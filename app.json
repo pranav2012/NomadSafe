@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.pranav2012.NomadSafe"
+      "bundleIdentifier": "com.pranav.NomadSafe"
     },
     "android": {
       "adaptiveIcon": {
