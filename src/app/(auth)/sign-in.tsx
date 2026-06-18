@@ -19,6 +19,7 @@ import { authClient } from "@/lib/auth-client";
 import { NomadButton } from "@/components/nomad/Button";
 import { Icon } from "@/components/nomad/Icon";
 import { Stamp } from "@/components/nomad/Stamp";
+import { useLocalization } from "@/localization";
 
 const DIAL_CODES = ["+44", "+1", "+91", "+61", "+351"];
 
@@ -74,6 +75,7 @@ function SocialButton({ theme, glyph, label, bg, fg, border, onPress }: SocialBu
 export default function SignInScreen() {
   const router = useRouter();
   const { isDark } = useThemeContext();
+  const { t } = useLocalization();
   const theme = getNomadTheme(isDark);
   const { isPinSet, setSignedIn, setUnlocked } = useAuthStore();
 
@@ -177,11 +179,11 @@ export default function SignInScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Text style={[styles.eyebrow, { color: theme.stamp }]}>Welcome</Text>
+          <Text style={[styles.eyebrow, { color: theme.stamp }]}>{t("auth.welcome")}</Text>
           <Text style={[styles.headline, { color: theme.inkDeep }]}>
-            Continue to{" "}
+            {t("auth.continueTo")}{" "}
             <Text style={[styles.headlineItalic, { color: theme.stamp }]}>
-              Nomad Safe
+              {t("common.appName")}
             </Text>
             .
           </Text>
@@ -191,7 +193,7 @@ export default function SignInScreen() {
             <SocialButton
               theme={theme}
               glyph={<GoogleGlyph />}
-              label={loading === "google" ? "Connecting…" : "Continue with Google"}
+              label={loading === "google" ? t("auth.connecting") : t("auth.continueWithGoogle")}
               bg={theme.paperSoft}
               fg={theme.inkDeep}
               border={theme.hairline}
@@ -203,7 +205,7 @@ export default function SignInScreen() {
           <View style={styles.dividerRow}>
             <View style={[styles.dividerLine, { backgroundColor: theme.hairline }]} />
             <Text style={[styles.dividerLabel, { color: theme.inkMuted }]}>
-              or use phone
+              {t("auth.orUsePhone")}
             </Text>
             <View style={[styles.dividerLine, { backgroundColor: theme.hairline }]} />
           </View>
@@ -254,7 +256,7 @@ export default function SignInScreen() {
             <TextInput
               value={num}
               onChangeText={(v) => setNum(v.replace(/[^0-9]/g, "").slice(0, 11))}
-              placeholder="7700 900000"
+              placeholder={t("auth.phonePlaceholder")}
               placeholderTextColor={theme.inkMuted}
               keyboardType="phone-pad"
               style={[
@@ -276,12 +278,11 @@ export default function SignInScreen() {
             style={[styles.sendBtn, { opacity: ready && loading !== "phone" ? 1 : 0.45 }]}
             icon={<Icon name="chevronRight" size={18} color="#fff" strokeWidth={2.4} />}
           >
-            {loading === "phone" ? "Sending…" : "Send code"}
+            {loading === "phone" ? t("auth.sending") : t("auth.sendCode")}
           </NomadButton>
 
           <Text style={[styles.footer, { color: theme.inkMuted }]}>
-            We&apos;ll text a 6-digit code to verify.{"\n"}● End-to-end encrypted ·
-            nothing leaves your phone
+            {t("auth.smsCodeFooter")}
           </Text>
         </ScrollView>
       </SafeAreaView>

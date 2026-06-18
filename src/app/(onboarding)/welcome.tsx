@@ -27,25 +27,21 @@ import { AIStep } from "@/components/nomad/onboarding/AIStep";
 import { SecureStep } from "@/components/nomad/onboarding/SecureStep";
 import { ReadyStep } from "@/components/nomad/onboarding/ReadyStep";
 import { useBiometricPresentation } from "@/hooks/useBiometricPresentation";
+import { useLocalization } from "@/localization";
 
-const STEP_IDS = [
-  { id: "welcome", label: "Welcome" },
-  { id: "safety", label: "Safety net" },
-  { id: "ledger", label: "Ledger" },
-  { id: "ai", label: "On-device AI" },
-  { id: "secure", label: "Secure" },
-  { id: "ready", label: "Ready" },
-] as const;
+const STEP_IDS = ["welcome", "safety", "ledger", "ai", "secure", "ready"] as const;
 
 export default function OnboardingWelcomeScreen() {
   const router = useRouter();
+  const { t } = useLocalization();
   const setOnboardingCompleted = useSettingsStore((s) => s.setOnboardingCompleted);
   const { isDark } = useThemeContext();
   const theme = getNomadTheme(isDark);
   const biometric = useBiometricPresentation();
-  const steps = STEP_IDS.map((item) =>
-    item.id === "secure" ? { ...item, label: biometric.name } : item,
-  );
+  const steps = STEP_IDS.map((id) => ({
+    id,
+    label: id === "secure" ? biometric.name : t(`onboarding.steps.${id === "safety" ? "safetyNet" : id === "ai" ? "onDeviceAi" : id}`),
+  }));
 
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState<1 | -1>(1);
@@ -111,16 +107,16 @@ export default function OnboardingWelcomeScreen() {
 
   const ctaLabel =
     step === 0
-      ? "Begin setup"
+      ? t("onboarding.beginSetup")
       : step === 1
-        ? `Enable safety net · ${selectedContacts.length} trusted`
+        ? t("onboarding.enableSafetyNet", { count: selectedContacts.length })
         : step === 2
-          ? "Continue"
+          ? t("common.continue")
           : step === 3
-            ? "Download model"
+            ? t("onboarding.downloadModel")
             : step === 4
               ? biometric.setupLabel
-              : "Start my trip";
+              : t("onboarding.startMyTrip");
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.paper }}>
@@ -159,7 +155,7 @@ export default function OnboardingWelcomeScreen() {
 
           {!last ? (
             <Pressable onPress={onDone}>
-              <Text style={[styles.skip, { color: theme.inkSoft }]}>Skip</Text>
+              <Text style={[styles.skip, { color: theme.inkSoft }]}>{t("onboarding.skip")}</Text>
             </Pressable>
           ) : (
             <View style={{ width: 34 }} />
@@ -201,7 +197,7 @@ export default function OnboardingWelcomeScreen() {
               {ctaLabel}
             </NomadButton>
             <Text style={[styles.ctaHint, { color: theme.inkMuted }]}>
-              ● End-to-end encrypted · nothing leaves your phone
+              {t("common.encryptedFooter")}
             </Text>
           </View>
         </View>

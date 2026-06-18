@@ -8,6 +8,7 @@ import Animated, {
   ZoomIn,
 } from "react-native-reanimated";
 import { NOMAD_FONTS, type NomadTheme } from "@/constants/nomadTokens";
+import { useLocalization } from "@/localization";
 import { Stamp } from "../Stamp";
 import { Icon } from "../Icon";
 import { Eyebrow, HugeHeadline, HeadlineItalic } from "../Typography";
@@ -19,6 +20,13 @@ interface Props {
 const HERO_H = 300;
 
 export function WelcomeStep({ theme }: Props) {
+  const { t } = useLocalization();
+  const kpis = [
+    { v: "140k", l: t("onboarding.travellers") },
+    { v: "4.9★", l: t("onboarding.appStore") },
+    { v: "0", l: t("onboarding.servers") },
+  ];
+
   return (
     <View style={{ flex: 1 }}>
       {/* HERO */}
@@ -136,14 +144,15 @@ export function WelcomeStep({ theme }: Props) {
         entering={FadeInDown.delay(200).duration(500)}
         style={styles.copyWrap}
       >
-        <Eyebrow color={theme.stamp}>Nomad Safe · v2.4</Eyebrow>
+        <Eyebrow color={theme.stamp}>{t("onboarding.welcomeEyebrow")}</Eyebrow>
         <HugeHeadline color={theme.inkDeep}>
-          Travel,{" "}
-          <HeadlineItalic color={theme.stamp}>guarded</HeadlineItalic>.
+          {t("onboarding.welcomeHeadlinePrefix")}{" "}
+          <HeadlineItalic color={theme.stamp}>
+            {t("onboarding.welcomeHeadlineAccent")}
+          </HeadlineItalic>.
         </HugeHeadline>
         <Text style={[styles.lede, { color: theme.inkSoft }]}>
-          A safety companion for long trips — check-ins, sharing, and money, all
-          on your phone. Nothing on our servers, ever.
+          {t("onboarding.welcomeLede")}
         </Text>
 
         {/* KPI row */}
@@ -153,11 +162,7 @@ export function WelcomeStep({ theme }: Props) {
             { borderTopColor: theme.hairline },
           ]}
         >
-          {[
-            { v: "140k", l: "Travellers" },
-            { v: "4.9★", l: "App Store" },
-            { v: "0", l: "Servers" },
-          ].map((kpi, i) => (
+          {kpis.map((kpi, i) => (
             <View key={i} style={{ flex: 1 }}>
               <Text
                 style={[

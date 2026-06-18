@@ -10,9 +10,11 @@ import { Card } from "@/components/ui/Card";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
+import { useLocalization } from "@/localization";
 
 export default function HomeScreen() {
   const { colors, typography, spacing } = useTheme();
+  const { t } = useLocalization();
   const user = useAuthStore((s) => s.user);
   const signOut = useAuthStore((s) => s.signOut);
   const setPinSet = useAuthStore((s) => s.setPinSet);
@@ -31,8 +33,8 @@ export default function HomeScreen() {
     setBiometricEnabled(false);
     setUnlocked(false);
     setOnboardingCompleted(false);
-    Alert.alert("Storage cleared", "All local data has been erased.", [
-      { text: "OK", onPress: () => router.replace("/") },
+    Alert.alert(t("home.storageClearedTitle"), t("home.storageClearedBody"), [
+      { text: t("common.ok"), onPress: () => router.replace("/") },
     ]);
   };
 
@@ -46,7 +48,7 @@ export default function HomeScreen() {
               fontSize: typography.sizes.base,
             }}
           >
-            Welcome back,
+            {t("home.welcomeBack")}
           </Text>
           <Text
             style={{
@@ -55,10 +57,10 @@ export default function HomeScreen() {
               fontWeight: typography.weights.bold,
             }}
           >
-            {user?.name ?? "Traveler"}
+            {user?.name ?? t("common.fallbackTraveler")}
           </Text>
         </View>
-        <Avatar name={user?.name ?? "User"} imageUri={user?.avatarUrl} />
+        <Avatar name={user?.name ?? t("common.fallbackUser")} imageUri={user?.avatarUrl} />
       </View>
 
       <View style={{ gap: spacing.md }}>
@@ -71,10 +73,10 @@ export default function HomeScreen() {
               marginBottom: spacing.sm,
             }}
           >
-            Quick Actions
+            {t("home.quickActionsTitle")}
           </Text>
           <Text style={{ color: colors.textSecondary, fontSize: typography.sizes.sm }}>
-            Start a trip, log an expense, or check safety alerts.
+            {t("home.quickActionsBody")}
           </Text>
         </Card>
 
@@ -87,10 +89,10 @@ export default function HomeScreen() {
               marginBottom: spacing.sm,
             }}
           >
-            Recent Activity
+            {t("home.recentActivityTitle")}
           </Text>
           <Text style={{ color: colors.textSecondary, fontSize: typography.sizes.sm }}>
-            No recent activity yet. Start your first trip!
+            {t("home.recentActivityBody")}
           </Text>
         </Card>
 
@@ -103,7 +105,7 @@ export default function HomeScreen() {
               marginBottom: spacing.sm,
             }}
           >
-            Dev Tools
+            {t("home.devToolsTitle")}
           </Text>
           <Text
             style={{
@@ -112,10 +114,10 @@ export default function HomeScreen() {
               marginBottom: spacing.md,
             }}
           >
-            Reset all local data and return to onboarding.
+            {t("home.devToolsBody")}
           </Text>
           <Button
-            title="Clear Storage"
+            title={t("home.clearStorage")}
             variant="danger"
             icon="trash-outline"
             fullWidth
@@ -127,10 +129,10 @@ export default function HomeScreen() {
       <Modal
         visible={clearModalVisible}
         onClose={() => setClearModalVisible(false)}
-        title="Clear all storage?"
+        title={t("home.clearStorageTitle")}
         actions={[
-          { title: "Cancel", variant: "ghost", onPress: () => setClearModalVisible(false) },
-          { title: "Clear", variant: "danger", onPress: handleClearStorage },
+          { title: t("common.cancel"), variant: "ghost", onPress: () => setClearModalVisible(false) },
+          { title: t("common.clear"), variant: "danger", onPress: handleClearStorage },
         ]}
       >
         <Text
@@ -139,7 +141,7 @@ export default function HomeScreen() {
             fontSize: typography.sizes.sm,
           }}
         >
-          This will erase all local data (auth, settings, trips) and reload the app to onboarding. This cannot be undone.
+          {t("home.clearStorageBody")}
         </Text>
       </Modal>
     </Screen>

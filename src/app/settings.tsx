@@ -11,22 +11,12 @@ import { Switch } from "@/components/ui/Switch";
 import { Button } from "@/components/ui/Button";
 import { Divider } from "@/components/ui/Divider";
 import { Avatar } from "@/components/ui/Avatar";
-
-const THEME_OPTIONS = [
-  { label: "Light", value: "light" as const },
-  { label: "Dark", value: "dark" as const },
-  { label: "System", value: "system" as const },
-];
-
-const LOCK_OPTIONS = [
-  { label: "Immediate", value: 0 },
-  { label: "1 minute", value: 60000 },
-  { label: "5 minutes", value: 300000 },
-];
+import { LANGUAGE_OPTIONS, useLocalization } from "@/localization";
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { colors, typography, spacing } = useTheme();
+  const { t, locale, deviceLocale } = useLocalization();
   const user = useAuthStore((s) => s.user);
   const biometricEnabled = useAuthStore((s) => s.biometricEnabled);
   const setBiometricEnabled = useAuthStore((s) => s.setBiometricEnabled);
@@ -35,13 +25,25 @@ export default function SettingsScreen() {
   const signOut = useAuthStore((s) => s.signOut);
   const themeMode = useSettingsStore((s) => s.themeMode);
   const setThemeMode = useSettingsStore((s) => s.setThemeMode);
+  const localeOverride = useSettingsStore((s) => s.localeOverride);
+  const setLocaleOverride = useSettingsStore((s) => s.setLocaleOverride);
   const [signingOut, setSigningOut] = useState(false);
+  const themeOptions = [
+    { label: t("settings.themeLight"), value: "light" as const },
+    { label: t("settings.themeDark"), value: "dark" as const },
+    { label: t("settings.themeSystem"), value: "system" as const },
+  ];
+  const lockOptions = [
+    { label: t("settings.lockImmediate"), value: 0 },
+    { label: t("settings.lockOneMinute"), value: 60000 },
+    { label: t("settings.lockFiveMinutes"), value: 300000 },
+  ];
 
   const handleSignOut = async () => {
-    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(t("settings.signOutTitle"), t("settings.signOutBody"), [
+      { text: t("common.cancel"), style: "cancel" },
       {
-        text: "Sign Out",
+        text: t("settings.signOut"),
         style: "destructive",
         onPress: async () => {
           setSigningOut(true);
@@ -68,12 +70,12 @@ export default function SettingsScreen() {
           paddingTop: spacing.sm,
         }}
       >
-        Settings
+        {t("settings.title")}
       </Text>
 
       <Card variant="elevated">
         <View style={styles.row}>
-          <Avatar name={user?.name ?? "User"} imageUri={user?.avatarUrl} />
+          <Avatar name={user?.name ?? t("common.fallbackUser")} imageUri={user?.avatarUrl} />
           <View style={{ marginLeft: spacing.md, flex: 1 }}>
             <Text
               style={{
@@ -82,10 +84,10 @@ export default function SettingsScreen() {
                 fontWeight: typography.weights.semibold,
               }}
             >
-              {user?.name ?? "User"}
+              {user?.name ?? t("common.fallbackUser")}
             </Text>
             <Text style={{ color: colors.textSecondary, fontSize: typography.sizes.sm }}>
-              {user?.email ?? user?.phone ?? "Not signed in"}
+              {user?.email ?? user?.phone ?? t("common.notSignedIn")}
             </Text>
           </View>
         </View>
@@ -103,11 +105,11 @@ export default function SettingsScreen() {
           },
         ]}
       >
-        APPEARANCE
+        {t("settings.appearance")}
       </Text>
       <Card>
         <View style={styles.optionRow}>
-          {THEME_OPTIONS.map((option) => (
+          {themeOptions.map((option) => (
             <Button
               key={option.value}
               title={option.label}
@@ -131,12 +133,12 @@ export default function SettingsScreen() {
           },
         ]}
       >
-        SECURITY
+        {t("settings.security")}
       </Text>
       <Card>
         <View style={[styles.settingRow, { marginBottom: spacing.lg }]}>
           <Text style={{ color: colors.text, fontSize: typography.sizes.base }}>
-            Biometric Unlock
+            {t("settings.biometricUnlock")}
           </Text>
           <Switch
             value={biometricEnabled}
@@ -151,10 +153,10 @@ export default function SettingsScreen() {
             marginBottom: spacing.sm,
           }}
         >
-          Auto-Lock
+          {t("settings.autoLock")}
         </Text>
         <View style={styles.optionRow}>
-          {LOCK_OPTIONS.map((option) => (
+          {lockOptions.map((option) => (
             <Button
               key={option.value}
               title={option.label}
@@ -178,12 +180,70 @@ export default function SettingsScreen() {
           },
         ]}
       >
-        ABOUT
+        {t("settings.language")}
+      </Text>
+      <Card>
+        <Button
+          title={`${t("settings.languageDevice")} (${deviceLocale})`}
+          onPress={() => setLocaleOverride(null)}
+          variant={localeOverride === null ? "primary" : "ghost"}
+          size="sm"
+          fullWidth
+        />
+        <Text
+          style={{
+            color: colors.textSecondary,
+            fontSize: typography.sizes.sm,
+            marginTop: spacing.md,
+            marginBottom: spacing.sm,
+          }}
+        >
+          {t("settings.languageManual")}
+        </Text>
+        <View style={styles.languageGrid}>
+          {LANGUAGE_OPTIONS.map((option) => (
+            <Button
+              key={option.locale}
+              title={option.nativeLabel}
+              onPress={() => setLocaleOverride(option.locale)}
+              variant={
+                localeOverride === option.locale || (!localeOverride && locale === option.locale)
+                  ? "primary"
+                  : "ghost"
+              }
+              size="sm"
+            />
+          ))}
+        </View>
+        <Text
+          style={{
+            color: colors.textSecondary,
+            fontSize: typography.sizes.sm,
+            marginTop: spacing.md,
+          }}
+        >
+          {t("settings.languageFallback")}
+        </Text>
+      </Card>
+
+      <Divider />
+
+      <Text
+        style={[
+          styles.sectionTitle,
+          {
+            color: colors.textSecondary,
+            fontSize: typography.sizes.sm,
+            fontWeight: typography.weights.medium,
+          },
+        ]}
+      >
+        {t("settings.about")}
       </Text>
       <Card>
         <View style={styles.settingRow}>
           <Text style={{ color: colors.text, fontSize: typography.sizes.base }}>
-            Version
+            {t("settings.version")}
           </Text>
           <Text style={{ color: colors.textSecondary, fontSize: typography.sizes.base }}>
             1.0.0
@@ -193,7 +253,7 @@ export default function SettingsScreen() {
 
       <View style={{ marginTop: spacing["3xl"], marginBottom: spacing["3xl"] }}>
         <Button
-          title="Sign Out"
+          title={t("settings.signOut")}
           onPress={handleSignOut}
           variant="danger"
           fullWidth
@@ -217,4 +277,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   optionRow: { flexDirection: "row", gap: 8 },
+  languageGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
 });

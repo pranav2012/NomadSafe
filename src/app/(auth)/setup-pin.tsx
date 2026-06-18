@@ -18,6 +18,7 @@ import { localAuth } from "@/services/localAuth";
 import { lightImpact, errorNotification } from "@/utils/haptics";
 import { Icon } from "@/components/nomad/Icon";
 import { useBiometricPresentation } from "@/hooks/useBiometricPresentation";
+import { useLocalization } from "@/localization";
 
 const PIN_LENGTH = 6;
 const NUMPAD = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "delete"];
@@ -25,6 +26,7 @@ const NUMPAD = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "delete"];
 export default function SetupPinScreen() {
   const router = useRouter();
   const { isDark } = useThemeContext();
+  const { t } = useLocalization();
   const theme = getNomadTheme(isDark);
   const { setPinSet, setBiometricEnabled, setUnlocked } = useAuthStore();
   const biometric = useBiometricPresentation();
@@ -84,7 +86,7 @@ export default function SetupPinScreen() {
       } else {
         errorNotification();
         shake();
-        setError("PINs don't match. Try again.");
+        setError(t("auth.pinMismatch"));
         setTimeout(() => {
           setConfirmPin("");
           setError("");
@@ -104,25 +106,28 @@ export default function SetupPinScreen() {
           </View>
 
           <Text style={[styles.eyebrow, { color: theme.sky }]}>
-            {step === "create" ? "Secure your vault" : "Confirm"}
+            {step === "create" ? t("auth.secureVault") : t("auth.confirm")}
           </Text>
           <Text style={[styles.headline, { color: theme.inkDeep }]}>
             {step === "create" ? (
               <>
-                Create a{" "}
-                <Text style={[styles.italic, { color: theme.sky }]}>6-digit</Text> PIN.
+                {t("auth.createPinPrefix")}{" "}
+                <Text style={[styles.italic, { color: theme.sky }]}>
+                  {t("auth.sixDigit")}
+                </Text>{" "}
+                {t("auth.pin")}.
               </>
             ) : (
               <>
-                Re-enter your{" "}
-                <Text style={[styles.italic, { color: theme.sky }]}>PIN</Text>.
+                {t("auth.reenterYour")}{" "}
+                <Text style={[styles.italic, { color: theme.sky }]}>{t("auth.pin")}</Text>.
               </>
             )}
           </Text>
           <Text style={[styles.sub, { color: theme.inkSoft }]}>
             {step === "create"
-              ? `Unlocks the app when ${biometric.name} isn't available.`
-              : "Enter the same PIN once more to confirm."}
+              ? t("auth.createPinSub", { biometricName: biometric.name })
+              : t("auth.confirmPinSub")}
           </Text>
 
           {/* Dots */}
@@ -180,7 +185,9 @@ export default function SetupPinScreen() {
               }}
               style={styles.startOver}
             >
-              <Text style={[styles.startOverText, { color: theme.inkSoft }]}>Start over</Text>
+              <Text style={[styles.startOverText, { color: theme.inkSoft }]}>
+                {t("auth.startOver")}
+              </Text>
             </Pressable>
           )}
         </View>

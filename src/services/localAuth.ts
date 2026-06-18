@@ -12,10 +12,13 @@ export const localAuth = {
     return { available: compatible && enrolled, types };
   },
 
-  async authenticateWithBiometric(): Promise<boolean> {
+  async authenticateWithBiometric(options?: {
+    promptMessage?: string;
+    cancelLabel?: string;
+  }): Promise<boolean> {
     const result = await LocalAuthentication.authenticateAsync({
-      promptMessage: "Unlock NomadSafe",
-      cancelLabel: "Use PIN",
+      promptMessage: options?.promptMessage ?? "Unlock NomadSafe",
+      cancelLabel: options?.cancelLabel ?? "Use PIN",
       disableDeviceFallback: true,
     });
     return result.success;

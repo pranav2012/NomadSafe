@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet } from "react-native";
 import Svg, { Line, Path, Polygon } from "react-native-svg";
 import { LinearGradient } from "expo-linear-gradient";
 import { NOMAD_FONTS, type NomadTheme } from "@/constants/nomadTokens";
+import { useLocalization } from "@/localization";
 import { NomadCard } from "../Card";
 import { TravelMap } from "../TravelMap";
 import { Icon } from "../Icon";
@@ -23,10 +24,10 @@ interface Props {
 }
 
 const contacts = [
-  { n: "Mum", init: "M", colorKey: "teal", sub: "+44 · London" },
+  { nameKey: "onboarding.mum", init: "M", colorKey: "teal", sub: "+44 · London" },
   { n: "Jamie", init: "J", colorKey: "mustard", sub: "+44 · Brighton" },
   { n: "Priya", init: "P", colorKey: "sky", sub: "+91 · Bangalore" },
-  { n: "Dad", init: "D", colorKey: "stamp", sub: "+44 · Leeds" },
+  { nameKey: "onboarding.dad", init: "D", colorKey: "stamp", sub: "+44 · Leeds" },
   { n: "Ravi", init: "R", colorKey: "teal", sub: "+61 · Melbourne" },
 ] as const;
 
@@ -37,8 +38,10 @@ export function SafetyStep({
   selectedContacts,
   setSelectedContacts,
 }: Props) {
+  const { t } = useLocalization();
   const resolvedContacts = contacts.map((c) => ({
     ...c,
+    n: "nameKey" in c ? t(c.nameKey) : c.n,
     color: theme[c.colorKey as keyof NomadTheme] as string,
   }));
 
@@ -58,25 +61,28 @@ export function SafetyStep({
 
   const slotNames =
     selectedContacts.map((i) => resolvedContacts[i].n).join(" · ") ||
-    "Pick up to three";
+    t("onboarding.pickUpToThree");
 
   return (
     <View style={{ flex: 1 }}>
       {/* Headline */}
       <View style={{ paddingHorizontal: 26, paddingTop: 6, paddingBottom: 18 }}>
-        <Eyebrow color={theme.teal}>Step 1 of {totalSteps - 1}</Eyebrow>
+        <Eyebrow color={theme.teal}>
+          {t("onboarding.stepOf", { step: 1, total: totalSteps - 1 })}
+        </Eyebrow>
         <HugeHeadline color={theme.inkDeep}>
-          Your <HeadlineItalic>safety net</HeadlineItalic>.
+          {t("onboarding.safetyHeadlinePrefix")}{" "}
+          <HeadlineItalic>{t("onboarding.safetyHeadlineAccent")}</HeadlineItalic>.
         </HugeHeadline>
         <Text style={[styles.lede, { color: theme.inkSoft }]}>
-          Location, trusted three, and an offline fallback — set up in one pass.
+          {t("onboarding.safetyLede")}
         </Text>
       </View>
 
       {/* 01 · LOCATION */}
       <View style={{ paddingHorizontal: 16 }}>
         <View style={{ paddingHorizontal: 10 }}>
-          <SectionLabel step={1} color={theme.teal} title="Live location" theme={theme} />
+          <SectionLabel step={1} color={theme.teal} title={t("onboarding.liveLocation")} theme={theme} />
         </View>
         <NomadCard theme={theme} padding={10} style={{ position: "relative", overflow: "hidden" }}>
           <TravelMap theme={theme} dark={dark} pins={mapPins} height={148}
@@ -94,16 +100,18 @@ export function SafetyStep({
           >
             <View style={[styles.gpsPill, { backgroundColor: "rgba(26,22,18,0.88)" }]}>
               <Text style={[styles.gpsPillText, { color: theme.paperSoft }]}>
-                ±8 m · GPS + Wi-Fi
+                {t("onboarding.gpsStatus")}
               </Text>
             </View>
             <View style={[styles.livePill, { backgroundColor: theme.tealSoft }]}>
-              <Text style={[styles.livePillText, { color: theme.teal }]}>● Live</Text>
+              <Text style={[styles.livePillText, { color: theme.teal }]}>
+                {t("onboarding.live")}
+              </Text>
             </View>
           </View>
         </NomadCard>
         <Text style={[styles.bodyCopy, { color: theme.inkSoft }]}>
-          {"Powers check-in timers, geofences, and emergency broadcasts. Adapts to save battery when you're still."}
+          {t("onboarding.locationBody")}
         </Text>
       </View>
 
@@ -113,7 +121,7 @@ export function SafetyStep({
           <SectionLabel
             step={2}
             color={theme.mustard}
-            title={`Trusted three · ${selectedContacts.length}/3`}
+            title={t("onboarding.trustedThree", { count: selectedContacts.length })}
             theme={theme}
           />
         </View>
@@ -163,7 +171,7 @@ export function SafetyStep({
               {slotNames}
             </Text>
             <Text style={[styles.slotSub, { color: theme.inkSoft }]}>
-              SMS if you miss a check-in
+              {t("onboarding.smsMissCheckIn")}
             </Text>
           </View>
         </View>
@@ -222,7 +230,7 @@ export function SafetyStep({
       {/* 03 · OFFLINE FALLBACK */}
       <View style={{ paddingHorizontal: 16, paddingTop: 22 }}>
         <View style={{ paddingHorizontal: 10 }}>
-          <SectionLabel step={3} color={theme.stamp} title="Offline fallback" theme={theme} />
+          <SectionLabel step={3} color={theme.stamp} title={t("onboarding.offlineFallback")} theme={theme} />
         </View>
 
         <View style={styles.offlineHero}>
@@ -270,7 +278,9 @@ export function SafetyStep({
           >
             <Icon name="shield" size={24} color="#fff" />
           </View>
-          <Text style={[styles.offlineLabelLeft, { color: "rgba(255,255,255,0.65)" }]}>OFFLINE</Text>
+          <Text style={[styles.offlineLabelLeft, { color: "rgba(255,255,255,0.65)" }]}>
+            {t("onboarding.offline")}
+          </Text>
 
           {/* arc */}
           <View style={styles.offlineArc}>
@@ -293,7 +303,7 @@ export function SafetyStep({
             ]}
           >
             <Text style={[styles.smsBadgeText, { color: theme.inkDeep }]}>
-              SMS · no data
+              {t("onboarding.smsNoData")}
             </Text>
           </View>
 
@@ -303,23 +313,25 @@ export function SafetyStep({
           >
             <Text style={styles.offlineContactInit}>M</Text>
           </View>
-          <Text style={[styles.offlineLabelRight, { color: "rgba(255,255,255,0.65)" }]}>MUM</Text>
+          <Text style={[styles.offlineLabelRight, { color: "rgba(255,255,255,0.65)" }]}>
+            {t("onboarding.mumUpper")}
+          </Text>
         </View>
 
         <Text style={[styles.bodyCopy, { color: theme.inkSoft }]}>
-          Lost signal mid-trek? We fall back to SMS — alerts still reach your three with your last GPS fix.
+          {t("onboarding.offlineBody")}
         </Text>
       </View>
 
       {/* Consolidated permissions */}
       <View style={{ paddingHorizontal: 16, paddingTop: 20 }}>
         <View style={{ paddingHorizontal: 10 }}>
-          <SectionLabel step={4} color={theme.sky} title="Permissions" theme={theme} />
+          <SectionLabel step={4} color={theme.sky} title={t("onboarding.permissions")} theme={theme} />
         </View>
         <View style={{ gap: 6 }}>
-          <PermissionRow theme={theme} title="Location · Always" sub="SOS, sharing, geofences" on />
-          <PermissionRow theme={theme} title="Contacts + SMS" sub="Pick your three · offline fallback" on />
-          <PermissionRow theme={theme} title="Offline maps" sub="Pre-caches current region · 1.2 GB" on />
+          <PermissionRow theme={theme} title={t("onboarding.locationAlways")} sub={t("onboarding.sosSharingGeofences")} on />
+          <PermissionRow theme={theme} title={t("onboarding.contactsSms")} sub={t("onboarding.pickYourThreeOffline")} on />
+          <PermissionRow theme={theme} title={t("onboarding.offlineMaps")} sub={t("onboarding.preCachesRegion")} on />
         </View>
       </View>
     </View>

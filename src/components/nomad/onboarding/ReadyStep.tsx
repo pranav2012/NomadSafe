@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from "react-native";
 import Animated, { ZoomIn } from "react-native-reanimated";
 import { NOMAD_FONTS, type NomadTheme } from "@/constants/nomadTokens";
 import type { BiometricPresentation } from "@/hooks/useBiometricPresentation";
+import { useLocalization } from "@/localization";
 import { Stamp } from "../Stamp";
 import { Icon, type IconName } from "../Icon";
 import {
@@ -18,16 +19,17 @@ interface Props {
 }
 
 export function ReadyStep({ theme, selectedContactsCount, biometric }: Props) {
+  const { t } = useLocalization();
   const rows: { i: IconName; l: string; v: string; c: string }[] = [
-    { i: "mapPin", l: "Location", v: "Always · adaptive", c: theme.teal },
+    { i: "mapPin", l: t("onboarding.location"), v: t("onboarding.locationValue"), c: theme.teal },
     {
       i: "users",
-      l: "Trusted three",
-      v: `${selectedContactsCount} people`,
+      l: t("onboarding.trustedThreeLabel"),
+      v: t("onboarding.people", { count: selectedContactsCount }),
       c: theme.mustard,
     },
-    { i: "wifi", l: "Offline fallback", v: "SMS + 1.2 GB maps", c: theme.stamp },
-    { i: "lock", l: "Vault", v: biometric.vaultSummary, c: theme.sky },
+    { i: "wifi", l: t("onboarding.offlineFallback"), v: t("onboarding.offlineFallbackValue"), c: theme.stamp },
+    { i: "lock", l: t("onboarding.vault"), v: biometric.vaultSummary, c: theme.sky },
   ];
 
   return (
@@ -37,18 +39,19 @@ export function ReadyStep({ theme, selectedContactsCount, biometric }: Props) {
           entering={ZoomIn.duration(800).springify().damping(10)}
           style={{ marginBottom: 16 }}
         >
-          <Stamp label="READY" sub="ALL SET" color={theme.teal} rot={-6} size={130} />
+          <Stamp label={t("onboarding.readyStamp")} sub={t("onboarding.allSetStamp")} color={theme.teal} rot={-6} size={130} />
         </Animated.View>
 
         <View style={{ alignSelf: "stretch", alignItems: "flex-start" }}>
-          <Eyebrow color={theme.teal}>Setup complete</Eyebrow>
+          <Eyebrow color={theme.teal}>{t("onboarding.setupComplete")}</Eyebrow>
           <HugeHeadline color={theme.inkDeep}>
-            {"You're "}<HeadlineItalic>all set</HeadlineItalic>.
+            {t("onboarding.readyHeadlinePrefix")}{" "}
+            <HeadlineItalic>{t("onboarding.readyHeadlineAccent")}</HeadlineItalic>.
           </HugeHeadline>
         </View>
 
         <Text style={[styles.lede, { color: theme.inkSoft }]}>
-          {`Everything's encrypted, offline-ready, and protected by ${biometric.protectedBy}. Have a safe one.`}
+          {t("onboarding.readyLede", { protectedBy: biometric.protectedBy })}
         </Text>
       </View>
 
@@ -63,7 +66,9 @@ export function ReadyStep({ theme, selectedContactsCount, biometric }: Props) {
             },
           ]}
         >
-          <Text style={[styles.recapEyebrow, { color: theme.inkMuted }]}>Your setup</Text>
+          <Text style={[styles.recapEyebrow, { color: theme.inkMuted }]}>
+            {t("onboarding.yourSetup")}
+          </Text>
           {rows.map((r, i) => (
             <View
               key={i}

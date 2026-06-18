@@ -14,6 +14,7 @@ import Animated, {
   FadeInDown,
 } from "react-native-reanimated";
 import { NOMAD_FONTS, type NomadTheme } from "@/constants/nomadTokens";
+import { useLocalization } from "@/localization";
 import { Icon, type IconName } from "../Icon";
 import {
   Eyebrow,
@@ -26,17 +27,17 @@ interface Props {
   totalSteps: number;
 }
 
-const questions = [
-  { q: "Forecast my Hanoi week", a: "~$312 · 12% under" },
-  { q: "Split Lisbon dinners", a: "4-way · you paid €148" },
-  { q: "Cheapest transit to CDG", a: "RER B · €11.80 · 32m" },
-  { q: "Monthly food trend", a: "↓ 18% vs last month" },
+const questionKeys = [
+  { q: "onboarding.forecastHanoi", a: "onboarding.forecastHanoiAnswer" },
+  { q: "onboarding.splitLisbon", a: "onboarding.splitLisbonAnswer" },
+  { q: "onboarding.transitCdg", a: "onboarding.transitCdgAnswer" },
+  { q: "onboarding.monthlyFood", a: "onboarding.monthlyFoodAnswer" },
 ];
 
-const capabilities: { i: IconName; t: string; s: string; colorKey: keyof NomadTheme }[] = [
-  { i: "trendUp", t: "Weekly briefs", s: "\"You're pacing $45/day — 12% under budget.\"", colorKey: "teal" },
-  { i: "sparkle", t: "Ask anything", s: "\"Forecast my Hanoi budget\" · answers in ~2s", colorKey: "mustard" },
-  { i: "shield", t: "Zero telemetry", s: "No servers, no tokens shipped off device", colorKey: "stamp" },
+const capabilities: { i: IconName; titleKey: string; subKey: string; colorKey: keyof NomadTheme }[] = [
+  { i: "trendUp", titleKey: "onboarding.weeklyBriefs", subKey: "onboarding.weeklyBriefsSub", colorKey: "teal" },
+  { i: "sparkle", titleKey: "onboarding.askAnything", subKey: "onboarding.askAnythingSub", colorKey: "mustard" },
+  { i: "shield", titleKey: "onboarding.zeroTelemetry", subKey: "onboarding.zeroTelemetrySub", colorKey: "stamp" },
 ];
 
 /**
@@ -114,12 +115,13 @@ function PulseRing({ index, color }: { index: number; color: string }) {
 }
 
 export function AIStep({ theme, totalSteps }: Props) {
+  const { t } = useLocalization();
   const [qIdx, setQIdx] = useState(0);
   useEffect(() => {
-    const t = setInterval(() => setQIdx((i) => (i + 1) % questions.length), 2600);
-    return () => clearInterval(t);
+    const timer = setInterval(() => setQIdx((i) => (i + 1) % questionKeys.length), 2600);
+    return () => clearInterval(timer);
   }, []);
-  const current = questions[qIdx];
+  const current = questionKeys[qIdx];
 
   // NO CLOUD pulse
   const cloudPulse = useSharedValue(1);
@@ -189,14 +191,14 @@ export function AIStep({ theme, totalSteps }: Props) {
               ]}
             />
             <Text style={[styles.noCloudText, { color: theme.mustard }]}>
-              NO CLOUD
+              {t("onboarding.noCloud")}
             </Text>
           </View>
 
           {/* Secure Enclave chip badge */}
           <View style={[styles.enclave, { borderColor: "rgba(255,255,255,0.12)" }]}>
             <Icon name="lock" size={9} color="rgba(255,255,255,0.85)" />
-            <Text style={styles.enclaveText}>SECURE ENCLAVE</Text>
+            <Text style={styles.enclaveText}>{t("onboarding.secureEnclave")}</Text>
           </View>
 
           {/* Phone silhouette */}
@@ -236,9 +238,9 @@ export function AIStep({ theme, totalSteps }: Props) {
               { borderColor: "rgba(255,255,255,0.14)" },
             ]}
           >
-            <Text style={[styles.qLabel, { color: theme.mustard }]}>YOU</Text>
+            <Text style={[styles.qLabel, { color: theme.mustard }]}>{t("onboarding.you")}</Text>
             <Text style={[styles.qText, { color: "rgba(255,255,255,0.9)" }]}>
-              {current.q}
+              {t(current.q)}
             </Text>
           </Animated.View>
 
@@ -251,9 +253,11 @@ export function AIStep({ theme, totalSteps }: Props) {
               { backgroundColor: theme.mustard },
             ]}
           >
-            <Text style={[styles.aLabel, { color: theme.stamp }]}>ON-DEVICE</Text>
+            <Text style={[styles.aLabel, { color: theme.stamp }]}>
+              {t("onboarding.onDevice")}
+            </Text>
             <Text style={[styles.aText, { color: theme.inkDeep }]}>
-              {current.a}
+              {t(current.a)}
             </Text>
           </Animated.View>
 
@@ -353,14 +357,14 @@ export function AIStep({ theme, totalSteps }: Props) {
                 ))}
               </Svg>
               <View style={{ marginLeft: 8 }}>
-                <Text style={styles.chipTitle}>NEURAL ENGINE</Text>
-                <Text style={styles.chipSub}>340 MB · Q4</Text>
+                <Text style={styles.chipTitle}>{t("onboarding.neuralEngine")}</Text>
+                <Text style={styles.chipSub}>{t("onboarding.modelSize")}</Text>
               </View>
             </View>
 
             <View style={[styles.outMeter, { borderColor: "rgba(198,67,42,0.28)" }]}>
               <Icon name="wifi" size={10} color="#F4B2A1" />
-              <Text style={styles.outMeterText}>OUT · 0 B</Text>
+              <Text style={styles.outMeterText}>{t("onboarding.outZero")}</Text>
             </View>
           </View>
         </View>
@@ -368,12 +372,15 @@ export function AIStep({ theme, totalSteps }: Props) {
 
       {/* Headline */}
       <View style={{ paddingHorizontal: 26, paddingTop: 22 }}>
-        <Eyebrow color={theme.sky}>Step 3 of {totalSteps - 1}</Eyebrow>
+        <Eyebrow color={theme.sky}>
+          {t("onboarding.stepOf", { step: 3, total: totalSteps - 1 })}
+        </Eyebrow>
         <HugeHeadline color={theme.inkDeep}>
-          A tiny brain for <HeadlineItalic>your money</HeadlineItalic>.
+          {t("onboarding.aiHeadlinePrefix")}{" "}
+          <HeadlineItalic>{t("onboarding.aiHeadlineAccent")}</HeadlineItalic>.
         </HugeHeadline>
         <Text style={[styles.lede, { color: theme.inkSoft }]}>
-          340 MB model, downloaded once. Analyses spend, answers budget questions, forecasts trips — sealed inside your phone.
+          {t("onboarding.aiLede")}
         </Text>
       </View>
 
@@ -386,10 +393,14 @@ export function AIStep({ theme, totalSteps }: Props) {
             { backgroundColor: theme.paperSoft, borderColor: theme.hairline, opacity: 0.72 },
           ]}
         >
-          <Text style={[styles.compEyebrow, { color: theme.inkMuted }]}>CLOUD AI</Text>
-          <Text style={[styles.compTitle, { color: theme.inkDeep }]}>Your data leaves</Text>
+          <Text style={[styles.compEyebrow, { color: theme.inkMuted }]}>
+            {t("onboarding.cloudAi")}
+          </Text>
+          <Text style={[styles.compTitle, { color: theme.inkDeep }]}>
+            {t("onboarding.yourDataLeaves")}
+          </Text>
           <Text style={[styles.compSub, { color: theme.inkSoft }]}>
-            Prompts + spend → servers → back
+            {t("onboarding.cloudAiSub")}
           </Text>
           <View style={[styles.compBar, { backgroundColor: theme.hairline }]}>
             <View style={[styles.compBarFill, { backgroundColor: theme.stamp, width: "30%" }]} />
@@ -406,10 +417,14 @@ export function AIStep({ theme, totalSteps }: Props) {
             { backgroundColor: theme.inkDeep, borderColor: theme.inkDeep },
           ]}
         >
-          <Text style={[styles.compEyebrow, { color: theme.mustard }]}>ON-DEVICE</Text>
-          <Text style={[styles.compTitleDark, { color: theme.paperSoft }]}>Stays with you</Text>
+          <Text style={[styles.compEyebrow, { color: theme.mustard }]}>
+            {t("onboarding.onDevice")}
+          </Text>
+          <Text style={[styles.compTitleDark, { color: theme.paperSoft }]}>
+            {t("onboarding.staysWithYou")}
+          </Text>
           <Text style={[styles.compSub, { color: "rgba(245,240,232,0.65)" }]}>
-            All compute in Secure Enclave
+            {t("onboarding.onDeviceSub")}
           </Text>
           <View style={[styles.compBar, { backgroundColor: "rgba(255,255,255,0.12)" }]}>
             <Animated.View
@@ -441,8 +456,8 @@ export function AIStep({ theme, totalSteps }: Props) {
                 <Icon name={f.i} size={15} color={fColor} strokeWidth={2} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.capTitle, { color: theme.inkDeep }]}>{f.t}</Text>
-                <Text style={[styles.capSub, { color: theme.inkSoft }]}>{f.s}</Text>
+                <Text style={[styles.capTitle, { color: theme.inkDeep }]}>{t(f.titleKey)}</Text>
+                <Text style={[styles.capSub, { color: theme.inkSoft }]}>{t(f.subKey)}</Text>
               </View>
             </View>
           );
@@ -459,8 +474,12 @@ export function AIStep({ theme, totalSteps }: Props) {
           alignItems: "center",
         }}
       >
-        <Text style={[styles.estText, { color: theme.inkMuted }]}>↓ 340 MB · ~2 min on Wi-Fi</Text>
-        <Text style={[styles.estText, { color: theme.inkMuted }]}>SKIP · cloud mode later</Text>
+        <Text style={[styles.estText, { color: theme.inkMuted }]}>
+          {t("onboarding.downloadEstimate")}
+        </Text>
+        <Text style={[styles.estText, { color: theme.inkMuted }]}>
+          {t("onboarding.skipCloudLater")}
+        </Text>
       </View>
     </View>
   );

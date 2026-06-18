@@ -23,6 +23,7 @@ import { localAuth } from "@/services/localAuth";
 import { lightImpact, errorNotification } from "@/utils/haptics";
 import { Icon } from "@/components/nomad/Icon";
 import { useBiometricPresentation } from "@/hooks/useBiometricPresentation";
+import { useLocalization } from "@/localization";
 
 const PIN_LENGTH = 6;
 const MAX_ATTEMPTS = 5;
@@ -35,6 +36,7 @@ type Phase = "idle" | "scanning" | "success";
 export default function LockScreen() {
   const router = useRouter();
   const { isDark } = useThemeContext();
+  const { t, formatDuration } = useLocalization();
   const theme = getNomadTheme(isDark);
   const { user, biometricEnabled, setUnlocked, signOut } = useAuthStore();
   const biometric = useBiometricPresentation();
@@ -53,12 +55,12 @@ export default function LockScreen() {
   const successScale = useSharedValue(0);
   const shakeX = useSharedValue(0);
 
-  const name = user?.name ?? "Welcome back";
+  const name = user?.name ?? t("auth.welcomeBack");
   const initial = user?.name?.trim()?.[0]?.toUpperCase() ?? "N";
 
   const accent = phase === "success" ? theme.teal : theme.mustard;
   const label =
-    phase === "idle" ? "Tap to unlock" : phase === "scanning" ? "Scanning..." : biometric.matchedLabel;
+    phase === "idle" ? t("auth.tapToUnlock") : phase === "scanning" ? t("auth.scanning") : biometric.matchedLabel;
 
   const scanStyle = useAnimatedStyle(() => ({ transform: [{ translateY: scanY.value }] }));
   const successStyle = useAnimatedStyle(() => ({
@@ -84,7 +86,10 @@ export default function LockScreen() {
       -1,
     ));
 
-    const success = await localAuth.authenticateWithBiometric();
+    const success = await localAuth.authenticateWithBiometric({
+      promptMessage: t("auth.nativeUnlockPrompt"),
+      cancelLabel: t("auth.nativeCancelLabel"),
+    });
     cancelAnimation(scanY);
 
     if (success) {
@@ -94,7 +99,7 @@ export default function LockScreen() {
     } else {
       setPhase("idle");
     }
-  }, [phase, scanY, successScale, handleUnlock]);
+  }, [phase, scanY, successScale, handleUnlock, t]);
 
   useEffect(() => {
     if (mode !== "biometric" || !biometricEnabled) return;
@@ -140,14 +145,14 @@ export default function LockScreen() {
         setAttempts(a);
         if (a >= MAX_ATTEMPTS) {
           setIsLocked(true);
-          setError("Too many attempts. Try again in 30 seconds.");
+          setError(t("auth.tooManyAttempts", { duration: formatDuration(30) }));
           setTimeout(() => {
             setIsLocked(false);
             setAttempts(0);
             setError("");
           }, LOCKOUT_DURATION);
         } else {
-          setError(`Incorrect PIN. ${MAX_ATTEMPTS - a} attempts remaining.`);
+          setError(t("auth.attemptsRemaining", { count: MAX_ATTEMPTS - a }));
         }
         setTimeout(() => setPin(""), 300);
       }
@@ -178,7 +183,9 @@ export default function LockScreen() {
             <Text style={styles.avatarText}>{initial}</Text>
           </LinearGradient>
           <Text style={[styles.name, { color: theme.inkDeep }]}>{name}</Text>
-          <Text style={[styles.locked, { color: theme.inkMuted }]}>VAULT LOCKED</Text>
+          <Text style={[styles.locked, { color: theme.inkMuted }]}>
+            {t("auth.vaultLocked")}
+          </Text>
         </View>
 
         {mode === "biometric" ? (
@@ -287,12 +294,16 @@ export default function LockScreen() {
               }}
             >
               <Text style={[styles.footerAction, { color: theme.inkSoft }]}>
-                {mode === "biometric" ? "Use passcode instead" : `Use ${biometric.name}`}
+                {mode === "biometric"
+                  ? t("auth.usePasscodeInstead")
+                  : t("auth.useBiometric", { biometricName: biometric.name })}
               </Text>
             </Pressable>
           )}
           <Pressable onPress={handleSignOut}>
-            <Text style={[styles.footerAction, { color: theme.stamp }]}>Sign out</Text>
+            <Text style={[styles.footerAction, { color: theme.stamp }]}>
+              {t("auth.signOut")}
+            </Text>
           </Pressable>
         </View>
       </SafeAreaView>

@@ -1,23 +1,19 @@
 import React from "react";
 import { MilestoneStub } from "@/components/nomad/MilestoneStub";
+import { useLocalization } from "@/localization";
 
 // TODO(milestone): build the Safety center. See design screens/sos.jsx.
 export default function SosScreen() {
+  const { t, tArray } = useLocalization();
+
   return (
     <MilestoneStub
-      eyebrow="Safety"
-      title="Peace of mind"
-      titleAccent="engine"
+      eyebrow={t("milestones.safetyEyebrow")}
+      title={t("milestones.safetyTitle")}
+      titleAccent={t("milestones.safetyAccent")}
       icon="shield"
       designRef="screens/sos.jsx"
-      features={[
-        "Safety status: idle / active / emergency states",
-        "Check-in countdown timer with extend & custom durations",
-        "Big SOS trigger that broadcasts to the trusted three",
-        "Geofence arrival/exit alerts",
-        "Live sensors panel + safety score",
-        "Recent activity log (last 7 days)",
-      ]}
+      features={tArray("milestones.safetyFeatures")}
     />
   );
 }

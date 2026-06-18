@@ -12,6 +12,7 @@ import Animated, {
   FadeIn,
 } from "react-native-reanimated";
 import { NOMAD_FONTS, type NomadTheme } from "@/constants/nomadTokens";
+import { useLocalization } from "@/localization";
 import { Icon, type IconName } from "../Icon";
 import { PermissionRow } from "../PermissionRow";
 import { Eyebrow, HugeHeadline, HeadlineItalic } from "../Typography";
@@ -21,13 +22,14 @@ interface Props {
   totalSteps: number;
 }
 
-const features: { i: IconName; t: string; s: string; colorKey: keyof NomadTheme }[] = [
-  { i: "users", t: "Group split", s: "Auto-split meals, stays, rides with co-travellers", colorKey: "teal" },
-  { i: "trendUp", t: "Interbank FX", s: "Real-time conversion, no hidden spread", colorKey: "mustard" },
-  { i: "wallet", t: "Category budgets", s: "Food, transit, stays — roll over automatically", colorKey: "stamp" },
+const features: { i: IconName; titleKey: string; subKey: string; colorKey: keyof NomadTheme }[] = [
+  { i: "users", titleKey: "onboarding.groupSplit", subKey: "onboarding.groupSplitSub", colorKey: "teal" },
+  { i: "trendUp", titleKey: "onboarding.interbankFx", subKey: "onboarding.interbankFxSub", colorKey: "mustard" },
+  { i: "wallet", titleKey: "onboarding.categoryBudgets", subKey: "onboarding.categoryBudgetsSub", colorKey: "stamp" },
 ];
 
 export function LedgerStep({ theme, totalSteps }: Props) {
+  const { t } = useLocalization();
   // parsing pulse dot
   const pulse = useSharedValue(1);
   useEffect(() => {
@@ -78,11 +80,13 @@ export function LedgerStep({ theme, totalSteps }: Props) {
             <Animated.View
               style={[{ width: 5, height: 5, borderRadius: 3, backgroundColor: theme.mustard }, pulseStyle]}
             />
-            <Text style={[styles.parsedText, { color: theme.mustard }]}>PARSED ON-DEVICE</Text>
+            <Text style={[styles.parsedText, { color: theme.mustard }]}>
+              {t("onboarding.parsedOnDevice")}
+            </Text>
           </View>
           <View style={[styles.uploadBadge, { borderColor: "rgba(255,255,255,0.12)" }]}>
             <Icon name="lock" size={9} color="rgba(255,255,255,0.85)" />
-            <Text style={styles.uploadText}>NEVER UPLOADED</Text>
+            <Text style={styles.uploadText}>{t("onboarding.neverUploaded")}</Text>
           </View>
 
           {/* converging arrows */}
@@ -104,10 +108,12 @@ export function LedgerStep({ theme, totalSteps }: Props) {
               <View style={[styles.msgIcon, { backgroundColor: theme.mustard }]}>
                 <Icon name="phone" size={10} color={theme.inkDeep} />
               </View>
-              <Text style={[styles.msgTag, { color: theme.mustard }]}>SMS · HDFC</Text>
+              <Text style={[styles.msgTag, { color: theme.mustard }]}>
+                {t("onboarding.smsHdfc")}
+              </Text>
             </View>
             <Text style={styles.msgBody}>
-              ₹1,240 spent on card ••4182 at <Text style={styles.msgBold}>Café Lisboa</Text>
+              {t("onboarding.smsReceipt")}
             </Text>
           </Animated.View>
 
@@ -117,10 +123,12 @@ export function LedgerStep({ theme, totalSteps }: Props) {
               <View style={[styles.msgIcon, { backgroundColor: theme.sky }]}>
                 <Icon name="mail" size={11} color="#fff" />
               </View>
-              <Text style={[styles.msgTag, { color: theme.sky }]}>EMAIL · UBER</Text>
+              <Text style={[styles.msgTag, { color: theme.sky }]}>
+                {t("onboarding.emailUber")}
+              </Text>
             </View>
             <Text style={styles.msgBody}>
-              Receipt — trip to <Text style={styles.msgBold}>Alfama</Text> · €11.80
+              {t("onboarding.emailReceipt")}
             </Text>
           </Animated.View>
 
@@ -129,39 +137,42 @@ export function LedgerStep({ theme, totalSteps }: Props) {
             <View style={styles.loggedCheck}>
               <Icon name="check" size={11} color="#fff" strokeWidth={3} />
             </View>
-            <Text style={styles.loggedLabel}>Logged</Text>
-            <Text style={styles.loggedMeta}>Food · €25.40 · split 2-way</Text>
+            <Text style={styles.loggedLabel}>{t("onboarding.logged")}</Text>
+            <Text style={styles.loggedMeta}>{t("onboarding.loggedMeta")}</Text>
           </View>
         </View>
       </View>
 
       {/* Headline */}
       <View style={{ paddingHorizontal: 26, paddingTop: 22 }}>
-        <Eyebrow color={theme.mustard}>Step 4 of {totalSteps - 1}</Eyebrow>
+        <Eyebrow color={theme.mustard}>
+          {t("onboarding.stepOf", { step: 4, total: totalSteps - 1 })}
+        </Eyebrow>
         <HugeHeadline color={theme.inkDeep}>
-          Track spend from <HeadlineItalic>email &amp; SMS</HeadlineItalic>.
+          {t("onboarding.ledgerHeadlinePrefix")}{" "}
+          <HeadlineItalic>{t("onboarding.ledgerHeadlineAccent")}</HeadlineItalic>.
         </HugeHeadline>
         <Text style={[styles.lede, { color: theme.inkSoft }]}>
-          Grant access to your transaction emails and bank SMS — we read receipts and spend
-          alerts, then categorise and split them automatically. Parsing happens on-device;
-          messages never leave your phone.
+          {t("onboarding.ledgerLede")}
         </Text>
       </View>
 
       {/* Grant access */}
       <View style={{ paddingHorizontal: 16, paddingTop: 18 }}>
-        <Text style={[styles.grantLabel, { color: theme.inkMuted }]}>Grant access</Text>
+        <Text style={[styles.grantLabel, { color: theme.inkMuted }]}>
+          {t("onboarding.grantAccess")}
+        </Text>
         <View style={{ gap: 8 }}>
           <PermissionRow
             theme={theme}
-            title="Email · transactions only"
-            sub="Reads receipts & bank statements — nothing else"
+            title={t("onboarding.emailTransactionsOnly")}
+            sub={t("onboarding.readsReceipts")}
             on
           />
           <PermissionRow
             theme={theme}
-            title="SMS · spend alerts"
-            sub="Bank debit alerts & merchant receipts"
+            title={t("onboarding.smsSpendAlerts")}
+            sub={t("onboarding.bankDebitAlerts")}
             on
           />
         </View>
@@ -180,8 +191,8 @@ export function LedgerStep({ theme, totalSteps }: Props) {
                 <Icon name={f.i} size={15} color={fColor} strokeWidth={2} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.featureTitle, { color: theme.inkDeep }]}>{f.t}</Text>
-                <Text style={[styles.featureSub, { color: theme.inkSoft }]}>{f.s}</Text>
+                <Text style={[styles.featureTitle, { color: theme.inkDeep }]}>{t(f.titleKey)}</Text>
+                <Text style={[styles.featureSub, { color: theme.inkSoft }]}>{t(f.subKey)}</Text>
               </View>
             </View>
           );

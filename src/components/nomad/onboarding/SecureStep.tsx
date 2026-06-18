@@ -11,6 +11,7 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 import { NOMAD_FONTS, type NomadTheme } from "@/constants/nomadTokens";
+import { useLocalization } from "@/localization";
 import type { BiometricPresentation } from "@/hooks/useBiometricPresentation";
 import { PermissionRow } from "../PermissionRow";
 import { Eyebrow, HugeHeadline, HeadlineItalic } from "../Typography";
@@ -22,6 +23,7 @@ interface Props {
 }
 
 export function SecureStep({ theme, totalSteps, biometric }: Props) {
+  const { t } = useLocalization();
   // scan-line animation
   const y = useSharedValue(-22);
   const op = useSharedValue(0);
@@ -151,21 +153,27 @@ export function SecureStep({ theme, totalSteps, biometric }: Props) {
         </View>
 
         <View style={{ marginTop: 22, alignSelf: "stretch", alignItems: "flex-start" }}>
-          <Eyebrow color={theme.sky}>Step 5 of {totalSteps - 1}</Eyebrow>
+          <Eyebrow color={theme.sky}>
+            {t("onboarding.stepOf", { step: 5, total: totalSteps - 1 })}
+          </Eyebrow>
           <HugeHeadline color={theme.inkDeep}>
-            Locked behind <HeadlineItalic>{biometric.protectedBy}</HeadlineItalic>.
+            {t("onboarding.secureHeadlinePrefix")}{" "}
+            <HeadlineItalic>{biometric.protectedBy}</HeadlineItalic>.
           </HugeHeadline>
         </View>
 
         <Text style={[styles.lede, { color: theme.inkSoft }]}>
-          Trip data, receipts and contacts encrypted on-device with {biometric.name} + {biometric.keyStoreName} keys. No cloud, no leaks, no recovery calls — just you.
+          {t("onboarding.secureLede", {
+            biometricName: biometric.name,
+            keyStoreName: biometric.keyStoreName,
+          })}
         </Text>
       </View>
 
       <View style={{ paddingHorizontal: 16, paddingTop: 18, gap: 8 }}>
-        <PermissionRow theme={theme} title={biometric.name} sub="Unlock the vault" on />
-        <PermissionRow theme={theme} title={biometric.keyStoreName} sub="Keys stay on-device" on />
-        <PermissionRow theme={theme} title="Auto-lock" sub="After 30 seconds idle" on />
+        <PermissionRow theme={theme} title={biometric.name} sub={t("onboarding.unlockVault")} on />
+        <PermissionRow theme={theme} title={biometric.keyStoreName} sub={t("onboarding.keysStayOnDevice")} on />
+        <PermissionRow theme={theme} title={t("onboarding.autoLock")} sub={t("onboarding.afterThirtySeconds")} on />
       </View>
     </View>
   );

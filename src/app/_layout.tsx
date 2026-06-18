@@ -23,6 +23,7 @@ import {
 import { authClient } from "@/lib/auth-client";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { useAuthStore } from "@/stores/authStore";
+import { LocalizationProvider } from "@/localization";
 
 const convex = new ConvexReactClient(process.env.EXPO_PUBLIC_CONVEX_URL!, {
   unsavedChangesWarning: false,
@@ -87,17 +88,19 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ConvexBetterAuthProvider client={convex} authClient={authClient}>
-        <ThemeProvider>
-          <AppStateLock />
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="index" />
-            <Stack.Screen name="(onboarding)" />
-            <Stack.Screen name="(auth)" />
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="settings" options={{ presentation: "modal" }} />
-            <Stack.Screen name="trips" options={{ presentation: "modal" }} />
-          </Stack>
-        </ThemeProvider>
+        <LocalizationProvider>
+          <ThemeProvider>
+            <AppStateLock />
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="index" />
+              <Stack.Screen name="(onboarding)" />
+              <Stack.Screen name="(auth)" />
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="settings" options={{ presentation: "modal" }} />
+              <Stack.Screen name="trips" options={{ presentation: "modal" }} />
+            </Stack>
+          </ThemeProvider>
+        </LocalizationProvider>
       </ConvexBetterAuthProvider>
     </GestureHandlerRootView>
   );

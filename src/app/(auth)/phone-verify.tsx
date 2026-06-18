@@ -16,6 +16,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { authClient } from "@/lib/auth-client";
 import { NomadButton } from "@/components/nomad/Button";
 import { Icon } from "@/components/nomad/Icon";
+import { useLocalization } from "@/localization";
 
 const OTP_LENGTH = 6;
 const RESEND_COOLDOWN = 28;
@@ -25,6 +26,7 @@ export default function PhoneVerifyScreen() {
   const router = useRouter();
   const { phone } = useLocalSearchParams<{ phone: string }>();
   const { isDark } = useThemeContext();
+  const { t, formatDuration } = useLocalization();
   const theme = getNomadTheme(isDark);
   const { isPinSet, setSignedIn, setUnlocked } = useAuthStore();
 
@@ -61,7 +63,7 @@ export default function PhoneVerifyScreen() {
         router.replace("/(tabs)");
       }
     } catch {
-      setError("Invalid code. Please try again.");
+      setError(t("auth.invalidCode"));
       setCode("");
     } finally {
       setLoading(false);
@@ -105,19 +107,24 @@ export default function PhoneVerifyScreen() {
             <Icon name="phone" size={26} color={theme.mustard} strokeWidth={2} />
           </View>
 
-          <Text style={[styles.eyebrow, { color: theme.stamp }]}>Verify your number</Text>
+          <Text style={[styles.eyebrow, { color: theme.stamp }]}>
+            {t("auth.verifyNumber")}
+          </Text>
           <Text style={[styles.headline, { color: theme.inkDeep }]}>
-            Enter the{" "}
-            <Text style={[styles.headlineItalic, { color: theme.teal }]}>6-digit</Text> code.
+            {t("auth.enterCodePrefix")}{" "}
+            <Text style={[styles.headlineItalic, { color: theme.teal }]}>
+              {t("auth.sixDigit")}
+            </Text>{" "}
+            {t("auth.code")}.
           </Text>
           <Text style={[styles.sub, { color: theme.inkSoft }]}>
-            Sent to{" "}
+            {t("auth.sentTo")}{" "}
             <Text style={[styles.subStrong, { color: theme.inkDeep }]}>
               {phone || "+44 7700 900000"}
             </Text>
             .{" "}
             <Text style={[styles.change, { color: theme.teal }]} onPress={() => router.back()}>
-              Change
+              {t("auth.change")}
             </Text>
           </Text>
 
@@ -177,17 +184,17 @@ export default function PhoneVerifyScreen() {
             onPress={() => handleVerify(code)}
             style={[styles.verifyBtn, { opacity: filled && !loading ? 1 : 0.45 }]}
           >
-            {loading ? "Verifying…" : "Verify"}
+            {loading ? t("auth.verifying") : t("auth.verify")}
           </NomadButton>
 
           <Pressable onPress={handleResend} disabled={secs > 0} style={styles.resend}>
             <Text style={[styles.resendText, { color: secs > 0 ? theme.inkMuted : theme.teal }]}>
-              {secs > 0 ? `Resend code in ${secs}s` : "Resend code"}
+              {secs > 0 ? t("auth.resendCodeIn", { duration: formatDuration(secs) }) : t("auth.resendCode")}
             </Text>
           </Pressable>
 
           <Text style={[styles.footer, { color: theme.inkMuted }]}>
-            ● End-to-end encrypted · nothing leaves your phone
+            {t("common.encryptedFooter")}
           </Text>
         </View>
       </SafeAreaView>

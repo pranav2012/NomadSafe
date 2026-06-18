@@ -2,10 +2,12 @@ import React from "react";
 import { NativeTabs } from "expo-router/unstable-native-tabs";
 import { getNomadTheme, NOMAD_FONTS } from "@/constants/nomadTokens";
 import { useThemeContext } from "@/providers/ThemeProvider";
+import { useLocalization } from "@/localization";
 
 export default function TabsLayout() {
   const { isDark } = useThemeContext();
   const theme = getNomadTheme(isDark);
+  const { t } = useLocalization();
 
   return (
     <NativeTabs
@@ -33,7 +35,7 @@ export default function TabsLayout() {
       disableTransparentOnScrollEdge
     >
       <NativeTabs.Trigger name="index">
-        <NativeTabs.Trigger.Label>Trip</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>{t("tabs.trip")}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
           sf={{ default: "safari", selected: "safari.fill" }}
           md={{ default: "explore", selected: "explore" }}
@@ -41,7 +43,7 @@ export default function TabsLayout() {
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="sos">
-        <NativeTabs.Trigger.Label>Safety</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>{t("tabs.safety")}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
           sf={{ default: "shield", selected: "shield.fill" }}
           md={{ default: "shield", selected: "shield" }}
@@ -49,7 +51,7 @@ export default function TabsLayout() {
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="sharing">
-        <NativeTabs.Trigger.Label>Share</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>{t("tabs.share")}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
           sf={{ default: "person.2", selected: "person.2.fill" }}
           md={{ default: "groups", selected: "groups" }}
@@ -57,7 +59,7 @@ export default function TabsLayout() {
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="expenses">
-        <NativeTabs.Trigger.Label>Money</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>{t("tabs.money")}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
           sf={{ default: "wallet.pass", selected: "wallet.pass.fill" }}
           md={{
@@ -68,7 +70,7 @@ export default function TabsLayout() {
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="ai">
-        <NativeTabs.Trigger.Label>AI</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>{t("tabs.ai")}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
           sf={{ default: "sparkles", selected: "sparkles" }}
           md={{ default: "auto_awesome", selected: "auto_awesome" }}

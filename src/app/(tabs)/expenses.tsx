@@ -1,23 +1,19 @@
 import React from "react";
 import { MilestoneStub } from "@/components/nomad/MilestoneStub";
+import { useLocalization } from "@/localization";
 
 // TODO(milestone): build the trip money ledger. See design screens/expenses.jsx.
 export default function ExpensesScreen() {
+  const { t, tArray } = useLocalization();
+
   return (
     <MilestoneStub
-      eyebrow="Ledger"
-      title="Trip"
-      titleAccent="money"
+      eyebrow={t("milestones.expensesEyebrow")}
+      title={t("milestones.expensesTitle")}
+      titleAccent={t("milestones.expensesAccent")}
       icon="wallet"
       designRef="screens/expenses.jsx"
-      features={[
-        "Spend chart over the last 14 days",
-        "Categories: food / stays / travel / other",
-        "Auto-logged entries parsed from email + SMS (on-device)",
-        "Scan receipt to add an expense",
-        "Group settle-up + multi-way split",
-        "Recent transactions & top merchants",
-      ]}
+      features={tArray("milestones.expensesFeatures")}
     />
   );
 }

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Platform } from "react-native";
 import * as LocalAuthentication from "expo-local-authentication";
 import { localAuth } from "@/services/localAuth";
+import { useLocalization } from "@/localization";
 
 type BiometricKind = "face" | "fingerprint" | "generic";
 
@@ -15,39 +16,42 @@ export interface BiometricPresentation {
   keyStoreName: string;
 }
 
-function getPresentation(kind: BiometricKind): BiometricPresentation {
+function getPresentation(
+  kind: BiometricKind,
+  t: ReturnType<typeof useLocalization>["t"],
+): BiometricPresentation {
   if (kind === "fingerprint") {
     return {
       kind,
-      name: Platform.OS === "ios" ? "Touch ID" : "Fingerprint",
-      matchedLabel: "Fingerprint matched",
-      setupLabel: "Set up fingerprint",
-      protectedBy: "your fingerprint",
-      vaultSummary: "Fingerprint · on-device",
-      keyStoreName: Platform.OS === "ios" ? "Secure Enclave" : "Android Keystore",
+      name: Platform.OS === "ios" ? t("biometric.touchId") : t("biometric.fingerprint"),
+      matchedLabel: t("biometric.fingerprintMatched"),
+      setupLabel: t("biometric.setupFingerprint"),
+      protectedBy: t("biometric.yourFingerprint"),
+      vaultSummary: t("biometric.fingerprintVaultSummary"),
+      keyStoreName: Platform.OS === "ios" ? t("biometric.secureEnclave") : t("biometric.androidKeystore"),
     };
   }
 
   if (kind === "face") {
     return {
       kind,
-      name: "Face ID",
-      matchedLabel: "Face ID matched",
-      setupLabel: "Set up Face ID",
-      protectedBy: "your face",
-      vaultSummary: "Face ID · on-device",
-      keyStoreName: "Secure Enclave",
+      name: t("biometric.faceId"),
+      matchedLabel: t("biometric.faceIdMatched"),
+      setupLabel: t("biometric.setupFaceId"),
+      protectedBy: t("biometric.yourFace"),
+      vaultSummary: t("biometric.faceIdVaultSummary"),
+      keyStoreName: t("biometric.secureEnclave"),
     };
   }
 
   return {
     kind,
-    name: "Biometric unlock",
-    matchedLabel: "Biometric matched",
-    setupLabel: "Set up biometric unlock",
-    protectedBy: "your biometrics",
-    vaultSummary: "Biometric · on-device",
-    keyStoreName: Platform.OS === "ios" ? "Secure Enclave" : "Android Keystore",
+    name: t("biometric.biometricUnlock"),
+    matchedLabel: t("biometric.biometricMatched"),
+    setupLabel: t("biometric.setupBiometric"),
+    protectedBy: t("biometric.yourBiometrics"),
+    vaultSummary: t("biometric.biometricVaultSummary"),
+    keyStoreName: Platform.OS === "ios" ? t("biometric.secureEnclave") : t("biometric.androidKeystore"),
   };
 }
 
@@ -59,8 +63,9 @@ function getKind(types: LocalAuthentication.AuthenticationType[]): BiometricKind
 }
 
 export function useBiometricPresentation() {
+  const { t, locale } = useLocalization();
   const [presentation, setPresentation] = useState(() =>
-    getPresentation(Platform.OS === "android" ? "fingerprint" : "face"),
+    getPresentation(Platform.OS === "android" ? "fingerprint" : "face", t),
   );
 
   useEffect(() => {
@@ -68,16 +73,16 @@ export function useBiometricPresentation() {
 
     localAuth.checkBiometricAvailability()
       .then(({ types }) => {
-        if (mounted) setPresentation(getPresentation(getKind(types)));
+        if (mounted) setPresentation(getPresentation(getKind(types), t));
       })
       .catch(() => {
-        if (mounted) setPresentation(getPresentation(Platform.OS === "android" ? "fingerprint" : "generic"));
+        if (mounted) setPresentation(getPresentation(Platform.OS === "android" ? "fingerprint" : "generic", t));
       });
 
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [locale, t]);
 
   return presentation;
 }

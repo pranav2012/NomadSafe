@@ -4,6 +4,7 @@ import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NOMAD_FONTS, getNomadTheme } from "@/constants/nomadTokens";
 import { useThemeContext } from "@/providers/ThemeProvider";
+import { useLocalization } from "@/localization";
 import { Icon, type IconName } from "./Icon";
 import { Eyebrow, HugeHeadline, HeadlineItalic } from "./Typography";
 
@@ -33,6 +34,7 @@ export function MilestoneStub({
   features,
 }: Props) {
   const { isDark } = useThemeContext();
+  const { t } = useLocalization();
   const theme = getNomadTheme(isDark);
 
   return (
@@ -54,11 +56,15 @@ export function MilestoneStub({
 
           <View style={[styles.badge, { backgroundColor: theme.mustardSoft }]}>
             <Icon name="clock" size={13} color={theme.mustard} strokeWidth={2} />
-            <Text style={[styles.badgeText, { color: theme.mustard }]}>Later milestone</Text>
+            <Text style={[styles.badgeText, { color: theme.mustard }]}>
+              {t("common.laterMilestone")}
+            </Text>
           </View>
 
           <View style={styles.listLabelRow}>
-            <Text style={[styles.listLabel, { color: theme.inkMuted }]}>Planned</Text>
+            <Text style={[styles.listLabel, { color: theme.inkMuted }]}>
+              {t("common.planned")}
+            </Text>
             <View style={[styles.hairline, { backgroundColor: theme.hairline }]} />
           </View>
 
@@ -75,7 +81,7 @@ export function MilestoneStub({
           </View>
 
           <Text style={[styles.ref, { color: theme.inkMuted }]}>
-            Design reference · {designRef}
+            {t("common.designReference", { designRef })}
           </Text>
         </ScrollView>
       </SafeAreaView>
