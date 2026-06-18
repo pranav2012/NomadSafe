@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Platform } from "react-native";
 import * as LocalAuthentication from "expo-local-authentication";
-import { localAuth } from "@/services/localAuth";
+import { localAuth } from "@/features/auth";
 import { useLocalization } from "@/localization";
 
 type BiometricKind = "face" | "fingerprint" | "generic";

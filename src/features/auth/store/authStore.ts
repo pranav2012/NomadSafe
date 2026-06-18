@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import { mmkvStateStorage } from "./storage";
+import { mmkvStateStorage } from "@/stores/storage";
 
 interface AuthUser {
   id: string;

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useMemo } from "react";
 import { useColorScheme } from "react-native";
-import { useSettingsStore } from "@/stores/settingsStore";
+import { useSettingsStore } from "@/features/settings";
 import {
   lightColors,
   darkColors,

@@ -2,15 +2,15 @@ import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import Animated, { ZoomIn } from "react-native-reanimated";
 import { NOMAD_FONTS, type NomadTheme } from "@/constants/nomadTokens";
-import type { BiometricPresentation } from "@/hooks/useBiometricPresentation";
+import type { BiometricPresentation } from "@/features/auth";
 import { useLocalization } from "@/localization";
-import { Stamp } from "../Stamp";
-import { Icon, type IconName } from "../Icon";
+import { Stamp } from "@/components/nomad/Stamp";
+import { Icon, type IconName } from "@/components/nomad/Icon";
 import {
   Eyebrow,
   HugeHeadline,
   HeadlineItalic,
-} from "../Typography";
+} from "@/components/nomad/Typography";
 
 interface Props {
   theme: NomadTheme;

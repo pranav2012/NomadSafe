@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useMemo } from "react";
 import * as Localization from "expo-localization";
 import { I18nManager } from "react-native";
-import { useSettingsStore } from "@/stores/settingsStore";
+import { useSettingsStore } from "@/features/settings";
 import { getEffectiveCurrency } from "@/utils/currency";
 import { LANGUAGE_OPTIONS, normalizeLocale, type SupportedLocale } from "./languages";
 import { translations, type TranslationResource } from "./translations.generated";

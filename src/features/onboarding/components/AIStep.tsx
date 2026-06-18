@@ -15,12 +15,12 @@ import Animated, {
 } from "react-native-reanimated";
 import { NOMAD_FONTS, type NomadTheme } from "@/constants/nomadTokens";
 import { useLocalization } from "@/localization";
-import { Icon, type IconName } from "../Icon";
+import { Icon, type IconName } from "@/components/nomad/Icon";
 import {
   Eyebrow,
   HugeHeadline,
   HeadlineItalic,
-} from "../Typography";
+} from "@/components/nomad/Typography";
 
 interface Props {
   theme: NomadTheme;

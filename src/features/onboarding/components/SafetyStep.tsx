@@ -4,16 +4,16 @@ import Svg, { Line, Path, Polygon } from "react-native-svg";
 import { LinearGradient } from "expo-linear-gradient";
 import { NOMAD_FONTS, type NomadTheme } from "@/constants/nomadTokens";
 import { useLocalization } from "@/localization";
-import { NomadCard } from "../Card";
-import { TravelMap } from "../TravelMap";
-import { Icon } from "../Icon";
-import { PermissionRow } from "../PermissionRow";
+import { NomadCard } from "@/components/nomad/Card";
+import { TravelMap } from "@/components/nomad/TravelMap";
+import { Icon } from "@/components/nomad/Icon";
+import { PermissionRow } from "@/components/nomad/PermissionRow";
 import {
   Eyebrow,
   HugeHeadline,
   HeadlineItalic,
   SectionLabel,
-} from "../Typography";
+} from "@/components/nomad/Typography";
 
 interface Props {
   theme: NomadTheme;

@@ -12,9 +12,9 @@ import Animated, {
 } from "react-native-reanimated";
 import { NOMAD_FONTS, type NomadTheme } from "@/constants/nomadTokens";
 import { useLocalization } from "@/localization";
-import type { BiometricPresentation } from "@/hooks/useBiometricPresentation";
-import { PermissionRow } from "../PermissionRow";
-import { Eyebrow, HugeHeadline, HeadlineItalic } from "../Typography";
+import type { BiometricPresentation } from "@/features/auth";
+import { PermissionRow } from "@/components/nomad/PermissionRow";
+import { Eyebrow, HugeHeadline, HeadlineItalic } from "@/components/nomad/Typography";
 
 interface Props {
   theme: NomadTheme;

@@ -1,6 +1,6 @@
 import { Redirect } from "expo-router";
-import { useSettingsStore } from "@/stores/settingsStore";
-import { useAuthStore } from "@/stores/authStore";
+import { useSettingsStore } from "@/features/settings";
+import { useAuthStore } from "@/features/auth";
 
 export default function Index() {
   const onboardingCompleted = useSettingsStore((s) => s.onboardingCompleted);

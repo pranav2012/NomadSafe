@@ -1,5 +1,4 @@
-import { useAuthStore } from "@/stores/authStore";
-import { authClient } from "@/lib/auth-client";
+import { authClient, useAuthStore } from "@/features/auth";
 
 /**
  * Combined hook for account auth (Better Auth session) and local lock state.

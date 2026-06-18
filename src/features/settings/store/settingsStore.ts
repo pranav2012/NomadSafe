@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import { mmkvStateStorage } from "./storage";
+import { mmkvStateStorage } from "@/stores/storage";
 import type { SupportedLocale } from "@/localization/languages";
 import { normalizeCurrencyCode } from "@/utils/currency";
 

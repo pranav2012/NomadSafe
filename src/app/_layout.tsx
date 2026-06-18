@@ -20,9 +20,8 @@ import {
   GeistMono_400Regular,
   GeistMono_500Medium,
 } from "@expo-google-fonts/geist-mono";
-import { authClient } from "@/lib/auth-client";
+import { authClient, useAuthStore } from "@/features/auth";
 import { ThemeProvider } from "@/providers/ThemeProvider";
-import { useAuthStore } from "@/stores/authStore";
 import { LocalizationProvider } from "@/localization";
 
 const convex = new ConvexReactClient(process.env.EXPO_PUBLIC_CONVEX_URL!, {

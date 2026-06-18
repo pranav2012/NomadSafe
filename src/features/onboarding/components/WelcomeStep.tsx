@@ -9,9 +9,9 @@ import Animated, {
 } from "react-native-reanimated";
 import { NOMAD_FONTS, type NomadTheme } from "@/constants/nomadTokens";
 import { useLocalization } from "@/localization";
-import { Stamp } from "../Stamp";
-import { Icon } from "../Icon";
-import { Eyebrow, HugeHeadline, HeadlineItalic } from "../Typography";
+import { Stamp } from "@/components/nomad/Stamp";
+import { Icon } from "@/components/nomad/Icon";
+import { Eyebrow, HugeHeadline, HeadlineItalic } from "@/components/nomad/Typography";
 
 interface Props {
   theme: NomadTheme;
