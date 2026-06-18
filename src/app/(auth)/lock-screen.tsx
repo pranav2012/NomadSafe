@@ -22,6 +22,7 @@ import { secureStorage } from "@/services/secureStorage";
 import { localAuth } from "@/services/localAuth";
 import { lightImpact, errorNotification } from "@/utils/haptics";
 import { Icon } from "@/components/nomad/Icon";
+import { useBiometricPresentation } from "@/hooks/useBiometricPresentation";
 
 const PIN_LENGTH = 6;
 const MAX_ATTEMPTS = 5;
@@ -36,9 +37,10 @@ export default function LockScreen() {
   const { isDark } = useThemeContext();
   const theme = getNomadTheme(isDark);
   const { user, biometricEnabled, setUnlocked, signOut } = useAuthStore();
+  const biometric = useBiometricPresentation();
 
-  const [mode, setMode] = useState<"faceid" | "passcode">(
-    biometricEnabled ? "faceid" : "passcode",
+  const [mode, setMode] = useState<"biometric" | "passcode">(
+    biometricEnabled ? "biometric" : "passcode",
   );
   const [phase, setPhase] = useState<Phase>("idle");
 
@@ -56,7 +58,7 @@ export default function LockScreen() {
 
   const accent = phase === "success" ? theme.teal : theme.mustard;
   const label =
-    phase === "idle" ? "Tap to unlock" : phase === "scanning" ? "Scanning…" : "Face ID matched";
+    phase === "idle" ? "Tap to unlock" : phase === "scanning" ? "Scanning..." : biometric.matchedLabel;
 
   const scanStyle = useAnimatedStyle(() => ({ transform: [{ translateY: scanY.value }] }));
   const successStyle = useAnimatedStyle(() => ({
@@ -95,7 +97,7 @@ export default function LockScreen() {
   }, [phase, scanY, successScale, handleUnlock]);
 
   useEffect(() => {
-    if (mode !== "faceid" || !biometricEnabled) return;
+    if (mode !== "biometric" || !biometricEnabled) return;
     const t = setTimeout(runScan, 650);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -179,7 +181,7 @@ export default function LockScreen() {
           <Text style={[styles.locked, { color: theme.inkMuted }]}>VAULT LOCKED</Text>
         </View>
 
-        {mode === "faceid" ? (
+        {mode === "biometric" ? (
           <View style={styles.faceWrap}>
             <Pressable onPress={runScan} disabled={phase !== "idle"}>
               <LinearGradient
@@ -199,27 +201,7 @@ export default function LockScreen() {
                   />
                 ))}
 
-                <Svg width="100%" height="100%" viewBox="0 0 168 168" style={StyleSheet.absoluteFill}>
-                  <Circle cx="66" cy="74" r="3.4" fill={theme.paperSoft} />
-                  <Circle cx="102" cy="74" r="3.4" fill={theme.paperSoft} />
-                  <Path
-                    d="M66,108 Q84,118 102,108"
-                    fill="none"
-                    stroke={theme.paperSoft}
-                    strokeWidth="2.8"
-                    strokeLinecap="round"
-                  />
-                  <Line
-                    x1="84"
-                    y1="80"
-                    x2="84"
-                    y2="96"
-                    stroke={theme.paperSoft}
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    opacity="0.6"
-                  />
-                </Svg>
+                <BiometricGlyph type={biometric.kind} color={theme.paperSoft} />
 
                 {phase === "scanning" && (
                   <Animated.View
@@ -299,13 +281,13 @@ export default function LockScreen() {
           {biometricEnabled && (
             <Pressable
               onPress={() => {
-                setMode((m) => (m === "faceid" ? "passcode" : "faceid"));
+                setMode((m) => (m === "biometric" ? "passcode" : "biometric"));
                 setError("");
                 setPin("");
               }}
             >
               <Text style={[styles.footerAction, { color: theme.inkSoft }]}>
-                {mode === "faceid" ? "Use passcode instead" : "Use Face ID"}
+                {mode === "biometric" ? "Use passcode instead" : `Use ${biometric.name}`}
               </Text>
             </Pressable>
           )}
@@ -315,6 +297,45 @@ export default function LockScreen() {
         </View>
       </SafeAreaView>
     </View>
+  );
+}
+
+function BiometricGlyph({ type, color }: { type: "face" | "fingerprint" | "generic"; color: string }) {
+  if (type === "fingerprint") {
+    return (
+      <Svg width="100%" height="100%" viewBox="0 0 168 168" style={StyleSheet.absoluteFill}>
+        <Path d="M56 82c0-16 12-28 28-28s28 12 28 28" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" />
+        <Path d="M48 78c2-22 18-38 36-38 20 0 36 16 36 38" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" opacity="0.82" />
+        <Path d="M64 88c0-12 8-20 20-20s20 8 20 20c0 22-8 34-21 44" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" />
+        <Path d="M80 86c0-4 2-6 4-6s4 2 4 6c0 20-8 31-22 38" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" />
+        <Path d="M104 112c4-8 6-17 6-26" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" opacity="0.82" />
+        <Path d="M60 108c-3-6-4-13-4-22" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" opacity="0.82" />
+      </Svg>
+    );
+  }
+
+  return (
+    <Svg width="100%" height="100%" viewBox="0 0 168 168" style={StyleSheet.absoluteFill}>
+      <Circle cx="66" cy="74" r="3.4" fill={color} />
+      <Circle cx="102" cy="74" r="3.4" fill={color} />
+      <Path
+        d="M66,108 Q84,118 102,108"
+        fill="none"
+        stroke={color}
+        strokeWidth="2.8"
+        strokeLinecap="round"
+      />
+      <Line
+        x1="84"
+        y1="80"
+        x2="84"
+        y2="96"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        opacity="0.6"
+      />
+    </Svg>
   );
 }
 
@@ -390,7 +411,15 @@ const styles = StyleSheet.create({
     height: 2.5,
     borderRadius: 2,
   },
-  successWrap: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center" },
+  successWrap: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   successCircle: {
     width: 56,
     height: 56,

@@ -11,15 +11,17 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 import { NOMAD_FONTS, type NomadTheme } from "@/constants/nomadTokens";
+import type { BiometricPresentation } from "@/hooks/useBiometricPresentation";
 import { PermissionRow } from "../PermissionRow";
 import { Eyebrow, HugeHeadline, HeadlineItalic } from "../Typography";
 
 interface Props {
   theme: NomadTheme;
   totalSteps: number;
+  biometric: BiometricPresentation;
 }
 
-export function SecureStep({ theme, totalSteps }: Props) {
+export function SecureStep({ theme, totalSteps, biometric }: Props) {
   // scan-line animation
   const y = useSharedValue(-22);
   const op = useSharedValue(0);
@@ -60,7 +62,6 @@ export function SecureStep({ theme, totalSteps }: Props) {
   return (
     <View style={{ flex: 1 }}>
       <View style={{ paddingHorizontal: 26, paddingTop: 20, alignItems: "center" }}>
-        {/* Face ID glyph */}
         <View style={styles.faceBox}>
           <LinearGradient
             colors={[theme.inkDeep, "#2A332E"]}
@@ -123,28 +124,7 @@ export function SecureStep({ theme, totalSteps }: Props) {
             ]}
           />
 
-          {/* Face icon */}
-          <Svg width={140} height={140} viewBox="0 0 140 140" style={StyleSheet.absoluteFill}>
-            <Circle cx="56" cy="62" r="3" fill={theme.paperSoft} />
-            <Circle cx="84" cy="62" r="3" fill={theme.paperSoft} />
-            <Path
-              d="M56,90 Q70,98 84,90"
-              fill="none"
-              stroke={theme.paperSoft}
-              strokeWidth="2.5"
-              strokeLinecap="round"
-            />
-            <Line
-              x1="70"
-              y1="66"
-              x2="70"
-              y2="80"
-              stroke={theme.paperSoft}
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              opacity="0.6"
-            />
-          </Svg>
+          <BiometricGlyph type={biometric.kind} color={theme.paperSoft} />
 
           {/* Scan line */}
           <Animated.View
@@ -173,21 +153,60 @@ export function SecureStep({ theme, totalSteps }: Props) {
         <View style={{ marginTop: 22, alignSelf: "stretch", alignItems: "flex-start" }}>
           <Eyebrow color={theme.sky}>Step 5 of {totalSteps - 1}</Eyebrow>
           <HugeHeadline color={theme.inkDeep}>
-            Locked behind <HeadlineItalic>your face</HeadlineItalic>.
+            Locked behind <HeadlineItalic>{biometric.protectedBy}</HeadlineItalic>.
           </HugeHeadline>
         </View>
 
         <Text style={[styles.lede, { color: theme.inkSoft }]}>
-          Trip data, receipts and contacts encrypted on-device with Face ID + Secure Enclave keys. No cloud, no leaks, no recovery calls — just you.
+          Trip data, receipts and contacts encrypted on-device with {biometric.name} + {biometric.keyStoreName} keys. No cloud, no leaks, no recovery calls — just you.
         </Text>
       </View>
 
       <View style={{ paddingHorizontal: 16, paddingTop: 18, gap: 8 }}>
-        <PermissionRow theme={theme} title="Face ID" sub="Unlock the vault" on />
-        <PermissionRow theme={theme} title="Secure Enclave" sub="Keys live on-chip — not in iCloud" on />
+        <PermissionRow theme={theme} title={biometric.name} sub="Unlock the vault" on />
+        <PermissionRow theme={theme} title={biometric.keyStoreName} sub="Keys stay on-device" on />
         <PermissionRow theme={theme} title="Auto-lock" sub="After 30 seconds idle" on />
       </View>
     </View>
+  );
+}
+
+function BiometricGlyph({ type, color }: { type: "face" | "fingerprint" | "generic"; color: string }) {
+  if (type === "fingerprint") {
+    return (
+      <Svg width={140} height={140} viewBox="0 0 140 140" style={StyleSheet.absoluteFill}>
+        <Path d="M47 68c0-13 10-23 23-23s23 10 23 23" fill="none" stroke={color} strokeWidth="2.8" strokeLinecap="round" />
+        <Path d="M40 65c2-18 15-31 30-31 17 0 30 13 30 31" fill="none" stroke={color} strokeWidth="2.8" strokeLinecap="round" opacity="0.82" />
+        <Path d="M53 73c0-10 7-17 17-17s17 7 17 17c0 18-7 28-18 36" fill="none" stroke={color} strokeWidth="2.8" strokeLinecap="round" />
+        <Path d="M67 72c0-3 1.5-5 3-5s3 2 3 5c0 17-7 26-18 32" fill="none" stroke={color} strokeWidth="2.8" strokeLinecap="round" />
+        <Path d="M87 94c3-7 5-14 5-22" fill="none" stroke={color} strokeWidth="2.8" strokeLinecap="round" opacity="0.82" />
+        <Path d="M50 91c-2-5-3-11-3-18" fill="none" stroke={color} strokeWidth="2.8" strokeLinecap="round" opacity="0.82" />
+      </Svg>
+    );
+  }
+
+  return (
+    <Svg width={140} height={140} viewBox="0 0 140 140" style={StyleSheet.absoluteFill}>
+      <Circle cx="56" cy="62" r="3" fill={color} />
+      <Circle cx="84" cy="62" r="3" fill={color} />
+      <Path
+        d="M56,90 Q70,98 84,90"
+        fill="none"
+        stroke={color}
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      />
+      <Line
+        x1="70"
+        y1="66"
+        x2="70"
+        y2="80"
+        stroke={color}
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        opacity="0.6"
+      />
+    </Svg>
   );
 }
 

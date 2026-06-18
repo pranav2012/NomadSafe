@@ -26,13 +26,14 @@ import { LedgerStep } from "@/components/nomad/onboarding/LedgerStep";
 import { AIStep } from "@/components/nomad/onboarding/AIStep";
 import { SecureStep } from "@/components/nomad/onboarding/SecureStep";
 import { ReadyStep } from "@/components/nomad/onboarding/ReadyStep";
+import { useBiometricPresentation } from "@/hooks/useBiometricPresentation";
 
-const STEPS = [
+const STEP_IDS = [
   { id: "welcome", label: "Welcome" },
   { id: "safety", label: "Safety net" },
   { id: "ledger", label: "Ledger" },
   { id: "ai", label: "On-device AI" },
-  { id: "secure", label: "Face ID" },
+  { id: "secure", label: "Secure" },
   { id: "ready", label: "Ready" },
 ] as const;
 
@@ -41,13 +42,17 @@ export default function OnboardingWelcomeScreen() {
   const setOnboardingCompleted = useSettingsStore((s) => s.setOnboardingCompleted);
   const { isDark } = useThemeContext();
   const theme = getNomadTheme(isDark);
+  const biometric = useBiometricPresentation();
+  const steps = STEP_IDS.map((item) =>
+    item.id === "secure" ? { ...item, label: biometric.name } : item,
+  );
 
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState<1 | -1>(1);
   const [selectedContacts, setSelectedContacts] = useState<number[]>([0, 1]);
   const scrollRef = useRef<ScrollView>(null);
 
-  const last = step === STEPS.length - 1;
+  const last = step === steps.length - 1;
 
   const onDone = () => {
     setOnboardingCompleted(true);
@@ -82,19 +87,25 @@ export default function OnboardingWelcomeScreen() {
           <SafetyStep
             theme={theme}
             dark={isDark}
-            totalSteps={STEPS.length}
+            totalSteps={steps.length}
             selectedContacts={selectedContacts}
             setSelectedContacts={setSelectedContacts}
           />
         );
       case 2:
-        return <LedgerStep theme={theme} totalSteps={STEPS.length} />;
+        return <LedgerStep theme={theme} totalSteps={steps.length} />;
       case 3:
-        return <AIStep theme={theme} totalSteps={STEPS.length} />;
+        return <AIStep theme={theme} totalSteps={steps.length} />;
       case 4:
-        return <SecureStep theme={theme} totalSteps={STEPS.length} />;
+        return <SecureStep theme={theme} totalSteps={steps.length} biometric={biometric} />;
       default:
-        return <ReadyStep theme={theme} selectedContactsCount={selectedContacts.length} />;
+        return (
+          <ReadyStep
+            theme={theme}
+            selectedContactsCount={selectedContacts.length}
+            biometric={biometric}
+          />
+        );
     }
   };
 
@@ -108,7 +119,7 @@ export default function OnboardingWelcomeScreen() {
           : step === 3
             ? "Download model"
             : step === 4
-              ? "Set up Face ID"
+              ? biometric.setupLabel
               : "Start my trip";
 
   return (
@@ -133,7 +144,7 @@ export default function OnboardingWelcomeScreen() {
           </Pressable>
 
           <View style={styles.progressRow}>
-            {STEPS.map((_, i) => (
+            {steps.map((_, i) => (
               <View
                 key={i}
                 style={[

@@ -17,6 +17,7 @@ import { secureStorage } from "@/services/secureStorage";
 import { localAuth } from "@/services/localAuth";
 import { lightImpact, errorNotification } from "@/utils/haptics";
 import { Icon } from "@/components/nomad/Icon";
+import { useBiometricPresentation } from "@/hooks/useBiometricPresentation";
 
 const PIN_LENGTH = 6;
 const NUMPAD = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "delete"];
@@ -26,6 +27,7 @@ export default function SetupPinScreen() {
   const { isDark } = useThemeContext();
   const theme = getNomadTheme(isDark);
   const { setPinSet, setBiometricEnabled, setUnlocked } = useAuthStore();
+  const biometric = useBiometricPresentation();
 
   const [step, setStep] = useState<"create" | "confirm">("create");
   const [pin, setPin] = useState("");
@@ -119,7 +121,7 @@ export default function SetupPinScreen() {
           </Text>
           <Text style={[styles.sub, { color: theme.inkSoft }]}>
             {step === "create"
-              ? "Unlocks the app when Face ID isn't available."
+              ? `Unlocks the app when ${biometric.name} isn't available.`
               : "Enter the same PIN once more to confirm."}
           </Text>
 

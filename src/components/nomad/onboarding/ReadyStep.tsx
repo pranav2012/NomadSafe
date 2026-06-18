@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import Animated, { ZoomIn } from "react-native-reanimated";
 import { NOMAD_FONTS, type NomadTheme } from "@/constants/nomadTokens";
+import type { BiometricPresentation } from "@/hooks/useBiometricPresentation";
 import { Stamp } from "../Stamp";
 import { Icon, type IconName } from "../Icon";
 import {
@@ -13,9 +14,10 @@ import {
 interface Props {
   theme: NomadTheme;
   selectedContactsCount: number;
+  biometric: BiometricPresentation;
 }
 
-export function ReadyStep({ theme, selectedContactsCount }: Props) {
+export function ReadyStep({ theme, selectedContactsCount, biometric }: Props) {
   const rows: { i: IconName; l: string; v: string; c: string }[] = [
     { i: "mapPin", l: "Location", v: "Always · adaptive", c: theme.teal },
     {
@@ -25,7 +27,7 @@ export function ReadyStep({ theme, selectedContactsCount }: Props) {
       c: theme.mustard,
     },
     { i: "wifi", l: "Offline fallback", v: "SMS + 1.2 GB maps", c: theme.stamp },
-    { i: "lock", l: "Vault", v: "Face ID · on-device", c: theme.sky },
+    { i: "lock", l: "Vault", v: biometric.vaultSummary, c: theme.sky },
   ];
 
   return (
@@ -46,7 +48,7 @@ export function ReadyStep({ theme, selectedContactsCount }: Props) {
         </View>
 
         <Text style={[styles.lede, { color: theme.inkSoft }]}>
-          {"Everything's encrypted, offline-ready, and protected by your face. Have a safe one."}
+          {`Everything's encrypted, offline-ready, and protected by ${biometric.protectedBy}. Have a safe one.`}
         </Text>
       </View>
 
