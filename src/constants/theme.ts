@@ -67,7 +67,7 @@ export const darkColors = {
   tabBarBorder: palette.gray[700],
 } as const;
 
-export type ThemeColors = typeof lightColors;
+export type ThemeColors = typeof lightColors | typeof darkColors;
 
 export const typography = {
   sizes: {
@@ -132,3 +132,155 @@ export const shadows = {
     elevation: 5,
   },
 } as const;
+
+export const nomadLightColors = {
+  paper: "#F6EEE0",
+  paperDeep: "#EDE4D3",
+  paperSoft: "#FBF6EC",
+  inkDeep: "#1A1612",
+  ink: "#2B2620",
+  inkSoft: "#5C544A",
+  inkMuted: "#8A8175",
+  hairline: "rgba(26,22,18,0.09)",
+
+  teal: "#2B6C5F",
+  tealSoft: "#E0ECE8",
+  stamp: "#C6432A",
+  stampSoft: "#F5DDD6",
+  mustard: "#D9A441",
+  mustardSoft: "#F6E8C8",
+  sky: "#6B8DB3",
+  skySoft: "#E2EAF3",
+  cream: "#F0D89C",
+
+  inverse: "#FFFFFF",
+  shadow: "#1A1612",
+  scrim: "rgba(26,22,18,0.88)",
+  whiteOverlay: "rgba(255,255,255,0.08)",
+  whiteOverlayStrong: "rgba(255,255,255,0.22)",
+  whiteBorder: "rgba(255,255,255,0.12)",
+  whiteText: "rgba(255,255,255,0.9)",
+  whiteTextMuted: "rgba(255,255,255,0.65)",
+  black: "#000000",
+} as const;
+
+export const nomadDarkColors = {
+  paper: "#171C20",
+  paperDeep: "#0F1519",
+  paperSoft: "#1F2529",
+  inkDeep: "#F0E6D6",
+  ink: "#E4D9C7",
+  inkSoft: "#9A9287",
+  inkMuted: "#666056",
+  hairline: "rgba(240,230,214,0.1)",
+
+  teal: "#4FA693",
+  tealSoft: "rgba(79,166,147,0.15)",
+  stamp: "#E06044",
+  stampSoft: "rgba(224,96,68,0.16)",
+  mustard: "#E5B860",
+  mustardSoft: "rgba(229,184,96,0.16)",
+  sky: "#8FAAD0",
+  skySoft: "rgba(143,170,208,0.16)",
+  cream: "#C9A764",
+
+  inverse: "#FFFFFF",
+  shadow: "#1A1612",
+  scrim: "rgba(26,22,18,0.88)",
+  whiteOverlay: "rgba(255,255,255,0.08)",
+  whiteOverlayStrong: "rgba(255,255,255,0.22)",
+  whiteBorder: "rgba(255,255,255,0.12)",
+  whiteText: "rgba(255,255,255,0.9)",
+  whiteTextMuted: "rgba(255,255,255,0.65)",
+  black: "#000000",
+} as const;
+
+export type NomadColors = typeof nomadLightColors;
+
+export const nomadFonts = {
+  display: "Fraunces_500Medium",
+  displayItalic: "Fraunces_500Medium_Italic",
+  displayBold: "Fraunces_600SemiBold",
+  ui: "Geist_400Regular",
+  uiMedium: "Geist_500Medium",
+  uiSemi: "Geist_600SemiBold",
+  uiBold: "Geist_700Bold",
+  mono: "GeistMono_400Regular",
+  monoMedium: "GeistMono_500Medium",
+} as const;
+
+export const nomadTypography = {
+  eyebrow: { size: 10.5, weight: "700" as const, letterSpacing: 1.8 },
+  headline: { size: 34, weight: "500" as const, lineHeight: 34 * 1.04 },
+  body: { size: 14, lineHeight: 14 * 1.5 },
+  caption: { size: 11.5 },
+  monoLabel: { size: 11, letterSpacing: 0.8 },
+  button: { size: 15, letterSpacing: 0 },
+} as const;
+
+export const nomadSpacing = {
+  xxs: 3,
+  xs: 6,
+  sm: 8,
+  md: 10,
+  lg: 14,
+  xl: 18,
+  "2xl": 24,
+  "3xl": 32,
+} as const;
+
+export const nomadRadii = {
+  sm: 7,
+  md: 10,
+  lg: 14,
+  xl: 18,
+  "2xl": 26,
+  full: 999,
+} as const;
+
+export const nomadShadows = {
+  card: {
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 1 },
+  },
+  mark: {
+    shadowOpacity: 0.22,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 8,
+  },
+} as const;
+
+export const nomadComponents = {
+  button: {
+    borderRadius: nomadRadii.lg,
+    paddingVertical: 15,
+    paddingHorizontal: nomadSpacing.xl,
+  },
+  card: {
+    borderRadius: nomadRadii.xl,
+    padding: nomadSpacing.xl,
+  },
+  iconMark: {
+    borderRadius: nomadRadii.xl,
+  },
+} as const;
+
+export function getNomadColors(dark: boolean): NomadColors {
+  return (dark ? nomadDarkColors : nomadLightColors) as NomadColors;
+}
+
+export function createNomadTheme(dark: boolean) {
+  return {
+    colors: getNomadColors(dark),
+    fonts: nomadFonts,
+    typography: nomadTypography,
+    spacing: nomadSpacing,
+    radii: nomadRadii,
+    shadows: nomadShadows,
+    components: nomadComponents,
+  };
+}
+
+export type NomadTheme = ReturnType<typeof createNomadTheme>;

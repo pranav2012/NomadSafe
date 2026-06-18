@@ -1,6 +1,7 @@
 import React from "react";
 import { Text, View, StyleSheet } from "react-native";
 import { NOMAD_FONTS, type NomadTheme } from "@/constants/nomadTokens";
+import { useTheme } from "@/hooks/useTheme";
 
 export function Eyebrow({
   color,
@@ -9,15 +10,17 @@ export function Eyebrow({
   color: string;
   children: React.ReactNode;
 }) {
+  const { nomad } = useTheme();
+
   return (
     <Text
       style={{
-        fontSize: 10.5,
-        letterSpacing: 1.8,
-        fontWeight: "700",
+        fontSize: nomad.typography.eyebrow.size,
+        letterSpacing: nomad.typography.eyebrow.letterSpacing,
+        fontWeight: nomad.typography.eyebrow.weight,
         color,
         textTransform: "uppercase",
-        fontFamily: NOMAD_FONTS.uiBold,
+        fontFamily: nomad.fonts.uiBold,
       }}
     >
       {children}
@@ -32,16 +35,19 @@ export function HugeHeadline({
   children: React.ReactNode;
   color: string;
 }) {
+  const { nomad } = useTheme();
+  const size = 40;
+
   return (
     <Text
       style={{
-        fontFamily: NOMAD_FONTS.display,
-        fontWeight: "500",
-        fontSize: 40,
-        lineHeight: 40 * 1.02,
+        fontFamily: nomad.fonts.display,
+        fontWeight: nomad.typography.headline.weight,
+        fontSize: size,
+        lineHeight: size * 1.02,
         color,
         marginTop: 6,
-        letterSpacing: -0.7,
+        letterSpacing: 0,
       }}
     >
       {children}
@@ -56,10 +62,12 @@ export function HeadlineItalic({
   children: React.ReactNode;
   color?: string;
 }) {
+  const { nomad } = useTheme();
+
   return (
     <Text
       style={{
-        fontFamily: NOMAD_FONTS.displayItalic,
+        fontFamily: nomad.fonts.displayItalic,
         fontStyle: "italic",
         color,
       }}
@@ -73,13 +81,16 @@ export function SectionLabel({
   step,
   color,
   title,
-  theme,
+  theme: themeProp,
 }: {
   step: number;
   color: string;
   title: string;
-  theme: NomadTheme;
+  theme?: NomadTheme;
 }) {
+  const { nomad } = useTheme();
+  const theme = themeProp ?? nomad.colors;
+
   return (
     <View style={styles.sectionRow}>
       <Text

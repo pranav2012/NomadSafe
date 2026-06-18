@@ -2,15 +2,19 @@ import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { Icon } from "./Icon";
 import { NOMAD_FONTS, type NomadTheme } from "@/constants/nomadTokens";
+import { useTheme } from "@/hooks/useTheme";
 
 interface PermissionRowProps {
-  theme: NomadTheme;
+  theme?: NomadTheme;
   title: string;
   sub: string;
   on: boolean;
 }
 
-export function PermissionRow({ theme, title, sub, on }: PermissionRowProps) {
+export function PermissionRow({ theme: themeProp, title, sub, on }: PermissionRowProps) {
+  const { nomad } = useTheme();
+  const theme = themeProp ?? nomad.colors;
+
   return (
     <View
       style={[
@@ -44,7 +48,16 @@ export function PermissionRow({ theme, title, sub, on }: PermissionRowProps) {
           { backgroundColor: on ? theme.teal : theme.hairline },
         ]}
       >
-        <View style={[styles.knob, { left: on ? 20 : 2 }]} />
+        <View
+          style={[
+            styles.knob,
+            {
+              left: on ? 20 : 2,
+              backgroundColor: theme.inverse,
+              shadowColor: theme.black,
+            },
+          ]}
+        />
       </View>
     </View>
   );
@@ -89,8 +102,6 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 999,
-    backgroundColor: "#fff",
-    shadowColor: "#000",
     shadowOpacity: 0.15,
     shadowRadius: 3,
     shadowOffset: { width: 0, height: 1 },

@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import { useQuery, type FunctionReference } from "convex/react";
+import { useQuery } from "convex/react";
+import type { FunctionReference } from "convex/server";
 
 /**
  * Subscribes to a Convex query and syncs the result to a Zustand setter.

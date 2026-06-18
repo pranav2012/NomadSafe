@@ -1,12 +1,12 @@
 import React from "react";
 import { NativeTabs } from "expo-router/unstable-native-tabs";
-import { getNomadTheme, NOMAD_FONTS } from "@/constants/nomadTokens";
-import { useThemeContext } from "@/providers/ThemeProvider";
+import { NOMAD_FONTS } from "@/constants/nomadTokens";
+import { useTheme } from "@/hooks/useTheme";
 import { useLocalization } from "@/localization";
 
 export default function TabsLayout() {
-  const { isDark } = useThemeContext();
-  const theme = getNomadTheme(isDark);
+  const { isDark, nomad } = useTheme();
+  const theme = nomad.colors;
   const { t } = useLocalization();
 
   return (

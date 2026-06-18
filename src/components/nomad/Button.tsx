@@ -8,6 +8,7 @@ import {
   type ViewStyle,
 } from "react-native";
 import { NOMAD_FONTS, type NomadTheme } from "@/constants/nomadTokens";
+import { useTheme } from "@/hooks/useTheme";
 
 type Variant = "primary" | "secondary" | "teal" | "stamp" | "ghost";
 
@@ -15,7 +16,7 @@ interface ButtonProps {
   children: React.ReactNode;
   onPress?: () => void;
   variant?: Variant;
-  theme: NomadTheme;
+  theme?: NomadTheme;
   icon?: React.ReactNode;
   full?: boolean;
   style?: StyleProp<ViewStyle>;
@@ -25,11 +26,14 @@ export function NomadButton({
   children,
   onPress,
   variant = "primary",
-  theme,
+  theme: themeProp,
   icon,
   full,
   style,
 }: ButtonProps) {
+  const { nomad } = useTheme();
+  const theme = themeProp ?? nomad.colors;
+  const button = nomad.components.button;
   const variants = {
     primary: {
       bg: theme.inkDeep,
@@ -41,8 +45,8 @@ export function NomadButton({
       fg: theme.inkDeep,
       border: theme.inkDeep,
     },
-    teal: { bg: theme.teal, fg: "#fff", border: theme.teal },
-    stamp: { bg: theme.stamp, fg: "#fff", border: theme.stamp },
+    teal: { bg: theme.teal, fg: theme.inverse, border: theme.teal },
+    stamp: { bg: theme.stamp, fg: theme.inverse, border: theme.stamp },
     ghost: {
       bg: theme.paperSoft,
       fg: theme.inkDeep,
@@ -58,6 +62,9 @@ export function NomadButton({
         {
           backgroundColor: v.bg,
           borderColor: v.border,
+          borderRadius: button.borderRadius,
+          paddingVertical: button.paddingVertical,
+          paddingHorizontal: button.paddingHorizontal,
           width: full ? "100%" : undefined,
           transform: [{ scale: pressed ? 0.98 : 1 }],
         },
@@ -74,9 +81,6 @@ export function NomadButton({
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: 14,
-    paddingVertical: 15,
-    paddingHorizontal: 18,
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
@@ -89,6 +93,6 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: NOMAD_FONTS.uiSemi,
     fontSize: 15,
-    letterSpacing: -0.15,
+    letterSpacing: 0,
   },
 });

@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { NOMAD_FONTS } from "@/constants/nomadTokens";
+import { useTheme } from "@/hooks/useTheme";
 
 interface StampProps {
   label: string;
@@ -14,9 +15,12 @@ export function Stamp({
   label,
   sub,
   rot = -8,
-  color = "#C6432A",
+  color,
   size = 92,
 }: StampProps) {
+  const { nomad } = useTheme();
+  const stampColor = color ?? nomad.colors.stamp;
+
   return (
     <View
       style={[
@@ -25,7 +29,7 @@ export function Stamp({
           width: size,
           height: size,
           borderRadius: size / 2,
-          borderColor: color,
+          borderColor: stampColor,
           transform: [{ rotate: `${rot}deg` }],
         },
       ]}
@@ -35,12 +39,12 @@ export function Stamp({
           styles.inner,
           {
             borderRadius: (size - 8) / 2,
-            borderColor: color,
+            borderColor: stampColor,
           },
         ]}
       />
-      <Text style={[styles.sub, { color }]}>{sub}</Text>
-      <Text style={[styles.label, { color, fontSize: size * 0.26 }]}>
+      <Text style={[styles.sub, { color: stampColor }]}>{sub}</Text>
+      <Text style={[styles.label, { color: stampColor, fontSize: size * 0.26 }]}>
         {label}
       </Text>
     </View>

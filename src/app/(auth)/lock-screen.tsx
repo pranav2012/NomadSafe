@@ -14,8 +14,8 @@ import Animated, {
   cancelAnimation,
   Easing,
 } from "react-native-reanimated";
-import { NOMAD_FONTS, getNomadTheme } from "@/constants/nomadTokens";
-import { useThemeContext } from "@/providers/ThemeProvider";
+import { NOMAD_FONTS } from "@/constants/nomadTokens";
+import { useTheme } from "@/hooks/useTheme";
 import { useAuthStore } from "@/stores/authStore";
 import { verifyPin } from "@/utils/crypto";
 import { secureStorage } from "@/services/secureStorage";
@@ -35,9 +35,9 @@ type Phase = "idle" | "scanning" | "success";
 
 export default function LockScreen() {
   const router = useRouter();
-  const { isDark } = useThemeContext();
+  const { isDark, nomad } = useTheme();
   const { t, formatDuration } = useLocalization();
-  const theme = getNomadTheme(isDark);
+  const theme = nomad.colors;
   const { user, biometricEnabled, setUnlocked, signOut } = useAuthStore();
   const biometric = useBiometricPresentation();
 
@@ -178,9 +178,9 @@ export default function LockScreen() {
             colors={[theme.mustard, theme.stamp]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={styles.avatar}
+            style={[styles.avatar, { shadowColor: theme.stamp }]}
           >
-            <Text style={styles.avatarText}>{initial}</Text>
+            <Text style={[styles.avatarText, { color: theme.inverse }]}>{initial}</Text>
           </LinearGradient>
           <Text style={[styles.name, { color: theme.inkDeep }]}>{name}</Text>
           <Text style={[styles.locked, { color: theme.inkMuted }]}>
@@ -195,7 +195,7 @@ export default function LockScreen() {
                 colors={[theme.inkDeep, isDark ? "#2A332E" : "#2A332E"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
-                style={styles.glyph}
+                style={[styles.glyph, { shadowColor: theme.shadow }]}
               >
                 {/* corner brackets */}
                 {(["tl", "tr", "bl", "br"] as const).map((pos) => (
@@ -226,7 +226,7 @@ export default function LockScreen() {
                 {phase === "success" && (
                   <Animated.View style={[styles.successWrap, successStyle]}>
                     <View style={[styles.successCircle, { backgroundColor: theme.teal, shadowColor: theme.teal }]}>
-                      <Icon name="check" size={30} color="#fff" strokeWidth={2.6} />
+                      <Icon name="check" size={30} color={theme.inverse} strokeWidth={2.6} />
                     </View>
                   </Animated.View>
                 )}
@@ -373,14 +373,12 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#C6432A",
     shadowOpacity: 0.25,
     shadowRadius: 24,
     shadowOffset: { width: 0, height: 8 },
     elevation: 8,
   },
   avatarText: {
-    color: "#fff",
     fontFamily: NOMAD_FONTS.displayItalic,
     fontStyle: "italic",
     fontWeight: "500",
@@ -391,7 +389,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     fontSize: 22,
     marginTop: 12,
-    letterSpacing: -0.3,
+    letterSpacing: 0,
   },
   locked: {
     fontSize: 11,
@@ -408,7 +406,6 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#1A1612",
     shadowOpacity: 0.18,
     shadowRadius: 34,
     shadowOffset: { width: 0, height: 12 },

@@ -9,8 +9,8 @@ import Animated, {
   withSequence,
   withTiming,
 } from "react-native-reanimated";
-import { NOMAD_FONTS, getNomadTheme } from "@/constants/nomadTokens";
-import { useThemeContext } from "@/providers/ThemeProvider";
+import { NOMAD_FONTS } from "@/constants/nomadTokens";
+import { useTheme } from "@/hooks/useTheme";
 import { useAuthStore } from "@/stores/authStore";
 import { hashPin } from "@/utils/crypto";
 import { secureStorage } from "@/services/secureStorage";
@@ -25,9 +25,9 @@ const NUMPAD = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "delete"];
 
 export default function SetupPinScreen() {
   const router = useRouter();
-  const { isDark } = useThemeContext();
+  const { isDark, nomad } = useTheme();
   const { t } = useLocalization();
-  const theme = getNomadTheme(isDark);
+  const theme = nomad.colors;
   const { setPinSet, setBiometricEnabled, setUnlocked } = useAuthStore();
   const biometric = useBiometricPresentation();
 
@@ -101,7 +101,7 @@ export default function SetupPinScreen() {
       <SafeAreaView style={styles.safe} edges={["top", "bottom", "left", "right"]}>
         <View style={styles.body}>
           {/* Lock mark */}
-          <View style={[styles.mark, { backgroundColor: theme.inkDeep, shadowColor: "#1A1612" }]}>
+          <View style={[styles.mark, { backgroundColor: theme.inkDeep, shadowColor: theme.shadow }]}>
             <Icon name="lock" size={26} color={theme.mustard} strokeWidth={2} />
           </View>
 
@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
     fontSize: 34,
     lineHeight: 34 * 1.04,
     marginTop: 6,
-    letterSpacing: -0.6,
+    letterSpacing: 0,
     textAlign: "center",
   },
   italic: { fontFamily: NOMAD_FONTS.displayItalic, fontStyle: "italic" },

@@ -131,7 +131,7 @@ export function WelcomeStep({ theme }: Props) {
             styles.shieldBadge,
             {
               backgroundColor: theme.inkDeep,
-              shadowColor: "#1A1612",
+              shadowColor: theme.shadow,
             },
           ]}
         >
@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
     fontFamily: NOMAD_FONTS.display,
     fontWeight: "500",
     fontSize: 22,
-    letterSpacing: -0.4,
+    letterSpacing: 0,
     lineHeight: 22,
   },
   kpiLabel: {

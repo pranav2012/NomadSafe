@@ -12,8 +12,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import Svg, { Path } from "react-native-svg";
-import { NOMAD_FONTS, getNomadTheme, type NomadTheme } from "@/constants/nomadTokens";
-import { useThemeContext } from "@/providers/ThemeProvider";
+import { NOMAD_FONTS, type NomadTheme } from "@/constants/nomadTokens";
+import { useTheme } from "@/hooks/useTheme";
 import { useAuthStore } from "@/stores/authStore";
 import { authClient } from "@/lib/auth-client";
 import { NomadButton } from "@/components/nomad/Button";
@@ -74,9 +74,9 @@ function SocialButton({ theme, glyph, label, bg, fg, border, onPress }: SocialBu
 
 export default function SignInScreen() {
   const router = useRouter();
-  const { isDark } = useThemeContext();
+  const { isDark, nomad } = useTheme();
   const { t } = useLocalization();
-  const theme = getNomadTheme(isDark);
+  const theme = nomad.colors;
   const { isPinSet, setSignedIn, setUnlocked } = useAuthStore();
 
   const [dial, setDial] = useState("+44");
@@ -165,7 +165,7 @@ export default function SignInScreen() {
           <View
             style={[
               styles.shieldMark,
-              { backgroundColor: theme.inkDeep, shadowColor: "#1A1612" },
+              { backgroundColor: theme.inkDeep, shadowColor: theme.shadow },
             ]}
           >
             <Icon name="shield" size={30} color={theme.mustard} strokeWidth={2} />
@@ -227,7 +227,11 @@ export default function SignInScreen() {
                 <View
                   style={[
                     styles.dialMenu,
-                    { backgroundColor: theme.paperSoft, borderColor: theme.hairline },
+                    {
+                      backgroundColor: theme.paperSoft,
+                      borderColor: theme.hairline,
+                      shadowColor: theme.shadow,
+                    },
                   ]}
                 >
                   {DIAL_CODES.map((d) => (
@@ -276,7 +280,7 @@ export default function SignInScreen() {
             full
             onPress={handlePhoneSendOTP}
             style={[styles.sendBtn, { opacity: ready && loading !== "phone" ? 1 : 0.45 }]}
-            icon={<Icon name="chevronRight" size={18} color="#fff" strokeWidth={2.4} />}
+            icon={<Icon name="chevronRight" size={18} color={theme.inverse} strokeWidth={2.4} />}
           >
             {loading === "phone" ? t("auth.sending") : t("auth.sendCode")}
           </NomadButton>
@@ -331,7 +335,7 @@ const styles = StyleSheet.create({
     fontSize: 38,
     lineHeight: 38 * 1.02,
     marginTop: 6,
-    letterSpacing: -0.7,
+    letterSpacing: 0,
   },
   headlineItalic: {
     fontFamily: NOMAD_FONTS.displayItalic,
@@ -357,7 +361,7 @@ const styles = StyleSheet.create({
     fontFamily: NOMAD_FONTS.uiSemi,
     fontWeight: "600",
     fontSize: 15,
-    letterSpacing: -0.1,
+    letterSpacing: 0,
   },
   dividerRow: {
     flexDirection: "row",
@@ -400,7 +404,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     paddingVertical: 4,
-    shadowColor: "#1A1612",
     shadowOpacity: 0.12,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 6 },

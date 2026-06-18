@@ -10,8 +10,8 @@ import {
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { NOMAD_FONTS, getNomadTheme } from "@/constants/nomadTokens";
-import { useThemeContext } from "@/providers/ThemeProvider";
+import { NOMAD_FONTS } from "@/constants/nomadTokens";
+import { useTheme } from "@/hooks/useTheme";
 import { useAuthStore } from "@/stores/authStore";
 import { authClient } from "@/lib/auth-client";
 import { NomadButton } from "@/components/nomad/Button";
@@ -25,9 +25,9 @@ const CELLS = [0, 1, 2, 3, 4, 5];
 export default function PhoneVerifyScreen() {
   const router = useRouter();
   const { phone } = useLocalSearchParams<{ phone: string }>();
-  const { isDark } = useThemeContext();
+  const { isDark, nomad } = useTheme();
   const { t, formatDuration } = useLocalization();
-  const theme = getNomadTheme(isDark);
+  const theme = nomad.colors;
   const { isPinSet, setSignedIn, setUnlocked } = useAuthStore();
 
   const [code, setCode] = useState("");
@@ -103,7 +103,7 @@ export default function PhoneVerifyScreen() {
 
         <View style={styles.body}>
           {/* Phone mark */}
-          <View style={[styles.mark, { backgroundColor: theme.inkDeep, shadowColor: "#1A1612" }]}>
+          <View style={[styles.mark, { backgroundColor: theme.inkDeep, shadowColor: theme.shadow }]}>
             <Icon name="phone" size={26} color={theme.mustard} strokeWidth={2} />
           </View>
 
@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
     fontSize: 36,
     lineHeight: 36 * 1.02,
     marginTop: 6,
-    letterSpacing: -0.7,
+    letterSpacing: 0,
   },
   headlineItalic: { fontFamily: NOMAD_FONTS.displayItalic, fontStyle: "italic" },
   sub: {

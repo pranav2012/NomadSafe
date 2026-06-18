@@ -40,7 +40,10 @@ export function Modal({
       animationType="fade"
       onRequestClose={onClose}
     >
-      <Pressable style={styles.backdrop} onPress={onClose}>
+      <Pressable
+        style={[styles.backdrop, { backgroundColor: colors.overlay }]}
+        onPress={onClose}
+      >
         <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(150)}>
           <Pressable
             style={[
@@ -101,7 +104,6 @@ export function Modal({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "center",
     alignItems: "center",
     padding: 24,

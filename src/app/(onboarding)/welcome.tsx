@@ -15,8 +15,8 @@ import Animated, {
   FadeInRight,
   FadeInLeft,
 } from "react-native-reanimated";
-import { NOMAD_FONTS, getNomadTheme } from "@/constants/nomadTokens";
-import { useThemeContext } from "@/providers/ThemeProvider";
+import { NOMAD_FONTS } from "@/constants/nomadTokens";
+import { useTheme } from "@/hooks/useTheme";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { NomadButton } from "@/components/nomad/Button";
 import { Icon } from "@/components/nomad/Icon";
@@ -35,8 +35,8 @@ export default function OnboardingWelcomeScreen() {
   const router = useRouter();
   const { t } = useLocalization();
   const setOnboardingCompleted = useSettingsStore((s) => s.setOnboardingCompleted);
-  const { isDark } = useThemeContext();
-  const theme = getNomadTheme(isDark);
+  const { isDark, nomad } = useTheme();
+  const theme = nomad.colors;
   const biometric = useBiometricPresentation();
   const steps = STEP_IDS.map((id) => ({
     id,
@@ -190,7 +190,7 @@ export default function OnboardingWelcomeScreen() {
               onPress={next}
               icon={
                 last ? (
-                  <Icon name="check" size={18} color="#fff" strokeWidth={2.4} />
+                  <Icon name="check" size={18} color={theme.inverse} strokeWidth={2.4} />
                 ) : null
               }
             >

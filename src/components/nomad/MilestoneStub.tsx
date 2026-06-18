@@ -2,8 +2,8 @@ import React from "react";
 import { View, Text, ScrollView, StyleSheet } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { NOMAD_FONTS, getNomadTheme } from "@/constants/nomadTokens";
-import { useThemeContext } from "@/providers/ThemeProvider";
+import { NOMAD_FONTS } from "@/constants/nomadTokens";
+import { useTheme } from "@/hooks/useTheme";
 import { useLocalization } from "@/localization";
 import { Icon, type IconName } from "./Icon";
 import { Eyebrow, HugeHeadline, HeadlineItalic } from "./Typography";
@@ -33,9 +33,9 @@ export function MilestoneStub({
   designRef,
   features,
 }: Props) {
-  const { isDark } = useThemeContext();
+  const { isDark, nomad } = useTheme();
   const { t } = useLocalization();
-  const theme = getNomadTheme(isDark);
+  const theme = nomad.colors;
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.paper }}>
@@ -45,7 +45,7 @@ export function MilestoneStub({
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >
-          <View style={[styles.mark, { backgroundColor: theme.inkDeep, shadowColor: "#1A1612" }]}>
+          <View style={[styles.mark, { backgroundColor: theme.inkDeep, shadowColor: theme.shadow }]}>
             <Icon name={icon} size={28} color={theme.mustard} strokeWidth={2} />
           </View>
 
