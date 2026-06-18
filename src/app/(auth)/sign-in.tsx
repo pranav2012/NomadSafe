@@ -31,8 +31,8 @@ export default function SignInScreen() {
       setLoading("google");
       await authClient.signIn.social({ provider: "google" });
       handlePostSignIn();
-    } catch {
-      // User cancelled or error
+    } catch (error) {
+      void error;
     } finally {
       setLoading(null);
     }
@@ -53,8 +53,8 @@ export default function SignInScreen() {
         idToken: { token: credential.identityToken! },
       });
       handlePostSignIn();
-    } catch {
-      // User cancelled or error
+    } catch (error) {
+      void error;
     } finally {
       setLoading(null);
     }
@@ -69,8 +69,8 @@ export default function SignInScreen() {
         pathname: "/(auth)/phone-verify",
         params: { phone },
       });
-    } catch {
-      // Error sending OTP
+    } catch (error) {
+      void error;
     } finally {
       setLoading(null);
     }

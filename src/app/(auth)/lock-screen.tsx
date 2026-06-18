@@ -53,7 +53,6 @@ export default function LockScreen() {
     router.replace("/(tabs)");
   }, [setUnlocked, router]);
 
-  // Auto-trigger biometric on mount
   useEffect(() => {
     if (biometricEnabled) {
       localAuth.authenticateWithBiometric().then((success) => {

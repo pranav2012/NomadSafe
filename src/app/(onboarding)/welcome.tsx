@@ -1,185 +1,253 @@
-import React, { useRef, useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
-  FlatList,
+  Pressable,
+  ScrollView,
   StyleSheet,
-  type ViewToken,
+  Platform,
 } from "react-native";
+import { StatusBar } from "expo-status-bar";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import { useTheme } from "@/hooks/useTheme";
+import Animated, {
+  FadeInRight,
+  FadeInLeft,
+} from "react-native-reanimated";
+import { NOMAD_FONTS, getNomadTheme } from "@/constants/nomadTokens";
+import { useThemeContext } from "@/providers/ThemeProvider";
 import { useSettingsStore } from "@/stores/settingsStore";
-import { Button } from "@/components/ui/Button";
-import { Screen } from "@/components/layout/Screen";
-import { SCREEN_WIDTH } from "@/constants/layout";
+import { NomadButton } from "@/components/nomad/Button";
+import { Icon } from "@/components/nomad/Icon";
+import { WelcomeStep } from "@/components/nomad/onboarding/WelcomeStep";
+import { SafetyStep } from "@/components/nomad/onboarding/SafetyStep";
+import { LedgerStep } from "@/components/nomad/onboarding/LedgerStep";
+import { AIStep } from "@/components/nomad/onboarding/AIStep";
+import { SecureStep } from "@/components/nomad/onboarding/SecureStep";
+import { ReadyStep } from "@/components/nomad/onboarding/ReadyStep";
 
-interface Slide {
-  id: string;
-  title: string;
-  description: string;
-  icon: keyof typeof Ionicons.glyphMap;
-}
+const STEPS = [
+  { id: "welcome", label: "Welcome" },
+  { id: "safety", label: "Safety net" },
+  { id: "ledger", label: "Ledger" },
+  { id: "ai", label: "On-device AI" },
+  { id: "secure", label: "Face ID" },
+  { id: "ready", label: "Ready" },
+] as const;
 
-const slides: Slide[] = [
-  {
-    id: "1",
-    title: "Track expenses, split costs",
-    description:
-      "Keep all your travel expenses organized and easily split bills with fellow travelers.",
-    icon: "wallet-outline",
-  },
-  {
-    id: "2",
-    title: "Stay safe with SOS alerts",
-    description:
-      "Send emergency alerts with your location to trusted contacts instantly.",
-    icon: "shield-checkmark-outline",
-  },
-  {
-    id: "3",
-    title: "AI-powered travel insights",
-    description:
-      "Get smart recommendations, safety tips, and local insights powered by AI.",
-    icon: "sparkles-outline",
-  },
-];
-
-export default function WelcomeScreen() {
+export default function OnboardingWelcomeScreen() {
   const router = useRouter();
-  const { colors, typography, spacing } = useTheme();
-  const setOnboardingCompleted = useSettingsStore(
-    (s) => s.setOnboardingCompleted,
-  );
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const flatListRef = useRef<FlatList>(null);
+  const setOnboardingCompleted = useSettingsStore((s) => s.setOnboardingCompleted);
+  const { isDark } = useThemeContext();
+  const theme = getNomadTheme(isDark);
 
-  const onViewableItemsChanged = useRef(
-    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
-      if (viewableItems.length > 0 && viewableItems[0].index != null) {
-        setCurrentIndex(viewableItems[0].index);
-      }
-    },
-  ).current;
+  const [step, setStep] = useState(0);
+  const [direction, setDirection] = useState<1 | -1>(1);
+  const [selectedContacts, setSelectedContacts] = useState<number[]>([0, 1]);
+  const scrollRef = useRef<ScrollView>(null);
 
-  const handleGetStarted = () => {
+  const last = step === STEPS.length - 1;
+
+  const onDone = () => {
     setOnboardingCompleted(true);
     router.replace("/(auth)/sign-in");
   };
 
-  const handleNext = () => {
-    if (currentIndex < slides.length - 1) {
-      flatListRef.current?.scrollToIndex({ index: currentIndex + 1 });
+  const next = () => {
+    setDirection(1);
+    if (last) {
+      onDone();
+    } else {
+      setStep((s) => s + 1);
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
     }
   };
 
-  const isLastSlide = currentIndex === slides.length - 1;
+  const back = () => {
+    if (step === 0) return;
+    setDirection(-1);
+    setStep((s) => s - 1);
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+  };
+
+  const entering = direction > 0 ? FadeInRight.duration(420) : FadeInLeft.duration(420);
+
+  const renderStep = () => {
+    switch (step) {
+      case 0:
+        return <WelcomeStep theme={theme} />;
+      case 1:
+        return (
+          <SafetyStep
+            theme={theme}
+            dark={isDark}
+            totalSteps={STEPS.length}
+            selectedContacts={selectedContacts}
+            setSelectedContacts={setSelectedContacts}
+          />
+        );
+      case 2:
+        return <LedgerStep theme={theme} totalSteps={STEPS.length} />;
+      case 3:
+        return <AIStep theme={theme} totalSteps={STEPS.length} />;
+      case 4:
+        return <SecureStep theme={theme} totalSteps={STEPS.length} />;
+      default:
+        return <ReadyStep theme={theme} selectedContactsCount={selectedContacts.length} />;
+    }
+  };
+
+  const ctaLabel =
+    step === 0
+      ? "Begin setup"
+      : step === 1
+        ? `Enable safety net · ${selectedContacts.length} trusted`
+        : step === 2
+          ? "Continue"
+          : step === 3
+            ? "Download model"
+            : step === 4
+              ? "Set up Face ID"
+              : "Start my trip";
 
   return (
-    <Screen edges={["top", "bottom"]} padding={false}>
-      <FlatList
-        ref={flatListRef}
-        data={slides}
-        keyExtractor={(item) => item.id}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onViewableItemsChanged={onViewableItemsChanged}
-        viewabilityConfig={{ viewAreaCoveragePercentThreshold: 50 }}
-        renderItem={({ item }) => (
-          <View style={[styles.slide, { width: SCREEN_WIDTH }]}>
-            <Ionicons
-              name={item.icon}
-              size={120}
-              color={colors.primary}
-              style={{ marginBottom: spacing["3xl"] }}
-            />
-            <Text
-              style={[
-                styles.title,
-                {
-                  color: colors.text,
-                  fontSize: typography.sizes["3xl"],
-                  fontWeight: typography.weights.bold,
-                  marginBottom: spacing.md,
-                },
-              ]}
-            >
-              {item.title}
-            </Text>
-            <Text
-              style={[
-                styles.description,
-                {
-                  color: colors.textSecondary,
-                  fontSize: typography.sizes.base,
-                  lineHeight: typography.sizes.base * typography.lineHeights.relaxed,
-                },
-              ]}
-            >
-              {item.description}
-            </Text>
-          </View>
-        )}
-      />
+    <View style={{ flex: 1, backgroundColor: theme.paper }}>
+      <StatusBar style={isDark ? "light" : "dark"} />
+      <SafeAreaView style={{ flex: 1 }} edges={["top", "left", "right"]}>
+        {/* Top bar: back + progress + skip */}
+        <View style={styles.topBar}>
+          <Pressable
+            onPress={back}
+            disabled={step === 0}
+            style={[
+              styles.backBtn,
+              {
+                backgroundColor: step === 0 ? "transparent" : theme.paperSoft,
+                borderColor: step === 0 ? "transparent" : theme.hairline,
+                opacity: step === 0 ? 0.3 : 1,
+              },
+            ]}
+          >
+            <Icon name="chevronLeft" size={16} color={theme.inkSoft} />
+          </Pressable>
 
-      <View style={[styles.footer, { paddingHorizontal: spacing.lg, paddingBottom: spacing["2xl"] }]}>
-        <View style={styles.dots}>
-          {slides.map((_, index) => (
-            <View
-              key={index}
-              style={[
-                styles.dot,
-                {
-                  backgroundColor:
-                    index === currentIndex
-                      ? colors.primary
-                      : colors.border,
-                },
-              ]}
-            />
-          ))}
+          <View style={styles.progressRow}>
+            {STEPS.map((_, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.progressBar,
+                  {
+                    backgroundColor: i <= step ? theme.inkDeep : theme.hairline,
+                  },
+                ]}
+              />
+            ))}
+          </View>
+
+          {!last ? (
+            <Pressable onPress={onDone}>
+              <Text style={[styles.skip, { color: theme.inkSoft }]}>Skip</Text>
+            </Pressable>
+          ) : (
+            <View style={{ width: 34 }} />
+          )}
         </View>
 
-        <Button
-          title={isLastSlide ? "Get Started" : "Next"}
-          onPress={isLastSlide ? handleGetStarted : handleNext}
-          fullWidth
-          size="lg"
-        />
+        {/* Content */}
+        <ScrollView
+          ref={scrollRef}
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingBottom: 160 }}
+          showsVerticalScrollIndicator={false}
+        >
+          <Animated.View key={step} entering={entering}>
+            {renderStep()}
+          </Animated.View>
+        </ScrollView>
 
-        {!isLastSlide && (
-          <Button
-            title="Skip"
-            onPress={handleGetStarted}
-            variant="ghost"
-            fullWidth
+        {/* Bottom CTA */}
+        <View pointerEvents="box-none" style={styles.ctaWrap}>
+          <LinearGradient
+            colors={["transparent", theme.paper]}
+            locations={[0, 0.28]}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
           />
-        )}
-      </View>
-    </Screen>
+          <View style={styles.ctaInner}>
+            <NomadButton
+              theme={theme}
+              full
+              variant={last ? "teal" : "primary"}
+              onPress={next}
+              icon={
+                last ? (
+                  <Icon name="check" size={18} color="#fff" strokeWidth={2.4} />
+                ) : null
+              }
+            >
+              {ctaLabel}
+            </NomadButton>
+            <Text style={[styles.ctaHint, { color: theme.inkMuted }]}>
+              ● End-to-end encrypted · nothing leaves your phone
+            </Text>
+          </View>
+        </View>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  slide: {
-    flex: 1,
+  topBar: {
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  backBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 999,
+    borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 32,
   },
-  title: { textAlign: "center" },
-  description: { textAlign: "center", maxWidth: 300 },
-  footer: { gap: 12 },
-  dots: {
+  progressRow: {
+    flex: 1,
     flexDirection: "row",
-    justifyContent: "center",
-    gap: 8,
-    marginBottom: 24,
+    gap: 4,
   },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+  progressBar: {
+    flex: 1,
+    height: 3,
+    borderRadius: 999,
+  },
+  skip: {
+    fontSize: 12,
+    fontWeight: "500",
+    fontFamily: NOMAD_FONTS.uiMedium,
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+  },
+  ctaWrap: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  ctaInner: {
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: Platform.OS === "ios" ? 38 : 24,
+  },
+  ctaHint: {
+    textAlign: "center",
+    fontSize: 11,
+    fontFamily: NOMAD_FONTS.mono,
+    marginTop: 10,
+    letterSpacing: 0.3,
   },
 });

@@ -2,7 +2,7 @@ import React from "react";
 import { Screen } from "@/components/layout/Screen";
 import { EmptyState } from "@/components/ui/EmptyState";
 
-export default function SafetyScreen() {
+export default function SosScreen() {
   return (
     <Screen>
       <EmptyState

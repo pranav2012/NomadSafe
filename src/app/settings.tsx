@@ -47,8 +47,8 @@ export default function SettingsScreen() {
           setSigningOut(true);
           try {
             await authClient.signOut();
-          } catch {
-            // Continue with local sign out
+          } catch (error) {
+            void error;
           }
           signOut();
           router.replace("/(auth)/sign-in");
@@ -71,7 +71,6 @@ export default function SettingsScreen() {
         Settings
       </Text>
 
-      {/* Account */}
       <Card variant="elevated">
         <View style={styles.row}>
           <Avatar name={user?.name ?? "User"} imageUri={user?.avatarUrl} />
@@ -94,7 +93,6 @@ export default function SettingsScreen() {
 
       <Divider />
 
-      {/* Appearance */}
       <Text
         style={[
           styles.sectionTitle,
@@ -123,7 +121,6 @@ export default function SettingsScreen() {
 
       <Divider />
 
-      {/* Security */}
       <Text
         style={[
           styles.sectionTitle,
@@ -171,7 +168,6 @@ export default function SettingsScreen() {
 
       <Divider />
 
-      {/* About */}
       <Text
         style={[
           styles.sectionTitle,

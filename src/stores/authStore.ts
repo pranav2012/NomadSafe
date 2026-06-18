@@ -40,7 +40,7 @@ export const useAuthStore = create<AuthState>()(
       biometricEnabled: false,
       isUnlocked: false,
       lastActiveTimestamp: null,
-      autoLockTimeout: 0,
+      autoLockTimeout: 60000,
 
       setUser: (user) => set({ user }),
       setSignedIn: (value) => set({ isSignedIn: value }),
@@ -60,6 +60,19 @@ export const useAuthStore = create<AuthState>()(
     {
       name: "auth-store",
       storage: createJSONStorage(() => mmkvStateStorage),
+      version: 1,
+      migrate: (persistedState) => {
+        if (
+          persistedState &&
+          typeof persistedState === "object" &&
+          "autoLockTimeout" in persistedState &&
+          persistedState.autoLockTimeout === 0
+        ) {
+          return { ...persistedState, autoLockTimeout: 60000 };
+        }
+
+        return persistedState as AuthState;
+      },
       partialize: (state) => ({
         user: state.user,
         isSignedIn: state.isSignedIn,
