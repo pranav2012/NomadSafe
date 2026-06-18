@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-NomadSafe is a cross-platform mobile app built with Expo (SDK 54), React Native 0.81, and React 19. Uses TypeScript in strict mode.
+NomadSafe is a cross-platform mobile app built with Expo (SDK 55), React Native 0.83, and React 19.2. Uses TypeScript in strict mode.
 
 ## Commands
 
@@ -19,17 +19,18 @@ Package manager is **pnpm** (not npm/yarn).
 
 ## Architecture
 
-- **Routing**: Expo Router (file-based routing) — files in `app/` define routes
-  - `app/_layout.tsx` — root layout (Stack navigator)
-  - `app/index.tsx` — home screen (`/`)
-- **Path alias**: `@/` maps to project root (configured in tsconfig.json)
+- **Routing**: Expo Router (file-based routing) — files in `src/app/` define routes
+  - `src/app/_layout.tsx` — root layout (Stack navigator)
+  - `src/app/index.tsx` — home screen (`/`)
+- **Path alias**: `@/` maps to `./src/` (configured in tsconfig.json)
+- **Source code**: All source files live in `src/` (app, components, hooks, stores, etc.)
 - **Navigation**: `@react-navigation/native` with `@react-navigation/bottom-tabs`
 - **No state management library** yet — using React built-ins
 - **No test framework** configured yet
 
 ## Key Config
 
-- **New Architecture** enabled (Fabric + TurboModules)
+- **New Architecture** is the default (Fabric + TurboModules) — SDK 55 dropped legacy arch
 - **React Compiler** (experimental) enabled
 - **Typed routes** enabled — route names are type-checked
 - **Bundle IDs**: `com.pranav2012.NomadSafe` (iOS & Android)
