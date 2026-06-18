@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
-import Svg, { Line } from "react-native-svg";
+import React, { useEffect } from "react";
+import { View, Text, StyleSheet } from "react-native";
+import Svg, { Line, Path } from "react-native-svg";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
   useSharedValue,
@@ -9,33 +9,17 @@ import Animated, {
   withSequence,
   withTiming,
   Easing,
+  FadeIn,
 } from "react-native-reanimated";
 import { NOMAD_FONTS, type NomadTheme } from "@/constants/nomadTokens";
 import { Icon, type IconName } from "../Icon";
-import {
-  Eyebrow,
-  HugeHeadline,
-  HeadlineItalic,
-} from "../Typography";
+import { PermissionRow } from "../PermissionRow";
+import { Eyebrow, HugeHeadline, HeadlineItalic } from "../Typography";
 
 interface Props {
   theme: NomadTheme;
   totalSteps: number;
 }
-
-type Bank = {
-  id: string;
-  name: string;
-  sub: string;
-  colorKey: keyof NomadTheme;
-};
-
-const banks: Bank[] = [
-  { id: "revolut", name: "Revolut", sub: "Multi-currency · FX", colorKey: "inkDeep" },
-  { id: "wise", name: "Wise", sub: "Debit · global", colorKey: "teal" },
-  { id: "chase", name: "Chase", sub: "Travel credit", colorKey: "sky" },
-  { id: "amex", name: "Amex Platinum", sub: "Points · lounges", colorKey: "mustard" },
-];
 
 const features: { i: IconName; t: string; s: string; colorKey: keyof NomadTheme }[] = [
   { i: "users", t: "Group split", s: "Auto-split meals, stays, rides with co-travellers", colorKey: "teal" },
@@ -44,17 +28,13 @@ const features: { i: IconName; t: string; s: string; colorKey: keyof NomadTheme 
 ];
 
 export function LedgerStep({ theme, totalSteps }: Props) {
-  const [connected, setConnected] = useState<string[]>(["revolut"]);
-  const toggle = (id: string) =>
-    setConnected((c) => (c.includes(id) ? c.filter((x) => x !== id) : [...c, id]));
-
-  // auto-sync pulse dot
+  // parsing pulse dot
   const pulse = useSharedValue(1);
   useEffect(() => {
     pulse.value = withRepeat(
       withSequence(
-        withTiming(0.55, { duration: 800, easing: Easing.inOut(Easing.ease) }),
-        withTiming(1, { duration: 800, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0.4, { duration: 900, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1, { duration: 900, easing: Easing.inOut(Easing.ease) }),
       ),
       -1,
       false,
@@ -64,7 +44,7 @@ export function LedgerStep({ theme, totalSteps }: Props) {
 
   return (
     <View style={{ flex: 1 }}>
-      {/* HERO: stacked cards */}
+      {/* HERO: email + SMS → auto-logged spend */}
       <View style={{ paddingHorizontal: 16, paddingTop: 4 }}>
         <View style={styles.hero}>
           <LinearGradient
@@ -76,11 +56,11 @@ export function LedgerStep({ theme, totalSteps }: Props) {
           <Svg
             width="100%"
             height="100%"
-            viewBox="0 0 358 210"
+            viewBox="0 0 358 230"
             preserveAspectRatio="none"
             style={[StyleSheet.absoluteFill, { opacity: 0.08 }]}
           >
-            {Array.from({ length: 10 }).map((_, i) => (
+            {Array.from({ length: 11 }).map((_, i) => (
               <Line
                 key={i}
                 x1="0"
@@ -93,47 +73,64 @@ export function LedgerStep({ theme, totalSteps }: Props) {
             ))}
           </Svg>
 
-          {/* Card 1 back (Wise) */}
-          <View style={[styles.cardBack]}>
-            <LinearGradient
-              colors={[theme.teal, "#1F4C43"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={StyleSheet.absoluteFill}
-            />
-            <Text style={styles.cardBrand}>WISE</Text>
-            <Text style={styles.cardNum}>•••• 4182</Text>
-            <View style={styles.cardChip} />
-          </View>
-
-          {/* Card 2 front (Revolut) */}
-          <View style={[styles.cardFront]}>
-            <LinearGradient
-              colors={[theme.stamp, "#8B2F1E"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={StyleSheet.absoluteFill}
-            />
-            <Text style={styles.cardBrandFront}>REVOLUT</Text>
-            <Text style={styles.cardEmoji}>💳</Text>
-            <Text style={styles.cardNumFront}>•••• •••• 2097</Text>
-            <Text style={styles.cardHolder}>A. KOVÁCS</Text>
-            <Text style={[styles.cardBalance, { fontFamily: NOMAD_FONTS.display }]}>
-              £412
-            </Text>
-          </View>
-
-          {/* auto-sync badge */}
-          <View style={[styles.autoSync, { backgroundColor: "rgba(43,108,95,0.25)" }]}>
+          {/* badges */}
+          <View style={[styles.parsedBadge, { borderColor: "rgba(217,164,65,0.25)" }]}>
             <Animated.View
-              style={[
-                { width: 6, height: 6, borderRadius: 3, backgroundColor: theme.teal },
-                pulseStyle,
-              ]}
+              style={[{ width: 5, height: 5, borderRadius: 3, backgroundColor: theme.mustard }, pulseStyle]}
             />
-            <Text style={[styles.autoSyncText, { color: theme.tealSoft }]}>
-              AUTO-SYNC · OPEN BANKING
+            <Text style={[styles.parsedText, { color: theme.mustard }]}>PARSED ON-DEVICE</Text>
+          </View>
+          <View style={[styles.uploadBadge, { borderColor: "rgba(255,255,255,0.12)" }]}>
+            <Icon name="lock" size={9} color="rgba(255,255,255,0.85)" />
+            <Text style={styles.uploadText}>NEVER UPLOADED</Text>
+          </View>
+
+          {/* converging arrows */}
+          <Svg
+            width="100%"
+            height="100%"
+            viewBox="0 0 358 230"
+            preserveAspectRatio="none"
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
+          >
+            <Path d="M96,116 Q120,160 176,182" fill="none" stroke={theme.mustard} strokeWidth="1.2" strokeDasharray="2 3" opacity="0.6" />
+            <Path d="M262,116 Q238,160 182,182" fill="none" stroke={theme.sky} strokeWidth="1.2" strokeDasharray="2 3" opacity="0.6" />
+          </Svg>
+
+          {/* SMS card */}
+          <Animated.View entering={FadeIn.duration(500)} style={[styles.msgCard, styles.smsCard]}>
+            <View style={styles.msgHead}>
+              <View style={[styles.msgIcon, { backgroundColor: theme.mustard }]}>
+                <Icon name="phone" size={10} color={theme.inkDeep} />
+              </View>
+              <Text style={[styles.msgTag, { color: theme.mustard }]}>SMS · HDFC</Text>
+            </View>
+            <Text style={styles.msgBody}>
+              ₹1,240 spent on card ••4182 at <Text style={styles.msgBold}>Café Lisboa</Text>
             </Text>
+          </Animated.View>
+
+          {/* EMAIL card */}
+          <Animated.View entering={FadeIn.delay(120).duration(500)} style={[styles.msgCard, styles.emailCard]}>
+            <View style={styles.msgHead}>
+              <View style={[styles.msgIcon, { backgroundColor: theme.sky }]}>
+                <Icon name="mail" size={11} color="#fff" />
+              </View>
+              <Text style={[styles.msgTag, { color: theme.sky }]}>EMAIL · UBER</Text>
+            </View>
+            <Text style={styles.msgBody}>
+              Receipt — trip to <Text style={styles.msgBold}>Alfama</Text> · €11.80
+            </Text>
+          </Animated.View>
+
+          {/* result ledger chip */}
+          <View style={[styles.loggedChip, { backgroundColor: theme.teal, shadowColor: theme.teal }]}>
+            <View style={styles.loggedCheck}>
+              <Icon name="check" size={11} color="#fff" strokeWidth={3} />
+            </View>
+            <Text style={styles.loggedLabel}>Logged</Text>
+            <Text style={styles.loggedMeta}>Food · €25.40 · split 2-way</Text>
           </View>
         </View>
       </View>
@@ -142,69 +139,31 @@ export function LedgerStep({ theme, totalSteps }: Props) {
       <View style={{ paddingHorizontal: 26, paddingTop: 22 }}>
         <Eyebrow color={theme.mustard}>Step 4 of {totalSteps - 1}</Eyebrow>
         <HugeHeadline color={theme.inkDeep}>
-          Trips & <HeadlineItalic>money</HeadlineItalic>, auto-tracked.
+          Track spend from <HeadlineItalic>email &amp; SMS</HeadlineItalic>.
         </HugeHeadline>
         <Text style={[styles.lede, { color: theme.inkSoft }]}>
-          Connect cards via Open Banking — spend gets categorised, split with companions, and converted at interbank FX. Zero manual entry.
+          Grant access to your transaction emails and bank SMS — we read receipts and spend
+          alerts, then categorise and split them automatically. Parsing happens on-device;
+          messages never leave your phone.
         </Text>
       </View>
 
-      {/* Bank picker */}
-      <View style={{ paddingHorizontal: 16, paddingTop: 16 }}>
-        <Text
-          style={[
-            styles.pickerLabel,
-            { color: theme.inkMuted, fontFamily: NOMAD_FONTS.uiBold },
-          ]}
-        >
-          Connect accounts · {connected.length} linked
-        </Text>
-        <View style={styles.bankGrid}>
-          {banks.map((b) => {
-            const on = connected.includes(b.id);
-            const bColor = theme[b.colorKey] as string;
-            return (
-              <Pressable
-                key={b.id}
-                onPress={() => toggle(b.id)}
-                style={[
-                  styles.bankCell,
-                  {
-                    backgroundColor: on ? theme.paperSoft : "transparent",
-                    borderColor: on ? bColor : theme.hairline,
-                  },
-                ]}
-              >
-                <View style={[styles.bankBadge, { backgroundColor: bColor }]}>
-                  <Text style={styles.bankBadgeText}>{b.name.slice(0, 1)}</Text>
-                </View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text
-                    numberOfLines={1}
-                    style={[styles.bankName, { color: theme.inkDeep }]}
-                  >
-                    {b.name}
-                  </Text>
-                  <Text style={[styles.bankSub, { color: theme.inkSoft }]}>
-                    {b.sub}
-                  </Text>
-                </View>
-                <View
-                  style={[
-                    styles.bankCheck,
-                    {
-                      borderColor: on ? bColor : theme.hairline,
-                      backgroundColor: on ? bColor : "transparent",
-                    },
-                  ]}
-                >
-                  {on ? (
-                    <Icon name="check" size={10} color="#fff" strokeWidth={3} />
-                  ) : null}
-                </View>
-              </Pressable>
-            );
-          })}
+      {/* Grant access */}
+      <View style={{ paddingHorizontal: 16, paddingTop: 18 }}>
+        <Text style={[styles.grantLabel, { color: theme.inkMuted }]}>Grant access</Text>
+        <View style={{ gap: 8 }}>
+          <PermissionRow
+            theme={theme}
+            title="Email · transactions only"
+            sub="Reads receipts & bank statements — nothing else"
+            on
+          />
+          <PermissionRow
+            theme={theme}
+            title="SMS · spend alerts"
+            sub="Bank debit alerts & merchant receipts"
+            on
+          />
         </View>
       </View>
 
@@ -215,29 +174,14 @@ export function LedgerStep({ theme, totalSteps }: Props) {
           return (
             <View
               key={i}
-              style={[
-                styles.featureRow,
-                {
-                  backgroundColor: theme.paperSoft,
-                  borderColor: theme.hairline,
-                },
-              ]}
+              style={[styles.featureRow, { backgroundColor: theme.paperSoft, borderColor: theme.hairline }]}
             >
-              <View
-                style={[
-                  styles.featureIcon,
-                  { backgroundColor: fColor + "22" },
-                ]}
-              >
+              <View style={[styles.featureIcon, { backgroundColor: fColor + "22" }]}>
                 <Icon name={f.i} size={15} color={fColor} strokeWidth={2} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.featureTitle, { color: theme.inkDeep }]}>
-                  {f.t}
-                </Text>
-                <Text style={[styles.featureSub, { color: theme.inkSoft }]}>
-                  {f.s}
-                </Text>
+                <Text style={[styles.featureTitle, { color: theme.inkDeep }]}>{f.t}</Text>
+                <Text style={[styles.featureSub, { color: theme.inkSoft }]}>{f.s}</Text>
               </View>
             </View>
           );
@@ -249,132 +193,118 @@ export function LedgerStep({ theme, totalSteps }: Props) {
 
 const styles = StyleSheet.create({
   hero: {
-    height: 210,
+    height: 230,
     borderRadius: 20,
     position: "relative",
     overflow: "hidden",
   },
-  cardBack: {
-    position: "absolute",
-    left: 28,
-    top: 52,
-    width: 180,
-    height: 108,
-    borderRadius: 14,
-    overflow: "hidden",
-    transform: [{ rotate: "-8deg" }],
-    shadowColor: "#000",
-    shadowOpacity: 0.35,
-    shadowRadius: 30,
-    shadowOffset: { width: 0, height: 14 },
-    elevation: 8,
-  },
-  cardFront: {
-    position: "absolute",
-    right: 22,
-    top: 40,
-    width: 190,
-    height: 116,
-    borderRadius: 14,
-    overflow: "hidden",
-    transform: [{ rotate: "6deg" }],
-    shadowColor: "#C6432A",
-    shadowOpacity: 0.45,
-    shadowRadius: 40,
-    shadowOffset: { width: 0, height: 18 },
-    elevation: 10,
-  },
-  cardBrand: {
-    position: "absolute",
-    left: 12,
-    top: 10,
-    fontSize: 9,
-    opacity: 0.7,
-    fontWeight: "700",
-    letterSpacing: 1,
-    color: "#fff",
-    fontFamily: NOMAD_FONTS.uiBold,
-  },
-  cardBrandFront: {
+  parsedBadge: {
     position: "absolute",
     left: 14,
-    top: 12,
-    fontSize: 10,
-    opacity: 0.8,
-    fontWeight: "700",
-    letterSpacing: 1,
-    color: "#fff",
-    fontFamily: NOMAD_FONTS.uiBold,
-  },
-  cardNum: {
-    position: "absolute",
-    left: 12,
-    bottom: 12,
-    fontFamily: NOMAD_FONTS.mono,
-    fontSize: 11,
-    opacity: 0.85,
-    letterSpacing: 1.2,
-    color: "#fff",
-  },
-  cardNumFront: {
-    position: "absolute",
-    left: 14,
-    bottom: 34,
-    fontFamily: NOMAD_FONTS.mono,
-    fontSize: 12,
-    opacity: 0.9,
-    letterSpacing: 1.4,
-    color: "#fff",
-  },
-  cardChip: {
-    position: "absolute",
-    right: 12,
-    top: 12,
-    width: 16,
-    height: 12,
-    borderRadius: 2,
-    backgroundColor: "rgba(255,255,255,0.3)",
-  },
-  cardEmoji: {
-    position: "absolute",
-    right: 14,
-    top: 12,
-    fontSize: 18,
-  },
-  cardHolder: {
-    position: "absolute",
-    left: 14,
-    bottom: 12,
-    fontSize: 9,
-    opacity: 0.7,
-    letterSpacing: 0.5,
-    color: "#fff",
-    fontFamily: NOMAD_FONTS.ui,
-  },
-  cardBalance: {
-    position: "absolute",
-    right: 14,
-    bottom: 10,
-    fontSize: 18,
-    fontWeight: "500",
-    color: "#fff",
-  },
-  autoSync: {
-    position: "absolute",
-    left: 16,
-    top: 16,
+    top: 14,
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
+    gap: 6,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
     borderRadius: 999,
+    backgroundColor: "rgba(217,164,65,0.16)",
+    borderWidth: 1,
   },
-  autoSyncText: {
-    fontSize: 10,
+  parsedText: {
+    fontSize: 9.5,
     fontWeight: "700",
-    letterSpacing: 0.8,
+    letterSpacing: 1,
     fontFamily: NOMAD_FONTS.uiBold,
+  },
+  uploadBadge: {
+    position: "absolute",
+    right: 14,
+    top: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    borderWidth: 1,
+  },
+  uploadText: {
+    color: "rgba(255,255,255,0.72)",
+    fontSize: 9.5,
+    fontFamily: NOMAD_FONTS.mono,
+    letterSpacing: 0.6,
+  },
+  msgCard: {
+    position: "absolute",
+    top: 52,
+    width: 156,
+    paddingVertical: 10,
+    paddingHorizontal: 11,
+    borderRadius: 13,
+    backgroundColor: "rgba(255,255,255,0.07)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.13)",
+  },
+  smsCard: { left: 18 },
+  emailCard: { right: 18 },
+  msgHead: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 6 },
+  msgIcon: {
+    width: 18,
+    height: 18,
+    borderRadius: 6,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  msgTag: {
+    fontSize: 8.5,
+    fontWeight: "700",
+    letterSpacing: 1,
+    fontFamily: NOMAD_FONTS.uiBold,
+  },
+  msgBody: {
+    fontSize: 10.5,
+    lineHeight: 10.5 * 1.35,
+    color: "rgba(255,255,255,0.9)",
+    fontFamily: NOMAD_FONTS.ui,
+  },
+  msgBold: { fontFamily: NOMAD_FONTS.uiSemi, fontWeight: "700" },
+  loggedChip: {
+    position: "absolute",
+    bottom: 18,
+    alignSelf: "center",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 9,
+    paddingHorizontal: 15,
+    borderRadius: 999,
+    shadowOpacity: 0.4,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 8,
+  },
+  loggedCheck: {
+    width: 18,
+    height: 18,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.22)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loggedLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.2,
+    color: "#fff",
+    fontFamily: NOMAD_FONTS.uiBold,
+  },
+  loggedMeta: {
+    fontSize: 11,
+    opacity: 0.8,
+    color: "#fff",
+    fontFamily: NOMAD_FONTS.mono,
   },
   lede: {
     fontSize: 14,
@@ -382,58 +312,14 @@ const styles = StyleSheet.create({
     lineHeight: 14 * 1.55,
     fontFamily: NOMAD_FONTS.ui,
   },
-  pickerLabel: {
+  grantLabel: {
     fontSize: 10.5,
     fontWeight: "700",
     letterSpacing: 1.2,
     textTransform: "uppercase",
     marginBottom: 8,
     paddingLeft: 6,
-  },
-  bankGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  bankCell: {
-    width: "48.5%",
-    padding: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  bankBadge: {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  bankBadgeText: {
-    color: "#fff",
     fontFamily: NOMAD_FONTS.uiBold,
-    fontWeight: "700",
-    fontSize: 12,
-  },
-  bankName: {
-    fontSize: 12.5,
-    fontWeight: "600",
-    fontFamily: NOMAD_FONTS.uiSemi,
-  },
-  bankSub: {
-    fontSize: 10,
-    marginTop: 1,
-    fontFamily: NOMAD_FONTS.ui,
-  },
-  bankCheck: {
-    width: 18,
-    height: 18,
-    borderRadius: 999,
-    borderWidth: 1.5,
-    alignItems: "center",
-    justifyContent: "center",
   },
   featureRow: {
     paddingVertical: 12,

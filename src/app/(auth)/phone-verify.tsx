@@ -1,61 +1,59 @@
-import React, { useState, useRef, useEffect } from "react";
-import { View, Text, TextInput, StyleSheet } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  View,
+  Text,
+  Pressable,
+  TextInput,
+  StyleSheet,
+  Platform,
+} from "react-native";
+import { StatusBar } from "expo-status-bar";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { useTheme } from "@/hooks/useTheme";
+import { NOMAD_FONTS, getNomadTheme } from "@/constants/nomadTokens";
+import { useThemeContext } from "@/providers/ThemeProvider";
 import { useAuthStore } from "@/stores/authStore";
 import { authClient } from "@/lib/auth-client";
-import { Button } from "@/components/ui/Button";
-import { Screen } from "@/components/layout/Screen";
+import { NomadButton } from "@/components/nomad/Button";
+import { Icon } from "@/components/nomad/Icon";
 
 const OTP_LENGTH = 6;
-const RESEND_COOLDOWN = 60;
+const RESEND_COOLDOWN = 28;
+const CELLS = [0, 1, 2, 3, 4, 5];
 
 export default function PhoneVerifyScreen() {
   const router = useRouter();
   const { phone } = useLocalSearchParams<{ phone: string }>();
-  const { colors, typography, spacing, radii } = useTheme();
+  const { isDark } = useThemeContext();
+  const theme = getNomadTheme(isDark);
   const { isPinSet, setSignedIn, setUnlocked } = useAuthStore();
 
-  const [code, setCode] = useState<string[]>(Array(OTP_LENGTH).fill(""));
+  const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [cooldown, setCooldown] = useState(RESEND_COOLDOWN);
-  const inputRefs = useRef<(TextInput | null)[]>([]);
+  const [secs, setSecs] = useState(RESEND_COOLDOWN);
+  const inputRef = useRef<TextInput>(null);
+
+  const filled = code.length === OTP_LENGTH;
 
   useEffect(() => {
-    if (cooldown <= 0) return;
-    const timer = setInterval(() => setCooldown((c) => c - 1), 1000);
-    return () => clearInterval(timer);
-  }, [cooldown]);
+    const t = setTimeout(() => inputRef.current?.focus(), 300);
+    return () => clearTimeout(t);
+  }, []);
 
-  const handleChangeDigit = (text: string, index: number) => {
-    if (text.length > 1) text = text[text.length - 1];
-    const newCode = [...code];
-    newCode[index] = text;
-    setCode(newCode);
-    setError("");
+  useEffect(() => {
+    if (secs <= 0) return;
+    const t = setInterval(() => setSecs((s) => (s > 0 ? s - 1 : 0)), 1000);
+    return () => clearInterval(t);
+  }, [secs]);
 
-    if (text && index < OTP_LENGTH - 1) {
-      inputRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const handleKeyPress = (key: string, index: number) => {
-    if (key === "Backspace" && !code[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
-    }
-  };
-
-  const handleVerify = async () => {
-    const otp = code.join("");
+  const handleVerify = async (otp: string) => {
     if (otp.length !== OTP_LENGTH) return;
-
     try {
       setLoading(true);
       setError("");
       await authClient.phoneNumber.verify({ phoneNumber: phone!, code: otp });
       setSignedIn(true);
-
       if (!isPinSet) {
         router.replace("/(auth)/setup-pin");
       } else {
@@ -64,136 +62,227 @@ export default function PhoneVerifyScreen() {
       }
     } catch {
       setError("Invalid code. Please try again.");
+      setCode("");
     } finally {
       setLoading(false);
     }
   };
 
+  const handleChange = (v: string) => {
+    const next = v.replace(/\D/g, "").slice(0, OTP_LENGTH);
+    setCode(next);
+    setError("");
+    if (next.length === OTP_LENGTH) handleVerify(next);
+  };
+
   const handleResend = async () => {
-    if (cooldown > 0) return;
+    if (secs > 0) return;
     try {
       await authClient.phoneNumber.sendOtp({ phoneNumber: phone! });
-      setCooldown(RESEND_COOLDOWN);
+      setSecs(RESEND_COOLDOWN);
     } catch {
-      // Error resending
+      void 0;
     }
   };
 
   return (
-    <Screen scroll keyboardAvoiding edges={["top", "bottom"]}>
-      <View style={styles.container}>
-        <Text
-          style={[
-            styles.title,
-            {
-              color: colors.text,
-              fontSize: typography.sizes["2xl"],
-              fontWeight: typography.weights.bold,
-            },
-          ]}
-        >
-          Verify your number
-        </Text>
-        <Text
-          style={[
-            styles.subtitle,
-            {
-              color: colors.textSecondary,
-              fontSize: typography.sizes.base,
-              marginTop: spacing.sm,
-              marginBottom: spacing["3xl"],
-            },
-          ]}
-        >
-          Enter the 6-digit code sent to {phone}
-        </Text>
-
-        <View style={styles.otpRow}>
-          {code.map((digit, index) => (
-            <TextInput
-              key={index}
-              ref={(ref) => {
-                inputRefs.current[index] = ref;
-              }}
-              value={digit}
-              onChangeText={(text) => handleChangeDigit(text, index)}
-              onKeyPress={({ nativeEvent }) =>
-                handleKeyPress(nativeEvent.key, index)
-              }
-              keyboardType="number-pad"
-              maxLength={1}
-              style={[
-                styles.otpInput,
-                {
-                  borderColor: digit
-                    ? colors.borderFocused
-                    : error
-                      ? colors.error
-                      : colors.border,
-                  borderRadius: radii.md,
-                  color: colors.text,
-                  fontSize: typography.sizes["2xl"],
-                  backgroundColor: colors.surface,
-                },
-              ]}
-              autoFocus={index === 0}
-            />
-          ))}
-        </View>
-
-        {error && (
-          <Text
-            style={[
-              styles.error,
-              {
-                color: colors.error,
-                fontSize: typography.sizes.sm,
-                marginTop: spacing.md,
-              },
-            ]}
+    <View style={{ flex: 1, backgroundColor: theme.paper }}>
+      <StatusBar style={isDark ? "light" : "dark"} />
+      <SafeAreaView style={{ flex: 1 }} edges={["top", "left", "right"]}>
+        {/* Top bar */}
+        <View style={styles.topBar}>
+          <Pressable
+            onPress={() => router.back()}
+            style={[styles.backBtn, { backgroundColor: theme.paperSoft, borderColor: theme.hairline }]}
           >
-            {error}
-          </Text>
-        )}
-
-        <View style={{ marginTop: spacing["3xl"], gap: spacing.md }}>
-          <Button
-            title="Verify"
-            onPress={handleVerify}
-            fullWidth
-            size="lg"
-            loading={loading}
-            disabled={code.join("").length !== OTP_LENGTH}
-          />
-
-          <Button
-            title={cooldown > 0 ? `Resend in ${cooldown}s` : "Resend Code"}
-            onPress={handleResend}
-            variant="ghost"
-            fullWidth
-            disabled={cooldown > 0}
-          />
+            <Icon name="chevronLeft" size={16} color={theme.inkSoft} />
+          </Pressable>
         </View>
-      </View>
-    </Screen>
+
+        <View style={styles.body}>
+          {/* Phone mark */}
+          <View style={[styles.mark, { backgroundColor: theme.inkDeep, shadowColor: "#1A1612" }]}>
+            <Icon name="phone" size={26} color={theme.mustard} strokeWidth={2} />
+          </View>
+
+          <Text style={[styles.eyebrow, { color: theme.stamp }]}>Verify your number</Text>
+          <Text style={[styles.headline, { color: theme.inkDeep }]}>
+            Enter the{" "}
+            <Text style={[styles.headlineItalic, { color: theme.teal }]}>6-digit</Text> code.
+          </Text>
+          <Text style={[styles.sub, { color: theme.inkSoft }]}>
+            Sent to{" "}
+            <Text style={[styles.subStrong, { color: theme.inkDeep }]}>
+              {phone || "+44 7700 900000"}
+            </Text>
+            .{" "}
+            <Text style={[styles.change, { color: theme.teal }]} onPress={() => router.back()}>
+              Change
+            </Text>
+          </Text>
+
+          {/* OTP cells */}
+          <Pressable style={styles.cellsWrap} onPress={() => inputRef.current?.focus()}>
+            <TextInput
+              ref={inputRef}
+              value={code}
+              onChangeText={handleChange}
+              keyboardType="number-pad"
+              maxLength={OTP_LENGTH}
+              style={styles.hiddenInput}
+              caretHidden
+            />
+            <View style={styles.cellsRow}>
+              {CELLS.map((i) => {
+                const active = i === code.length;
+                const char = code[i];
+                return (
+                  <View
+                    key={i}
+                    style={[
+                      styles.cell,
+                      {
+                        backgroundColor: theme.paperSoft,
+                        borderColor: char
+                          ? theme.inkDeep
+                          : active
+                            ? theme.teal
+                            : error
+                              ? theme.stamp
+                              : theme.hairline,
+                      },
+                      active && {
+                        shadowColor: theme.teal,
+                        shadowOpacity: 0.25,
+                        shadowRadius: 6,
+                        elevation: 3,
+                      },
+                    ]}
+                  >
+                    <Text style={[styles.cellChar, { color: theme.inkDeep }]}>{char || ""}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          </Pressable>
+
+          {error ? (
+            <Text style={[styles.error, { color: theme.stamp }]}>{error}</Text>
+          ) : null}
+
+          <NomadButton
+            theme={theme}
+            variant="teal"
+            full
+            onPress={() => handleVerify(code)}
+            style={[styles.verifyBtn, { opacity: filled && !loading ? 1 : 0.45 }]}
+          >
+            {loading ? "Verifying…" : "Verify"}
+          </NomadButton>
+
+          <Pressable onPress={handleResend} disabled={secs > 0} style={styles.resend}>
+            <Text style={[styles.resendText, { color: secs > 0 ? theme.inkMuted : theme.teal }]}>
+              {secs > 0 ? `Resend code in ${secs}s` : "Resend code"}
+            </Text>
+          </Pressable>
+
+          <Text style={[styles.footer, { color: theme.inkMuted }]}>
+            ● End-to-end encrypted · nothing leaves your phone
+          </Text>
+        </View>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center" },
-  title: {},
-  subtitle: {},
-  otpRow: {
-    flexDirection: "row",
+  topBar: { paddingHorizontal: 18, paddingVertical: 8 },
+  backBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 999,
+    borderWidth: 1,
+    alignItems: "center",
     justifyContent: "center",
-    gap: 10,
   },
-  otpInput: {
-    width: 48,
-    height: 56,
-    borderWidth: 1.5,
-    textAlign: "center",
+  body: { flex: 1, paddingHorizontal: 26, paddingTop: 12 },
+  mark: {
+    width: 60,
+    height: 60,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 22,
+    shadowOpacity: 0.22,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 8,
+  },
+  eyebrow: {
+    fontSize: 10.5,
+    letterSpacing: 1.8,
     fontWeight: "700",
+    textTransform: "uppercase",
+    fontFamily: NOMAD_FONTS.uiBold,
   },
-  error: { textAlign: "center" },
+  headline: {
+    fontFamily: NOMAD_FONTS.display,
+    fontWeight: "500",
+    fontSize: 36,
+    lineHeight: 36 * 1.02,
+    marginTop: 6,
+    letterSpacing: -0.7,
+  },
+  headlineItalic: { fontFamily: NOMAD_FONTS.displayItalic, fontStyle: "italic" },
+  sub: {
+    fontSize: 14,
+    marginTop: 10,
+    lineHeight: 14 * 1.5,
+    fontFamily: NOMAD_FONTS.ui,
+  },
+  subStrong: { fontFamily: NOMAD_FONTS.monoMedium },
+  change: { fontFamily: NOMAD_FONTS.uiSemi, fontWeight: "600" },
+  cellsWrap: { marginTop: 26, position: "relative" },
+  hiddenInput: {
+    position: "absolute",
+    opacity: 0,
+    width: "100%",
+    height: "100%",
+    zIndex: 2,
+  },
+  cellsRow: { flexDirection: "row", gap: 8, justifyContent: "space-between" },
+  cell: {
+    flex: 1,
+    aspectRatio: 1 / 1.18,
+    borderRadius: 13,
+    borderWidth: 1.5,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cellChar: {
+    fontFamily: NOMAD_FONTS.display,
+    fontSize: 26,
+    fontWeight: "500",
+  },
+  error: {
+    marginTop: 14,
+    fontSize: 13,
+    fontFamily: NOMAD_FONTS.uiMedium,
+    textAlign: "center",
+  },
+  verifyBtn: { marginTop: 26 },
+  resend: { marginTop: 16, alignItems: "center" },
+  resendText: {
+    fontSize: 13,
+    fontFamily: NOMAD_FONTS.uiSemi,
+    fontWeight: "600",
+  },
+  footer: {
+    textAlign: "center",
+    fontSize: 11,
+    fontFamily: NOMAD_FONTS.mono,
+    marginTop: "auto",
+    marginBottom: Platform.OS === "ios" ? 20 : 16,
+    letterSpacing: 0.3,
+  },
 });

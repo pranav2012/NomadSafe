@@ -27,6 +27,7 @@ export type IconName =
   | "pause"
   | "play"
   | "phone"
+  | "mail"
   | "flag"
   | "heart"
   | "trendDown"
@@ -249,6 +250,14 @@ export function Icon({
       body = (
         <G {...p}>
           <Path d="M5 4h4l2 5-3 2c1.2 2.4 3.6 4.8 6 6l2-3 5 2v4c0 1.1-.9 2-2 2A15 15 0 013 6c0-1.1.9-2 2-2z" />
+        </G>
+      );
+      break;
+    case "mail":
+      body = (
+        <G {...p}>
+          <Rect x="3" y="5" width="18" height="14" rx="2" />
+          <Path d="M3.5 7l8.5 6 8.5-6" />
         </G>
       );
       break;

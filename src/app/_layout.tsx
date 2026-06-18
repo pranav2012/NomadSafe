@@ -95,6 +95,7 @@ export default function RootLayout() {
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="settings" options={{ presentation: "modal" }} />
+            <Stack.Screen name="trips" options={{ presentation: "modal" }} />
           </Stack>
         </ThemeProvider>
       </ConvexBetterAuthProvider>
