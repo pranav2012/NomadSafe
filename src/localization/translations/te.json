@@ -54,7 +54,11 @@
     "version": "వెర్షన్",
     "signOut": "సైన్ అవుట్",
     "signOutTitle": "సైన్ అవుట్",
-    "signOutBody": "మీరు నిజంగానే సైన్ అవుట్ కావాలనుకుంటున్నారా?"
+    "signOutBody": "మీరు నిజంగానే సైన్ అవుట్ కావాలనుకుంటున్నారా?",
+    "currency": "కరెన్సీ",
+    "currencyDevice": "పరికరం కరెన్సీ",
+    "currencyManual": "కరెన్సీని ఎంచుకోండి",
+    "currencyFallback": "పరికరం కరెన్సీ అందుబాటులో లేకపోతే, USD వాడబడుతుంది."
   },
   "auth": {
     "welcome": "స్వాగతం",
@@ -295,6 +299,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "te",
-    "lastGeneratedAt": "2026-06-18T23:21:47.775Z"
+    "lastGeneratedAt": "2026-06-18T23:31:27.901Z"
   }
 }

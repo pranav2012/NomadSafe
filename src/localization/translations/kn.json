@@ -54,7 +54,11 @@
     "version": "ಆವೃತ್ತಿ",
     "signOut": "ಸೈನ್ ಔಟ್",
     "signOutTitle": "ಸೈನ್ ಔಟ್",
-    "signOutBody": "ನೀವು ಖಚಿತವಾಗಿ ಸೈನ್ ಔಟ್ ಮಾಡಲು ಬಯಸುವಿರಾ?"
+    "signOutBody": "ನೀವು ಖಚಿತವಾಗಿ ಸೈನ್ ಔಟ್ ಮಾಡಲು ಬಯಸುವಿರಾ?",
+    "currency": "ಕರೆನ್ಸಿ",
+    "currencyDevice": "ಸಾಧನದ ಕರೆನ್ಸಿ",
+    "currencyManual": "ಕರೆನ್ಸಿ ಆಯ್ಕೆಮಾಡಿ",
+    "currencyFallback": "ಸಾಧನದ ಕರೆನ್ಸಿ ಲಭ್ಯವಿಲ್ಲದಿದ್ದರೆ, USD ಬಳಸಲಾಗುತ್ತದೆ."
   },
   "auth": {
     "welcome": "ಸ್ವಾಗತ",
@@ -295,6 +299,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "kn",
-    "lastGeneratedAt": "2026-06-18T23:21:47.775Z"
+    "lastGeneratedAt": "2026-06-18T23:31:27.901Z"
   }
 }

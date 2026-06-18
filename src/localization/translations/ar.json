@@ -54,7 +54,11 @@
     "version": "الإصدار",
     "signOut": "تسجيل الخروج",
     "signOutTitle": "تسجيل الخروج",
-    "signOutBody": "هل أنت متأكد أنك تريد تسجيل الخروج؟"
+    "signOutBody": "هل أنت متأكد أنك تريد تسجيل الخروج؟",
+    "currency": "العملة",
+    "currencyDevice": "عملة الجهاز",
+    "currencyManual": "اختر العملة",
+    "currencyFallback": "إذا كانت عملة الجهاز غير متاحة، فسيتم استخدام USD."
   },
   "auth": {
     "welcome": "مرحبًا",
@@ -295,6 +299,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "ar",
-    "lastGeneratedAt": "2026-06-18T23:21:47.775Z"
+    "lastGeneratedAt": "2026-06-18T23:31:27.901Z"
   }
 }

@@ -54,7 +54,11 @@
     "version": "பதிப்பு",
     "signOut": "வெளியேறு",
     "signOutTitle": "வெளியேறவா",
-    "signOutBody": "நீங்கள் நிச்சயமாக வெளியேற விரும்புகிறீர்களா?"
+    "signOutBody": "நீங்கள் நிச்சயமாக வெளியேற விரும்புகிறீர்களா?",
+    "currency": "நாணயம்",
+    "currencyDevice": "சாதன நாணயம்",
+    "currencyManual": "நாணயத்தைத் தேர்ந்தெடுக்கவும்",
+    "currencyFallback": "சாதன நாணயம் கிடைக்காவிட்டால், USD பயன்படுத்தப்படும்."
   },
   "auth": {
     "welcome": "வரவேற்பு",
@@ -295,6 +299,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "ta",
-    "lastGeneratedAt": "2026-06-18T23:21:47.775Z"
+    "lastGeneratedAt": "2026-06-18T23:31:27.901Z"
   }
 }

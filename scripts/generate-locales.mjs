@@ -207,7 +207,7 @@ async function updateGeneratedIndex(existingLocales) {
 
   await writeFile(
     generatedPath,
-    `${imports.join("\n")}\nimport type { SupportedLocale } from "./languages";\n\nexport type TranslationResource = typeof en;\n\nexport const translations: Partial<Record<SupportedLocale, TranslationResource>> = {\n${mapEntries.join("\n")}\n};\n`,
+    `${imports.join("\n")}\nimport type { SupportedLocale } from "./languages";\n\nexport type TranslationResource = typeof en;\ntype PartialTranslationResource = {\n  [Key in keyof TranslationResource]?: TranslationResource[Key] extends string[]\n    ? TranslationResource[Key]\n    : Partial<TranslationResource[Key]>;\n};\n\nexport const translations: Partial<Record<SupportedLocale, PartialTranslationResource>> = {\n${mapEntries.join("\n")}\n};\n`,
   );
 }
 

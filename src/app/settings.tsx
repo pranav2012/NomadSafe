@@ -12,11 +12,12 @@ import { Button } from "@/components/ui/Button";
 import { Divider } from "@/components/ui/Divider";
 import { Avatar } from "@/components/ui/Avatar";
 import { LANGUAGE_OPTIONS, useLocalization } from "@/localization";
+import { CURRENCY_OPTIONS } from "@/utils/currency";
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { colors, typography, spacing } = useTheme();
-  const { t, locale, deviceLocale } = useLocalization();
+  const { t, locale, deviceLocale, deviceCurrency } = useLocalization();
   const user = useAuthStore((s) => s.user);
   const biometricEnabled = useAuthStore((s) => s.biometricEnabled);
   const setBiometricEnabled = useAuthStore((s) => s.setBiometricEnabled);
@@ -27,6 +28,8 @@ export default function SettingsScreen() {
   const setThemeMode = useSettingsStore((s) => s.setThemeMode);
   const localeOverride = useSettingsStore((s) => s.localeOverride);
   const setLocaleOverride = useSettingsStore((s) => s.setLocaleOverride);
+  const currencyOverride = useSettingsStore((s) => s.currencyOverride);
+  const setCurrencyOverride = useSettingsStore((s) => s.setCurrencyOverride);
   const [signingOut, setSigningOut] = useState(false);
   const themeOptions = [
     { label: t("settings.themeLight"), value: "light" as const },
@@ -91,6 +94,60 @@ export default function SettingsScreen() {
             </Text>
           </View>
         </View>
+      </Card>
+
+      <Divider />
+
+      <Text
+        style={[
+          styles.sectionTitle,
+          {
+            color: colors.textSecondary,
+            fontSize: typography.sizes.sm,
+            fontWeight: typography.weights.medium,
+          },
+        ]}
+      >
+        {t("settings.currency")}
+      </Text>
+      <Card>
+        <Button
+          title={`${t("settings.currencyDevice")} (${deviceCurrency})`}
+          onPress={() => setCurrencyOverride(null)}
+          variant={currencyOverride === null ? "primary" : "ghost"}
+          size="sm"
+          fullWidth
+        />
+        <Text
+          style={{
+            color: colors.textSecondary,
+            fontSize: typography.sizes.sm,
+            marginTop: spacing.md,
+            marginBottom: spacing.sm,
+          }}
+        >
+          {t("settings.currencyManual")}
+        </Text>
+        <View style={styles.currencyGrid}>
+          {CURRENCY_OPTIONS.map((option) => (
+            <Button
+              key={option.code}
+              title={`${option.code} · ${option.name}`}
+              onPress={() => setCurrencyOverride(option.code)}
+              variant={currencyOverride === option.code ? "primary" : "ghost"}
+              size="sm"
+            />
+          ))}
+        </View>
+        <Text
+          style={{
+            color: colors.textSecondary,
+            fontSize: typography.sizes.sm,
+            marginTop: spacing.md,
+          }}
+        >
+          {t("settings.currencyFallback")}
+        </Text>
       </Card>
 
       <Divider />
@@ -277,5 +334,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   optionRow: { flexDirection: "row", gap: 8 },
+  currencyGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   languageGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
 });

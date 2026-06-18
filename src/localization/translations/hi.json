@@ -54,7 +54,11 @@
     "version": "संस्करण",
     "signOut": "साइन आउट",
     "signOutTitle": "साइन आउट",
-    "signOutBody": "क्या आप वाकई साइन आउट करना चाहते हैं?"
+    "signOutBody": "क्या आप वाकई साइन आउट करना चाहते हैं?",
+    "currency": "मुद्रा",
+    "currencyDevice": "डिवाइस की मुद्रा",
+    "currencyManual": "मुद्रा चुनें",
+    "currencyFallback": "यदि डिवाइस की मुद्रा उपलब्ध नहीं है, तो USD का उपयोग किया जाता है।"
   },
   "auth": {
     "welcome": "स्वागत है",
@@ -295,6 +299,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "hi",
-    "lastGeneratedAt": "2026-06-18T23:21:47.775Z"
+    "lastGeneratedAt": "2026-06-18T23:31:27.901Z"
   }
 }

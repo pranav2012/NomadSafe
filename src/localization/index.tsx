@@ -2,6 +2,7 @@ import React, { createContext, useContext, useMemo } from "react";
 import * as Localization from "expo-localization";
 import { I18nManager } from "react-native";
 import { useSettingsStore } from "@/stores/settingsStore";
+import { getEffectiveCurrency } from "@/utils/currency";
 import { LANGUAGE_OPTIONS, normalizeLocale, type SupportedLocale } from "./languages";
 import { translations, type TranslationResource } from "./translations.generated";
 
@@ -11,9 +12,12 @@ type Params = Record<string, Primitive>;
 interface LocalizationContextValue {
   locale: SupportedLocale;
   deviceLocale: SupportedLocale;
+  currency: string;
+  deviceCurrency: string;
   isRTL: boolean;
   t: (key: string, params?: Params) => string;
   tArray: (key: string) => string[];
+  formatCurrency: (amount: number, currency?: string, options?: Intl.NumberFormatOptions) => string;
   formatDate: (value: Date | number, options?: Intl.DateTimeFormatOptions) => string;
   formatTime: (value: Date | number, options?: Intl.DateTimeFormatOptions) => string;
   formatDateTime: (value: Date | number, options?: Intl.DateTimeFormatOptions) => string;
@@ -40,8 +44,12 @@ function interpolate(value: string, params?: Params) {
 
 export function LocalizationProvider({ children }: { children: React.ReactNode }) {
   const localeOverride = useSettingsStore((s) => s.localeOverride);
-  const deviceLocale = normalizeLocale(Localization.getLocales()[0]?.languageTag);
+  const currencyOverride = useSettingsStore((s) => s.currencyOverride);
+  const deviceLocalization = Localization.useLocales()[0];
+  const deviceLocale = normalizeLocale(deviceLocalization?.languageTag);
   const locale = localeOverride ?? deviceLocale;
+  const deviceCurrency = getEffectiveCurrency(null, deviceLocalization?.currencyCode);
+  const currency = getEffectiveCurrency(currencyOverride, deviceLocalization?.currencyCode);
   const resource = translations[locale] ?? fallbackResource;
   const isRTL = locale === "ar";
 
@@ -56,6 +64,8 @@ export function LocalizationProvider({ children }: { children: React.ReactNode }
     return {
       locale,
       deviceLocale,
+      currency,
+      deviceCurrency,
       isRTL,
       t: (key, params) => {
         const valueAtKey = getValue(key);
@@ -65,6 +75,12 @@ export function LocalizationProvider({ children }: { children: React.ReactNode }
         const valueAtKey = getValue(key);
         return Array.isArray(valueAtKey) ? valueAtKey.filter((item) => typeof item === "string") : [];
       },
+      formatCurrency: (amount, selectedCurrency = currency, options) =>
+        new Intl.NumberFormat(formatLocale, {
+          style: "currency",
+          currency: selectedCurrency,
+          ...options,
+        }).format(amount),
       formatDate: (value, options) =>
         new Intl.DateTimeFormat(formatLocale, { dateStyle: "medium", ...options }).format(value),
       formatTime: (value, options) =>
@@ -83,7 +99,7 @@ export function LocalizationProvider({ children }: { children: React.ReactNode }
         }
       },
     };
-  }, [deviceLocale, isRTL, locale, resource]);
+  }, [currency, deviceCurrency, deviceLocale, isRTL, locale, resource]);
 
   return (
     <LocalizationContext.Provider value={value}>

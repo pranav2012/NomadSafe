@@ -54,7 +54,11 @@
     "version": "バージョン",
     "signOut": "サインアウト",
     "signOutTitle": "サインアウト",
-    "signOutBody": "サインアウトしてもよろしいですか？"
+    "signOutBody": "サインアウトしてもよろしいですか？",
+    "currency": "通貨",
+    "currencyDevice": "端末の通貨",
+    "currencyManual": "通貨を選択",
+    "currencyFallback": "デバイスの通貨が利用できない場合は、USD が使用されます。"
   },
   "auth": {
     "welcome": "ようこそ",
@@ -295,6 +299,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "ja",
-    "lastGeneratedAt": "2026-06-18T23:21:47.775Z"
+    "lastGeneratedAt": "2026-06-18T23:31:27.901Z"
   }
 }

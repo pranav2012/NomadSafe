@@ -54,7 +54,11 @@
     "version": "Versione",
     "signOut": "Esci",
     "signOutTitle": "Esci",
-    "signOutBody": "Sei sicuro di voler uscire?"
+    "signOutBody": "Sei sicuro di voler uscire?",
+    "currency": "Valuta",
+    "currencyDevice": "Valuta del dispositivo",
+    "currencyManual": "Scegli valuta",
+    "currencyFallback": "Se la valuta del dispositivo non è disponibile, viene utilizzato USD."
   },
   "auth": {
     "welcome": "Benvenuto",
@@ -295,6 +299,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "it",
-    "lastGeneratedAt": "2026-06-18T23:21:47.775Z"
+    "lastGeneratedAt": "2026-06-18T23:31:27.901Z"
   }
 }

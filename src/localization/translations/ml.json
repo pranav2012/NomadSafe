@@ -54,7 +54,11 @@
     "version": "പതിപ്പ്",
     "signOut": "സൈൻ ഔട്ട്",
     "signOutTitle": "സൈൻ ഔട്ട്",
-    "signOutBody": "നിങ്ങൾ സൈൻ ഔട്ട് ചെയ്യണമെന്ന് ഉറപ്പാണോ?"
+    "signOutBody": "നിങ്ങൾ സൈൻ ഔട്ട് ചെയ്യണമെന്ന് ഉറപ്പാണോ?",
+    "currency": "കറൻസി",
+    "currencyDevice": "ഉപകരണത്തിന്റെ കറൻസി",
+    "currencyManual": "കറൻസി തിരഞ്ഞെടുക്കുക",
+    "currencyFallback": "ഉപകരണത്തിന്റെ കറൻസി ലഭ്യമല്ലെങ്കിൽ, USD ഉപയോഗിക്കും."
   },
   "auth": {
     "welcome": "സ്വാഗതം",
@@ -295,6 +299,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "ml",
-    "lastGeneratedAt": "2026-06-18T23:21:47.775Z"
+    "lastGeneratedAt": "2026-06-18T23:31:27.901Z"
   }
 }

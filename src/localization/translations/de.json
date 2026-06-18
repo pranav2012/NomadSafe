@@ -54,7 +54,11 @@
     "version": "Version",
     "signOut": "Abmelden",
     "signOutTitle": "Abmelden",
-    "signOutBody": "Möchtest du dich wirklich abmelden?"
+    "signOutBody": "Möchtest du dich wirklich abmelden?",
+    "currency": "Währung",
+    "currencyDevice": "Gerätewährung",
+    "currencyManual": "Währung wählen",
+    "currencyFallback": "Wenn die Gerätewährung nicht verfügbar ist, wird USD verwendet."
   },
   "auth": {
     "welcome": "Willkommen",
@@ -295,6 +299,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "de",
-    "lastGeneratedAt": "2026-06-18T23:21:47.775Z"
+    "lastGeneratedAt": "2026-06-18T23:31:27.901Z"
   }
 }

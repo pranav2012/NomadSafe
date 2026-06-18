@@ -54,7 +54,11 @@
     "version": "Versión",
     "signOut": "Cerrar sesión",
     "signOutTitle": "Cerrar sesión",
-    "signOutBody": "¿Seguro que quieres cerrar sesión?"
+    "signOutBody": "¿Seguro que quieres cerrar sesión?",
+    "currency": "Moneda",
+    "currencyDevice": "Moneda del dispositivo",
+    "currencyManual": "Elegir moneda",
+    "currencyFallback": "Si la moneda del dispositivo no está disponible, se usa USD."
   },
   "auth": {
     "welcome": "Bienvenido",
@@ -295,6 +299,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "es",
-    "lastGeneratedAt": "2026-06-18T23:21:47.775Z"
+    "lastGeneratedAt": "2026-06-18T23:31:27.901Z"
   }
 }

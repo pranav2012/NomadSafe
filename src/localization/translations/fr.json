@@ -54,7 +54,11 @@
     "version": "Version",
     "signOut": "Se déconnecter",
     "signOutTitle": "Se déconnecter",
-    "signOutBody": "Êtes-vous sûr de vouloir vous déconnecter ?"
+    "signOutBody": "Êtes-vous sûr de vouloir vous déconnecter ?",
+    "currency": "Devise",
+    "currencyDevice": "Devise de l’appareil",
+    "currencyManual": "Choisir une devise",
+    "currencyFallback": "Si la devise de l’appareil n’est pas disponible, USD est utilisé."
   },
   "auth": {
     "welcome": "Bienvenue",
@@ -295,6 +299,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "fr",
-    "lastGeneratedAt": "2026-06-18T23:21:47.775Z"
+    "lastGeneratedAt": "2026-06-18T23:31:27.901Z"
   }
 }

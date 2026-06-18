@@ -16,8 +16,13 @@ import kn from "./translations/kn.json";
 import type { SupportedLocale } from "./languages";
 
 export type TranslationResource = typeof en;
+type PartialTranslationResource = {
+  [Key in keyof TranslationResource]?: TranslationResource[Key] extends string[]
+    ? TranslationResource[Key]
+    : Partial<TranslationResource[Key]>;
+};
 
-export const translations: Partial<Record<SupportedLocale, TranslationResource>> = {
+export const translations: Partial<Record<SupportedLocale, PartialTranslationResource>> = {
   en,
   "es": es,
   "fr": fr,

@@ -54,7 +54,11 @@
     "version": "Version",
     "signOut": "Sign Out",
     "signOutTitle": "Sign Out",
-    "signOutBody": "Are you sure you want to sign out?"
+    "signOutBody": "Are you sure you want to sign out?",
+    "currency": "Currency",
+    "currencyDevice": "Device currency",
+    "currencyManual": "Choose currency",
+    "currencyFallback": "If device currency is unavailable, USD is used."
   },
   "auth": {
     "welcome": "Welcome",

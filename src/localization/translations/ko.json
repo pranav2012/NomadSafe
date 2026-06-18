@@ -54,7 +54,11 @@
     "version": "버전",
     "signOut": "로그아웃",
     "signOutTitle": "로그아웃",
-    "signOutBody": "정말 로그아웃하시겠어요?"
+    "signOutBody": "정말 로그아웃하시겠어요?",
+    "currency": "통화",
+    "currencyDevice": "기기 통화",
+    "currencyManual": "통화 선택",
+    "currencyFallback": "기기 통화를 사용할 수 없으면 USD가 사용됩니다."
   },
   "auth": {
     "welcome": "환영합니다",
@@ -295,6 +299,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "ko",
-    "lastGeneratedAt": "2026-06-18T23:21:47.775Z"
+    "lastGeneratedAt": "2026-06-18T23:31:27.901Z"
   }
 }

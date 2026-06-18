@@ -54,7 +54,11 @@
     "version": "版本",
     "signOut": "退出登录",
     "signOutTitle": "退出登录",
-    "signOutBody": "你确定要退出登录吗？"
+    "signOutBody": "你确定要退出登录吗？",
+    "currency": "货币",
+    "currencyDevice": "设备货币",
+    "currencyManual": "选择货币",
+    "currencyFallback": "如果无法获取设备货币，将使用 USD。"
   },
   "auth": {
     "welcome": "欢迎",
@@ -295,6 +299,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "zh-CN",
-    "lastGeneratedAt": "2026-06-18T23:21:47.775Z"
+    "lastGeneratedAt": "2026-06-18T23:31:27.901Z"
   }
 }
