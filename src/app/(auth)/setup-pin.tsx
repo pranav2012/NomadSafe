@@ -39,13 +39,13 @@ export default function SetupPinScreen() {
   const shakeStyle = useAnimatedStyle(() => ({ transform: [{ translateX: shakeX.value }] }));
 
   const shake = useCallback(() => {
-    shakeX.value = withSequence(
+    shakeX.set(withSequence(
       withTiming(-10, { duration: 50 }),
       withTiming(10, { duration: 50 }),
       withTiming(-10, { duration: 50 }),
       withTiming(10, { duration: 50 }),
       withTiming(0, { duration: 50 }),
-    );
+    ));
   }, [shakeX]);
 
   const handleComplete = async (finalPin: string) => {

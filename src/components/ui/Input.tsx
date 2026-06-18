@@ -60,12 +60,12 @@ export function Input({
 
   const handleFocus = () => {
     setIsFocused(true);
-    focusProgress.value = withTiming(1, { duration: 200 });
+    focusProgress.set(withTiming(1, { duration: 200 }));
   };
 
   const handleBlur = () => {
     setIsFocused(false);
-    focusProgress.value = withTiming(0, { duration: 200 });
+    focusProgress.set(withTiming(0, { duration: 200 }));
   };
 
   return (

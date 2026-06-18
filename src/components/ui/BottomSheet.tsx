@@ -37,28 +37,28 @@ export function BottomSheet({
 
   useEffect(() => {
     if (visible) {
-      translateY.value = withSpring(0, SPRING_CONFIG);
-      backdropOpacity.value = withTiming(1, { duration: 200 });
+      translateY.set(withSpring(0, SPRING_CONFIG));
+      backdropOpacity.set(withTiming(1, { duration: 200 }));
     } else {
-      translateY.value = withSpring(sheetHeight, SPRING_CONFIG);
-      backdropOpacity.value = withTiming(0, { duration: 200 });
+      translateY.set(withSpring(sheetHeight, SPRING_CONFIG));
+      backdropOpacity.set(withTiming(0, { duration: 200 }));
     }
   }, [visible, sheetHeight, translateY, backdropOpacity]);
 
   const panGesture = Gesture.Pan()
     .onStart(() => {
-      context.value = translateY.value;
+      context.set(translateY.get());
     })
     .onUpdate((event) => {
-      translateY.value = Math.max(0, context.value + event.translationY);
+      translateY.set(Math.max(0, context.get() + event.translationY));
     })
     .onEnd((event) => {
       if (event.translationY > sheetHeight * 0.3 || event.velocityY > 500) {
-        translateY.value = withSpring(sheetHeight, SPRING_CONFIG);
-        backdropOpacity.value = withTiming(0, { duration: 200 });
+        translateY.set(withSpring(sheetHeight, SPRING_CONFIG));
+        backdropOpacity.set(withTiming(0, { duration: 200 }));
         runOnJS(onClose)();
       } else {
-        translateY.value = withSpring(0, SPRING_CONFIG);
+        translateY.set(withSpring(0, SPRING_CONFIG));
       }
     });
 

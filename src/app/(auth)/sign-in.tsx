@@ -6,14 +6,12 @@ import {
   TextInput,
   ScrollView,
   StyleSheet,
-  Platform,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import Svg, { Path } from "react-native-svg";
-import * as AppleAuthentication from "expo-apple-authentication";
 import { NOMAD_FONTS, getNomadTheme, type NomadTheme } from "@/constants/nomadTokens";
 import { useThemeContext } from "@/providers/ThemeProvider";
 import { useAuthStore } from "@/stores/authStore";
@@ -42,17 +40,6 @@ function GoogleGlyph() {
       <Path
         fill="#EA4335"
         d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.59A8.98 8.98 0 0 0 9 0 9 9 0 0 0 .95 4.95l3.02 2.33C4.68 5.16 6.66 3.58 9 3.58z"
-      />
-    </Svg>
-  );
-}
-
-function AppleGlyph() {
-  return (
-    <Svg width={17} height={20} viewBox="0 0 16 20">
-      <Path
-        fill="#fff"
-        d="M13.1 10.6c0-2.3 1.9-3.4 1.95-3.5-1.06-1.55-2.72-1.77-3.31-1.8-1.41-.14-2.75.83-3.46.83-.71 0-1.81-.81-2.98-.79C3.76 5.37 2.3 6.2 1.5 7.6c-1.64 2.85-.42 7.06 1.18 9.37.78 1.13 1.71 2.4 2.93 2.36 1.17-.05 1.62-.76 3.04-.76s1.82.76 3.06.73c1.26-.02 2.06-1.16 2.83-2.3.89-1.32 1.26-2.6 1.28-2.66-.03-.01-2.45-.94-2.47-3.73zM10.86 3.5c.65-.79 1.08-1.88.96-2.97-.93.04-2.06.62-2.73 1.4-.6.7-1.12 1.81-.98 2.88 1.04.08 2.1-.53 2.75-1.31z"
       />
     </Svg>
   );
@@ -112,27 +99,6 @@ export default function SignInScreen() {
     try {
       setLoading("google");
       await authClient.signIn.social({ provider: "google" });
-      handlePostSignIn();
-    } catch (error) {
-      void error;
-    } finally {
-      setLoading(null);
-    }
-  };
-
-  const handleAppleSignIn = async () => {
-    try {
-      setLoading("apple");
-      const credential = await AppleAuthentication.signInAsync({
-        requestedScopes: [
-          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-          AppleAuthentication.AppleAuthenticationScope.EMAIL,
-        ],
-      });
-      await authClient.signIn.social({
-        provider: "apple",
-        idToken: { token: credential.identityToken! },
-      });
       handlePostSignIn();
     } catch (error) {
       void error;
@@ -231,17 +197,6 @@ export default function SignInScreen() {
               border={theme.hairline}
               onPress={handleGoogleSignIn}
             />
-            {Platform.OS === "ios" && (
-              <SocialButton
-                theme={theme}
-                glyph={<AppleGlyph />}
-                label={loading === "apple" ? "Connecting…" : "Continue with Apple"}
-                bg={theme.inkDeep}
-                fg="#fff"
-                border={theme.inkDeep}
-                onPress={handleAppleSignIn}
-              />
-            )}
           </View>
 
           {/* Divider */}

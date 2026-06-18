@@ -50,10 +50,10 @@ export function Card({
           onPress();
         }}
         onPressIn={() => {
-          scale.value = withSpring(0.98);
+          scale.set(withSpring(0.98));
         }}
         onPressOut={() => {
-          scale.value = withSpring(1);
+          scale.set(withSpring(1));
         }}
         style={[cardStyle, animatedStyle]}
       >

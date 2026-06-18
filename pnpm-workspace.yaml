@@ -1,2 +1,5 @@
 nodeLinker: hoisted
-minimumReleaseAge: 43200 # 30 days
+minimumReleaseAge: 2880 # 2 days
+allowBuilds:
+  prisma: true
+  unrs-resolver: true

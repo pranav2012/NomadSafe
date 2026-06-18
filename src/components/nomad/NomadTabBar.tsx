@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Pressable, Text, StyleSheet, Platform } from "react-native";
 import { BlurView } from "expo-blur";
-import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
+import type { BottomTabBarProps } from "expo-router/tabs";
 import { Icon, type IconName } from "./Icon";
 import { getNomadTheme, NOMAD_FONTS } from "@/constants/nomadTokens";
 import { useThemeContext } from "@/providers/ThemeProvider";

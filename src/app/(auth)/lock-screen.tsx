@@ -45,13 +45,12 @@ export default function LockScreen() {
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [attempts, setAttempts] = useState(0);
-  const [lockedUntil, setLockedUntil] = useState<number | null>(null);
+  const [isLocked, setIsLocked] = useState(false);
 
   const scanY = useSharedValue(0);
   const successScale = useSharedValue(0);
   const shakeX = useSharedValue(0);
 
-  const isLocked = lockedUntil !== null && Date.now() < lockedUntil;
   const name = user?.name ?? "Welcome back";
   const initial = user?.name?.trim()?.[0]?.toUpperCase() ?? "N";
 
@@ -74,21 +73,21 @@ export default function LockScreen() {
   const runScan = useCallback(async () => {
     if (phase !== "idle") return;
     setPhase("scanning");
-    scanY.value = -GLYPH * 0.3;
-    scanY.value = withRepeat(
+    scanY.set(-GLYPH * 0.3);
+    scanY.set(withRepeat(
       withSequence(
         withTiming(GLYPH * 0.3, { duration: 1100, easing: Easing.inOut(Easing.ease) }),
         withTiming(-GLYPH * 0.3, { duration: 1100, easing: Easing.inOut(Easing.ease) }),
       ),
       -1,
-    );
+    ));
 
     const success = await localAuth.authenticateWithBiometric();
     cancelAnimation(scanY);
 
     if (success) {
       setPhase("success");
-      successScale.value = withTiming(1, { duration: 320 });
+      successScale.set(withTiming(1, { duration: 320 }));
       setTimeout(handleUnlock, 600);
     } else {
       setPhase("idle");
@@ -103,13 +102,13 @@ export default function LockScreen() {
   }, [mode, biometricEnabled]);
 
   const shake = useCallback(() => {
-    shakeX.value = withSequence(
+    shakeX.set(withSequence(
       withTiming(-10, { duration: 50 }),
       withTiming(10, { duration: 50 }),
       withTiming(-10, { duration: 50 }),
       withTiming(10, { duration: 50 }),
       withTiming(0, { duration: 50 }),
-    );
+    ));
   }, [shakeX]);
 
   const handleKeyPress = async (key: string) => {
@@ -138,10 +137,10 @@ export default function LockScreen() {
         const a = attempts + 1;
         setAttempts(a);
         if (a >= MAX_ATTEMPTS) {
-          setLockedUntil(Date.now() + LOCKOUT_DURATION);
+          setIsLocked(true);
           setError("Too many attempts. Try again in 30 seconds.");
           setTimeout(() => {
-            setLockedUntil(null);
+            setIsLocked(false);
             setAttempts(0);
             setError("");
           }, LOCKOUT_DURATION);

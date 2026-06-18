@@ -74,10 +74,10 @@ export function Button({
     <AnimatedPressable
       onPress={handlePress}
       onPressIn={() => {
-        scale.value = withSpring(0.97);
+        scale.set(withSpring(0.97));
       }}
       onPressOut={() => {
-        scale.value = withSpring(1);
+        scale.set(withSpring(1));
       }}
       disabled={isDisabled}
       style={[
