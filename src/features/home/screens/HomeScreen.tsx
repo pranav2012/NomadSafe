@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -13,9 +13,12 @@ import {
 import { DateTimePicker } from "@expo/ui/community/datetime-picker";
 import { DatePicker as SwiftDatePicker, Host } from "@expo/ui/swift-ui";
 import { datePickerStyle, environment, tint } from "@expo/ui/swift-ui/modifiers";
+import Animated, { FadeInDown, LinearTransition } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Icon } from "@/components/nomad/Icon";
 import { NOMAD_FONTS } from "@/constants/nomadTokens";
+import { localModelService, useModelDownload } from "@/features/ai";
+import type { TripBudgetEstimate } from "@/features/ai/services/localModelService";
 import { useSettingsStore } from "@/features/settings";
 import {
   type DestinationOption,
@@ -180,22 +183,62 @@ export default function HomeScreen() {
   const activeTripId = useTripsStore((state) => state.activeTripId);
   const createTrip = useTripsStore((state) => state.createTrip);
   const activeTrip = trips.find((trip) => trip.id === activeTripId) ?? trips[0] ?? null;
+  const aiDownload = useModelDownload();
+  const scrollRef = useRef<ScrollView>(null);
+  const budgetEstimateKeyRef = useRef<string | null>(null);
   const [form, setForm] = useState<FormState>(() => makeInitialForm(defaultCurrency));
   const [pickerField, setPickerField] = useState<DateField | null>(null);
   const [isCurrencyPickerOpen, setIsCurrencyPickerOpen] = useState(false);
   const [webDestinationResults, setWebDestinationResults] = useState<DestinationOption[]>([]);
   const [isSearchingWebDestinations, setIsSearchingWebDestinations] = useState(false);
   const [webDestinationError, setWebDestinationError] = useState<string | null>(null);
+  const [isBudgetAiAvailable, setIsBudgetAiAvailable] = useState(false);
+  const [isEstimatingBudget, setIsEstimatingBudget] = useState(false);
+  const [budgetEstimate, setBudgetEstimate] = useState<TripBudgetEstimate | null>(null);
+  const [budgetEstimateError, setBudgetEstimateError] = useState<string | null>(null);
 
   const offlineDestinationResults = useMemo(
     () => searchOfflineDestinations(form.destinationQuery, locale, form.destinations),
     [form.destinationQuery, form.destinations, locale],
   );
+  const shouldShowBudgetEstimate = isBudgetAiAvailable && form.destinations.length > 0;
+  const budgetEstimateKey = useMemo(
+    () =>
+      [
+        form.destinations.join("|"),
+        toDateKey(form.startDate),
+        toDateKey(form.endDate),
+        form.mode,
+        form.companions.length,
+        form.currency,
+      ].join("::"),
+    [form.companions.length, form.currency, form.destinations, form.endDate, form.mode, form.startDate],
+  );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function checkBudgetAiAvailability() {
+      const model = await localModelService.getReadyModel();
+      if (isMounted) setIsBudgetAiAvailable(model !== null);
+    }
+
+    checkBudgetAiAvailability();
+    return () => {
+      isMounted = false;
+    };
+  }, [aiDownload.modelId, aiDownload.status]);
 
   const updateForm = <Key extends keyof FormState>(
     key: Key,
     value: FormState[Key],
-  ) => setForm((current) => ({ ...current, [key]: value }));
+  ) => {
+    setForm((current) => ({ ...current, [key]: value }));
+    if (key === "mode") {
+      setBudgetEstimate(null);
+      setBudgetEstimateError(null);
+    }
+  };
 
   const handleDestinationQueryChange = (value: string) => {
     setWebDestinationResults([]);
@@ -218,6 +261,8 @@ export default function HomeScreen() {
     });
     setWebDestinationResults([]);
     setWebDestinationError(null);
+    setBudgetEstimate(null);
+    setBudgetEstimateError(null);
   };
 
   const handleRemoveDestination = (destination: string) => {
@@ -225,6 +270,8 @@ export default function HomeScreen() {
       ...current,
       destinations: current.destinations.filter((item) => item !== destination),
     }));
+    setBudgetEstimate(null);
+    setBudgetEstimateError(null);
   };
 
   const handleSearchWebDestinations = async () => {
@@ -295,6 +342,8 @@ export default function HomeScreen() {
         companions: exists ? current.companions : [...current.companions, name],
       };
     });
+    setBudgetEstimate(null);
+    setBudgetEstimateError(null);
   };
 
   const handleRemoveTraveler = (traveler: string) => {
@@ -302,12 +351,72 @@ export default function HomeScreen() {
       ...current,
       companions: current.companions.filter((companion) => companion !== traveler),
     }));
+    setBudgetEstimate(null);
+    setBudgetEstimateError(null);
   };
 
   const handleSelectCurrency = (currency: string) => {
     updateForm("currency", currency);
     setIsCurrencyPickerOpen(false);
+    setBudgetEstimate(null);
+    setBudgetEstimateError(null);
   };
+
+  const handleEstimateBudget = useCallback(async () => {
+    if (form.destinations.length === 0 || isEstimatingBudget) return;
+
+    budgetEstimateKeyRef.current = budgetEstimateKey;
+    setIsEstimatingBudget(true);
+    setBudgetEstimateError(null);
+
+    try {
+      const estimate = await localModelService.estimateTripBudget({
+        destinations: form.destinations,
+        days: countInclusiveDays(form.startDate, form.endDate),
+        travelerCount: form.mode === "group" ? form.companions.length + 1 : 1,
+        currency: form.currency,
+      });
+      setBudgetEstimate(estimate);
+    } catch {
+      setBudgetEstimate(null);
+      setBudgetEstimateError(t("trip.aiBudgetError"));
+    } finally {
+      await localModelService.release();
+      setIsEstimatingBudget(false);
+    }
+  }, [
+    budgetEstimateKey,
+    form.companions.length,
+    form.currency,
+    form.destinations,
+    form.endDate,
+    form.mode,
+    form.startDate,
+    isEstimatingBudget,
+    t,
+  ]);
+
+  const handleUseBudgetEstimate = () => {
+    if (!budgetEstimate) return;
+    updateForm("budget", `${budgetEstimate.total}`);
+  };
+
+  useEffect(() => {
+    if (!shouldShowBudgetEstimate || isEstimatingBudget) return;
+    if (budgetEstimateKeyRef.current === budgetEstimateKey) return;
+
+    handleEstimateBudget();
+  }, [budgetEstimateKey, handleEstimateBudget, isEstimatingBudget, shouldShowBudgetEstimate]);
+
+  useEffect(() => {
+    if (!shouldShowBudgetEstimate) return;
+
+    const id = setTimeout(() => {
+      scrollRef.current?.scrollToEnd({ animated: true });
+    }, 120);
+
+    return () => clearTimeout(id);
+  }, [shouldShowBudgetEstimate, budgetEstimateKey]);
 
   const handleDateChange = (field: DateField, date: Date) => {
     const selectedDate = startOfLocalDay(date);
@@ -323,6 +432,8 @@ export default function HomeScreen() {
 
       return { ...current, endDate: selectedDate };
     });
+    setBudgetEstimate(null);
+    setBudgetEstimateError(null);
   };
 
   const handleCreateTrip = () => {
@@ -352,6 +463,10 @@ export default function HomeScreen() {
     setForm(makeInitialForm(defaultCurrency));
     setPickerField(null);
     setIsCurrencyPickerOpen(false);
+    setBudgetEstimate(null);
+    setBudgetEstimateError(null);
+    budgetEstimateKeyRef.current = null;
+    localModelService.release();
   };
 
   return (
@@ -360,6 +475,7 @@ export default function HomeScreen() {
       style={[styles.root, { backgroundColor: theme.paper }]}
     >
       <ScrollView
+        ref={scrollRef}
         contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
@@ -378,6 +494,10 @@ export default function HomeScreen() {
             pickerField={pickerField}
             currency={form.currency}
             isCurrencyPickerOpen={isCurrencyPickerOpen}
+            shouldShowBudgetEstimate={shouldShowBudgetEstimate}
+            isEstimatingBudget={isEstimatingBudget}
+            budgetEstimate={budgetEstimate}
+            budgetEstimateError={budgetEstimateError}
             destinationOptions={offlineDestinationResults}
             webDestinationOptions={webDestinationResults}
             isSearchingWebDestinations={isSearchingWebDestinations}
@@ -391,6 +511,8 @@ export default function HomeScreen() {
             onRemoveTraveler={handleRemoveTraveler}
             onToggleCurrencyPicker={() => setIsCurrencyPickerOpen((open) => !open)}
             onSelectCurrency={handleSelectCurrency}
+            onEstimateBudget={handleEstimateBudget}
+            onUseBudgetEstimate={handleUseBudgetEstimate}
             onDateFieldPress={setPickerField}
             onDateChange={handleDateChange}
             onDismissPicker={() => setPickerField(null)}
@@ -407,6 +529,10 @@ function CreateTripForm({
   pickerField,
   currency,
   isCurrencyPickerOpen,
+  shouldShowBudgetEstimate,
+  isEstimatingBudget,
+  budgetEstimate,
+  budgetEstimateError,
   destinationOptions,
   webDestinationOptions,
   isSearchingWebDestinations,
@@ -420,6 +546,8 @@ function CreateTripForm({
   onRemoveTraveler,
   onToggleCurrencyPicker,
   onSelectCurrency,
+  onEstimateBudget,
+  onUseBudgetEstimate,
   onDateFieldPress,
   onDateChange,
   onDismissPicker,
@@ -429,6 +557,10 @@ function CreateTripForm({
   pickerField: DateField | null;
   currency: string;
   isCurrencyPickerOpen: boolean;
+  shouldShowBudgetEstimate: boolean;
+  isEstimatingBudget: boolean;
+  budgetEstimate: TripBudgetEstimate | null;
+  budgetEstimateError: string | null;
   destinationOptions: DestinationOption[];
   webDestinationOptions: DestinationOption[];
   isSearchingWebDestinations: boolean;
@@ -442,6 +574,8 @@ function CreateTripForm({
   onRemoveTraveler: (traveler: string) => void;
   onToggleCurrencyPicker: () => void;
   onSelectCurrency: (currency: string) => void;
+  onEstimateBudget: () => void;
+  onUseBudgetEstimate: () => void;
   onDateFieldPress: (field: DateField) => void;
   onDateChange: (field: DateField, date: Date) => void;
   onDismissPicker: () => void;
@@ -449,7 +583,7 @@ function CreateTripForm({
 }) {
   const { nomad, isDark } = useTheme();
   const theme = nomad.colors;
-  const { t, locale } = useLocalization();
+  const { t, locale, formatCurrency } = useLocalization();
   const budgetCurrencyAffix = getCurrencyAffix(locale, currency);
   return (
     <View style={styles.stack}>
@@ -573,6 +707,31 @@ function CreateTripForm({
               );
             })}
           </View>
+        ) : null}
+
+        {shouldShowBudgetEstimate ? (
+          <BudgetEstimateCard
+            estimate={budgetEstimate}
+            error={budgetEstimateError}
+            isLoading={isEstimatingBudget}
+            canEstimate={form.destinations.length > 0}
+            formattedTotal={
+              budgetEstimate
+                ? formatCurrency(budgetEstimate.total, currency, {
+                    maximumFractionDigits: 0,
+                  })
+                : null
+            }
+            formattedDaily={
+              budgetEstimate
+                ? formatCurrency(budgetEstimate.daily, currency, {
+                    maximumFractionDigits: 0,
+                  })
+                : null
+            }
+            onEstimate={onEstimateBudget}
+            onUseEstimate={onUseBudgetEstimate}
+          />
         ) : null}
 
         <View style={styles.segmentWrap}>
@@ -842,6 +1001,95 @@ function TripTextInput({
         ) : null}
       </View>
     </View>
+  );
+}
+
+function BudgetEstimateCard({
+  estimate,
+  error,
+  isLoading,
+  canEstimate,
+  formattedTotal,
+  formattedDaily,
+  onEstimate,
+  onUseEstimate,
+}: {
+  estimate: TripBudgetEstimate | null;
+  error: string | null;
+  isLoading: boolean;
+  canEstimate: boolean;
+  formattedTotal: string | null;
+  formattedDaily: string | null;
+  onEstimate: () => void;
+  onUseEstimate: () => void;
+}) {
+  const { nomad } = useTheme();
+  const theme = nomad.colors;
+  const { t } = useLocalization();
+
+  return (
+    <Animated.View
+      entering={FadeInDown.duration(260)}
+      layout={LinearTransition.duration(220)}
+      style={[styles.aiBudgetCard, { backgroundColor: theme.paper, borderColor: theme.hairline }]}
+    >
+      <View style={styles.aiBudgetHeader}>
+        <View style={[styles.aiBudgetIcon, { backgroundColor: theme.mustardSoft }]}>
+          {isLoading ? (
+            <ActivityIndicator size="small" color={theme.mustard} />
+          ) : (
+            <Icon name="sparkle" size={16} color={theme.mustard} />
+          )}
+        </View>
+        <View style={styles.aiBudgetCopy}>
+          <Text style={[styles.aiBudgetTitle, { color: theme.inkDeep }]}>
+            {t("trip.aiBudgetTitle")}
+          </Text>
+          <Text style={[styles.aiBudgetSub, { color: theme.inkSoft }]}>
+            {estimate && formattedTotal && formattedDaily
+              ? t("trip.aiBudgetEstimate", {
+                  total: formattedTotal,
+                  daily: formattedDaily,
+                })
+              : error ?? t("trip.aiBudgetBody")}
+          </Text>
+        </View>
+      </View>
+
+      {estimate ? (
+        <Text style={[styles.aiBudgetReason, { color: theme.inkSoft }]}>
+          {estimate.rationale}
+        </Text>
+      ) : null}
+
+      <View style={styles.aiBudgetActions}>
+        <Pressable
+          onPress={onEstimate}
+          disabled={!canEstimate || isLoading}
+          style={[
+            styles.aiBudgetButton,
+            {
+              backgroundColor: theme.tealSoft,
+              opacity: canEstimate && !isLoading ? 1 : 0.45,
+            },
+          ]}
+        >
+          <Text style={[styles.aiBudgetButtonText, { color: theme.teal }]}>
+            {isLoading ? t("trip.aiBudgetEstimating") : t("trip.aiBudgetAction")}
+          </Text>
+        </Pressable>
+        {estimate ? (
+          <Pressable
+            onPress={onUseEstimate}
+            style={[styles.aiBudgetButton, { backgroundColor: theme.teal }]}
+          >
+            <Text style={[styles.aiBudgetButtonText, { color: theme.inverse }]}>
+              {t("trip.aiBudgetUse")}
+            </Text>
+          </Pressable>
+        ) : null}
+      </View>
+    </Animated.View>
   );
 }
 
@@ -1466,6 +1714,58 @@ const styles = StyleSheet.create({
     fontFamily: NOMAD_FONTS.ui,
     fontSize: 11.5,
     lineHeight: 15,
+  },
+  aiBudgetCard: {
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 12,
+    gap: 10,
+  },
+  aiBudgetHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  aiBudgetIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  aiBudgetCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  aiBudgetTitle: {
+    fontFamily: NOMAD_FONTS.uiSemi,
+    fontSize: 14,
+  },
+  aiBudgetSub: {
+    fontFamily: NOMAD_FONTS.ui,
+    fontSize: 12.5,
+    lineHeight: 17,
+  },
+  aiBudgetReason: {
+    fontFamily: NOMAD_FONTS.ui,
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  aiBudgetActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  aiBudgetButton: {
+    minHeight: 36,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  aiBudgetButtonText: {
+    fontFamily: NOMAD_FONTS.uiSemi,
+    fontSize: 12.5,
   },
   addButton: {
     width: 34,

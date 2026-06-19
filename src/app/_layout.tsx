@@ -22,6 +22,7 @@ import {
 } from "@expo-google-fonts/geist-mono";
 import { authClient, useAuthStore, useSyncAuthSession } from "@/features/auth";
 import {
+  localModelService,
   modelDownloadManager,
   modelNotifications,
   registerModelDownloadTask,
@@ -55,6 +56,7 @@ function AppStateLock() {
         if (appState.current === "active" && nextState === "background") {
           backgroundedAt.current = Date.now();
           updateLastActive();
+          localModelService.release();
         }
 
         if (appState.current === "background" && nextState === "active") {
