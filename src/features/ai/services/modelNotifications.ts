@@ -30,6 +30,12 @@ export const modelNotifications = {
       }).catch(() => {
         // channel setup is best-effort
       });
+      Notifications.setNotificationChannelAsync("assistant", {
+        name: "Assistant replies",
+        importance: Notifications.AndroidImportance.DEFAULT,
+      }).catch(() => {
+        // channel setup is best-effort
+      });
     }
   },
 
@@ -75,6 +81,25 @@ export const modelNotifications = {
         title: "Assistant ready",
         body: `${modelName} finished downloading and is ready to use offline.`,
         ...(Platform.OS === "android" ? { channelId: "downloads" } : {}),
+      },
+      trigger: null,
+    });
+  },
+
+  /**
+   * Posts a local notification when the assistant finishes a chat reply while
+   * the app is backgrounded. Reuses the same opt-in as download notifications.
+   */
+  async notifyAssistantReply(): Promise<void> {
+    if (!this.isEnabled()) return;
+    this.configure();
+    const granted = await this.ensurePermission();
+    if (!granted) return;
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: "Nomad replied",
+        body: "Your assistant finished a reply. Tap to read it.",
+        ...(Platform.OS === "android" ? { channelId: "assistant" } : {}),
       },
       trigger: null,
     });

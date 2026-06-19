@@ -2,6 +2,7 @@ import * as LegacyFileSystem from "expo-file-system/legacy";
 import type { DownloadPauseState, DownloadProgressData } from "expo-file-system/legacy";
 import { storage } from "@/stores/storage";
 import { aiModelService, AI_MODELS, type AiModel } from "./aiModelService";
+import { localModelService } from "./localModelService";
 import { modelNotifications } from "./modelNotifications";
 
 export type DownloadStatus =
@@ -233,6 +234,7 @@ class ModelDownloadManager {
   private async markCompleted(model: AiModel, opts: { notify: boolean }) {
     this.resumable = null;
     aiModelService.setDownloadedModelId(model.id);
+    aiModelService.setActiveModelId(model.id);
     writePersisted(null);
     this.emit({ modelId: model.id, status: "completed", progress: 100, error: null });
     if (opts.notify) {
@@ -250,3 +252,37 @@ function messageFrom(err: unknown): string {
 }
 
 export const modelDownloadManager = new ModelDownloadManager();
+
+/**
+ * Deletes a fully downloaded model file from disk and clears the selected /
+ * downloaded / active IDs when that model was the only one tracked. Other
+ * downloaded models are left untouched.
+ */
+export async function deleteDownloadedModel(model: AiModel): Promise<void> {
+  await localModelService.release();
+  const removed = await aiModelService.deleteModel(model);
+  if (!removed) return;
+
+  const downloadedId = aiModelService.getDownloadedModelId();
+  const selectedId = aiModelService.getSelectedModelId();
+  const activeId = aiModelService.getActiveModelId();
+
+  if (downloadedId === model.id) {
+    aiModelService.setDownloadedModelId("");
+  }
+  if (selectedId === model.id) {
+    aiModelService.setSelectedModelId("");
+  }
+  if (activeId === model.id) {
+    aiModelService.setActiveModelId("");
+  }
+
+  // If another model is still on disk, promote it as the new default.
+  for (const candidate of AI_MODELS) {
+    if (candidate.id !== model.id && (await aiModelService.isModelDownloaded(candidate))) {
+      aiModelService.setDownloadedModelId(candidate.id);
+      aiModelService.setActiveModelId(candidate.id);
+      return;
+    }
+  }
+}

@@ -9,6 +9,11 @@ import {
 import { Platform } from "react-native";
 import { storage } from "@/stores/storage";
 
+export function formatModelSize(sizeMb: number): string {
+  if (sizeMb >= 1024) return `${(sizeMb / 1024).toFixed(1)} GB`;
+  return `${sizeMb} MB`;
+}
+
 export interface DeviceCapability {
   totalMemoryGb: number;
   supported: boolean;
@@ -87,6 +92,7 @@ export const AI_MODELS: AiModel[] = [
 
 const AI_MODEL_ID_KEY = "ai-selected-model-id";
 const AI_MODEL_DOWNLOADED_KEY = "ai-downloaded-model-id";
+const AI_ACTIVE_MODEL_ID_KEY = "ai-active-model-id";
 
 function getOsVersion(): number {
   if (Platform.OS === "android") {
@@ -175,6 +181,14 @@ export const aiModelService = {
     storage.set(AI_MODEL_DOWNLOADED_KEY, id ?? "");
   },
 
+  getActiveModelId(): string | null {
+    return storage.getString(AI_ACTIVE_MODEL_ID_KEY) ?? null;
+  },
+
+  setActiveModelId(id: string | null) {
+    storage.set(AI_ACTIVE_MODEL_ID_KEY, id ?? "");
+  },
+
   getModelDownloadUrl(model: AiModel): string {
     return `https://huggingface.co/${model.hfRepoId}/resolve/main/${model.hfFilename}`;
   },
@@ -226,5 +240,16 @@ export const aiModelService = {
   async isModelDownloaded(model: AiModel): Promise<boolean> {
     const file = new File(aiModelService.getLocalModelPath(model));
     return file.exists;
+  },
+
+  /**
+   * Removes a downloaded model file from disk. Safe to call even if the file
+   * does not exist. Returns true if the file was present and removed.
+   */
+  async deleteModel(model: AiModel): Promise<boolean> {
+    const file = new File(aiModelService.getLocalModelPath(model));
+    if (!file.exists) return false;
+    await file.delete();
+    return true;
   },
 };

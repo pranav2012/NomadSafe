@@ -2,13 +2,20 @@ export { default as AiScreen } from "./screens/AiScreen";
 export {
   aiModelService,
   AI_MODELS,
+  formatModelSize,
   type AiModel,
   type AiModelCategory,
   type DeviceCapability,
 } from "./services/aiModelService";
-export { localModelService } from "./services/localModelService";
+export {
+  localModelService,
+  type TripBudgetEstimate,
+  type TripNameInput,
+  type TripNameSuggestion,
+} from "./services/localModelService";
 export {
   modelDownloadManager,
+  deleteDownloadedModel,
   type DownloadState,
   type DownloadStatus,
 } from "./services/modelDownloadManager";
@@ -18,3 +25,5 @@ export {
   MODEL_DOWNLOAD_TASK,
 } from "./services/modelDownloadTask";
 export { useModelDownload } from "./hooks/useModelDownload";
+export { useAiModels } from "./hooks/useAiModels";
+export { useChatStore, type ChatMessage } from "./store/chatStore";

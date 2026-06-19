@@ -1,3 +1,4 @@
+import { Platform } from "react-native";
 import {
   loadLlamaModelInfo,
   initLlama,
@@ -21,6 +22,13 @@ export interface TripBudgetEstimate {
 }
 
 export const LOCAL_AI_PROMPTS = {
+  systemChatAssistant:
+    "You are Nomad, NomadSafe's on-device travel and money assistant. " +
+    "You help travelers with budgeting, spending habits, trip planning, and general travel questions. " +
+    "Keep answers concise, practical, and friendly. Write in plain text — no markdown, headings, or JSON. " +
+    "If you don't have the data to answer something specific about the user's spending, say so and suggest what they could log. " +
+    "Everything you say stays on the user's device.",
+
   systemBudgetEstimator:
     "You are NomadSafe's on-device travel budget estimator. " +
     "Produce a realistic mid-range trip budget in the requested currency. " +
@@ -59,6 +67,19 @@ export const LOCAL_AI_PROMPTS = {
     ].join("\n"),
 };
 
+export type ChatRole = "system" | "user" | "assistant";
+
+export interface ChatTurn {
+  role: ChatRole;
+  content: string;
+}
+
+export interface ChatOptions {
+  onToken?: (delta: string, accumulated: string) => void;
+  /** Extra factual context (e.g. the active trip + budget) appended to the system prompt. */
+  systemContext?: string;
+}
+
 export interface TripNameInput {
   destinations: string[];
   days: number;
@@ -72,6 +93,19 @@ export interface TripNameSuggestion {
 
 let activeContext: LlamaContext | null = null;
 let activeModelId: string | null = null;
+// Shared in-flight load so a warm-up preload and the first send don't kick off
+// two concurrent initLlama calls for the same model (which fails natively).
+let loadInFlight: { id: string; promise: Promise<LlamaContext> } | null = null;
+// Some chat templates reject the enable_thinking flag; once we see that, we stop
+// passing it for the rest of the session.
+let disableThinkingSupported = true;
+// Number of most-recent chat turns sent to the model. Keeps the prompt bounded
+// so a long saved conversation can't overflow the context window.
+const CHAT_HISTORY_TURNS = 10;
+
+function isActiveModelId(id: string): boolean {
+  return activeModelId === id;
+}
 
 function extractJsonObject(value: string) {
   const start = value.indexOf("{");
@@ -99,13 +133,15 @@ function normalizeEstimate(value: unknown): TripBudgetEstimate {
 }
 
 async function getReadyModel(): Promise<AiModel | null> {
-  const preferredIds = [
+  const activeId = aiModelService.getActiveModelId();
+  const selectedIds = [
+    activeId,
     aiModelService.getSelectedModelId(),
     aiModelService.getDownloadedModelId(),
     (await localModelService.getAssignedModel())?.id,
   ].filter(Boolean);
 
-  for (const id of preferredIds) {
+  for (const id of selectedIds) {
     const model = AI_MODELS.find((candidate) => candidate.id === id);
     if (model && (await localModelService.isDownloaded(model))) {
       return model;
@@ -131,6 +167,30 @@ export const localModelService = {
   },
 
   /**
+   * Returns the id of the model currently loaded in RAM, if any.
+   */
+  getActiveModelId(): string | null {
+    return activeModelId;
+  },
+
+  /**
+   * Returns whether the given model is loaded and ready for inference.
+   */
+  isModelLoaded(model: AiModel): boolean {
+    return isActiveModelId(model.id) && activeContext !== null;
+  },
+
+  /**
+   * Sets the active/default model in storage without loading it. Inference will
+   * lazily load it when needed.
+   */
+  setDefaultModel(model: AiModel): void {
+    aiModelService.setActiveModelId(model.id);
+    aiModelService.setSelectedModelId(model.id);
+    aiModelService.setDownloadedModelId(model.id);
+  },
+
+  /**
    * Loads the model into memory only when needed. Keeps at most one context
    * alive at a time to avoid running out of RAM.
    */
@@ -138,29 +198,48 @@ export const localModelService = {
     if (activeContext && activeModelId === model.id) {
       return activeContext;
     }
-    await localModelService.release();
+    // Reuse an in-flight load for the same model instead of starting another.
+    if (loadInFlight && loadInFlight.id === model.id) {
+      return loadInFlight.promise;
+    }
 
     const path = aiModelService.getLocalModelPath(model);
-    /**
-     * Battery and responsiveness settings:
-     * - n_gpu_layers: 0 keeps the model on the CPU. This avoids GPU-related
-     *   battery/thermal spikes and is supported on every device llama.rn ships for.
-     * - n_ctx: 2048 is enough for short travel QA and translation; doubling it
-     *   would sharply increase RAM use during inference.
-     * - use_mlock: false avoids holding pages in RAM indefinitely while the app
-     *   is backgrounded.
-     * - n_threads: undefined lets llama.cpp pick a sensible default (usually 4
-     *   or CPU count), which is faster than forcing a single thread while still
-     *   leaving headroom for the OS.
-     */
-    activeContext = await initLlama({
-      model: path,
-      use_mlock: false,
-      n_ctx: 2048,
-      n_gpu_layers: 0,
-    });
-    activeModelId = model.id;
-    return activeContext;
+    const promise = (async () => {
+      await localModelService.release();
+      /**
+       * Try a fast config first, then fall back to plain CPU if it fails.
+       * - n_gpu_layers: on iOS we offload all layers to the Metal GPU for a large
+       *   generation speedup, but some device/model combos can't allocate it.
+       * - flash_attn_type "auto": speeds up attention when the backend supports
+       *   it, but is not available everywhere.
+       * If either makes initLlama throw, we retry on CPU so chat still works.
+       * - n_ctx: 4096 leaves room for the system prompt, the trip/money context,
+       *   a few recent chat turns, and up to n_predict generated tokens.
+       * - use_mlock: false avoids pinning pages in RAM while backgrounded.
+       */
+      const baseParams = { model: path, use_mlock: false, n_ctx: 4096 } as const;
+      let context: LlamaContext;
+      try {
+        context = await initLlama({
+          ...baseParams,
+          n_gpu_layers: Platform.OS === "ios" ? 99 : 0,
+          flash_attn_type: "auto",
+        });
+      } catch (err) {
+        console.warn("[localModelService] fast load failed, retrying on CPU", err);
+        context = await initLlama({ ...baseParams, n_gpu_layers: 0 });
+      }
+      activeContext = context;
+      activeModelId = model.id;
+      return context;
+    })();
+
+    loadInFlight = { id: model.id, promise };
+    try {
+      return await promise;
+    } finally {
+      loadInFlight = null;
+    }
   },
 
   /**
@@ -199,6 +278,80 @@ export const localModelService = {
 
   async getReadyModel(): Promise<AiModel | null> {
     return getReadyModel();
+  },
+
+  /**
+   * Warms up the downloaded model by loading it into memory ahead of the first
+   * message, so initial replies aren't stuck behind a multi-second model load.
+   * No-op if no model is downloaded or one is already loaded.
+   */
+  async preload(): Promise<void> {
+    const model = await getReadyModel();
+    if (!model || localModelService.isModelLoaded(model)) return;
+    try {
+      await localModelService.loadModel(model);
+    } catch {
+      // best-effort warm-up; the next send will surface any real error
+    }
+  },
+
+  /**
+   * Streams a free-form chat reply from the local model. `history` is the prior
+   * conversation (excluding the system prompt, which is prepended here). The
+   * optional onToken callback fires for each generated token with the latest
+   * delta and the full accumulated text so far.
+   */
+  async chat(history: ChatTurn[], opts?: ChatOptions): Promise<string> {
+    const model = await localModelService.getReadyModel();
+    if (!model) {
+      throw new Error("Local AI model is not downloaded.");
+    }
+
+    const context = await localModelService.loadModel(model);
+    const systemContent = opts?.systemContext
+      ? `${LOCAL_AI_PROMPTS.systemChatAssistant}\n\n${opts.systemContext}`
+      : LOCAL_AI_PROMPTS.systemChatAssistant;
+    // Only send the most recent turns so the prompt stays well within n_ctx no
+    // matter how long the saved conversation grows.
+    const recentHistory = history.slice(-CHAT_HISTORY_TURNS);
+    const messages: ChatTurn[] = [
+      { role: "system", content: systemContent },
+      ...recentHistory,
+    ];
+
+    const onToken = (data: { token: string; accumulated_text?: string }) =>
+      opts?.onToken?.(data.token, data.accumulated_text ?? "");
+    const params = { messages, jinja: true, n_predict: 512, temperature: 0.6, top_p: 0.9 } as const;
+
+    // Prefer skipping Qwen's reasoning chain (faster replies), but some chat
+    // templates reject the enable_thinking flag and throw before generating.
+    // If that happens once, disable the flag for the rest of the session and
+    // retry with a plain completion so chat keeps working.
+    if (disableThinkingSupported) {
+      try {
+        const result = await context.completion({ ...params, enable_thinking: false }, onToken);
+        return result.text.trim();
+      } catch (err) {
+        console.warn("[localModelService] enable_thinking rejected, retrying without it", err);
+        disableThinkingSupported = false;
+      }
+    }
+
+    const result = await context.completion(params, onToken);
+    return result.text.trim();
+  },
+
+  /**
+   * Stops an in-flight chat completion (e.g. on screen unmount).
+   */
+  async stopChat(): Promise<void> {
+    if (activeContext) {
+      try {
+        await activeContext.stopCompletion();
+      } catch {
+        // ignore
+      }
+    }
   },
 
   async estimateTripBudget(input: TripBudgetEstimateInput): Promise<TripBudgetEstimate> {

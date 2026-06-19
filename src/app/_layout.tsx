@@ -26,6 +26,7 @@ import {
   modelDownloadManager,
   modelNotifications,
   registerModelDownloadTask,
+  useChatStore,
 } from "@/features/ai";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { LocalizationProvider } from "@/localization";
@@ -56,7 +57,11 @@ function AppStateLock() {
         if (appState.current === "active" && nextState === "background") {
           backgroundedAt.current = Date.now();
           updateLastActive();
-          localModelService.release();
+          // Keep the model loaded if a chat reply is still streaming; the chat
+          // store releases it once the reply finishes (and notifies the user).
+          if (!useChatStore.getState().isGenerating) {
+            localModelService.release();
+          }
         }
 
         if (appState.current === "background" && nextState === "active") {

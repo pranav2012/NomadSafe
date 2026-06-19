@@ -11,6 +11,7 @@ export const NOMAD_DARK = nomadDarkColors;
 export const NOMAD_FONTS = nomadFonts;
 
 export type NomadTheme = NomadColors;
+export type { NomadColors };
 
 export function getNomadTheme(dark: boolean): NomadTheme {
   return getNomadColors(dark);

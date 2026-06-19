@@ -703,6 +703,11 @@ function CreateTripForm({
   onRemoveTraveler,
   onToggleCurrencyPicker,
   onSelectCurrency,
+  isGeneratingName,
+  nameError,
+  hasGeneratedName,
+  canGenerateName,
+  onGenerateName,
   onEstimateBudget,
   onUseBudgetEstimate,
   onDateFieldPress,
@@ -869,7 +874,7 @@ function CreateTripForm({
           value={form.name}
           generated={hasGeneratedName}
           isGenerating={isGeneratingName}
-          error={nameError}
+          error={nameError ?? null}
           canGenerate={canGenerateName}
           onChangeText={(value) => onChange("name", value)}
           onGenerate={onGenerateName}
@@ -1186,43 +1191,6 @@ function TripDashboard({
         </View>
       </View>
 
-      <View style={styles.metricGrid}>
-        <MetricCard
-          icon="wallet"
-          label={t("trip.totalBudget")}
-          value={formatCurrency(trip.budget, trip.currency)}
-        />
-        <MetricCard
-          icon={trip.mode === "solo" ? "compass" : "users"}
-          label={t("trip.travelMode")}
-          value={trip.mode === "solo" ? t("trip.solo") : t("trip.group")}
-        />
-        <MetricCard
-          icon="lock"
-          label={t("trip.storage")}
-          value={t("trip.onDevice")}
-        />
-      </View>
-
-      {trip.mode === "group" ? (
-        <View style={[styles.detailsCard, { backgroundColor: theme.paperSoft, borderColor: theme.hairline }]}>
-          <View style={styles.detailsHeader}>
-            <View style={[styles.detailIcon, { backgroundColor: theme.tealSoft }]}>
-              <Icon name="users" size={18} color={theme.teal} />
-            </View>
-            <View>
-              <Text style={[styles.detailsTitle, { color: theme.inkDeep }]}>
-                {t("trip.companionSummary", { count: companionCount })}
-              </Text>
-              <Text style={[styles.detailsSub, { color: theme.inkSoft }]}>
-                {companionCount > 0
-                  ? trip.companions.join(", ")
-                  : t("trip.noCompanions")}
-              </Text>
-            </View>
-          </View>
-        </View>
-      ) : null}
     </View>
   );
 }
@@ -2033,29 +2001,6 @@ function TripMap({
         />
       ))}
     </MapView>
-  );
-}
-
-function MetricCard({
-  icon,
-  label,
-  value,
-}: {
-  icon: "wallet" | "clock" | "compass" | "users" | "lock";
-  label: string;
-  value: string;
-}) {
-  const { nomad } = useTheme();
-  const theme = nomad.colors;
-
-  return (
-    <View style={[styles.metricCard, { backgroundColor: theme.paperSoft, borderColor: theme.hairline }]}>
-      <View style={[styles.metricIcon, { backgroundColor: theme.tealSoft }]}>
-        <Icon name={icon} size={17} color={theme.teal} />
-      </View>
-      <Text style={[styles.metricLabel, { color: theme.inkMuted }]}>{label}</Text>
-      <Text style={[styles.metricValue, { color: theme.inkDeep }]}>{value}</Text>
-    </View>
   );
 }
 

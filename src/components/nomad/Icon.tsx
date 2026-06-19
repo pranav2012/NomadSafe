@@ -49,7 +49,10 @@ export type IconName =
   | "car"
   | "utensils"
   | "plug"
-  | "faceId";
+  | "faceId"
+  | "download"
+  | "minus"
+  | "cpu";
 
 interface IconProps {
   name: IconName;
@@ -434,6 +437,31 @@ export function Icon({
           <Path d="M4 8V6a2 2 0 012-2h2M16 4h2a2 2 0 012 2v2M20 16v2a2 2 0 01-2 2h-2M8 20H6a2 2 0 01-2-2v-2" />
           <Path d="M9 10v1M15 10v1M12 9v4l-1 1" />
           <Path d="M9 15s1 1.2 3 1.2S15 15 15 15" />
+        </G>
+      );
+      break;
+    case "download":
+      body = (
+        <G {...p}>
+          <Path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+          <Path d="M7 10l5 5 5-5" />
+          <Path d="M12 15V3" />
+        </G>
+      );
+      break;
+    case "minus":
+      body = (
+        <G {...p}>
+          <Path d="M5 12h14" />
+        </G>
+      );
+      break;
+    case "cpu":
+      body = (
+        <G {...p}>
+          <Rect x="6" y="6" width="12" height="12" rx="2" />
+          <Path d="M12 10v4M10 12h4" />
+          <Path d="M4 8v8M8 4v4M16 4v4M20 8v8M8 20v4M16 20v4" />
         </G>
       );
       break;
