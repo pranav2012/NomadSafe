@@ -255,7 +255,37 @@
     "biometricPrompt": "NomadSafeを保護するために本人確認を行ってください",
     "checkingBiometric": "生体認証の利用可能性を確認中…",
     "biometricNotSetUp": "生体認証が設定されていません",
-    "biometricSetUpSub": "最初にデバイスの設定でFace ID、Touch ID、または指紋認証を設定してください"
+    "biometricSetUpSub": "最初にデバイスの設定でFace ID、Touch ID、または指紋認証を設定してください",
+    "aiCapability": "デバイスの処理能力",
+    "deviceRam": "{{ram}} GB RAM",
+    "checkingDevice": "デバイスを確認中…",
+    "deviceSupported": "このデバイスはローカルAIを実行できます",
+    "deviceLimited": "このデバイスではローカルAIの動作が遅くなる可能性があります",
+    "deviceUnsupported": "このデバイスではローカルAIを利用できません",
+    "limitedAiSub": "一部のAI機能はクラウドモードを使用します。ほとんどの旅行ツールは引き続きご利用いただけます。",
+    "unsupportedAiSub": "AIの回答にはクラウドモードが使用されます。ローカルモデルのダウンロードは無効化されています。",
+    "selectModel": "モデルを選択",
+    "modelRecommended": "お使いのデバイスに推奨",
+    "modelCompact": "コンパクト",
+    "modelBalanced": "バランス",
+    "modelCapable": "高性能",
+    "modelSizeCompact": "180 MB · 素早い回答",
+    "modelSizeBalanced": "340 MB · 最適なバランス",
+    "modelSizeCapable": "1.2 GB · 最も高精度",
+    "modelDownloaded": "ダウンロード済み",
+    "modelDownload": "ダウンロード · {{size}}",
+    "modelDownloading": "ダウンロード中… {{progress}}%",
+    "modelRequiredRam": "{{ram}} GBのRAMが必要",
+    "modelMinStorage": "{{size}}の空き容量が必要",
+    "downloadModelTitle": "モデルをダウンロードしますか？",
+    "downloadModelBody": "{{model}}の利用には{{size}}の空き容量が必要で、{{ram}} GBのRAMを搭載したデバイスで最も快適に動作します。可能な限りWi-Fi接続でのダウンロードをおすすめします。",
+    "modelSelected": "選択中のモデル",
+    "noModelSelected": "モデルが選択されていません",
+    "modelWillLoad": "AIチャットを開いたときのみ読み込まれます · バックグラウンドで実行されることはありません",
+    "modelAssignedTitle": "デバイスに適合したモデル",
+    "modelAssigned": "割り当て済み: {{model}} · {{quant}}",
+    "unknownError": "問題が発生しました。もう一度お試しください。",
+    "modelQuantLabel": "{{quant}} 量子化"
   },
   "milestones": {
     "safetyEyebrow": "安全",
@@ -315,6 +345,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "ja",
-    "lastGeneratedAt": "2026-06-19T01:08:08.119Z"
+    "lastGeneratedAt": "2026-06-19T01:50:01.999Z"
   }
 }

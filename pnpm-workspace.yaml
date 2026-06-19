@@ -3,5 +3,6 @@ minimumReleaseAge: 2880 # 2 days
 allowBuilds:
   '@prisma/engines': true
   esbuild: true
+  llama.rn: true
   prisma: true
   unrs-resolver: true

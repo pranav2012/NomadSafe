@@ -255,7 +255,37 @@
     "biometricPrompt": "NomadSafe को सुरक्षित करने के लिए अपनी पहचान की पुष्टि करें",
     "checkingBiometric": "बायोमेट्रिक उपलब्धता की जांच की जा रही है…",
     "biometricNotSetUp": "बायोमेट्रिक सेटअप नहीं है",
-    "biometricSetUpSub": "पहले डिवाइस की सेटिंग्स में Face ID, Touch ID या फिंगरप्रिंट सेटअप करें"
+    "biometricSetUpSub": "पहले डिवाइस की सेटिंग्स में Face ID, Touch ID या फिंगरप्रिंट सेटअप करें",
+    "aiCapability": "डिवाइस की क्षमता",
+    "deviceRam": "{{ram}} GB RAM",
+    "checkingDevice": "आपके डिवाइस की जाँच की जा रही है…",
+    "deviceSupported": "यह डिवाइस लोकल AI चला सकता है",
+    "deviceLimited": "इस डिवाइस पर लोकल AI चलने में समस्या आ सकती है",
+    "deviceUnsupported": "इस डिवाइस पर लोकल AI उपलब्ध नहीं है",
+    "limitedAiSub": "कुछ AI फीचर्स क्लाउड मोड का इस्तेमाल करेंगे। आप अभी भी यात्रा के ज़्यादातर टूल्स का इस्तेमाल कर सकते हैं।",
+    "unsupportedAiSub": "AI के जवाब क्लाउड मोड का इस्तेमाल करेंगे। लोकल मॉडल डाउनलोड बंद है।",
+    "selectModel": "मॉडल चुनें",
+    "modelRecommended": "आपके डिवाइस के लिए अनुशंसित",
+    "modelCompact": "कॉम्पैक्ट",
+    "modelBalanced": "संतुलित",
+    "modelCapable": "सक्षम",
+    "modelSizeCompact": "180 MB · तेज़ जवाब",
+    "modelSizeBalanced": "340 MB · बेहतरीन संतुलन",
+    "modelSizeCapable": "1.2 GB · सबसे सटीक",
+    "modelDownloaded": "डाउनलोड किया गया",
+    "modelDownload": "डाउनलोड करें · {{size}}",
+    "modelDownloading": "डाउनलोड हो रहा है… {{progress}}%",
+    "modelRequiredRam": "{{ram}} GB RAM की आवश्यकता है",
+    "modelMinStorage": "{{size}} खाली स्पेस चाहिए",
+    "downloadModelTitle": "मॉडल डाउनलोड करें?",
+    "downloadModelBody": "{{model}} को {{size}} स्टोरेज की ज़रूरत है और यह {{ram}} GB RAM के साथ सबसे अच्छा काम करता है। हो सके तो Wi-Fi पर डाउनलोड करें।",
+    "modelSelected": "चुना गया मॉडल",
+    "noModelSelected": "कोई मॉडल नहीं चुना गया",
+    "modelWillLoad": "केवल तब लोड होता है जब आप AI चैट खोलते हैं · बैकग्राउंड में कुछ नहीं चलता",
+    "modelAssignedTitle": "आपके डिवाइस के अनुकूल मॉडल मिला",
+    "modelAssigned": "असाइन किया गया: {{model}} · {{quant}}",
+    "unknownError": "कुछ गड़बड़ हो गई। कृपया फिर से प्रयास करें।",
+    "modelQuantLabel": "{{quant}} क्वांट"
   },
   "milestones": {
     "safetyEyebrow": "सुरक्षा",
@@ -315,6 +345,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "hi",
-    "lastGeneratedAt": "2026-06-19T01:08:08.119Z"
+    "lastGeneratedAt": "2026-06-19T01:50:01.999Z"
   }
 }

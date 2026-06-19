@@ -255,7 +255,37 @@
     "biometricPrompt": "Bestätige deine Identität, um NomadSafe zu sichern",
     "checkingBiometric": "Biometrische Verfügbarkeit wird geprüft…",
     "biometricNotSetUp": "Biometrie nicht eingerichtet",
-    "biometricSetUpSub": "Richte zuerst Face ID, Touch ID oder Fingerabdruck in den Geräteeinstellungen ein"
+    "biometricSetUpSub": "Richte zuerst Face ID, Touch ID oder Fingerabdruck in den Geräteeinstellungen ein",
+    "aiCapability": "Geräteleistung",
+    "deviceRam": "{{ram}} GB RAM",
+    "checkingDevice": "Gerät wird überprüft…",
+    "deviceSupported": "Dieses Gerät kann lokale KI ausführen",
+    "deviceLimited": "Dieses Gerät ist für lokale KI nur eingeschränkt geeignet",
+    "deviceUnsupported": "Lokale KI ist auf diesem Gerät nicht verfügbar",
+    "limitedAiSub": "Einige KI-Funktionen nutzen den Cloud-Modus. Du kannst die meisten Reise-Tools weiterhin nutzen.",
+    "unsupportedAiSub": "KI-Antworten nutzen den Cloud-Modus. Das Herunterladen lokaler Modelle ist deaktiviert.",
+    "selectModel": "Modell auswählen",
+    "modelRecommended": "Für dein Gerät empfohlen",
+    "modelCompact": "Kompakt",
+    "modelBalanced": "Ausgewogen",
+    "modelCapable": "Leistungsstark",
+    "modelSizeCompact": "180 MB · schnelle Antworten",
+    "modelSizeBalanced": "340 MB · beste Balance",
+    "modelSizeCapable": "1,2 GB · am genauesten",
+    "modelDownloaded": "Heruntergeladen",
+    "modelDownload": "Herunterladen · {{size}}",
+    "modelDownloading": "Wird heruntergeladen… {{progress}}%",
+    "modelRequiredRam": "Erfordert {{ram}} GB RAM",
+    "modelMinStorage": "Benötigt {{size}} freien Speicher",
+    "downloadModelTitle": "Modell herunterladen?",
+    "downloadModelBody": "{{model}} benötigt {{size}} Speicherplatz und funktioniert am besten mit {{ram}} GB RAM. Lade es nach Möglichkeit über WLAN herunter.",
+    "modelSelected": "Ausgewähltes Modell",
+    "noModelSelected": "Kein Modell ausgewählt",
+    "modelWillLoad": "Lädt nur, wenn du den KI-Chat öffnest · im Hintergrund wird nichts ausgeführt",
+    "modelAssignedTitle": "Modell auf dein Gerät abgestimmt",
+    "modelAssigned": "Zugewiesen: {{model}} · {{quant}}",
+    "unknownError": "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
+    "modelQuantLabel": "{{quant}} Quant"
   },
   "milestones": {
     "safetyEyebrow": "Sicherheit",
@@ -315,6 +345,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "de",
-    "lastGeneratedAt": "2026-06-19T01:08:08.119Z"
+    "lastGeneratedAt": "2026-06-19T01:50:01.999Z"
   }
 }

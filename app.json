@@ -83,6 +83,15 @@
           "contactsPermission": "NomadSafe uses your contacts to pick your trusted three emergency contacts."
         }
       ],
+      [
+        "llama.rn",
+        {
+          "enableEntitlements": true,
+          "entitlementsProfile": "production",
+          "forceCxx20": true,
+          "enableOpenCLAndHexagon": true
+        }
+      ],
       "expo-font",
       "expo-image",
       "expo-web-browser",

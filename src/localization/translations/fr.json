@@ -255,7 +255,37 @@
     "biometricPrompt": "Confirmez votre identité pour sécuriser NomadSafe",
     "checkingBiometric": "Vérification de la disponibilité de la biométrie…",
     "biometricNotSetUp": "Biométrie non configurée",
-    "biometricSetUpSub": "Configurez d'abord Face ID, Touch ID ou l'empreinte digitale dans les paramètres de l'appareil"
+    "biometricSetUpSub": "Configurez d'abord Face ID, Touch ID ou l'empreinte digitale dans les paramètres de l'appareil",
+    "aiCapability": "Capacité de l'appareil",
+    "deviceRam": "{{ram}} Go de RAM",
+    "checkingDevice": "Vérification de votre appareil…",
+    "deviceSupported": "Cet appareil peut exécuter l'IA en local",
+    "deviceLimited": "Cet appareil pourrait avoir des difficultés avec l'IA en local",
+    "deviceUnsupported": "L'IA en local n'est pas disponible sur cet appareil",
+    "limitedAiSub": "Certaines fonctionnalités d'IA utiliseront le mode cloud. Vous pouvez toujours utiliser la plupart des outils de voyage.",
+    "unsupportedAiSub": "Les réponses de l'IA utiliseront le mode cloud. Le téléchargement du modèle local est désactivé.",
+    "selectModel": "Sélectionner un modèle",
+    "modelRecommended": "Recommandé pour votre appareil",
+    "modelCompact": "Compact",
+    "modelBalanced": "Équilibré",
+    "modelCapable": "Performant",
+    "modelSizeCompact": "180 Mo · réponses rapides",
+    "modelSizeBalanced": "340 Mo · meilleur équilibre",
+    "modelSizeCapable": "1,2 Go · le plus précis",
+    "modelDownloaded": "Téléchargé",
+    "modelDownload": "Télécharger · {{size}}",
+    "modelDownloading": "Téléchargement… {{progress}}%",
+    "modelRequiredRam": "Nécessite {{ram}} Go de RAM",
+    "modelMinStorage": "Nécessite {{size}} d'espace libre",
+    "downloadModelTitle": "Télécharger le modèle ?",
+    "downloadModelBody": "{{model}} nécessite {{size}} de stockage et fonctionne de manière optimale avec {{ram}} Go de RAM. Téléchargez via Wi‑Fi dans la mesure du possible.",
+    "modelSelected": "Modèle sélectionné",
+    "noModelSelected": "Aucun modèle sélectionné",
+    "modelWillLoad": "Se charge uniquement à l'ouverture du chat IA · rien ne s'exécute en arrière-plan",
+    "modelAssignedTitle": "Modèle correspondant à votre appareil",
+    "modelAssigned": "Attribué : {{model}} · {{quant}}",
+    "unknownError": "Une erreur est survenue. Veuillez réessayer.",
+    "modelQuantLabel": "{{quant}} quant"
   },
   "milestones": {
     "safetyEyebrow": "Sécurité",
@@ -315,6 +345,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "fr",
-    "lastGeneratedAt": "2026-06-19T01:08:08.119Z"
+    "lastGeneratedAt": "2026-06-19T01:50:01.999Z"
   }
 }

@@ -255,7 +255,37 @@
     "biometricPrompt": "تأكيد هويتك لتأمين NomadSafe",
     "checkingBiometric": "جاري التحقق من توفر المصادقة البيومترية…",
     "biometricNotSetUp": "لم يتم إعداد المصادقة البيومترية",
-    "biometricSetUpSub": "قم بإعداد Face ID أو Touch ID أو بصمة الإصبع في إعدادات الجهاز أولاً"
+    "biometricSetUpSub": "قم بإعداد Face ID أو Touch ID أو بصمة الإصبع في إعدادات الجهاز أولاً",
+    "aiCapability": "قدرة الجهاز",
+    "deviceRam": "{{ram}} جيجابايت رام",
+    "checkingDevice": "جاري التحقق من جهازك…",
+    "deviceSupported": "يمكن لهذا الجهاز تشغيل الذكاء الاصطناعي المحلي",
+    "deviceLimited": "قد يواجه هذا الجهاز صعوبة في تشغيل الذكاء الاصطناعي المحلي",
+    "deviceUnsupported": "الذكاء الاصطناعي المحلي غير متوفر على هذا الجهاز",
+    "limitedAiSub": "ستستخدم بعض ميزات الذكاء الاصطناعي الوضع السحابي. لا يزال بإمكانك استخدام معظم أدوات الرحلة.",
+    "unsupportedAiSub": "ستستخدم إجابات الذكاء الاصطناعي الوضع السحابي. تم تعطيل تنزيل النموذج المحلي.",
+    "selectModel": "اختر نموذجاً",
+    "modelRecommended": "موصى به لجهازك",
+    "modelCompact": "مدمج",
+    "modelBalanced": "متوازن",
+    "modelCapable": "كفء",
+    "modelSizeCompact": "180 ميجابايت · إجابات سريعة",
+    "modelSizeBalanced": "340 ميجابايت · أفضل توازن",
+    "modelSizeCapable": "1.2 جيجابايت · الأكثر دقة",
+    "modelDownloaded": "تم التنزيل",
+    "modelDownload": "تنزيل · {{size}}",
+    "modelDownloading": "جاري التنزيل… {{progress}}%",
+    "modelRequiredRam": "يتطلب {{ram}} جيجابايت رام",
+    "modelMinStorage": "يتطلب {{size}} مساحة فارغة",
+    "downloadModelTitle": "تنزيل النموذج؟",
+    "downloadModelBody": "يتطلب {{model}} مساحة تخزين تبلغ {{size}} ويعمل بشكل أفضل مع ذاكرة رام {{ram}} جيجابايت. يُفضل التنزيل عبر الـ Wi‑Fi عندما يكون ذلك ممكناً.",
+    "modelSelected": "النموذج المحدد",
+    "noModelSelected": "لم يتم تحديد أي نموذج",
+    "modelWillLoad": "يتم تحميله فقط عند فتح دردشة الذكاء الاصطناعي · لا يتم تشغيل أي شيء في الخلفية",
+    "modelAssignedTitle": "تمت مطابقة النموذج مع جهازك",
+    "modelAssigned": "تم التعيين: {{model}} · {{quant}}",
+    "unknownError": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
+    "modelQuantLabel": "تكميم {{quant}}"
   },
   "milestones": {
     "safetyEyebrow": "السلامة",
@@ -315,6 +345,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "ar",
-    "lastGeneratedAt": "2026-06-19T01:08:08.119Z"
+    "lastGeneratedAt": "2026-06-19T01:50:01.999Z"
   }
 }

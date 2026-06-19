@@ -255,7 +255,37 @@
     "biometricPrompt": "NomadSafeని సురక్షితం చేయడానికి మీ గుర్తింపును ధృవీకరించండి",
     "checkingBiometric": "బయోమెట్రిక్ లభ్యతను తనిఖీ చేస్తోంది…",
     "biometricNotSetUp": "బయోమెట్రిక్ సెటప్ చేయబడలేదు",
-    "biometricSetUpSub": "ముందుగా పరికర సెట్టింగ్స్‌లో Face ID, Touch ID లేదా వేలిముద్రను సెటప్ చేయండి"
+    "biometricSetUpSub": "ముందుగా పరికర సెట్టింగ్స్‌లో Face ID, Touch ID లేదా వేలిముద్రను సెటప్ చేయండి",
+    "aiCapability": "డివైజ్ సామర్థ్యం",
+    "deviceRam": "{{ram}} GB RAM",
+    "checkingDevice": "మీ డివైజ్ తనిఖీ చేయబడుతోంది…",
+    "deviceSupported": "ఈ డివైజ్ లోకల్ AIని రన్ చేయగలదు",
+    "deviceLimited": "లోకల్ AI రన్ చేయడంలో ఈ డివైజ్ ఇబ్బంది పడవచ్చు",
+    "deviceUnsupported": "ఈ డివైజ్‌లో లోకల్ AI అందుబాటులో లేదు",
+    "limitedAiSub": "కొన్ని AI ఫీచర్లు క్లౌడ్ మోడ్‌ను ఉపయోగిస్తాయి. మీరు ఇప్పటికీ చాలా వరకు ట్రిప్ టూల్స్‌ను ఉపయోగించవచ్చు.",
+    "unsupportedAiSub": "AI సమాధానాలు క్లౌడ్ మోడ్‌ను ఉపయోగిస్తాయి. లోకల్ మోడల్ డౌన్‌లోడ్ నిలిపివేయబడింది.",
+    "selectModel": "మోడల్‌ను ఎంచుకోండి",
+    "modelRecommended": "మీ డివైజ్ కోసం సిఫార్సు చేయబడింది",
+    "modelCompact": "కాంపాక్ట్",
+    "modelBalanced": "బ్యాలెన్స్‌డ్",
+    "modelCapable": "కేపబుల్",
+    "modelSizeCompact": "180 MB · వేగవంతమైన సమాధానాలు",
+    "modelSizeBalanced": "340 MB · ఉత్తమ బ్యాలెన్స్",
+    "modelSizeCapable": "1.2 GB · అత్యంత ఖచ్చితమైనది",
+    "modelDownloaded": "డౌన్‌లోడ్ చేయబడింది",
+    "modelDownload": "డౌన్‌లోడ్ చేయండి · {{size}}",
+    "modelDownloading": "డౌన్‌లోడ్ అవుతోంది… {{progress}}%",
+    "modelRequiredRam": "{{ram}} GB RAM అవసరం",
+    "modelMinStorage": "{{size}} ఖాళీగా ఉండాలి",
+    "downloadModelTitle": "మోడల్‌ను డౌన్‌లోడ్ చేయాలా?",
+    "downloadModelBody": "{{model}} కోసం {{size}} స్టోరేజ్ అవసరం మరియు ఇది {{ram}} GB RAMతో ఉత్తమంగా పనిచేస్తుంది. వీలైతే Wi‑Fi ద్వారా డౌన్‌లోడ్ చేయండి.",
+    "modelSelected": "ఎంచుకున్న మోడల్",
+    "noModelSelected": "ఏ మోడల్ ఎంచుకోలేదు",
+    "modelWillLoad": "మీరు AI చాట్‌ను ఓపెన్ చేసినప్పుడు మాత్రమే లోడ్ అవుతుంది · బ్యాక్‌గ్రౌండ్‌లో ఏదీ రన్ కాదు",
+    "modelAssignedTitle": "మీ పరికరానికి మోడల్ సరిపోలింది",
+    "modelAssigned": "కేటాయించబడింది: {{model}} · {{quant}}",
+    "unknownError": "ఏదో తప్పు జరిగింది. దయచేసి మళ్ళీ ప్రయత్నించండి.",
+    "modelQuantLabel": "{{quant}} క్వాంట్"
   },
   "milestones": {
     "safetyEyebrow": "భద్రత",
@@ -315,6 +345,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "te",
-    "lastGeneratedAt": "2026-06-19T01:08:08.119Z"
+    "lastGeneratedAt": "2026-06-19T01:50:01.999Z"
   }
 }

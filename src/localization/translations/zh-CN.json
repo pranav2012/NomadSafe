@@ -255,7 +255,37 @@
     "biometricPrompt": "验证您的身份以保障 NomadSafe 的安全",
     "checkingBiometric": "正在检查生物识别功能是否可用…",
     "biometricNotSetUp": "未设置生物识别",
-    "biometricSetUpSub": "请先在设备“设置”中设置面容 ID、触控 ID 或指纹"
+    "biometricSetUpSub": "请先在设备“设置”中设置面容 ID、触控 ID 或指纹",
+    "aiCapability": "设备能力",
+    "deviceRam": "{{ram}} GB 运行内存",
+    "checkingDevice": "正在检查您的设备…",
+    "deviceSupported": "此设备可运行本地 AI",
+    "deviceLimited": "此设备运行本地 AI 可能会比较吃力",
+    "deviceUnsupported": "此设备不支持本地 AI",
+    "limitedAiSub": "部分 AI 功能将使用云端模式。您仍可使用大部分出行工具。",
+    "unsupportedAiSub": "AI 回答将使用云端模式。本地模型下载已禁用。",
+    "selectModel": "选择模型",
+    "modelRecommended": "推荐您的设备使用",
+    "modelCompact": "轻量版",
+    "modelBalanced": "均衡版",
+    "modelCapable": "全能版",
+    "modelSizeCompact": "180 MB · 快速回答",
+    "modelSizeBalanced": "340 MB · 最佳平衡",
+    "modelSizeCapable": "1.2 GB · 最准确",
+    "modelDownloaded": "已下载",
+    "modelDownload": "下载 · {{size}}",
+    "modelDownloading": "正在下载… {{progress}}%",
+    "modelRequiredRam": "需要 {{ram}} GB 运行内存",
+    "modelMinStorage": "需要 {{size}} 可用空间",
+    "downloadModelTitle": "下载模型？",
+    "downloadModelBody": "{{model}} 需要 {{size}} 存储空间，且在 {{ram}} GB 运行内存下运行效果最佳。建议尽量通过 Wi‑Fi 下载。",
+    "modelSelected": "已选模型",
+    "noModelSelected": "未选择模型",
+    "modelWillLoad": "仅在您打开 AI 对话时加载 · 无后台运行",
+    "modelAssignedTitle": "已为您的设备匹配模型",
+    "modelAssigned": "已分配：{{model}} · {{quant}}",
+    "unknownError": "出错了。请重试。",
+    "modelQuantLabel": "{{quant}} 量化"
   },
   "milestones": {
     "safetyEyebrow": "安全",
@@ -315,6 +345,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "zh-CN",
-    "lastGeneratedAt": "2026-06-19T01:08:08.119Z"
+    "lastGeneratedAt": "2026-06-19T01:50:01.999Z"
   }
 }

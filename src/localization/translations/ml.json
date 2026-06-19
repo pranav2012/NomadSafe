@@ -255,7 +255,37 @@
     "biometricPrompt": "NomadSafe സുരക്ഷിതമാക്കാൻ നിങ്ങളുടെ ഐഡന്റിറ്റി സ്ഥിരീകരിക്കുക",
     "checkingBiometric": "ബയോമെട്രിക് ലഭ്യത പരിശോധിക്കുന്നു…",
     "biometricNotSetUp": "ബയോമെട്രിക് സജ്ജീകരിച്ചിട്ടില്ല",
-    "biometricSetUpSub": "ആദ്യം ഡിവൈസ് സെറ്റിംഗ്സിൽ Face ID, Touch ID അല്ലെങ്കിൽ ഫിംഗർപ്രിന്റ് സജ്ജീകരിക്കുക"
+    "biometricSetUpSub": "ആദ്യം ഡിവൈസ് സെറ്റിംഗ്സിൽ Face ID, Touch ID അല്ലെങ്കിൽ ഫിംഗർപ്രിന്റ് സജ്ജീകരിക്കുക",
+    "aiCapability": "ഉപകരണത്തിന്റെ ശേഷി",
+    "deviceRam": "{{ram}} GB RAM",
+    "checkingDevice": "ഉപകരണം പരിശോധിക്കുന്നു…",
+    "deviceSupported": "ഈ ഉപകരണത്തിന് ലോക്കൽ AI പ്രവർത്തിപ്പിക്കാൻ കഴിയും",
+    "deviceLimited": "ഈ ഉപകരണത്തിൽ ലോക്കൽ AI പ്രവർത്തിപ്പിക്കാൻ ബുദ്ധിമുട്ടായേക്കാം",
+    "deviceUnsupported": "ഈ ഉപകരണത്തിൽ ലോക്കൽ AI ലഭ്യമല്ല",
+    "limitedAiSub": "ചില AI ഫീച്ചറുകൾ ക്ലൗഡ് മോഡ് ഉപയോഗിക്കും. എങ്കിലും നിങ്ങൾക്ക് മിക്ക ട്രിപ്പ് ടൂളുകളും ഉപയോഗിക്കാനാകും.",
+    "unsupportedAiSub": "AI ഉത്തരങ്ങൾ ക്ലൗഡ് മോഡ് ഉപയോഗിക്കും. ലോക്കൽ മോഡൽ ഡൗൺലോഡ് പ്രവർത്തനരഹിതമാക്കിയിരിക്കുന്നു.",
+    "selectModel": "ഒരു മോഡൽ തിരഞ്ഞെടുക്കുക",
+    "modelRecommended": "നിങ്ങളുടെ ഉപകരണത്തിനായി ശുപാർശ ചെയ്യുന്നത്",
+    "modelCompact": "കോംപാക്റ്റ്",
+    "modelBalanced": "ബാലൻസ്ഡ്",
+    "modelCapable": "കാര്യശേഷിയുള്ളത്",
+    "modelSizeCompact": "180 MB · വേഗതയേറിയ ഉത്തരങ്ങൾ",
+    "modelSizeBalanced": "340 MB · മികച്ച ബാലൻസ്",
+    "modelSizeCapable": "1.2 GB · ഏറ്റവും കൃത്യതയാർന്നത്",
+    "modelDownloaded": "ഡൗൺലോഡ് ചെയ്‌തു",
+    "modelDownload": "ഡൗൺലോഡ് ചെയ്യുക · {{size}}",
+    "modelDownloading": "ഡൗൺലോഡ് ചെയ്യുന്നു… {{progress}}%",
+    "modelRequiredRam": "{{ram}} GB RAM ആവശ്യമാണ്",
+    "modelMinStorage": "{{size}} ഒഴിവ് ആവശ്യമാണ്",
+    "downloadModelTitle": "മോഡൽ ഡൗൺലോഡ് ചെയ്യണോ?",
+    "downloadModelBody": "{{model}} പ്രവർത്തിക്കാൻ {{size}} സ്റ്റോറേജ് ആവശ്യമാണ്, കൂടാതെ {{ram}} GB RAM-ൽ ഇത് മികച്ച രീതിയിൽ പ്രവർത്തിക്കും. സാധ്യമെങ്കിൽ Wi‑Fi വഴി ഡൗൺലോഡ് ചെയ്യുക.",
+    "modelSelected": "തിരഞ്ഞെടുത്ത മോഡൽ",
+    "noModelSelected": "മോഡലുകളൊന്നും തിരഞ്ഞെടുത്തിട്ടില്ല",
+    "modelWillLoad": "AI ചാറ്റ് തുറക്കുമ്പോൾ മാത്രം ലോഡ് ചെയ്യുന്നു · പശ്ചാത്തലത്തിൽ ഒന്നും പ്രവർത്തിക്കില്ല",
+    "modelAssignedTitle": "നിങ്ങളുടെ ഉപകരണവുമായി മോഡൽ പൊരുത്തപ്പെട്ടു",
+    "modelAssigned": "അനുവദിച്ചത്: {{model}} · {{quant}}",
+    "unknownError": "എന്തോ തകരാർ സംഭവിച്ചു. ദയവായി വീണ്ടും ശ്രമിക്കുക.",
+    "modelQuantLabel": "{{quant}} ക്വാന്റ്"
   },
   "milestones": {
     "safetyEyebrow": "സുരക്ഷ",
@@ -315,6 +345,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "ml",
-    "lastGeneratedAt": "2026-06-19T01:08:08.119Z"
+    "lastGeneratedAt": "2026-06-19T01:50:01.999Z"
   }
 }

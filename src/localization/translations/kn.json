@@ -255,7 +255,37 @@
     "biometricPrompt": "NomadSafe ಅನ್ನು ಸುರಕ್ಷಿತಗೊಳಿಸಲು ನಿಮ್ಮ ಗುರುತನ್ನು ದೃಢೀಕರಿಸಿ",
     "checkingBiometric": "ಬಯೋಮೆಟ್ರಿಕ್ ಲಭ್ಯತೆಯನ್ನು ಪರಿಶೀಲಿಸಲಾಗುತ್ತಿದೆ…",
     "biometricNotSetUp": "ಬಯೋಮೆಟ್ರಿಕ್ ಹೊಂದಿಸಲಾಗಿಲ್ಲ",
-    "biometricSetUpSub": "ಮೊದಲು ಸಾಧನದ ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ Face ID, Touch ID ಅಥವಾ ಫಿಂಗರ್‌ಪ್ರಿಂಟ್ ಅನ್ನು ಹೊಂದಿಸಿ"
+    "biometricSetUpSub": "ಮೊದಲು ಸಾಧನದ ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ Face ID, Touch ID ಅಥವಾ ಫಿಂಗರ್‌ಪ್ರಿಂಟ್ ಅನ್ನು ಹೊಂದಿಸಿ",
+    "aiCapability": "ಸಾಧನದ ಸಾಮರ್ಥ್ಯ",
+    "deviceRam": "{{ram}} GB RAM",
+    "checkingDevice": "ನಿಮ್ಮ ಸಾಧನವನ್ನು ಪರಿಶೀಲಿಸಲಾಗುತ್ತಿದೆ…",
+    "deviceSupported": "ಈ ಸಾಧನದಲ್ಲಿ ಸ್ಥಳೀಯ AI ರನ್ ಮಾಡಬಹುದು",
+    "deviceLimited": "ಈ ಸಾಧನದಲ್ಲಿ ಸ್ಥಳೀಯ AI ರನ್ ಮಾಡಲು ತೊಂದರೆಯಾಗಬಹುದು",
+    "deviceUnsupported": "ಈ ಸಾಧನದಲ್ಲಿ ಸ್ಥಳೀಯ AI ಲಭ್ಯವಿಲ್ಲ",
+    "limitedAiSub": "ಕೆಲವು AI ಫೀಚರ್‌ಗಳು ಕ್ಲೌಡ್ ಮೋಡ್ ಅನ್ನು ಬಳಸುತ್ತವೆ. ನೀವು ಇನ್ನೂ ಹೆಚ್ಚಿನ ಟ್ರಿಪ್ ಪರಿಕರಗಳನ್ನು ಬಳಸಬಹುದು.",
+    "unsupportedAiSub": "AI ಉತ್ತರಗಳು ಕ್ಲೌಡ್ ಮೋಡ್ ಅನ್ನು ಬಳಸುತ್ತವೆ. ಸ್ಥಳೀಯ ಮಾಡೆಲ್ ಡೌನ್‌ಲೋಡ್ ಅನ್ನು ನಿಷ್ಕ್ರಿಯಗೊಳಿಸಲಾಗಿದೆ.",
+    "selectModel": "ಮಾಡೆಲ್ ಆಯ್ಕೆಮಾಡಿ",
+    "modelRecommended": "ನಿಮ್ಮ ಸಾಧನಕ್ಕೆ ಶಿಫಾರಸು ಮಾಡಲಾಗಿದೆ",
+    "modelCompact": "ಕಾಂಪ್ಯಾಕ್ಟ್",
+    "modelBalanced": "ಸಮತೋಲಿತ",
+    "modelCapable": "ಸಮರ್ಥ",
+    "modelSizeCompact": "180 MB · ವೇಗದ ಉತ್ತರಗಳು",
+    "modelSizeBalanced": "340 MB · ಅತ್ಯುತ್ತಮ ಸಮತೋಲನ",
+    "modelSizeCapable": "1.2 GB · ಅತ್ಯಂತ ನಿಖರ",
+    "modelDownloaded": "ಡೌನ್‌ಲೋಡ್ ಮಾಡಲಾಗಿದೆ",
+    "modelDownload": "ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ · {{size}}",
+    "modelDownloading": "ಡೌನ್‌ಲೋಡ್ ಆಗುತ್ತಿದೆ… {{progress}}%",
+    "modelRequiredRam": "{{ram}} GB RAM ಅಗತ್ಯವಿದೆ",
+    "modelMinStorage": "{{size}} ಖಾಲಿ ಸ್ಥಳಾವಕಾಶದ ಅಗತ್ಯವಿದೆ",
+    "downloadModelTitle": "ಮಾಡೆಲ್ ಡೌನ್‌ಲೋಡ್ ಮಾಡಬೇಕೇ?",
+    "downloadModelBody": "{{model}} ಗೆ {{size}} ಸ್ಟೋರೇಜ್ ಅಗತ್ಯವಿದೆ ಮತ್ತು {{ram}} GB RAM ನಲ್ಲಿ ಅತ್ಯುತ್ತಮವಾಗಿ ಕಾರ್ಯನಿರ್ವಹಿಸುತ್ತದೆ. ಸಾಧ್ಯವಾದಾಗ ವೈ-ಫೈ ಮೂಲಕ ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ.",
+    "modelSelected": "ಆಯ್ಕೆಮಾಡಿದ ಮಾಡೆಲ್",
+    "noModelSelected": "ಯಾವುದೇ ಮಾಡೆಲ್ ಆಯ್ಕೆಮಾಡಿಲ್ಲ",
+    "modelWillLoad": "ನೀವು AI ಚಾಟ್ ತೆರೆದಾಗ ಮಾತ್ರ ಲೋಡ್ ಆಗುತ್ತದೆ · ಹಿನ್ನೆಲೆಯಲ್ಲಿ ಏನೂ ರನ್ ಆಗುವುದಿಲ್ಲ",
+    "modelAssignedTitle": "ನಿಮ್ಮ ಸಾಧನಕ್ಕೆ ಹೊಂದಿಕೆಯಾದ ಮಾದರಿ",
+    "modelAssigned": "ನಿಯೋಜಿಸಲಾಗಿದೆ: {{model}} · {{quant}}",
+    "unknownError": "ಏನೋ ತಪ್ಪಾಗಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೊಮ್ಮೆ ಪ್ರಯತ್ನಿಸಿ.",
+    "modelQuantLabel": "{{quant}} ಕ್ವಾಂಟ್"
   },
   "milestones": {
     "safetyEyebrow": "ಸುರಕ್ಷತೆ",
@@ -315,6 +345,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "kn",
-    "lastGeneratedAt": "2026-06-19T01:08:08.119Z"
+    "lastGeneratedAt": "2026-06-19T01:50:01.999Z"
   }
 }

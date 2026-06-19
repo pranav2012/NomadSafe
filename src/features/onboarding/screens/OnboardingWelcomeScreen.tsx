@@ -46,6 +46,7 @@ export default function OnboardingWelcomeScreen() {
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState<1 | -1>(1);
   const [safetyReady, setSafetyReady] = useState(false);
+  const [aiReady, setAiReady] = useState(false);
   const [securityReady, setSecurityReady] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
@@ -58,6 +59,7 @@ export default function OnboardingWelcomeScreen() {
 
   const canProceed = () => {
     if (step === 1) return safetyReady;
+    if (step === 3) return aiReady;
     if (step === 4) return securityReady;
     return true;
   };
@@ -98,7 +100,7 @@ export default function OnboardingWelcomeScreen() {
       case 2:
         return <LedgerStep theme={theme} totalSteps={steps.length} />;
       case 3:
-        return <AIStep theme={theme} totalSteps={steps.length} />;
+        return <AIStep theme={theme} totalSteps={steps.length} onModelReady={setAiReady} />;
       case 4:
         return <SecureStep theme={theme} totalSteps={steps.length} biometric={biometric} onSecurityReady={setSecurityReady} />;
       default:
@@ -119,8 +121,8 @@ export default function OnboardingWelcomeScreen() {
         ? t("onboarding.enableSafetyNet", { count: safetyReady ? 3 : 0 })
         : step === 2
           ? t("common.continue")
-          : step === 3
-            ? t("onboarding.downloadModel")
+          :       step === 3
+            ? aiReady ? t("onboarding.downloadModel") : t("onboarding.aiCapability")
             : step === 4
               ? biometric.setupLabel
               : t("onboarding.startMyTrip");

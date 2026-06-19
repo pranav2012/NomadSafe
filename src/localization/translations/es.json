@@ -255,7 +255,37 @@
     "biometricPrompt": "Confirma tu identidad para proteger NomadSafe",
     "checkingBiometric": "Comprobando la disponibilidad de datos biométricos…",
     "biometricNotSetUp": "Datos biométricos no configurados",
-    "biometricSetUpSub": "Configura primero Face ID, Touch ID o huella dactilar en la configuración del dispositivo"
+    "biometricSetUpSub": "Configura primero Face ID, Touch ID o huella dactilar en la configuración del dispositivo",
+    "aiCapability": "Capacidad del dispositivo",
+    "deviceRam": "{{ram}} GB de RAM",
+    "checkingDevice": "Verificando tu dispositivo…",
+    "deviceSupported": "Este dispositivo puede ejecutar IA local",
+    "deviceLimited": "Este dispositivo podría tener dificultades con la IA local",
+    "deviceUnsupported": "La IA local no está disponible en este dispositivo",
+    "limitedAiSub": "Algunas funciones de IA usarán el modo en la nube. Aún puedes usar la mayoría de las herramientas de viaje.",
+    "unsupportedAiSub": "Las respuestas de IA usarán el modo en la nube. La descarga del modelo local está desactivada.",
+    "selectModel": "Selecciona un modelo",
+    "modelRecommended": "Recomendado para tu dispositivo",
+    "modelCompact": "Compacto",
+    "modelBalanced": "Equilibrado",
+    "modelCapable": "Capaz",
+    "modelSizeCompact": "180 MB · respuestas rápidas",
+    "modelSizeBalanced": "340 MB · el mejor equilibrio",
+    "modelSizeCapable": "1,2 GB · mayor precisión",
+    "modelDownloaded": "Descargado",
+    "modelDownload": "Descargar · {{size}}",
+    "modelDownloading": "Descargando… {{progress}}%",
+    "modelRequiredRam": "Requiere {{ram}} GB de RAM",
+    "modelMinStorage": "Necesita {{size}} libres",
+    "downloadModelTitle": "¿Descargar modelo?",
+    "downloadModelBody": "{{model}} necesita {{size}} de almacenamiento y funciona mejor con {{ram}} GB de RAM. Descárgalo a través de Wi‑Fi cuando sea posible.",
+    "modelSelected": "Modelo seleccionado",
+    "noModelSelected": "Ningún modelo seleccionado",
+    "modelWillLoad": "Se carga solo cuando abres el chat de IA · nada se ejecuta en segundo plano",
+    "modelAssignedTitle": "Modelo adaptado a tu dispositivo",
+    "modelAssigned": "Asignado: {{model}} · {{quant}}",
+    "unknownError": "Algo salió mal. Por favor, inténtalo de nuevo.",
+    "modelQuantLabel": "cuantización {{quant}}"
   },
   "milestones": {
     "safetyEyebrow": "Seguridad",
@@ -315,6 +345,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "es",
-    "lastGeneratedAt": "2026-06-19T01:08:08.119Z"
+    "lastGeneratedAt": "2026-06-19T01:50:01.999Z"
   }
 }

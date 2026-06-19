@@ -255,7 +255,37 @@
     "biometricPrompt": "NomadSafe-ஐப் பாதுகாக்க உங்களது அடையாளத்தை உறுதிப்படுத்தவும்",
     "checkingBiometric": "பயோமெட்ரிக் வசதி உள்ளதா எனச் சரிபார்க்கப்படுகிறது…",
     "biometricNotSetUp": "பயோமெட்ரிக் அமைக்கப்படவில்லை",
-    "biometricSetUpSub": "முதலில் சாதன அமைப்புகளில் (Settings) Face ID, Touch ID அல்லது கைரேகையை அமைக்கவும்"
+    "biometricSetUpSub": "முதலில் சாதன அமைப்புகளில் (Settings) Face ID, Touch ID அல்லது கைரேகையை அமைக்கவும்",
+    "aiCapability": "சாதனத்தின் திறன்",
+    "deviceRam": "{{ram}} GB RAM",
+    "checkingDevice": "உங்கள் சாதனம் சரிபார்க்கப்படுகிறது…",
+    "deviceSupported": "இந்தச் சாதனத்தில் உள்ளூர் AI-ஐ இயக்க முடியும்",
+    "deviceLimited": "இந்தச் சாதனத்தில் உள்ளூர் AI-ஐ இயக்குவது கடினமாக இருக்கலாம்",
+    "deviceUnsupported": "இந்தச் சாதனத்தில் உள்ளூர் AI கிடைக்கவில்லை",
+    "limitedAiSub": "சில AI அம்சங்கள் கிளவுட் பயன்முறையைப் பயன்படுத்தும். இருப்பினும் நீங்கள் பெரும்பாலான பயணக் கருவிகளைப் பயன்படுத்தலாம்.",
+    "unsupportedAiSub": "AI பதில்கள் கிளவுட் பயன்முறையைப் பயன்படுத்தும். உள்ளூர் மாடல் பதிவிறக்கம் முடக்கப்பட்டுள்ளது.",
+    "selectModel": "ஒரு மாடலைத் தேர்ந்தெடுக்கவும்",
+    "modelRecommended": "உங்கள் சாதனத்திற்குப் பரிந்துரைக்கப்படுகிறது",
+    "modelCompact": "சிறியது",
+    "modelBalanced": "சமநிலையானது",
+    "modelCapable": "திறன்மிக்கது",
+    "modelSizeCompact": "180 MB · வேகமான பதில்கள்",
+    "modelSizeBalanced": "340 MB · சிறந்த சமநிலை",
+    "modelSizeCapable": "1.2 GB · மிகவும் துல்லியமானது",
+    "modelDownloaded": "பதிவிறக்கப்பட்டது",
+    "modelDownload": "பதிவிறக்கு · {{size}}",
+    "modelDownloading": "பதிவிறக்கப்படுகிறது… {{progress}}%",
+    "modelRequiredRam": "{{ram}} GB RAM தேவைப்படுகிறது",
+    "modelMinStorage": "{{size}} காலி இடம் தேவை",
+    "downloadModelTitle": "மாடலைப் பதிவிறக்கவா?",
+    "downloadModelBody": "{{model}} இயங்குவதற்கு {{size}} சேமிப்பிடம் தேவைப்படுகிறது மற்றும் {{ram}} GB RAM-இல் சிறப்பாகச் செயல்படும். இயலும்போது Wi-Fi மூலம் பதிவிறக்கவும்.",
+    "modelSelected": "தேர்ந்தெடுக்கப்பட்ட மாடல்",
+    "noModelSelected": "மாடல் எதுவும் தேர்ந்தெடுக்கப்படவில்லை",
+    "modelWillLoad": "நீங்கள் AI அரட்டையைத் திறக்கும்போது மட்டுமே இது ஏற்றப்படும் · பின்னணியில் எதுவும் இயங்காது",
+    "modelAssignedTitle": "உங்கள் சாதனத்திற்கு மாதிரி பொருத்தப்பட்டுள்ளது",
+    "modelAssigned": "ஒதுக்கப்பட்டது: {{model}} · {{quant}}",
+    "unknownError": "ஏதோ தவறு நடந்துவிட்டது. மீண்டும் முயற்சிக்கவும்.",
+    "modelQuantLabel": "{{quant}} குவாண்ட்"
   },
   "milestones": {
     "safetyEyebrow": "பாதுகாப்பு",
@@ -315,6 +345,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "ta",
-    "lastGeneratedAt": "2026-06-19T01:08:08.119Z"
+    "lastGeneratedAt": "2026-06-19T01:50:01.999Z"
   }
 }

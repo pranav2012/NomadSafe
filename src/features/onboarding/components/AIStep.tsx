@@ -1,5 +1,12 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  Pressable,
+  StyleSheet,
+  ActivityIndicator,
+  Alert,
+} from "react-native";
 import Svg, { Line, Path, Rect } from "react-native-svg";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
@@ -21,10 +28,17 @@ import {
   HugeHeadline,
   HeadlineItalic,
 } from "@/components/nomad/Typography";
+import {
+  aiModelService,
+  AI_MODELS,
+  type AiModel,
+  type DeviceCapability,
+} from "@/features/ai";
 
 interface Props {
   theme: NomadTheme;
   totalSteps: number;
+  onModelReady?: (ready: boolean) => void;
 }
 
 const questionKeys = [
@@ -40,10 +54,6 @@ const capabilities: { i: IconName; titleKey: string; subKey: string; colorKey: k
   { i: "shield", titleKey: "onboarding.zeroTelemetry", subKey: "onboarding.zeroTelemetrySub", colorKey: "stamp" },
 ];
 
-/**
- * Rotating conic-gradient approximation: four 90° pie slices in the brand
- * colours, spinning continuously. Cross-platform via react-native-svg.
- */
 function ConicCore({ teal, mustard, stamp, sky }: { teal: string; mustard: string; stamp: string; sky: string }) {
   const spin = useSharedValue(0);
   useEffect(() => {
@@ -60,7 +70,6 @@ function ConicCore({ teal, mustard, stamp, sky }: { teal: string; mustard: strin
   return (
     <Animated.View style={[{ width: 78, height: 78 }, aStyle]}>
       <Svg width={78} height={78} viewBox="0 0 78 78">
-        {/* four 90° pie slices forming a full disc */}
         <Path d="M39,39 L39,0 A39,39 0 0,1 78,39 Z" fill={teal} />
         <Path d="M39,39 L78,39 A39,39 0 0,1 39,78 Z" fill={mustard} />
         <Path d="M39,39 L39,78 A39,39 0 0,1 0,39 Z" fill={stamp} />
@@ -114,16 +123,61 @@ function PulseRing({ index, color }: { index: number; color: string }) {
   );
 }
 
-export function AIStep({ theme, totalSteps }: Props) {
+function formatSizeMb(sizeMb: number): string {
+  if (sizeMb >= 1024) return `${(sizeMb / 1024).toFixed(1)} GB`;
+  return `${sizeMb} MB`;
+}
+
+export function AIStep({ theme, totalSteps, onModelReady }: Props) {
   const { t } = useLocalization();
   const [qIdx, setQIdx] = useState(0);
+  const [capability, setCapability] = useState<DeviceCapability | null>(null);
+  const [checking, setChecking] = useState(true);
+  const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
+  const [downloadedModelId, setDownloadedModelId] = useState<string | null>(null);
+  const [downloadingModelId, setDownloadingModelId] = useState<string | null>(null);
+  const [downloadProgress, setDownloadProgress] = useState(0);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+
   useEffect(() => {
     const timer = setInterval(() => setQIdx((i) => (i + 1) % questionKeys.length), 2600);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    const run = async () => {
+      const cap = await aiModelService.checkDeviceCapability();
+      if (!mounted) return;
+      setCapability(cap);
+      setChecking(false);
+
+      const selected = aiModelService.getSelectedModelId();
+      const downloaded = aiModelService.getDownloadedModelId();
+      setSelectedModelId(selected ?? cap.assignedCategory);
+      setDownloadedModelId(downloaded);
+
+      // Auto-select the tier-matched model if nothing was previously chosen.
+      if (!selected) {
+        aiModelService.setSelectedModelId(cap.assignedCategory);
+      }
+
+      onModelReady?.(downloaded !== null || !cap.supported);
+    };
+    run();
+    return () => {
+      mounted = false;
+    };
+  }, [onModelReady]);
+
+  useEffect(() => {
+    if (!capability) return;
+    const ready = !capability.supported || downloadedModelId !== null;
+    onModelReady?.(ready);
+  }, [capability, downloadedModelId, onModelReady]);
+
   const current = questionKeys[qIdx];
 
-  // NO CLOUD pulse
   const cloudPulse = useSharedValue(1);
   useEffect(() => {
     cloudPulse.value = withRepeat(
@@ -136,6 +190,172 @@ export function AIStep({ theme, totalSteps }: Props) {
     );
   }, [cloudPulse]);
   const cloudPulseStyle = useAnimatedStyle(() => ({ opacity: cloudPulse.value }));
+
+  const availableModels = capability ? aiModelService.getAvailableModels(capability) : [];
+  const isModelAvailable = (model: AiModel) => availableModels.some((m) => m.id === model.id);
+
+  const selectModel = (model: AiModel) => {
+    setSelectedModelId(model.id);
+    aiModelService.setSelectedModelId(model.id);
+    if (downloadedModelId === model.id) return;
+    Alert.alert(
+      t("onboarding.downloadModelTitle"),
+      t("onboarding.downloadModelBody", {
+        model: model.name,
+        size: formatSizeMb(model.sizeMb),
+        ram: model.recommendedRamGb,
+      }),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("common.continue"),
+          onPress: () => startDownload(model),
+        },
+      ],
+    );
+  };
+
+  const startDownload = async (model: AiModel) => {
+    setDownloadingModelId(model.id);
+    setDownloadProgress(0);
+    setDownloadError(null);
+    try {
+      await aiModelService.downloadModel(model, (progress) => {
+        setDownloadProgress(progress);
+      });
+      setDownloadedModelId(model.id);
+      aiModelService.setDownloadedModelId(model.id);
+      onModelReady?.(true);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : t("common.unknownError");
+      setDownloadError(message);
+    } finally {
+      setDownloadingModelId(null);
+    }
+  };
+
+  const renderCapabilityStatus = () => {
+    if (checking || !capability) {
+      return (
+        <View style={[styles.statusRow, { backgroundColor: theme.paperSoft, borderColor: theme.hairline }]}>
+          <ActivityIndicator size="small" color={theme.inkSoft} />
+          <Text style={[styles.statusText, { color: theme.inkSoft }]}>{t("onboarding.checkingDevice")}</Text>
+        </View>
+      );
+    }
+
+    if (!capability.supported) {
+      const titleKey = capability.reason === "lowRam" ? "onboarding.deviceUnsupported" : "onboarding.deviceLimited";
+      const subKey = capability.reason === "lowRam" ? "onboarding.unsupportedAiSub" : "onboarding.limitedAiSub";
+      return (
+        <View style={[styles.statusRow, { backgroundColor: theme.stamp + "16", borderColor: theme.stamp }]}>
+          <Icon name="alertTriangle" size={18} color={theme.stamp} strokeWidth={2} />
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.statusTitle, { color: theme.inkDeep }]}>{t(titleKey)} · {t("onboarding.deviceRam", { ram: capability.totalMemoryGb })}</Text>
+            <Text style={[styles.statusSub, { color: theme.inkSoft }]}>{t(subKey)}</Text>
+          </View>
+        </View>
+      );
+    }
+
+    const assigned = AI_MODELS.find((m) => m.id === capability.assignedCategory);
+    return (
+      <View style={[styles.statusRow, { backgroundColor: theme.tealSoft, borderColor: theme.teal }]}>
+        <Icon name="check" size={18} color={theme.teal} strokeWidth={2} />
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.statusTitle, { color: theme.inkDeep }]}>
+            {t("onboarding.deviceSupported")} · {t("onboarding.deviceRam", { ram: capability.totalMemoryGb })}
+          </Text>
+          <Text style={[styles.statusSub, { color: theme.inkSoft }]}>
+            {assigned
+              ? t("onboarding.modelAssigned", { model: assigned.name, quant: assigned.quantLabel })
+              : t("onboarding.selectModel")}
+          </Text>
+        </View>
+      </View>
+    );
+  };
+
+  const renderModelList = () => {
+    if (checking || !capability?.supported) return null;
+
+    const sectionTitle = capability.limited
+      ? t("onboarding.modelAssignedTitle")
+      : t("onboarding.selectModel");
+
+    return (
+      <View style={{ paddingHorizontal: 16, paddingTop: 14, gap: 8 }}>
+        <Text style={[styles.sectionLabel, { color: theme.inkMuted }]}>{sectionTitle}</Text>
+        {AI_MODELS.map((model) => {
+          const isAssigned = capability?.assignedCategory === model.id;
+          const isAvailable = isModelAvailable(model);
+          const isSelected = selectedModelId === model.id;
+          const isDownloaded = downloadedModelId === model.id;
+          const isDownloading = downloadingModelId === model.id;
+          const fColor = isAvailable ? theme.teal : theme.inkMuted;
+          return (
+            <Pressable
+              key={model.id}
+              disabled={!isAvailable || isDownloading}
+              onPress={() => selectModel(model)}
+              style={({ pressed }) => [
+                styles.modelRow,
+                {
+                  backgroundColor: isSelected ? theme.tealSoft : theme.paperSoft,
+                  borderColor: isSelected ? theme.teal : theme.hairline,
+                  opacity: !isAvailable ? 0.55 : pressed ? 0.9 : 1,
+                },
+              ]}
+            >
+              <View style={[styles.modelIcon, { backgroundColor: fColor + "22" }]}>
+                <Icon name="sparkle" size={16} color={fColor} strokeWidth={2} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Text style={[styles.modelName, { color: theme.inkDeep }]}>{model.name}</Text>
+                  {isAssigned && (
+                    <View style={[styles.badge, { backgroundColor: theme.mustard }]}>
+                      <Text style={[styles.badgeText, { color: theme.inkDeep }]}>{t("onboarding.modelRecommended")}</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={[styles.modelSub, { color: theme.inkSoft }]}>
+                  {isDownloading
+                    ? t("onboarding.modelDownloading", { progress: downloadProgress })
+                    : isDownloaded
+                      ? t("onboarding.modelDownloaded")
+                      : t(model.descriptionKey)}
+                </Text>
+                <Text style={[styles.modelRequirement, { color: theme.inkMuted }]}>
+                  {t("onboarding.modelRequiredRam", { ram: model.recommendedRamGb })} · {formatSizeMb(model.sizeMb)} · {model.quantLabel}
+                </Text>
+                {isDownloaded && isSelected && (
+                  <Text style={[styles.modelNote, { color: theme.inkMuted }]}>
+                    {t("onboarding.modelWillLoad")}
+                  </Text>
+                )}
+              </View>
+              {!isAvailable ? (
+                <Icon name="alertTriangle" size={16} color={theme.stamp} strokeWidth={2} />
+              ) : isDownloaded ? (
+                <Icon name="check" size={16} color={theme.teal} strokeWidth={2.4} />
+              ) : isDownloading ? (
+                <ActivityIndicator size="small" color={theme.teal} />
+              ) : (
+                <Icon name="chevronRight" size={16} color={theme.inkMuted} strokeWidth={2} />
+              )}
+            </Pressable>
+          );
+        })}
+        {downloadError ? (
+          <View style={[styles.errorRow, { backgroundColor: theme.stamp + "16", borderColor: theme.stamp }]}>
+            <Icon name="alertTriangle" size={16} color={theme.stamp} strokeWidth={2} />
+            <Text style={[styles.errorText, { color: theme.stamp }]}>{downloadError}</Text>
+          </View>
+        ) : null}
+      </View>
+    );
+  };
 
   return (
     <View style={{ flex: 1 }}>
@@ -207,10 +427,8 @@ export function AIStep({ theme, totalSteps }: Props) {
               colors={["rgba(255,255,255,0.06)", "rgba(255,255,255,0.02)"]}
               style={[StyleSheet.absoluteFill, { borderRadius: 26 }]}
             />
-            {/* Dynamic island */}
             <View style={styles.dynamicIsland} />
 
-            {/* Conic AI core */}
             <View style={styles.core}>
               <ConicCore
                 teal={theme.teal}
@@ -218,11 +436,9 @@ export function AIStep({ theme, totalSteps }: Props) {
                 stamp={theme.stamp}
                 sky={theme.sky}
               />
-              {/* inner dark disc */}
               <View style={styles.coreInner}>
                 <Icon name="sparkle" size={18} color={theme.mustard} strokeWidth={1.8} />
               </View>
-              {/* pulse rings */}
               <PulseRing index={0} color={theme.mustard} />
               <PulseRing index={1} color={theme.mustard} />
               <PulseRing index={2} color={theme.mustard} />
@@ -261,7 +477,6 @@ export function AIStep({ theme, totalSteps }: Props) {
             </Text>
           </Animated.View>
 
-          {/* Connecting dotted paths */}
           <Svg
             width="100%"
             height="100%"
@@ -384,61 +599,13 @@ export function AIStep({ theme, totalSteps }: Props) {
         </Text>
       </View>
 
-      {/* Comparison row */}
-      <View style={{ paddingHorizontal: 16, paddingTop: 18, flexDirection: "row", gap: 8 }}>
-        {/* Cloud card */}
-        <View
-          style={[
-            styles.compCell,
-            { backgroundColor: theme.paperSoft, borderColor: theme.hairline, opacity: 0.72 },
-          ]}
-        >
-          <Text style={[styles.compEyebrow, { color: theme.inkMuted }]}>
-            {t("onboarding.cloudAi")}
-          </Text>
-          <Text style={[styles.compTitle, { color: theme.inkDeep }]}>
-            {t("onboarding.yourDataLeaves")}
-          </Text>
-          <Text style={[styles.compSub, { color: theme.inkSoft }]}>
-            {t("onboarding.cloudAiSub")}
-          </Text>
-          <View style={[styles.compBar, { backgroundColor: theme.hairline }]}>
-            <View style={[styles.compBarFill, { backgroundColor: theme.stamp, width: "30%" }]} />
-          </View>
-          <View style={[styles.compDot, { backgroundColor: theme.stamp + "22" }]}>
-            <Icon name="x" size={8} color={theme.stamp} strokeWidth={3} />
-          </View>
-        </View>
-
-        {/* On-device card */}
-        <View
-          style={[
-            styles.compCell,
-            { backgroundColor: theme.inkDeep, borderColor: theme.inkDeep },
-          ]}
-        >
-          <Text style={[styles.compEyebrow, { color: theme.mustard }]}>
-            {t("onboarding.onDevice")}
-          </Text>
-          <Text style={[styles.compTitleDark, { color: theme.paperSoft }]}>
-            {t("onboarding.staysWithYou")}
-          </Text>
-          <Text style={[styles.compSub, { color: "rgba(245,240,232,0.65)" }]}>
-            {t("onboarding.onDeviceSub")}
-          </Text>
-          <View style={[styles.compBar, { backgroundColor: "rgba(255,255,255,0.12)" }]}>
-            <Animated.View
-              style={[
-                { position: "absolute", left: 0, top: 0, right: 0, bottom: 0, backgroundColor: theme.mustard, borderRadius: 2 },
-                cloudPulseStyle,
-              ]}
-            />
-          </View>
-          <View style={[styles.compDot, { backgroundColor: theme.mustard }]}>
-            <Icon name="check" size={8} color={theme.inkDeep} strokeWidth={3} />
-          </View>
-        </View>
+      {/* Device capability status */}
+      <View style={{ paddingHorizontal: 16, paddingTop: 18 }}>
+        {renderCapabilityStatus()}
       </View>
+
+      {/* Model list */}
+      {renderModelList()}
 
       {/* Capability rows */}
       <View style={{ paddingHorizontal: 16, paddingTop: 14, gap: 8 }}>
@@ -771,5 +938,96 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: NOMAD_FONTS.mono,
     letterSpacing: 0.3,
+  },
+  statusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  statusText: {
+    fontSize: 13,
+    fontFamily: NOMAD_FONTS.ui,
+  },
+  statusTitle: {
+    fontSize: 13,
+    fontWeight: "600",
+    fontFamily: NOMAD_FONTS.uiSemi,
+  },
+  statusSub: {
+    fontSize: 11,
+    marginTop: 1,
+    fontFamily: NOMAD_FONTS.ui,
+  },
+  sectionLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    fontFamily: NOMAD_FONTS.uiBold,
+  },
+  modelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  modelIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modelName: {
+    fontSize: 14,
+    fontWeight: "600",
+    fontFamily: NOMAD_FONTS.uiSemi,
+  },
+  modelSub: {
+    fontSize: 11,
+    marginTop: 1,
+    fontFamily: NOMAD_FONTS.ui,
+  },
+  modelRequirement: {
+    fontSize: 10,
+    marginTop: 2,
+    fontFamily: NOMAD_FONTS.mono,
+    letterSpacing: 0.2,
+  },
+  badge: {
+    paddingVertical: 2,
+    paddingHorizontal: 6,
+    borderRadius: 999,
+  },
+  badgeText: {
+    fontSize: 8.5,
+    fontWeight: "700",
+    letterSpacing: 0.4,
+    fontFamily: NOMAD_FONTS.uiBold,
+  },
+  modelNote: {
+    fontSize: 10,
+    marginTop: 4,
+    fontFamily: NOMAD_FONTS.ui,
+  },
+  errorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  errorText: {
+    fontSize: 12,
+    fontFamily: NOMAD_FONTS.ui,
   },
 });

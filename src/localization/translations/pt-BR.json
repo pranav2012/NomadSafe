@@ -255,7 +255,37 @@
     "biometricPrompt": "Confirme sua identidade para proteger o NomadSafe",
     "checkingBiometric": "Verificando a disponibilidade da biometria…",
     "biometricNotSetUp": "Biometria não configurada",
-    "biometricSetUpSub": "Configure o Face ID, Touch ID ou a impressão digital primeiro nas Configurações do dispositivo"
+    "biometricSetUpSub": "Configure o Face ID, Touch ID ou a impressão digital primeiro nas Configurações do dispositivo",
+    "aiCapability": "Capacidade do dispositivo",
+    "deviceRam": "{{ram}} GB de RAM",
+    "checkingDevice": "Verificando seu dispositivo…",
+    "deviceSupported": "Este dispositivo pode executar IA local",
+    "deviceLimited": "Este dispositivo pode ter dificuldades com IA local",
+    "deviceUnsupported": "A IA local não está disponível neste dispositivo",
+    "limitedAiSub": "Alguns recursos de IA usarão o modo nuvem. Você ainda poderá usar a maioria das ferramentas de viagem.",
+    "unsupportedAiSub": "As respostas da IA usarão o modo nuvem. O download do modelo local está desativado.",
+    "selectModel": "Selecione um modelo",
+    "modelRecommended": "Recomendado para o seu dispositivo",
+    "modelCompact": "Compacto",
+    "modelBalanced": "Equilibrado",
+    "modelCapable": "Capaz",
+    "modelSizeCompact": "180 MB · respostas rápidas",
+    "modelSizeBalanced": "340 MB · melhor equilíbrio",
+    "modelSizeCapable": "1.2 GB · mais preciso",
+    "modelDownloaded": "Baixado",
+    "modelDownload": "Baixar · {{size}}",
+    "modelDownloading": "Baixando… {{progress}}%",
+    "modelRequiredRam": "Requer {{ram}} GB de RAM",
+    "modelMinStorage": "Precisa de {{size}} livre",
+    "downloadModelTitle": "Baixar modelo?",
+    "downloadModelBody": "O {{model}} precisa de {{size}} de armazenamento e funciona melhor com {{ram}} GB de RAM. Baixe via Wi‑Fi quando possível.",
+    "modelSelected": "Modelo selecionado",
+    "noModelSelected": "Nenhum modelo selecionado",
+    "modelWillLoad": "Carrega apenas quando você abre o chat de IA · nada roda em segundo plano",
+    "modelAssignedTitle": "Modelo correspondente ao seu dispositivo",
+    "modelAssigned": "Atribuído: {{model}} · {{quant}}",
+    "unknownError": "Algo deu errado. Tente novamente.",
+    "modelQuantLabel": "quant de {{quant}}"
   },
   "milestones": {
     "safetyEyebrow": "Segurança",
@@ -315,6 +345,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "pt-BR",
-    "lastGeneratedAt": "2026-06-19T01:08:08.119Z"
+    "lastGeneratedAt": "2026-06-19T01:50:01.999Z"
   }
 }
