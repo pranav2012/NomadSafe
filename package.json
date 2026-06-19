@@ -4,11 +4,12 @@
   "version": "1.0.0",
   "scripts": {
     "start": "expo start",
-    "android": "expo run:android",
-    "ios": "expo run:ios",
+    "android": "expo run:android -d",
+    "ios": "expo run:ios -d",
     "web": "expo start --web",
     "lint": "expo lint",
     "localize": "node scripts/generate-locales.mjs",
+    "build": "expo prebuild --clean",
     "eas-build-pre-install": "node scripts/generate-locales.mjs"
   },
   "dependencies": {
@@ -31,7 +32,7 @@
     "expo-image": "~56.0.11",
     "expo-linear-gradient": "^56.0.4",
     "expo-linking": "~56.0.14",
-    "expo-localization": "~17.0.0",
+    "expo-localization": "~56.0.6",
     "expo-local-authentication": "~56.0.4",
     "expo-network": "~56.0.5",
     "expo-router": "~56.2.11",
