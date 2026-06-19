@@ -140,8 +140,6 @@
     "welcomeHeadlinePrefix": "यात्रा करें,",
     "welcomeHeadlineAccent": "सुरक्षित",
     "welcomeLede": "लंबी यात्राओं के लिए एक सुरक्षा साथी — चेक-इन, शेयरिंग, और पैसा, सब आपके फ़ोन पर। हमारे सर्वर पर कुछ भी नहीं, कभी नहीं।",
-    "travellers": "यात्री",
-    "appStore": "App Store",
     "servers": "सर्वर",
     "stepOf": "{{step}} में से {{total}} चरण",
     "safetyHeadlinePrefix": "आपका",
@@ -285,7 +283,27 @@
     "modelAssignedTitle": "आपके डिवाइस के अनुकूल मॉडल मिला",
     "modelAssigned": "असाइन किया गया: {{model}} · {{quant}}",
     "unknownError": "कुछ गड़बड़ हो गई। कृपया फिर से प्रयास करें।",
-    "modelQuantLabel": "{{quant}} क्वांट"
+    "modelQuantLabel": "{{quant}} क्वांट",
+    "onDeviceStat": "ऑन-डिवाइस एआई",
+    "encryptedStat": "एन्क्रिप्टेड",
+    "modelPaused": "पॉज़ किया गया · {{progress}}%",
+    "pauseDownload": "पॉज़ करें",
+    "resumeDownload": "फिर से शुरू करें",
+    "downloadBackgroundHint": "बैकग्राउंड में डाउनलोड होना जारी रहेगा — आप सेटअप जारी रख सकते हैं।",
+    "aiCapabilities": "यह क्या कर सकता है",
+    "ledgerFeaturesLabel": "यह भी शामिल है",
+    "continueDownloadBg": "जारी रखें — बैकग्राउंड में डाउनलोड करें",
+    "chooseFromContacts": "संपर्कों से चुनें",
+    "trustedThreeFull": "भरोसेमंद तीन चुने गए",
+    "notifyWhenReady": "तैयार होने पर मुझे सूचित करें",
+    "notifyWhenReadySub": "मॉडल का डाउनलोड पूरा होने पर सूचना प्राप्त करें।",
+    "backupPinHeadlinePrefix": "एक",
+    "backupPinHeadlineAccent": "बैकअप पिन सेट करें",
+    "backupPinLede": "यदि {{biometricName}} या आपका फिंगरप्रिंट काम नहीं करता है, तो 6-अंकों का पिन वॉल्ट को अनलॉक करता है। यह केवल इसी डिवाइस पर स्टोर होता है।",
+    "setBackupPin": "एक बैकअप पिन सेट करें",
+    "safetyFocusedStat": "सुरक्षा",
+    "funStat": "रोमांच",
+    "unnamedContact": "संपर्क"
   },
   "milestones": {
     "safetyEyebrow": "सुरक्षा",
@@ -345,6 +363,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "hi",
-    "lastGeneratedAt": "2026-06-19T01:50:01.999Z"
+    "lastGeneratedAt": "2026-06-19T11:39:19.850Z"
   }
 }

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -26,31 +26,48 @@ import { LedgerStep } from "@/features/onboarding/components/LedgerStep";
 import { AIStep } from "@/features/onboarding/components/AIStep";
 import { SecureStep } from "@/features/onboarding/components/SecureStep";
 import { ReadyStep } from "@/features/onboarding/components/ReadyStep";
-import { useBiometricPresentation } from "@/features/auth";
+import { useBiometricPresentation, useAuthStore } from "@/features/auth";
+import { useModelDownload } from "@/features/ai";
 import { useLocalization } from "@/localization";
 
 const STEP_IDS = ["welcome", "safety", "ledger", "ai", "secure", "ready"] as const;
+
+// The four numbered setup steps shown with a "Step X of N" eyebrow.
+// Welcome (intro) and Ready (summary) are not numbered.
+const NUMBERED_TOTAL = 4;
 
 export default function OnboardingWelcomeScreen() {
   const router = useRouter();
   const { t } = useLocalization();
   const setOnboardingCompleted = useSettingsStore((s) => s.setOnboardingCompleted);
+  const persistedStep = useSettingsStore((s) => s.onboardingStep);
+  const setOnboardingStep = useSettingsStore((s) => s.setOnboardingStep);
   const { isDark, nomad } = useTheme();
   const theme = nomad.colors;
   const biometric = useBiometricPresentation();
+  const isPinSet = useAuthStore((s) => s.isPinSet);
+  const aiDownload = useModelDownload();
+  const aiDownloading =
+    aiDownload.status === "downloading" || aiDownload.status === "paused";
   const steps = STEP_IDS.map((id) => ({
     id,
     label: id === "secure" ? biometric.name : t(`onboarding.steps.${id === "safety" ? "safetyNet" : id === "ai" ? "onDeviceAi" : id}`),
   }));
 
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(() =>
+    Math.min(Math.max(persistedStep, 0), STEP_IDS.length - 1),
+  );
   const [direction, setDirection] = useState<1 | -1>(1);
   const [safetyReady, setSafetyReady] = useState(false);
   const [aiReady, setAiReady] = useState(false);
-  const [securityReady, setSecurityReady] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
   const last = step === steps.length - 1;
+
+  // Persist progress so a killed/relaunched session resumes where it left off.
+  useEffect(() => {
+    setOnboardingStep(step);
+  }, [step, setOnboardingStep]);
 
   const onDone = () => {
     setOnboardingCompleted(true);
@@ -60,7 +77,7 @@ export default function OnboardingWelcomeScreen() {
   const canProceed = () => {
     if (step === 1) return safetyReady;
     if (step === 3) return aiReady;
-    if (step === 4) return securityReady;
+    // Step 4 (backup PIN) is always actionable — its CTA opens the PIN screen.
     return true;
   };
 
@@ -73,6 +90,16 @@ export default function OnboardingWelcomeScreen() {
       setStep((s) => s + 1);
       scrollRef.current?.scrollTo({ y: 0, animated: false });
     }
+  };
+
+  const handleCta = () => {
+    // On the security step, route to the PIN setup screen unless a PIN already
+    // exists. SetupPin returns to the next onboarding step (Ready) when done.
+    if (step === 4 && !isPinSet) {
+      router.push("/(auth)/setup-pin?from=onboarding");
+      return;
+    }
+    next();
   };
 
   const back = () => {
@@ -93,16 +120,16 @@ export default function OnboardingWelcomeScreen() {
           <SafetyStep
             theme={theme}
             dark={isDark}
-            totalSteps={steps.length}
+            totalSteps={NUMBERED_TOTAL}
             onPermissionsReady={setSafetyReady}
           />
         );
       case 2:
-        return <LedgerStep theme={theme} totalSteps={steps.length} />;
+        return <LedgerStep theme={theme} totalSteps={NUMBERED_TOTAL} />;
       case 3:
-        return <AIStep theme={theme} totalSteps={steps.length} onModelReady={setAiReady} />;
+        return <AIStep theme={theme} totalSteps={NUMBERED_TOTAL} onModelReady={setAiReady} />;
       case 4:
-        return <SecureStep theme={theme} totalSteps={steps.length} biometric={biometric} onSecurityReady={setSecurityReady} />;
+        return <SecureStep theme={theme} totalSteps={NUMBERED_TOTAL} biometric={biometric} />;
       default:
         return (
           <ReadyStep
@@ -122,9 +149,13 @@ export default function OnboardingWelcomeScreen() {
         : step === 2
           ? t("common.continue")
           :       step === 3
-            ? aiReady ? t("onboarding.downloadModel") : t("onboarding.aiCapability")
+            ? aiReady
+              ? aiDownloading
+                ? t("onboarding.continueDownloadBg")
+                : t("common.continue")
+              : t("onboarding.selectModel")
             : step === 4
-              ? biometric.setupLabel
+              ? isPinSet ? t("common.continue") : t("onboarding.setBackupPin")
               : t("onboarding.startMyTrip");
 
   return (
@@ -162,13 +193,8 @@ export default function OnboardingWelcomeScreen() {
             ))}
           </View>
 
-          {!last ? (
-            <Pressable onPress={onDone}>
-              <Text style={[styles.skip, { color: theme.inkSoft }]}>{t("onboarding.skip")}</Text>
-            </Pressable>
-          ) : (
-            <View style={{ width: 34 }} />
-          )}
+          {/* Onboarding is mandatory — no skip. Spacer keeps the bar balanced. */}
+          <View style={{ width: 34 }} />
         </View>
 
         {/* Content */}
@@ -196,7 +222,7 @@ export default function OnboardingWelcomeScreen() {
               theme={theme}
               full
               variant={last ? "teal" : "primary"}
-              onPress={next}
+              onPress={handleCta}
               disabled={!canProceed()}
               icon={
                 last ? (
@@ -241,13 +267,6 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 3,
     borderRadius: 999,
-  },
-  skip: {
-    fontSize: 12,
-    fontWeight: "500",
-    fontFamily: NOMAD_FONTS.uiMedium,
-    paddingVertical: 4,
-    paddingHorizontal: 6,
   },
   ctaWrap: {
     position: "absolute",

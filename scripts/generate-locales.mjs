@@ -13,9 +13,9 @@ const defaultTargetLocales = ["es", "fr", "de", "pt-BR", "ja", "zh-CN", "ko", "i
 
 loadLocalEnv();
 
-const apiBase = process.env.LOCALIZE_API_BASE ?? "https://cliproxy.pranav-agarwal.com/v1";
-const apiKey = process.env.LOCALIZE_API_KEY ?? process.env.CLIPROXY_API_KEY;
-const model = process.env.LOCALIZE_MODEL ?? "gpt-5.4-mini";
+const apiBase = process.env.LOCALIZE_API_BASE;
+const apiKey = process.env.LOCALIZE_API_KEY;
+const model = process.env.LOCALIZE_MODEL;
 const generatedMetaKey = "__generated";
 const maxAttempts = Number(process.env.LOCALIZE_MAX_ATTEMPTS ?? 4);
 const targetLocales = process.env.LOCALIZE_TARGET_LOCALES

@@ -7,7 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "nomadsafe",
     "userInterfaceStyle": "automatic",
-      "ios": {
+    "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.pranav.NomadSafe",
       "appleTeamId": "SXWRR559C6",
@@ -17,7 +17,11 @@
         "NSLocationWhenInUseUsageDescription": "NomadSafe uses your location to share with emergency contacts while the app is open.",
         "NSLocationAlwaysUsageDescription": "NomadSafe needs background location to send SOS alerts and check-ins even when the app is closed.",
         "NSContactsUsageDescription": "NomadSafe uses your contacts to let you pick your trusted three emergency contacts.",
-        "UIBackgroundModes": ["location", "fetch", "remote-notification"]
+        "UIBackgroundModes": [
+          "location",
+          "fetch",
+          "remote-notification"
+        ]
       }
     },
     "android": {
@@ -39,7 +43,8 @@
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_LOCATION",
         "android.permission.READ_CONTACTS",
-        "android.permission.RECEIVE_BOOT_COMPLETED"
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.POST_NOTIFICATIONS"
       ]
     },
     "web": {
@@ -95,7 +100,9 @@
       "expo-font",
       "expo-image",
       "expo-web-browser",
-      "expo-status-bar"
+      "expo-status-bar",
+      "expo-background-task",
+      "./plugins/withoutPushEntitlement"
     ],
     "experiments": {
       "typedRoutes": true,

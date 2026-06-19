@@ -23,6 +23,7 @@ import Animated, {
 import { NOMAD_FONTS, type NomadTheme } from "@/constants/nomadTokens";
 import { useLocalization } from "@/localization";
 import { Icon, type IconName } from "@/components/nomad/Icon";
+import { PermissionRow } from "@/components/nomad/PermissionRow";
 import {
   Eyebrow,
   HugeHeadline,
@@ -31,6 +32,9 @@ import {
 import {
   aiModelService,
   AI_MODELS,
+  modelDownloadManager,
+  modelNotifications,
+  useModelDownload,
   type AiModel,
   type DeviceCapability,
 } from "@/features/ai";
@@ -135,9 +139,27 @@ export function AIStep({ theme, totalSteps, onModelReady }: Props) {
   const [checking, setChecking] = useState(true);
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   const [downloadedModelId, setDownloadedModelId] = useState<string | null>(null);
-  const [downloadingModelId, setDownloadingModelId] = useState<string | null>(null);
-  const [downloadProgress, setDownloadProgress] = useState(0);
-  const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [notifyEnabled, setNotifyEnabled] = useState(() => modelNotifications.isEnabled());
+
+  const toggleNotify = async () => {
+    const next = await modelNotifications.setEnabled(!notifyEnabled);
+    setNotifyEnabled(next);
+  };
+
+  const download = useModelDownload();
+  const downloadingModelId =
+    download.status === "downloading" || download.status === "paused"
+      ? download.modelId
+      : null;
+  const downloadProgress = download.progress;
+  const downloadPaused = download.status === "paused";
+  const downloadError = download.status === "error" ? download.error : null;
+  // A just-finished background download counts as downloaded without needing
+  // to write back into local state from an effect.
+  const effectiveDownloadedId =
+    download.status === "completed" && download.modelId
+      ? download.modelId
+      : downloadedModelId;
 
   useEffect(() => {
     const timer = setInterval(() => setQIdx((i) => (i + 1) % questionKeys.length), 2600);
@@ -172,9 +194,15 @@ export function AIStep({ theme, totalSteps, onModelReady }: Props) {
 
   useEffect(() => {
     if (!capability) return;
-    const ready = !capability.supported || downloadedModelId !== null;
+    // Once a download is under way the user can move on — it finishes in the
+    // background and notifies on completion.
+    const ready =
+      !capability.supported ||
+      effectiveDownloadedId !== null ||
+      download.status === "downloading" ||
+      download.status === "paused";
     onModelReady?.(ready);
-  }, [capability, downloadedModelId, onModelReady]);
+  }, [capability, effectiveDownloadedId, download.status, onModelReady]);
 
   const current = questionKeys[qIdx];
 
@@ -194,10 +222,18 @@ export function AIStep({ theme, totalSteps, onModelReady }: Props) {
   const availableModels = capability ? aiModelService.getAvailableModels(capability) : [];
   const isModelAvailable = (model: AiModel) => availableModels.some((m) => m.id === model.id);
 
-  const selectModel = (model: AiModel) => {
+  const selectModel = async (model: AiModel) => {
     setSelectedModelId(model.id);
     aiModelService.setSelectedModelId(model.id);
-    if (downloadedModelId === model.id) return;
+
+    // If this model is already on disk, continue without re-downloading.
+    if (downloadedModelId === model.id || (await aiModelService.isModelDownloaded(model))) {
+      setDownloadedModelId(model.id);
+      aiModelService.setDownloadedModelId(model.id);
+      onModelReady?.(true);
+      return;
+    }
+
     Alert.alert(
       t("onboarding.downloadModelTitle"),
       t("onboarding.downloadModelBody", {
@@ -209,29 +245,10 @@ export function AIStep({ theme, totalSteps, onModelReady }: Props) {
         { text: t("common.cancel"), style: "cancel" },
         {
           text: t("common.continue"),
-          onPress: () => startDownload(model),
+          onPress: () => modelDownloadManager.start(model),
         },
       ],
     );
-  };
-
-  const startDownload = async (model: AiModel) => {
-    setDownloadingModelId(model.id);
-    setDownloadProgress(0);
-    setDownloadError(null);
-    try {
-      await aiModelService.downloadModel(model, (progress) => {
-        setDownloadProgress(progress);
-      });
-      setDownloadedModelId(model.id);
-      aiModelService.setDownloadedModelId(model.id);
-      onModelReady?.(true);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : t("common.unknownError");
-      setDownloadError(message);
-    } finally {
-      setDownloadingModelId(null);
-    }
   };
 
   const renderCapabilityStatus = () => {
@@ -290,13 +307,13 @@ export function AIStep({ theme, totalSteps, onModelReady }: Props) {
           const isAssigned = capability?.assignedCategory === model.id;
           const isAvailable = isModelAvailable(model);
           const isSelected = selectedModelId === model.id;
-          const isDownloaded = downloadedModelId === model.id;
+          const isDownloaded = effectiveDownloadedId === model.id;
           const isDownloading = downloadingModelId === model.id;
           const fColor = isAvailable ? theme.teal : theme.inkMuted;
           return (
             <Pressable
               key={model.id}
-              disabled={!isAvailable || isDownloading}
+              disabled={!isAvailable || downloadingModelId !== null}
               onPress={() => selectModel(model)}
               style={({ pressed }) => [
                 styles.modelRow,
@@ -321,7 +338,9 @@ export function AIStep({ theme, totalSteps, onModelReady }: Props) {
                 </View>
                 <Text style={[styles.modelSub, { color: theme.inkSoft }]}>
                   {isDownloading
-                    ? t("onboarding.modelDownloading", { progress: downloadProgress })
+                    ? downloadPaused
+                      ? t("onboarding.modelPaused", { progress: downloadProgress })
+                      : t("onboarding.modelDownloading", { progress: downloadProgress })
                     : isDownloaded
                       ? t("onboarding.modelDownloaded")
                       : t(model.descriptionKey)}
@@ -340,13 +359,59 @@ export function AIStep({ theme, totalSteps, onModelReady }: Props) {
               ) : isDownloaded ? (
                 <Icon name="check" size={16} color={theme.teal} strokeWidth={2.4} />
               ) : isDownloading ? (
-                <ActivityIndicator size="small" color={theme.teal} />
+                downloadPaused ? (
+                  <Icon name="pause" size={16} color={theme.mustard} strokeWidth={2} />
+                ) : (
+                  <ActivityIndicator size="small" color={theme.teal} />
+                )
               ) : (
                 <Icon name="chevronRight" size={16} color={theme.inkMuted} strokeWidth={2} />
               )}
             </Pressable>
           );
         })}
+        {downloadingModelId !== null && (
+          <View style={[styles.dlControls, { backgroundColor: theme.paperSoft, borderColor: theme.hairline }]}>
+            <View style={[styles.dlTrack, { backgroundColor: theme.hairline }]}>
+              <View
+                style={[
+                  styles.dlFill,
+                  { width: `${downloadProgress}%`, backgroundColor: downloadPaused ? theme.mustard : theme.teal },
+                ]}
+              />
+            </View>
+            <View style={styles.dlButtons}>
+              <Pressable
+                onPress={() =>
+                  downloadPaused ? modelDownloadManager.resume() : modelDownloadManager.pause()
+                }
+                style={[styles.dlBtn, { borderColor: theme.hairline }]}
+              >
+                <Icon
+                  name={downloadPaused ? "play" : "pause"}
+                  size={13}
+                  color={theme.inkDeep}
+                  strokeWidth={2}
+                />
+                <Text style={[styles.dlBtnText, { color: theme.inkDeep }]}>
+                  {downloadPaused ? t("onboarding.resumeDownload") : t("onboarding.pauseDownload")}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => modelDownloadManager.cancel()}
+                style={[styles.dlBtn, { borderColor: theme.stamp }]}
+              >
+                <Icon name="x" size={13} color={theme.stamp} strokeWidth={2} />
+                <Text style={[styles.dlBtnText, { color: theme.stamp }]}>
+                  {t("common.cancel")}
+                </Text>
+              </Pressable>
+            </View>
+            <Text style={[styles.dlHint, { color: theme.inkMuted }]}>
+              {t("onboarding.downloadBackgroundHint")}
+            </Text>
+          </View>
+        )}
         {downloadError ? (
           <View style={[styles.errorRow, { backgroundColor: theme.stamp + "16", borderColor: theme.stamp }]}>
             <Icon name="alertTriangle" size={16} color={theme.stamp} strokeWidth={2} />
@@ -588,7 +653,7 @@ export function AIStep({ theme, totalSteps, onModelReady }: Props) {
       {/* Headline */}
       <View style={{ paddingHorizontal: 26, paddingTop: 22 }}>
         <Eyebrow color={theme.sky}>
-          {t("onboarding.stepOf", { step: 3, total: totalSteps - 1 })}
+          {t("onboarding.stepOf", { step: 3, total: totalSteps })}
         </Eyebrow>
         <HugeHeadline color={theme.inkDeep}>
           {t("onboarding.aiHeadlinePrefix")}{" "}
@@ -607,28 +672,54 @@ export function AIStep({ theme, totalSteps, onModelReady }: Props) {
       {/* Model list */}
       {renderModelList()}
 
-      {/* Capability rows */}
-      <View style={{ paddingHorizontal: 16, paddingTop: 14, gap: 8 }}>
-        {capabilities.map((f, i) => {
-          const fColor = theme[f.colorKey] as string;
-          return (
-            <View
-              key={i}
-              style={[
-                styles.capRow,
-                { backgroundColor: theme.paperSoft, borderColor: theme.hairline },
-              ]}
-            >
-              <View style={[styles.capIcon, { backgroundColor: fColor + "22" }]}>
-                <Icon name={f.i} size={15} color={fColor} strokeWidth={2} />
+      {/* Notify-when-ready toggle */}
+      {!checking && capability?.supported && (
+        <View style={{ paddingHorizontal: 16, paddingTop: 10 }}>
+          <PermissionRow
+            theme={theme}
+            title={t("onboarding.notifyWhenReady")}
+            sub={t("onboarding.notifyWhenReadySub")}
+            on={notifyEnabled}
+            onPress={toggleNotify}
+          />
+        </View>
+      )}
+
+      {/* What it can do — compact tiles, visually distinct from model rows */}
+      <View style={{ paddingHorizontal: 16, paddingTop: 18 }}>
+        <Text style={[styles.capabilitiesLabel, { color: theme.inkMuted }]}>
+          {t("onboarding.aiCapabilities")}
+        </Text>
+        <View style={styles.capGrid}>
+          {capabilities.map((f, i) => {
+            const fColor = theme[f.colorKey] as string;
+            return (
+              <View
+                key={i}
+                style={[
+                  styles.capTile,
+                  { backgroundColor: theme.paperSoft, borderColor: theme.hairline },
+                ]}
+              >
+                <View style={[styles.capTileIcon, { backgroundColor: fColor + "22" }]}>
+                  <Icon name={f.i} size={15} color={fColor} strokeWidth={2} />
+                </View>
+                <Text
+                  style={[styles.capTileTitle, { color: theme.inkDeep }]}
+                  numberOfLines={2}
+                >
+                  {t(f.titleKey)}
+                </Text>
+                <Text
+                  style={[styles.capTileSub, { color: theme.inkSoft }]}
+                  numberOfLines={3}
+                >
+                  {t(f.subKey)}
+                </Text>
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.capTitle, { color: theme.inkDeep }]}>{t(f.titleKey)}</Text>
-                <Text style={[styles.capSub, { color: theme.inkSoft }]}>{t(f.subKey)}</Text>
-              </View>
-            </View>
-          );
-        })}
+            );
+          })}
+        </View>
       </View>
 
       {/* Download estimator */}
@@ -908,30 +999,83 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  capRow: {
+  capabilitiesLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    marginBottom: 10,
+    paddingLeft: 2,
+    fontFamily: NOMAD_FONTS.uiBold,
+  },
+  capGrid: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  capTile: {
+    flex: 1,
     paddingVertical: 12,
-    paddingHorizontal: 14,
+    paddingHorizontal: 10,
     borderRadius: 14,
     borderWidth: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
+    alignItems: "flex-start",
   },
-  capIcon: {
-    width: 32,
-    height: 32,
+  capTileIcon: {
+    width: 30,
+    height: 30,
     borderRadius: 9,
     alignItems: "center",
     justifyContent: "center",
+    marginBottom: 8,
   },
-  capTitle: {
-    fontSize: 13,
+  capTileTitle: {
+    fontSize: 12,
     fontWeight: "600",
     fontFamily: NOMAD_FONTS.uiSemi,
   },
-  capSub: {
-    fontSize: 11.5,
-    marginTop: 1,
+  capTileSub: {
+    fontSize: 10,
+    marginTop: 3,
+    lineHeight: 13,
+    fontFamily: NOMAD_FONTS.ui,
+  },
+  dlControls: {
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 12,
+    gap: 10,
+  },
+  dlTrack: {
+    height: 5,
+    borderRadius: 999,
+    overflow: "hidden",
+  },
+  dlFill: {
+    height: "100%",
+    borderRadius: 999,
+  },
+  dlButtons: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  dlBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 9,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  dlBtnText: {
+    fontSize: 12,
+    fontWeight: "600",
+    fontFamily: NOMAD_FONTS.uiSemi,
+  },
+  dlHint: {
+    fontSize: 10.5,
+    textAlign: "center",
     fontFamily: NOMAD_FONTS.ui,
   },
   estText: {

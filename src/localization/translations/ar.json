@@ -140,8 +140,6 @@
     "welcomeHeadlinePrefix": "السفر،",
     "welcomeHeadlineAccent": "محمي",
     "welcomeLede": "رفيق أمان للرحلات الطويلة — تسجيلات وصول، مشاركة، ومال، كلها على هاتفك. لا شيء على خوادمنا، أبدًا.",
-    "travellers": "المسافرون",
-    "appStore": "App Store",
     "servers": "الخوادم",
     "stepOf": "الخطوة {{step}} من {{total}}",
     "safetyHeadlinePrefix": "شبكة",
@@ -285,7 +283,27 @@
     "modelAssignedTitle": "تمت مطابقة النموذج مع جهازك",
     "modelAssigned": "تم التعيين: {{model}} · {{quant}}",
     "unknownError": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
-    "modelQuantLabel": "تكميم {{quant}}"
+    "modelQuantLabel": "تكميم {{quant}}",
+    "onDeviceStat": "ذكاء اصطناعي على الجهاز",
+    "encryptedStat": "مشفّر",
+    "modelPaused": "متوقف مؤقتًا · {{progress}}%",
+    "pauseDownload": "إيقاف مؤقت",
+    "resumeDownload": "استئناف",
+    "downloadBackgroundHint": "يستمر التنزيل في الخلفية — يمكنك متابعة الإعداد.",
+    "aiCapabilities": "ما يمكنه فعله",
+    "ledgerFeaturesLabel": "مدمجة أيضًا",
+    "continueDownloadBg": "متابعة — التنزيل في الخلفية",
+    "chooseFromContacts": "اختر من جهات الاتصال",
+    "trustedThreeFull": "تم تحديد الثلاثة الموثوق بهم",
+    "notifyWhenReady": "أعلمني عندما يكون جاهزًا",
+    "notifyWhenReadySub": "احصل على إشعار عند اكتمال تنزيل النموذج.",
+    "backupPinHeadlinePrefix": "تعيين",
+    "backupPinHeadlineAccent": "رمز PIN احتياطي",
+    "backupPinLede": "إذا لم يعمل {{biometricName}} أو بصمة إصبعك، فسيفتح رمز PIN المكون من 6 أرقام الخزنة. يتم تخزينه على هذا الجهاز فقط.",
+    "setBackupPin": "تعيين رمز PIN احتياطي",
+    "safetyFocusedStat": "الأمان",
+    "funStat": "مغامرات",
+    "unnamedContact": "جهة اتصال"
   },
   "milestones": {
     "safetyEyebrow": "السلامة",
@@ -345,6 +363,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "ar",
-    "lastGeneratedAt": "2026-06-19T01:50:01.999Z"
+    "lastGeneratedAt": "2026-06-19T11:39:19.850Z"
   }
 }

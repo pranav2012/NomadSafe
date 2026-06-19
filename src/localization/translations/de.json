@@ -140,8 +140,6 @@
     "welcomeHeadlinePrefix": "Reisen,",
     "welcomeHeadlineAccent": "geschützt",
     "welcomeLede": "Ein Sicherheitsbegleiter für lange Reisen — Check-ins, Teilen und Geld, alles auf deinem Telefon. Nichts läuft jemals über unsere Server.",
-    "travellers": "Reisende",
-    "appStore": "App Store",
     "servers": "Server",
     "stepOf": "Schritt {{step}} von {{total}}",
     "safetyHeadlinePrefix": "Dein",
@@ -285,7 +283,27 @@
     "modelAssignedTitle": "Modell auf dein Gerät abgestimmt",
     "modelAssigned": "Zugewiesen: {{model}} · {{quant}}",
     "unknownError": "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
-    "modelQuantLabel": "{{quant}} Quant"
+    "modelQuantLabel": "{{quant}} Quant",
+    "onDeviceStat": "On-Device-KI",
+    "encryptedStat": "Verschlüsselt",
+    "modelPaused": "Pausiert · {{progress}}%",
+    "pauseDownload": "Pausieren",
+    "resumeDownload": "Fortsetzen",
+    "downloadBackgroundHint": "Lädt im Hintergrund weiter – du kannst mit der Einrichtung fortfahren.",
+    "aiCapabilities": "Was es kann",
+    "ledgerFeaturesLabel": "Auch integriert",
+    "continueDownloadBg": "Weiter — im Hintergrund herunterladen",
+    "chooseFromContacts": "Aus Kontakten auswählen",
+    "trustedThreeFull": "Drei Vertrauenswürdige ausgewählt",
+    "notifyWhenReady": "Benachrichtigen, wenn bereit",
+    "notifyWhenReadySub": "Erhalte eine Benachrichtigung, wenn das Modell fertig heruntergeladen ist.",
+    "backupPinHeadlinePrefix": "Erstelle eine",
+    "backupPinHeadlineAccent": "Backup-PIN",
+    "backupPinLede": "Wenn {{biometricName}} oder dein Fingerabdruck nicht funktioniert, entsperrt eine 6-stellige PIN den Tresor. Sie wird nur auf diesem Gerät gespeichert.",
+    "setBackupPin": "Backup-PIN festlegen",
+    "safetyFocusedStat": "Sicherheitsfokus",
+    "funStat": "Abenteuer",
+    "unnamedContact": "Kontakt"
   },
   "milestones": {
     "safetyEyebrow": "Sicherheit",
@@ -345,6 +363,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "de",
-    "lastGeneratedAt": "2026-06-19T01:50:01.999Z"
+    "lastGeneratedAt": "2026-06-19T11:39:19.850Z"
   }
 }

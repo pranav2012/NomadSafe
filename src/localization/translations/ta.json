@@ -140,8 +140,6 @@
     "welcomeHeadlinePrefix": "பயணம்,",
     "welcomeHeadlineAccent": "பாதுகாக்கப்பட்டது",
     "welcomeLede": "நீண்ட பயணங்களுக்கான பாதுகாப்பு துணை — check-ins, பகிர்வு, மற்றும் பணம், எல்லாம் உங்கள் தொலைபேசியில். எங்கள் சேவையகங்களில் ஒன்றுமில்லை, எப்போதும்.",
-    "travellers": "பயணிகள்",
-    "appStore": "App Store",
     "servers": "சேவையகங்கள்",
     "stepOf": "படி {{step}} / {{total}}",
     "safetyHeadlinePrefix": "உங்கள்",
@@ -285,7 +283,27 @@
     "modelAssignedTitle": "உங்கள் சாதனத்திற்கு மாதிரி பொருத்தப்பட்டுள்ளது",
     "modelAssigned": "ஒதுக்கப்பட்டது: {{model}} · {{quant}}",
     "unknownError": "ஏதோ தவறு நடந்துவிட்டது. மீண்டும் முயற்சிக்கவும்.",
-    "modelQuantLabel": "{{quant}} குவாண்ட்"
+    "modelQuantLabel": "{{quant}} குவாண்ட்",
+    "onDeviceStat": "சாதனத்திலுள்ள AI",
+    "encryptedStat": "மறைகுறியாக்கப்பட்டது",
+    "modelPaused": "இடைநிறுத்தப்பட்டது · {{progress}}%",
+    "pauseDownload": "இடைநிறுத்து",
+    "resumeDownload": "தொடரவும்",
+    "downloadBackgroundHint": "பின்னணியில் தொடர்ந்து பதிவிறக்கப்படும் — நீங்கள் அமைப்பைத் தொடரலாம்.",
+    "aiCapabilities": "இதனால் என்ன செய்ய முடியும்",
+    "ledgerFeaturesLabel": "மேலும் உள்ளமைக்கப்பட்டவை",
+    "continueDownloadBg": "தொடரவும் — பின்னணியில் பதிவிறக்கவும்",
+    "chooseFromContacts": "தொடர்புகளிலிருந்து தேர்ந்தெடுக்கவும்",
+    "trustedThreeFull": "நம்பகமான மூவர் தேர்ந்தெடுக்கப்பட்டனர்",
+    "notifyWhenReady": "தயாரானதும் எனக்கு அறிவிக்கவும்",
+    "notifyWhenReadySub": "மாடல் பதிவிறக்கம் செய்து முடிந்ததும் அறிவிப்பைப் பெறவும்.",
+    "backupPinHeadlinePrefix": "ஒரு",
+    "backupPinHeadlineAccent": "காப்பு PIN-ஐ அமைக்கவும்",
+    "backupPinLede": "{{biometricName}} அல்லது உங்கள் கைரேகை வேலை செய்யவில்லை என்றால், 6-இலக்க PIN பெட்டகத்தைத் திறக்கும். இது இந்தச் சாதனத்தில் மட்டுமே சேமிக்கப்படும்.",
+    "setBackupPin": "காப்பு PIN-ஐ அமைக்கவும்",
+    "safetyFocusedStat": "பாதுகாப்பு",
+    "funStat": "சாகசங்கள்",
+    "unnamedContact": "தொடர்பு"
   },
   "milestones": {
     "safetyEyebrow": "பாதுகாப்பு",
@@ -345,6 +363,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "ta",
-    "lastGeneratedAt": "2026-06-19T01:50:01.999Z"
+    "lastGeneratedAt": "2026-06-19T11:39:19.850Z"
   }
 }

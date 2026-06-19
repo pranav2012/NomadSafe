@@ -140,8 +140,6 @@
     "welcomeHeadlinePrefix": "Viaje,",
     "welcomeHeadlineAccent": "protegido",
     "welcomeLede": "Um companheiro de segurança para viagens longas — check-ins, compartilhamento e dinheiro, tudo no seu celular. Nada em nossos servidores, nunca.",
-    "travellers": "Viajantes",
-    "appStore": "App Store",
     "servers": "Servidores",
     "stepOf": "Etapa {{step}} de {{total}}",
     "safetyHeadlinePrefix": "Sua",
@@ -285,7 +283,27 @@
     "modelAssignedTitle": "Modelo correspondente ao seu dispositivo",
     "modelAssigned": "Atribuído: {{model}} · {{quant}}",
     "unknownError": "Algo deu errado. Tente novamente.",
-    "modelQuantLabel": "quant de {{quant}}"
+    "modelQuantLabel": "quant de {{quant}}",
+    "onDeviceStat": "IA no dispositivo",
+    "encryptedStat": "Criptografado",
+    "modelPaused": "Pausado · {{progress}}%",
+    "pauseDownload": "Pausar",
+    "resumeDownload": "Retomar",
+    "downloadBackgroundHint": "O download continua em segundo plano — você pode continuar a configuração.",
+    "aiCapabilities": "O que ele pode fazer",
+    "ledgerFeaturesLabel": "Também integrado",
+    "continueDownloadBg": "Continuar — download em segundo plano",
+    "chooseFromContacts": "Escolher dos contatos",
+    "trustedThreeFull": "Três de confiança selecionados",
+    "notifyWhenReady": "Avise-me quando estiver pronto",
+    "notifyWhenReadySub": "Receba uma notificação quando o download do modelo for concluído.",
+    "backupPinHeadlinePrefix": "Defina um",
+    "backupPinHeadlineAccent": "PIN de backup",
+    "backupPinLede": "Se o {{biometricName}} ou sua impressão digital não funcionar, um PIN de 6 dígitos desbloqueia o cofre. Ele é armazenado apenas neste dispositivo.",
+    "setBackupPin": "Definir um PIN de backup",
+    "safetyFocusedStat": "Focado em segurança",
+    "funStat": "Aventura",
+    "unnamedContact": "Contato"
   },
   "milestones": {
     "safetyEyebrow": "Segurança",
@@ -345,6 +363,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "pt-BR",
-    "lastGeneratedAt": "2026-06-19T01:50:01.999Z"
+    "lastGeneratedAt": "2026-06-19T11:39:19.850Z"
   }
 }

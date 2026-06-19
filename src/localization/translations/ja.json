@@ -140,8 +140,6 @@
     "welcomeHeadlinePrefix": "旅を、",
     "welcomeHeadlineAccent": "守る",
     "welcomeLede": "長旅のための安全コンパニオン — チェックイン、共有、お金管理まで、すべて端末の中で。サーバーには一切送信しません。",
-    "travellers": "旅行者",
-    "appStore": "App Store",
     "servers": "サーバー",
     "stepOf": "ステップ {{step}} / {{total}}",
     "safetyHeadlinePrefix": "あなたの",
@@ -285,7 +283,27 @@
     "modelAssignedTitle": "デバイスに適合したモデル",
     "modelAssigned": "割り当て済み: {{model}} · {{quant}}",
     "unknownError": "問題が発生しました。もう一度お試しください。",
-    "modelQuantLabel": "{{quant}} 量子化"
+    "modelQuantLabel": "{{quant}} 量子化",
+    "onDeviceStat": "オンデバイスAI",
+    "encryptedStat": "暗号化済み",
+    "modelPaused": "一時停止中 · {{progress}}%",
+    "pauseDownload": "一時停止",
+    "resumeDownload": "再開",
+    "downloadBackgroundHint": "バックグラウンドでダウンロードを継続します — このままセットアップを続けられます。",
+    "aiCapabilities": "できること",
+    "ledgerFeaturesLabel": "こちらも搭載",
+    "continueDownloadBg": "続ける — バックグラウンドでダウンロード",
+    "chooseFromContacts": "連絡先から選択",
+    "trustedThreeFull": "信頼できる3人を選択済み",
+    "notifyWhenReady": "準備ができたら通知する",
+    "notifyWhenReadySub": "モデルのダウンロードが完了したときに通知を受け取ります。",
+    "backupPinHeadlinePrefix": "設定：",
+    "backupPinHeadlineAccent": "バックアップPIN",
+    "backupPinLede": "{{biometricName}}や指紋認証が機能しない場合、6桁のPINで保管庫をロック解除できます。このPINはこのデバイスにのみ保存されます。",
+    "setBackupPin": "バックアップPINを設定",
+    "safetyFocusedStat": "安全重視",
+    "funStat": "冒険",
+    "unnamedContact": "連絡先"
   },
   "milestones": {
     "safetyEyebrow": "安全",
@@ -345,6 +363,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "ja",
-    "lastGeneratedAt": "2026-06-19T01:50:01.999Z"
+    "lastGeneratedAt": "2026-06-19T11:39:19.850Z"
   }
 }

@@ -140,8 +140,6 @@
     "welcomeHeadlinePrefix": "旅行，",
     "welcomeHeadlineAccent": "有守护",
     "welcomeLede": "长途旅行的安全伴侣——报平安、共享和钱款，全都在你的手机上完成。我们的服务器上永远不会有任何内容。",
-    "travellers": "旅行者",
-    "appStore": "App Store",
     "servers": "服务器",
     "stepOf": "第 {{step}} 步，共 {{total}} 步",
     "safetyHeadlinePrefix": "你的",
@@ -285,7 +283,27 @@
     "modelAssignedTitle": "已为您的设备匹配模型",
     "modelAssigned": "已分配：{{model}} · {{quant}}",
     "unknownError": "出错了。请重试。",
-    "modelQuantLabel": "{{quant}} 量化"
+    "modelQuantLabel": "{{quant}} 量化",
+    "onDeviceStat": "设备端 AI",
+    "encryptedStat": "已加密",
+    "modelPaused": "已暂停 · {{progress}}%",
+    "pauseDownload": "暂停",
+    "resumeDownload": "继续",
+    "downloadBackgroundHint": "将在后台继续下载 — 您可以继续进行设置。",
+    "aiCapabilities": "它能做什么",
+    "ledgerFeaturesLabel": "还内置了",
+    "continueDownloadBg": "继续 — 在后台下载",
+    "chooseFromContacts": "从联系人中选择",
+    "trustedThreeFull": "已选择三位受信任联系人",
+    "notifyWhenReady": "准备就绪时通知我",
+    "notifyWhenReadySub": "模型下载完成时向我发送通知。",
+    "backupPinHeadlinePrefix": "设置",
+    "backupPinHeadlineAccent": "备用 PIN 码",
+    "backupPinLede": "如果 {{biometricName}} 或您的指纹无法使用，可以使用 6 位 PIN 码解锁保险库。它仅存储在此设备上。",
+    "setBackupPin": "设置备用 PIN 码",
+    "safetyFocusedStat": "注重安全",
+    "funStat": "冒险",
+    "unnamedContact": "联系人"
   },
   "milestones": {
     "safetyEyebrow": "安全",
@@ -345,6 +363,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "zh-CN",
-    "lastGeneratedAt": "2026-06-19T01:50:01.999Z"
+    "lastGeneratedAt": "2026-06-19T11:39:19.850Z"
   }
 }

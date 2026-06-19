@@ -17,21 +17,8 @@ export function PermissionRow({ theme: themeProp, title, sub, on, disabled, onPr
   const { nomad } = useTheme();
   const theme = themeProp ?? nomad.colors;
 
-  const Root = onPress ? Pressable : View;
-
-  return (
-    <Root
-      onPress={onPress}
-      disabled={disabled}
-      style={({ pressed }: { pressed?: boolean }) => [
-        styles.root,
-        {
-          backgroundColor: theme.paperSoft,
-          borderColor: theme.hairline,
-          opacity: disabled ? 0.6 : pressed ? 0.9 : 1,
-        },
-      ]}
-    >
+  const content = (
+    <>
       <View
         style={[
           styles.iconBox,
@@ -66,7 +53,36 @@ export function PermissionRow({ theme: themeProp, title, sub, on, disabled, onPr
           ]}
         />
       </View>
-    </Root>
+    </>
+  );
+
+  const baseStyle = {
+    backgroundColor: theme.paperSoft,
+    borderColor: theme.hairline,
+  } as const;
+
+  // A plain View ignores function styles, so only Pressable gets the pressed
+  // callback; non-interactive rows render with a resolved style array.
+  if (!onPress) {
+    return (
+      <View style={[styles.root, baseStyle, { opacity: disabled ? 0.6 : 1 }]}>
+        {content}
+      </View>
+    );
+  }
+
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      style={({ pressed }) => [
+        styles.root,
+        baseStyle,
+        { opacity: disabled ? 0.6 : pressed ? 0.9 : 1 },
+      ]}
+    >
+      {content}
+    </Pressable>
   );
 }
 
@@ -102,6 +118,7 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 999,
     position: "relative",
+    flexShrink: 0,
   },
   knob: {
     position: "absolute",

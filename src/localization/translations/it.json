@@ -140,8 +140,6 @@
     "welcomeHeadlinePrefix": "Viaggia,",
     "welcomeHeadlineAccent": "protetto",
     "welcomeLede": "Un compagno di sicurezza per i viaggi lunghi — check-in, condivisione e denaro, tutto sul tuo telefono. Mai nulla sui nostri server.",
-    "travellers": "Viaggiatori",
-    "appStore": "App Store",
     "servers": "Server",
     "stepOf": "Passo {{step}} di {{total}}",
     "safetyHeadlinePrefix": "La tua",
@@ -285,7 +283,27 @@
     "modelAssignedTitle": "Modello associato al tuo dispositivo",
     "modelAssigned": "Assegnato: {{model}} · {{quant}}",
     "unknownError": "Si è verificato un errore. Riprova.",
-    "modelQuantLabel": "{{quant}} quant"
+    "modelQuantLabel": "{{quant}} quant",
+    "onDeviceStat": "IA sul dispositivo",
+    "encryptedStat": "Crittografato",
+    "modelPaused": "In pausa · {{progress}}%",
+    "pauseDownload": "Metti in pausa",
+    "resumeDownload": "Riprendi",
+    "downloadBackgroundHint": "Il download continua in background — puoi proseguire con la configurazione.",
+    "aiCapabilities": "Cosa può fare",
+    "ledgerFeaturesLabel": "Anche integrate",
+    "continueDownloadBg": "Continua — scarica in background",
+    "chooseFromContacts": "Scegli dai contatti",
+    "trustedThreeFull": "Tre contatti fidati selezionati",
+    "notifyWhenReady": "Avvisami quando è pronto",
+    "notifyWhenReadySub": "Ricevi una notifica al termine del download del modello.",
+    "backupPinHeadlinePrefix": "Imposta un",
+    "backupPinHeadlineAccent": "PIN di backup",
+    "backupPinLede": "Se {{biometricName}} o la tua impronta digitale non funzionano, un PIN a 6 cifre sblocca la cassaforte. È memorizzato solo su questo dispositivo.",
+    "setBackupPin": "Imposta un PIN di backup",
+    "safetyFocusedStat": "Sicurezza",
+    "funStat": "Avventure",
+    "unnamedContact": "Contatto"
   },
   "milestones": {
     "safetyEyebrow": "Sicurezza",
@@ -345,6 +363,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "it",
-    "lastGeneratedAt": "2026-06-19T01:50:01.999Z"
+    "lastGeneratedAt": "2026-06-19T11:39:19.850Z"
   }
 }

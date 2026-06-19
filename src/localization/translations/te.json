@@ -140,8 +140,6 @@
     "welcomeHeadlinePrefix": "ప్రయాణం,",
     "welcomeHeadlineAccent": "రక్షణలో",
     "welcomeLede": "దీర్ఘ ప్రయాణాల కోసం ఒక భద్రతా సహాయకుడు — చెక్-ఇన్‌లు, షేరింగ్, మరియు డబ్బు, అన్నీ మీ ఫోన్‌లోనే. మా సర్వర్లకు ఏదీ వెళ్లదు, ఎప్పటికీ కాదు.",
-    "travellers": "ప్రయాణికులు",
-    "appStore": "App Store",
     "servers": "సర్వర్లు",
     "stepOf": "దశ {{step}} / {{total}}",
     "safetyHeadlinePrefix": "మీ",
@@ -285,7 +283,27 @@
     "modelAssignedTitle": "మీ పరికరానికి మోడల్ సరిపోలింది",
     "modelAssigned": "కేటాయించబడింది: {{model}} · {{quant}}",
     "unknownError": "ఏదో తప్పు జరిగింది. దయచేసి మళ్ళీ ప్రయత్నించండి.",
-    "modelQuantLabel": "{{quant}} క్వాంట్"
+    "modelQuantLabel": "{{quant}} క్వాంట్",
+    "onDeviceStat": "ఆన్-డివైస్ AI",
+    "encryptedStat": "ఎన్‌క్రిప్ట్ చేయబడింది",
+    "modelPaused": "పాజ్ చేయబడింది · {{progress}}%",
+    "pauseDownload": "పాజ్ చేయండి",
+    "resumeDownload": "కొనసాగించండి",
+    "downloadBackgroundHint": "బ్యాక్‌గ్రౌండ్‌లో డౌన్‌లోడ్ అవుతూనే ఉంటుంది — మీరు సెటప్‌ను కొనసాగించవచ్చు.",
+    "aiCapabilities": "ఇది ఏమి చేయగలదు",
+    "ledgerFeaturesLabel": "అంతర్నిర్మితంగా కూడా ఉన్నాయి",
+    "continueDownloadBg": "కొనసాగించండి — బ్యాక్‌గ్రౌండ్‌లో డౌన్‌లోడ్ చేయండి",
+    "chooseFromContacts": "పరిచయాల నుండి ఎంచుకోండి",
+    "trustedThreeFull": "విశ్వసనీయమైన ముగ్గురు ఎంపికయ్యారు",
+    "notifyWhenReady": "సిద్ధంగా ఉన్నప్పుడు నాకు తెలియజేయండి",
+    "notifyWhenReadySub": "మోడల్ డౌన్‌లోడ్ కావడం పూర్తయినప్పుడు నోటిఫికేషన్‌ను పొందండి.",
+    "backupPinHeadlinePrefix": "ఒక",
+    "backupPinHeadlineAccent": "బ్యాకప్ PIN‌ను సెట్ చేయండి",
+    "backupPinLede": "{{biometricName}} లేదా మీ వేలిముద్ర పని చేయకపోతే, 6-అంకెల PIN వాల్ట్‌ని అన్‌లాక్ చేస్తుంది. ఇది ఈ పరికరంలో మాత్రమే భద్రపరచబడుతుంది.",
+    "setBackupPin": "బ్యాకప్ PIN‌ను సెట్ చేయండి",
+    "safetyFocusedStat": "భద్రత",
+    "funStat": "సాహసాలు",
+    "unnamedContact": "పరిచయం"
   },
   "milestones": {
     "safetyEyebrow": "భద్రత",
@@ -345,6 +363,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "te",
-    "lastGeneratedAt": "2026-06-19T01:50:01.999Z"
+    "lastGeneratedAt": "2026-06-19T11:39:19.850Z"
   }
 }

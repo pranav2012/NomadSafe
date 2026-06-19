@@ -9,12 +9,14 @@ type ThemeMode = "light" | "dark" | "system";
 interface SettingsState {
   themeMode: ThemeMode;
   onboardingCompleted: boolean;
+  onboardingStep: number;
   defaultCurrency: string;
   currencyOverride: string | null;
   localeOverride: SupportedLocale | null;
 
   setThemeMode: (mode: ThemeMode) => void;
   setOnboardingCompleted: (value: boolean) => void;
+  setOnboardingStep: (step: number) => void;
   setDefaultCurrency: (currency: string) => void;
   setCurrencyOverride: (currency: string | null) => void;
   setLocaleOverride: (locale: SupportedLocale | null) => void;
@@ -27,12 +29,15 @@ export const useSettingsStore = create<SettingsState>()(
     (set) => ({
       themeMode: "system",
       onboardingCompleted: false,
+      onboardingStep: 0,
       defaultCurrency: "USD",
       currencyOverride: null,
       localeOverride: null,
 
       setThemeMode: (mode) => set({ themeMode: mode }),
-      setOnboardingCompleted: (value) => set({ onboardingCompleted: value }),
+      setOnboardingCompleted: (value) =>
+        set({ onboardingCompleted: value, onboardingStep: 0 }),
+      setOnboardingStep: (step) => set({ onboardingStep: step }),
       setDefaultCurrency: (currency) => {
         const normalizedCurrency = normalizeCurrencyCode(currency);
         set({ defaultCurrency: normalizedCurrency, currencyOverride: normalizedCurrency });

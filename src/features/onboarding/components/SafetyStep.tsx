@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import Svg, { Line, Path, Polygon } from "react-native-svg";
 import { LinearGradient } from "expo-linear-gradient";
-import * as Contacts from "expo-contacts";
+import * as Contacts from "expo-contacts/legacy";
 import { NOMAD_FONTS, type NomadTheme } from "@/constants/nomadTokens";
 import { useLocalization } from "@/localization";
 import { NomadCard } from "@/components/nomad/Card";
@@ -23,10 +23,7 @@ import {
   HeadlineItalic,
   SectionLabel,
 } from "@/components/nomad/Typography";
-import {
-  permissionsService,
-  type PermissionKind,
-} from "@/features/onboarding/services/permissions";
+import { permissionsService } from "@/features/onboarding/services/permissions";
 import {
   emergencyContactsStorage,
   type EmergencyContact,
@@ -40,9 +37,8 @@ interface Props {
 }
 
 interface PermissionState {
-  locationGranted: boolean;
-  contactsGranted: boolean;
-  smsGranted: boolean;
+  locationOn: boolean;
+  smsOn: boolean;
   loading: boolean;
 }
 
@@ -51,10 +47,7 @@ interface SelectableContact extends EmergencyContact {
   color: string;
 }
 
-const FALLBACK_CONTACTS: SelectableContact[] = [
-  { id: "mum", name: "Mum", phone: null, init: "M", color: "teal" },
-  { id: "dad", name: "Dad", phone: null, init: "D", color: "stamp" },
-];
+const SLOT_COLORS = ["teal", "mustard", "sky", "stamp"] as const;
 
 function hexFromName(
   theme: NomadTheme,
@@ -72,141 +65,120 @@ export function SafetyStep({
   const { t } = useLocalization();
 
   const [permissions, setPermissions] = useState<PermissionState>({
-    locationGranted: false,
-    contactsGranted: false,
-    smsGranted: true,
+    locationOn: false,
+    smsOn: false,
     loading: true,
   });
 
   const [selectedContacts, setSelectedContacts] = useState<SelectableContact[]>([]);
-  const [deviceContacts, setDeviceContacts] = useState<SelectableContact[]>([]);
-  const [loadingContacts, setLoadingContacts] = useState(false);
-  const [initialChecked, setInitialChecked] = useState(false);
+  const [picking, setPicking] = useState(false);
 
   const getLocationSub = () => {
-    if (permissions.locationGranted) return t("onboarding.sosSharingGeofences");
+    if (permissions.locationOn) return t("onboarding.sosSharingGeofences");
     return t("onboarding.locationAlwaysSub");
   };
 
-  const getContactsSub = () => {
-    if (permissions.contactsGranted) return t("onboarding.pickYourThreeOffline");
-    return t("onboarding.contactsPermissionSub");
-  };
-
   const getSmsSub = () => {
-    if (permissions.smsGranted) return t("onboarding.pickYourThreeOffline");
+    if (permissions.smsOn) return t("onboarding.pickYourThreeOffline");
     return t("onboarding.smsPermissionSub");
   };
-
-  const loadContacts = React.useCallback(async () => {
-    setLoadingContacts(true);
-    try {
-      const { data } = await Contacts.getContactsAsync({
-        fields: [Contacts.Fields.PhoneNumbers],
-        pageSize: 100,
-      });
-      const mapped: SelectableContact[] = data
-        .filter((c) => c.name)
-        .slice(0, 30)
-        .map((c, i) => ({
-          id: c.id,
-          name: c.name,
-          phone: c.phoneNumbers?.[0]?.number ?? null,
-          init: c.name.charAt(0).toUpperCase(),
-          color: ["teal", "mustard", "sky", "stamp"][i % 4],
-        }));
-      setDeviceContacts(mapped.length ? mapped : FALLBACK_CONTACTS);
-    } catch {
-      setDeviceContacts(FALLBACK_CONTACTS);
-    } finally {
-      setLoadingContacts(false);
-    }
-  }, []);
 
   useEffect(() => {
     let mounted = true;
     const run = async () => {
-      if (initialChecked) return;
       const status = await permissionsService.checkAll();
       if (!mounted) return;
       setPermissions({
-        locationGranted: status.location.granted,
-        contactsGranted: status.contacts.granted,
-        smsGranted: status.sms.granted,
+        locationOn: status.location.granted,
+        smsOn: status.sms.granted,
         loading: false,
       });
-      if (status.contacts.granted && deviceContacts.length === 0) {
-        await loadContacts();
-      }
-      setInitialChecked(true);
     };
     run();
     return () => {
       mounted = false;
     };
-  }, [deviceContacts.length, initialChecked, loadContacts]);
+  }, []);
 
   useEffect(() => {
-    const ready =
-      permissions.locationGranted &&
-      permissions.contactsGranted &&
-      selectedContacts.length > 0;
+    const ready = permissions.locationOn && selectedContacts.length > 0;
     onPermissionsReady?.(ready);
     if (ready) {
       emergencyContactsStorage.set(
         selectedContacts.map(({ id, name, phone }) => ({ id, name, phone })),
       );
     }
-  }, [permissions, selectedContacts, onPermissionsReady]);
+  }, [permissions.locationOn, selectedContacts, onPermissionsReady]);
 
-  const requestPermission = async (kind: PermissionKind) => {
-    try {
-      if (kind === "location" || kind === "locationAlways") {
-        const status = await permissionsService.requestLocation();
-        setPermissions((p) => ({
-          ...p,
-          locationGranted: status.granted,
-        }));
-        if (!status.granted && !status.canAskAgain) {
-          Alert.alert(
-            t("onboarding.locationRequiredTitle"),
-            t("onboarding.locationRequiredBody"),
-          );
-        }
-      } else if (kind === "contacts") {
-        const status = await permissionsService.requestContacts();
-        setPermissions((p) => ({ ...p, contactsGranted: status.granted }));
-        if (status.granted) {
-          await loadContacts();
-        } else if (!status.canAskAgain) {
-          Alert.alert(
-            t("onboarding.contactsRequiredTitle"),
-            t("onboarding.contactsRequiredBody"),
-          );
-        }
-      } else if (kind === "sms") {
-        const status = await permissionsService.requestSms();
-        setPermissions((p) => ({ ...p, smsGranted: status.granted }));
-      }
-    } catch {
-      // ignore
+  // Toggles are two-way: tapping an enabled row turns the feature off (the OS
+  // grant can't be revoked from here, but the in-app feature is disabled).
+  const toggleLocation = async () => {
+    if (permissions.locationOn) {
+      setPermissions((p) => ({ ...p, locationOn: false }));
+      return;
+    }
+    const status = await permissionsService.requestLocation();
+    setPermissions((p) => ({ ...p, locationOn: status.granted }));
+    if (!status.granted && !status.canAskAgain) {
+      Alert.alert(
+        t("onboarding.locationRequiredTitle"),
+        t("onboarding.locationRequiredBody"),
+      );
     }
   };
 
-  const toggleContact = (contact: SelectableContact) => {
-    setSelectedContacts((prev) => {
-      const exists = prev.find((c) => c.id === contact.id);
-      if (exists) {
-        return prev.filter((c) => c.id !== contact.id);
-      }
-      if (prev.length >= 3) return prev;
-      return [...prev, contact];
-    });
+  const toggleSms = async () => {
+    if (permissions.smsOn) {
+      setPermissions((p) => ({ ...p, smsOn: false }));
+      return;
+    }
+    const status = await permissionsService.requestSms();
+    setPermissions((p) => ({ ...p, smsOn: status.granted }));
   };
 
-  const resolvedContacts = deviceContacts.length
-    ? deviceContacts
-    : FALLBACK_CONTACTS;
+  // Opens the OS contact picker so the user always selects from their real
+  // contacts (no contacts permission required for the system picker).
+  const pickContact = async () => {
+    if (selectedContacts.length >= 3 || picking) return;
+    setPicking(true);
+    try {
+      const contact = await Contacts.presentContactPickerAsync();
+      if (!contact) return;
+
+      // Resolve a display name across the fields the picker may populate; the
+      // chosen contact can lack a composed `name` (e.g. first/last only).
+      const phone = contact.phoneNumbers?.[0]?.number ?? null;
+      const displayName =
+        contact.name?.trim() ||
+        [contact.firstName, contact.lastName].filter(Boolean).join(" ").trim() ||
+        contact.company?.trim() ||
+        phone ||
+        t("onboarding.unnamedContact");
+      const id = contact.id ?? `picked-${Date.now()}`;
+
+      setSelectedContacts((prev) => {
+        if (prev.length >= 3 || prev.some((c) => c.id === id)) return prev;
+        return [
+          ...prev,
+          {
+            id,
+            name: displayName,
+            phone,
+            init: displayName.charAt(0).toUpperCase(),
+            color: SLOT_COLORS[prev.length % SLOT_COLORS.length],
+          },
+        ];
+      });
+    } catch (err) {
+      console.warn("Contact picker failed", err);
+    } finally {
+      setPicking(false);
+    }
+  };
+
+  const removeContact = (id: string) => {
+    setSelectedContacts((prev) => prev.filter((c) => c.id !== id));
+  };
 
   const slotNames =
     selectedContacts.map((c) => c.name).join(" · ") ||
@@ -223,7 +195,7 @@ export function SafetyStep({
       {/* Headline */}
       <View style={{ paddingHorizontal: 26, paddingTop: 6, paddingBottom: 18 }}>
         <Eyebrow color={theme.teal}>
-          {t("onboarding.stepOf", { step: 1, total: totalSteps - 1 })}
+          {t("onboarding.stepOf", { step: 1, total: totalSteps })}
         </Eyebrow>
         <HugeHeadline color={theme.inkDeep}>
           {t("onboarding.safetyHeadlinePrefix")}{" "}
@@ -293,137 +265,28 @@ export function SafetyStep({
         <Text style={[styles.bodyCopy, { color: theme.inkSoft }]}>
           {t("onboarding.locationBody")}
         </Text>
-      </View>
 
-      {/* 02 · TRUSTED THREE */}
-      <View style={{ paddingHorizontal: 16, paddingTop: 20 }}>
-        <View style={{ paddingHorizontal: 10 }}>
-          <SectionLabel
-            step={2}
-            color={theme.mustard}
-            title={t("onboarding.trustedThree", {
-              count: selectedContacts.length,
-            })}
-            theme={theme}
-          />
-        </View>
-
-        {/* Selected slots */}
-        <View
-          style={[
-            styles.slotRow,
-            {
-              backgroundColor: theme.paperSoft,
-              borderColor: theme.mustard,
-            },
-          ]}
-        >
-          {[0, 1, 2].map((slot) => {
-            const c = selectedContacts[slot];
-            if (!c) {
-              return (
-                <View
-                  key={slot}
-                  style={[styles.slotEmpty, { borderColor: theme.hairline }]}
-                >
-                  <Text style={{ color: theme.inkMuted, fontSize: 16 }}>+</Text>
-                </View>
-              );
-            }
-            return (
-              <View
-                key={slot}
-                style={[
-                  styles.slotFilled,
-                  {
-                    backgroundColor: hexFromName(theme, c.color),
-                    borderColor: theme.paperSoft,
-                  },
-                ]}
-              >
-                <Text style={styles.slotInit}>{c.init}</Text>
-              </View>
-            );
-          })}
-          <View style={{ flex: 1, marginLeft: 4 }}>
-            <Text
-              numberOfLines={1}
-              style={[styles.slotName, { color: theme.inkDeep }]}
-            >
-              {slotNames}
-            </Text>
-            <Text style={[styles.slotSub, { color: theme.inkSoft }]}>
-              {t("onboarding.smsMissCheckIn")}
-            </Text>
-          </View>
-        </View>
-
-        {/* Loading state */}
-        {permissions.contactsGranted && loadingContacts && (
-          <View style={[styles.loadingRow, { borderColor: theme.hairline }]}>
-            <ActivityIndicator size="small" color={theme.mustard} />
-            <Text style={[styles.loadingText, { color: theme.inkSoft }]}>
-              {t("onboarding.loadingContacts")}
-            </Text>
-          </View>
-        )}
-
-        {/* Device contact list */}
-        <View style={{ gap: 6 }}>
-          {resolvedContacts.map((c) => {
-            const on = selectedContacts.some((s) => s.id === c.id);
-            return (
-              <Pressable
-                key={c.id}
-                onPress={() => toggleContact(c)}
-                style={[
-                  styles.contactRow,
-                  {
-                    backgroundColor: on ? theme.paperSoft : "transparent",
-                    borderColor: on ? theme.mustard : theme.hairline,
-                  },
-                ]}
-              >
-                <View
-                  style={[
-                    styles.contactAvatar,
-                    { backgroundColor: hexFromName(theme, c.color) },
-                  ]}
-                >
-                  <Text style={styles.contactAvatarText}>{c.init}</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.contactName, { color: theme.inkDeep }]}>
-                    {c.name}
-                  </Text>
-                  <Text style={[styles.contactSub, { color: theme.inkSoft }]}>
-                    {c.phone ?? t("onboarding.noPhone")}
-                  </Text>
-                </View>
-                <View
-                  style={[
-                    styles.checkBox,
-                    {
-                      borderColor: on ? theme.mustard : theme.hairline,
-                      backgroundColor: on ? theme.mustard : "transparent",
-                    },
-                  ]}
-                >
-                  {on ? (
-                    <Icon name="check" size={10} color="#fff" strokeWidth={3} />
-                  ) : null}
-                </View>
-              </Pressable>
-            );
-          })}
+        {/* Location toggle, right below the map */}
+        <View style={{ marginTop: 12 }}>
+          {permissions.loading ? (
+            <ActivityIndicator color={theme.inkSoft} />
+          ) : (
+            <PermissionRow
+              theme={theme}
+              title={t("onboarding.locationAlways")}
+              sub={getLocationSub()}
+              on={permissions.locationOn}
+              onPress={toggleLocation}
+            />
+          )}
         </View>
       </View>
 
-      {/* 03 · OFFLINE FALLBACK */}
+      {/* 02 · OFFLINE FALLBACK (image) */}
       <View style={{ paddingHorizontal: 16, paddingTop: 22 }}>
         <View style={{ paddingHorizontal: 10 }}>
           <SectionLabel
-            step={3}
+            step={2}
             color={theme.stamp}
             title={t("onboarding.offlineFallback")}
             theme={theme}
@@ -522,47 +385,143 @@ export function SafetyStep({
         </Text>
       </View>
 
-      {/* Consolidated permissions */}
-      <View style={{ paddingHorizontal: 16, paddingTop: 20 }}>
+      {/* 03 · TRUSTED THREE */}
+      <View style={{ paddingHorizontal: 16, paddingTop: 22 }}>
         <View style={{ paddingHorizontal: 10 }}>
           <SectionLabel
-            step={4}
-            color={theme.sky}
-            title={t("onboarding.permissions")}
+            step={3}
+            color={theme.mustard}
+            title={t("onboarding.trustedThree", {
+              count: selectedContacts.length,
+            })}
             theme={theme}
           />
         </View>
-        <View style={{ gap: 6 }}>
-          {permissions.loading ? (
-            <ActivityIndicator color={theme.inkSoft} />
-          ) : (
-            <>
-              <PermissionRow
-                theme={theme}
-                title={t("onboarding.locationAlways")}
-                sub={getLocationSub()}
-                on={permissions.locationGranted}
-                onPress={() => requestPermission("locationAlways")}
-              />
-              <PermissionRow
-                theme={theme}
-                title={t("onboarding.contacts")}
-                sub={getContactsSub()}
-                on={permissions.contactsGranted}
-                onPress={() => requestPermission("contacts")}
-              />
-              {Platform.OS === "android" && (
-                <PermissionRow
-                  theme={theme}
-                  title={t("onboarding.sms")}
-                  sub={getSmsSub()}
-                  on={permissions.smsGranted}
-                  onPress={() => requestPermission("sms")}
-                />
-              )}
-            </>
-          )}
+
+        {/* Selected slots */}
+        <View
+          style={[
+            styles.slotRow,
+            {
+              backgroundColor: theme.paperSoft,
+              borderColor: theme.mustard,
+            },
+          ]}
+        >
+          {[0, 1, 2].map((slot) => {
+            const c = selectedContacts[slot];
+            if (!c) {
+              return (
+                <Pressable
+                  key={slot}
+                  onPress={pickContact}
+                  style={[styles.slotEmpty, { borderColor: theme.hairline }]}
+                >
+                  <Text style={{ color: theme.inkMuted, fontSize: 16 }}>+</Text>
+                </Pressable>
+              );
+            }
+            return (
+              <Pressable
+                key={slot}
+                onPress={() => removeContact(c.id)}
+                style={[
+                  styles.slotFilled,
+                  {
+                    backgroundColor: hexFromName(theme, c.color),
+                    borderColor: theme.paperSoft,
+                  },
+                ]}
+              >
+                <Text style={styles.slotInit}>{c.init}</Text>
+              </Pressable>
+            );
+          })}
+          <View style={{ flex: 1, marginLeft: 4 }}>
+            <Text
+              numberOfLines={1}
+              style={[styles.slotName, { color: theme.inkDeep }]}
+            >
+              {slotNames}
+            </Text>
+            <Text style={[styles.slotSub, { color: theme.inkSoft }]}>
+              {t("onboarding.smsMissCheckIn")}
+            </Text>
+          </View>
         </View>
+
+        {/* Choose from your real contacts via the OS picker */}
+        <Pressable
+          onPress={pickContact}
+          disabled={selectedContacts.length >= 3 || picking}
+          style={({ pressed }) => [
+            styles.pickBtn,
+            {
+              backgroundColor: theme.paperSoft,
+              borderColor: theme.mustard,
+              opacity: selectedContacts.length >= 3 ? 0.5 : pressed ? 0.9 : 1,
+            },
+          ]}
+        >
+          {picking ? (
+            <ActivityIndicator size="small" color={theme.mustard} />
+          ) : (
+            <Icon name="plus" size={16} color={theme.mustard} strokeWidth={2.4} />
+          )}
+          <Text style={[styles.pickBtnText, { color: theme.inkDeep }]}>
+            {selectedContacts.length >= 3
+              ? t("onboarding.trustedThreeFull")
+              : t("onboarding.chooseFromContacts")}
+          </Text>
+        </Pressable>
+
+        {/* Selected real contacts list */}
+        {selectedContacts.length > 0 && (
+          <View style={{ gap: 6, marginTop: 10 }}>
+            {selectedContacts.map((c) => (
+              <Pressable
+                key={c.id}
+                onPress={() => removeContact(c.id)}
+                style={[
+                  styles.contactRow,
+                  { backgroundColor: theme.paperSoft, borderColor: theme.mustard },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.contactAvatar,
+                    { backgroundColor: hexFromName(theme, c.color) },
+                  ]}
+                >
+                  <Text style={styles.contactAvatarText}>{c.init}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.contactName, { color: theme.inkDeep }]}>
+                    {c.name}
+                  </Text>
+                  <Text style={[styles.contactSub, { color: theme.inkSoft }]}>
+                    {c.phone ?? t("onboarding.noPhone")}
+                  </Text>
+                </View>
+                <Icon name="x" size={14} color={theme.inkMuted} strokeWidth={2.4} />
+              </Pressable>
+            ))}
+          </View>
+        )}
+
+        {/* SMS fallback toggle (Android only) */}
+        {Platform.OS === "android" && !permissions.loading && (
+          <View style={{ marginTop: 10 }}>
+            <PermissionRow
+              theme={theme}
+              title={t("onboarding.sms")}
+              sub={getSmsSub()}
+              on={permissions.smsOn}
+              onPress={toggleSms}
+            />
+          </View>
+        )}
+
         <Text style={[styles.bodyCopy, { color: theme.inkSoft, marginTop: 10 }]}>
           {t("onboarding.permissionNote")}
         </Text>
@@ -670,6 +629,21 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 13,
     fontFamily: NOMAD_FONTS.ui,
+  },
+  pickBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderStyle: "dashed",
+  },
+  pickBtnText: {
+    fontSize: 13,
+    fontWeight: "600",
+    fontFamily: NOMAD_FONTS.uiSemi,
   },
   contactRow: {
     paddingVertical: 9,

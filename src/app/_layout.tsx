@@ -21,6 +21,11 @@ import {
   GeistMono_500Medium,
 } from "@expo-google-fonts/geist-mono";
 import { authClient, useAuthStore, useSyncAuthSession } from "@/features/auth";
+import {
+  modelDownloadManager,
+  modelNotifications,
+  registerModelDownloadTask,
+} from "@/features/ai";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { LocalizationProvider } from "@/localization";
 
@@ -50,6 +55,11 @@ function AppStateLock() {
         if (appState.current === "active" && nextState === "background") {
           backgroundedAt.current = Date.now();
           updateLastActive();
+        }
+
+        if (appState.current === "background" && nextState === "active") {
+          // Continue an interrupted model download when coming back to foreground.
+          modelDownloadManager.resumeIfInterrupted();
         }
 
         if (
@@ -91,6 +101,14 @@ export default function RootLayout() {
   });
 
   useSyncAuthSession();
+
+  // Resume any model download interrupted by a previous app kill, wire up the
+  // background task, and prepare local notifications for download completion.
+  useEffect(() => {
+    modelNotifications.configure();
+    registerModelDownloadTask();
+    modelDownloadManager.resumeIfInterrupted();
+  }, []);
 
   if (!fontsLoaded) return null;
 

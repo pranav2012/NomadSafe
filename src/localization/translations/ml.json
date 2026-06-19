@@ -140,8 +140,6 @@
     "welcomeHeadlinePrefix": "യാത്ര ചെയ്യൂ,",
     "welcomeHeadlineAccent": "സുരക്ഷിതമായി",
     "welcomeLede": "നീണ്ട യാത്രകൾക്കായുള്ള ഒരു സുരക്ഷാ സഹായി — ചെക്ക്-ഇനുകൾ, പങ്കിടൽ, പണം, എല്ലാം നിങ്ങളുടെ ഫോണിൽ. ഞങ്ങളുടെ സർവറുകളിൽ ഒന്നും ഒരിക്കലും ഇല്ല.",
-    "travellers": "യാത്രികർ",
-    "appStore": "App Store",
     "servers": "സെർവറുകൾ",
     "stepOf": "ഘട്ടം {{step}} / {{total}}",
     "safetyHeadlinePrefix": "നിങ്ങളുടെ",
@@ -285,7 +283,27 @@
     "modelAssignedTitle": "നിങ്ങളുടെ ഉപകരണവുമായി മോഡൽ പൊരുത്തപ്പെട്ടു",
     "modelAssigned": "അനുവദിച്ചത്: {{model}} · {{quant}}",
     "unknownError": "എന്തോ തകരാർ സംഭവിച്ചു. ദയവായി വീണ്ടും ശ്രമിക്കുക.",
-    "modelQuantLabel": "{{quant}} ക്വാന്റ്"
+    "modelQuantLabel": "{{quant}} ക്വാന്റ്",
+    "onDeviceStat": "ഡിവൈസിലെ AI",
+    "encryptedStat": "എൻക്രിപ്റ്റ് ചെയ്തത്",
+    "modelPaused": "നിർത്തിവെച്ചിരിക്കുന്നു · {{progress}}%",
+    "pauseDownload": "തൽക്കാലം നിർത്തുക",
+    "resumeDownload": "പുനരാരംഭിക്കുക",
+    "downloadBackgroundHint": "പശ്ചാത്തലത്തിൽ ഡൗൺലോഡ് ചെയ്യുന്നത് തുടരും — നിങ്ങൾക്ക് സജ്ജീകരണം തുടരാം.",
+    "aiCapabilities": "ഇതിന് എന്ത് ചെയ്യാൻ കഴിയും",
+    "ledgerFeaturesLabel": "ഇതോടൊപ്പം ഉൾപ്പെടുത്തിയിട്ടുള്ളവ",
+    "continueDownloadBg": "തുടരുക — ബാക്ക്ഗ്രൗണ്ടിൽ ഡൗൺലോഡ് ചെയ്യുക",
+    "chooseFromContacts": "കോൺടാക്റ്റുകളിൽ നിന്ന് തിരഞ്ഞെടുക്കുക",
+    "trustedThreeFull": "വിശ്വസ്തരായ മൂന്ന് പേരെ തിരഞ്ഞെടുത്തു",
+    "notifyWhenReady": "തയ്യാറാകുമ്പോൾ എന്നെ അറിയിക്കുക",
+    "notifyWhenReadySub": "മോഡൽ ഡൗൺലോഡ് പൂർത്തിയാകുമ്പോൾ ഒരു നോട്ടിഫിക്കേഷൻ നേടുക.",
+    "backupPinHeadlinePrefix": "ഒരു",
+    "backupPinHeadlineAccent": "ബാക്കപ്പ് പിൻ സജ്ജമാക്കുക",
+    "backupPinLede": "{{biometricName}} അല്ലെങ്കിൽ നിങ്ങളുടെ വിരലടയാളം പ്രവർത്തിക്കുന്നില്ലെങ്കിൽ, ഒരു 6-അക്ക പിൻ വോൾട്ട് അൺലോക്ക് ചെയ്യും. ഇത് ഈ ഉപകരണത്തിൽ മാത്രമേ സൂക്ഷിക്കുകയുള്ളൂ.",
+    "setBackupPin": "ഒരു ബാക്കപ്പ് പിൻ സജ്ജമാക്കുക",
+    "safetyFocusedStat": "സുരക്ഷ",
+    "funStat": "സാഹസികതകൾ",
+    "unnamedContact": "കോൺടാക്റ്റ്"
   },
   "milestones": {
     "safetyEyebrow": "സുരക്ഷ",
@@ -345,6 +363,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "ml",
-    "lastGeneratedAt": "2026-06-19T01:50:01.999Z"
+    "lastGeneratedAt": "2026-06-19T11:39:19.850Z"
   }
 }

@@ -2,7 +2,7 @@ import React, { useCallback, useState } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -18,6 +18,7 @@ import {
   useBiometricPresentation,
 } from "@/features/auth";
 import { hashPin } from "@/features/auth/utils/crypto";
+import { useSettingsStore } from "@/features/settings";
 import { lightImpact, errorNotification } from "@/utils/haptics";
 import { Icon } from "@/components/nomad/Icon";
 import { useLocalization } from "@/localization";
@@ -27,10 +28,13 @@ const NUMPAD = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "delete"];
 
 export default function SetupPinScreen() {
   const router = useRouter();
+  const { from } = useLocalSearchParams<{ from?: string }>();
+  const fromOnboarding = from === "onboarding";
   const { isDark, nomad } = useTheme();
   const { t } = useLocalization();
   const theme = nomad.colors;
   const { setPinSet, setBiometricEnabled, setUnlocked } = useAuthStore();
+  const setOnboardingStep = useSettingsStore((s) => s.setOnboardingStep);
   const biometric = useBiometricPresentation();
 
   const [step, setStep] = useState<"create" | "confirm">("create");
@@ -61,6 +65,14 @@ export default function SetupPinScreen() {
 
     const { available } = await localAuth.checkBiometricAvailability();
     if (available) setBiometricEnabled(true);
+
+    if (fromOnboarding) {
+      // Return to onboarding and advance to the final (Ready) step. Auth is
+      // finalized later, after sign-in.
+      setOnboardingStep(5);
+      router.replace("/(onboarding)/welcome");
+      return;
+    }
 
     setUnlocked(true);
     router.replace("/(tabs)");

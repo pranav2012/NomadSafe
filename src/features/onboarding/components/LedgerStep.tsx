@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import Svg, { Line, Path } from "react-native-svg";
 import { LinearGradient } from "expo-linear-gradient";
@@ -30,6 +30,8 @@ const features: { i: IconName; titleKey: string; subKey: string; colorKey: keyof
 
 export function LedgerStep({ theme, totalSteps }: Props) {
   const { t } = useLocalization();
+  const [emailOn, setEmailOn] = useState(true);
+  const [smsOn, setSmsOn] = useState(true);
   // parsing pulse dot
   const pulse = useSharedValue(1);
   useEffect(() => {
@@ -146,7 +148,7 @@ export function LedgerStep({ theme, totalSteps }: Props) {
       {/* Headline */}
       <View style={{ paddingHorizontal: 26, paddingTop: 22 }}>
         <Eyebrow color={theme.mustard}>
-          {t("onboarding.stepOf", { step: 4, total: totalSteps - 1 })}
+          {t("onboarding.stepOf", { step: 2, total: totalSteps })}
         </Eyebrow>
         <HugeHeadline color={theme.inkDeep}>
           {t("onboarding.ledgerHeadlinePrefix")}{" "}
@@ -167,36 +169,51 @@ export function LedgerStep({ theme, totalSteps }: Props) {
             theme={theme}
             title={t("onboarding.emailTransactionsOnly")}
             sub={t("onboarding.readsReceipts")}
-            on
+            on={emailOn}
+            onPress={() => setEmailOn((v) => !v)}
           />
           <PermissionRow
             theme={theme}
             title={t("onboarding.smsSpendAlerts")}
             sub={t("onboarding.bankDebitAlerts")}
-            on
+            on={smsOn}
+            onPress={() => setSmsOn((v) => !v)}
           />
         </View>
       </View>
 
-      {/* Feature strip */}
-      <View style={{ paddingHorizontal: 16, paddingTop: 18, gap: 8 }}>
-        {features.map((f, i) => {
-          const fColor = theme[f.colorKey] as string;
-          return (
-            <View
-              key={i}
-              style={[styles.featureRow, { backgroundColor: theme.paperSoft, borderColor: theme.hairline }]}
-            >
-              <View style={[styles.featureIcon, { backgroundColor: fColor + "22" }]}>
-                <Icon name={f.i} size={15} color={fColor} strokeWidth={2} />
+      {/* Feature tiles — distinct from the toggle rows above */}
+      <View style={{ paddingHorizontal: 16, paddingTop: 18 }}>
+        <Text style={[styles.featuresLabel, { color: theme.inkMuted }]}>
+          {t("onboarding.ledgerFeaturesLabel")}
+        </Text>
+        <View style={styles.featureGrid}>
+          {features.map((f, i) => {
+            const fColor = theme[f.colorKey] as string;
+            return (
+              <View
+                key={i}
+                style={[styles.featureTile, { backgroundColor: theme.paperSoft, borderColor: theme.hairline }]}
+              >
+                <View style={[styles.featureTileIcon, { backgroundColor: fColor + "22" }]}>
+                  <Icon name={f.i} size={15} color={fColor} strokeWidth={2} />
+                </View>
+                <Text
+                  style={[styles.featureTileTitle, { color: theme.inkDeep }]}
+                  numberOfLines={2}
+                >
+                  {t(f.titleKey)}
+                </Text>
+                <Text
+                  style={[styles.featureTileSub, { color: theme.inkSoft }]}
+                  numberOfLines={3}
+                >
+                  {t(f.subKey)}
+                </Text>
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.featureTitle, { color: theme.inkDeep }]}>{t(f.titleKey)}</Text>
-                <Text style={[styles.featureSub, { color: theme.inkSoft }]}>{t(f.subKey)}</Text>
-              </View>
-            </View>
-          );
-        })}
+            );
+          })}
+        </View>
       </View>
     </View>
   );
@@ -332,30 +349,44 @@ const styles = StyleSheet.create({
     paddingLeft: 6,
     fontFamily: NOMAD_FONTS.uiBold,
   },
-  featureRow: {
+  featuresLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    marginBottom: 10,
+    paddingLeft: 2,
+    fontFamily: NOMAD_FONTS.uiBold,
+  },
+  featureGrid: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  featureTile: {
+    flex: 1,
     paddingVertical: 12,
-    paddingHorizontal: 14,
+    paddingHorizontal: 10,
     borderRadius: 14,
     borderWidth: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
+    alignItems: "flex-start",
   },
-  featureIcon: {
-    width: 32,
-    height: 32,
+  featureTileIcon: {
+    width: 30,
+    height: 30,
     borderRadius: 9,
     alignItems: "center",
     justifyContent: "center",
+    marginBottom: 8,
   },
-  featureTitle: {
-    fontSize: 13,
+  featureTileTitle: {
+    fontSize: 12,
     fontWeight: "600",
     fontFamily: NOMAD_FONTS.uiSemi,
   },
-  featureSub: {
-    fontSize: 11.5,
-    marginTop: 1,
+  featureTileSub: {
+    fontSize: 10,
+    marginTop: 3,
+    lineHeight: 13,
     fontFamily: NOMAD_FONTS.ui,
   },
 });

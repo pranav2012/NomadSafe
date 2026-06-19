@@ -22,9 +22,9 @@ const HERO_H = 300;
 export function WelcomeStep({ theme }: Props) {
   const { t } = useLocalization();
   const kpis = [
-    { v: "140k", l: t("onboarding.travellers") },
-    { v: "4.9★", l: t("onboarding.appStore") },
-    { v: "0", l: t("onboarding.servers") },
+    { v: "24/7", l: t("onboarding.safetyFocusedStat") },
+    { v: "100%", l: t("onboarding.onDeviceStat") },
+    { v: "∞", l: t("onboarding.funStat") },
   ];
 
   return (
@@ -168,6 +168,14 @@ export function WelcomeStep({ theme }: Props) {
                 style={[
                   styles.kpiValue,
                   { color: theme.inkDeep },
+                  // The ∞ glyph reads smaller than digits in the display face.
+                  // Scale (not fontSize) enlarges it without changing the line
+                  // box — anchored bottom-left so its baseline and left edge stay
+                  // aligned with the digits and the label, and it never crops.
+                  kpi.v === "∞" && {
+                    transform: [{ scale: 1.6 }],
+                    transformOrigin: "left bottom",
+                  },
                 ]}
               >
                 {kpi.v}

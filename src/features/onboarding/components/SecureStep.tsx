@@ -30,6 +30,8 @@ export function SecureStep({ theme, totalSteps, biometric, onSecurityReady }: Pr
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
+  const [keystoreOn, setKeystoreOn] = useState(true);
+  const [autoLockOn, setAutoLockOn] = useState(true);
 
   useEffect(() => {
     let mounted = true;
@@ -197,18 +199,17 @@ export function SecureStep({ theme, totalSteps, biometric, onSecurityReady }: Pr
 
         <View style={{ marginTop: 22, alignSelf: "stretch", alignItems: "flex-start" }}>
           <Eyebrow color={theme.sky}>
-            {t("onboarding.stepOf", { step: 5, total: totalSteps - 1 })}
+            {t("onboarding.stepOf", { step: 4, total: totalSteps })}
           </Eyebrow>
           <HugeHeadline color={theme.inkDeep}>
-            {t("onboarding.secureHeadlinePrefix")}{" "}
-            <HeadlineItalic>{biometric.protectedBy}</HeadlineItalic>.
+            {t("onboarding.backupPinHeadlinePrefix")}{" "}
+            <HeadlineItalic>{t("onboarding.backupPinHeadlineAccent")}</HeadlineItalic>.
           </HugeHeadline>
         </View>
 
         <Text style={[styles.lede, { color: theme.inkSoft }]}>
-          {t("onboarding.secureLede", {
+          {t("onboarding.backupPinLede", {
             biometricName: biometric.name,
-            keyStoreName: biometric.keyStoreName,
           })}
         </Text>
       </View>
@@ -232,13 +233,15 @@ export function SecureStep({ theme, totalSteps, biometric, onSecurityReady }: Pr
               theme={theme}
               title={biometric.keyStoreName}
               sub={t("onboarding.keysStayOnDevice")}
-              on
+              on={keystoreOn}
+              onPress={() => setKeystoreOn((v) => !v)}
             />
             <PermissionRow
               theme={theme}
               title={t("onboarding.autoLock")}
               sub={t("onboarding.afterThirtySeconds")}
-              on
+              on={autoLockOn}
+              onPress={() => setAutoLockOn((v) => !v)}
             />
           </>
         )}

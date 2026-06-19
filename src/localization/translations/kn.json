@@ -140,8 +140,6 @@
     "welcomeHeadlinePrefix": "ಪ್ರಯಾಣ,",
     "welcomeHeadlineAccent": "ಸುರಕ್ಷಿತ",
     "welcomeLede": "ದೀರ್ಘ ಪ್ರಯಾಣಗಳಿಗಾಗಿ ಸುರಕ್ಷತಾ ಸಹಚರ — ಚೆಕ್-ಇನ್‌ಗಳು, ಹಂಚಿಕೆ, ಮತ್ತು ಹಣ, ಎಲ್ಲವೂ ನಿಮ್ಮ ಫೋನ್‌ನಲ್ಲೇ. ನಮ್ಮ ಸರ್ವರ್‌ಗಳಿಗೆ ಏನೂ ಹೋಗುವುದಿಲ್ಲ, ಎಂದಿಗೂ.",
-    "travellers": "ಪ್ರಯಾಣಿಕರು",
-    "appStore": "App Store",
     "servers": "ಸರ್ವರ್‌ಗಳು",
     "stepOf": "ಹಂತ {{step}} / {{total}}",
     "safetyHeadlinePrefix": "ನಿಮ್ಮ",
@@ -285,7 +283,27 @@
     "modelAssignedTitle": "ನಿಮ್ಮ ಸಾಧನಕ್ಕೆ ಹೊಂದಿಕೆಯಾದ ಮಾದರಿ",
     "modelAssigned": "ನಿಯೋಜಿಸಲಾಗಿದೆ: {{model}} · {{quant}}",
     "unknownError": "ಏನೋ ತಪ್ಪಾಗಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೊಮ್ಮೆ ಪ್ರಯತ್ನಿಸಿ.",
-    "modelQuantLabel": "{{quant}} ಕ್ವಾಂಟ್"
+    "modelQuantLabel": "{{quant}} ಕ್ವಾಂಟ್",
+    "onDeviceStat": "ಸಾಧನದಲ್ಲಿನ AI",
+    "encryptedStat": "ಎನ್‌ಕ್ರಿಪ್ಟ್ ಮಾಡಲಾಗಿದೆ",
+    "modelPaused": "ವಿರಾಮಗೊಳಿಸಲಾಗಿದೆ · {{progress}}%",
+    "pauseDownload": "ವಿರಾಮಗೊಳಿಸಿ",
+    "resumeDownload": "ಮುಂದುವರಿಸಿ",
+    "downloadBackgroundHint": "ಹಿನ್ನೆಲೆಯಲ್ಲಿ ಡೌನ್‌ಲೋಡ್ ಆಗುತ್ತಿರುತ್ತದೆ — ನೀವು ಸೆಟಪ್ ಮಾಡುವುದನ್ನು ಮುಂದುವರಿಸಬಹುದು.",
+    "aiCapabilities": "ಇದು ಏನು ಮಾಡಬಹುದು",
+    "ledgerFeaturesLabel": "ಇದರಲ್ಲೂ ಒಳಗೊಂಡಿದೆ",
+    "continueDownloadBg": "ಮುಂದುವರಿಯಿರಿ — ಹಿನ್ನೆಲೆಯಲ್ಲಿ ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ",
+    "chooseFromContacts": "ಸಂಪರ್ಕಗಳಿಂದ ಆಯ್ಕೆಮಾಡಿ",
+    "trustedThreeFull": "ವಿಶ್ವಾಸಾರ್ಹ ಮೂವರನ್ನು ಆಯ್ಕೆ ಮಾಡಲಾಗಿದೆ",
+    "notifyWhenReady": "ಸಿದ್ಧವಾದಾಗ ನನಗೆ ತಿಳಿಸಿ",
+    "notifyWhenReadySub": "ಮಾದರಿಯ ಡೌನ್‌ಲೋಡ್ ಪೂರ್ಣಗೊಂಡಾಗ ಅಧಿಸೂಚನೆಯನ್ನು ಪಡೆಯಿರಿ.",
+    "backupPinHeadlinePrefix": "ಹೊಂದಿಸಿ",
+    "backupPinHeadlineAccent": "ಬ್ಯಾಕಪ್ ಪಿನ್",
+    "backupPinLede": "{{biometricName}} ಅಥವಾ ನಿಮ್ಮ ಬೆರಳಚ್ಚು ಕೆಲಸ ಮಾಡದಿದ್ದರೆ, 6-ಅಂಕಿಯ ಪಿನ್ ವಾಲ್ಟ್ ಅನ್ನು ಅನ್‌ಲಾಕ್ ಮಾಡುತ್ತದೆ. ಇದನ್ನು ಈ ಸಾಧನದಲ್ಲಿ ಮಾತ್ರ ಸಂಗ್ರಹಿಸಲಾಗುತ್ತದೆ.",
+    "setBackupPin": "ಬ್ಯಾಕಪ್ ಪಿನ್ ಹೊಂದಿಸಿ",
+    "safetyFocusedStat": "ಸುರಕ್ಷತೆ",
+    "funStat": "ಸಾಹಸಗಳು",
+    "unnamedContact": "ಸಂಪರ್ಕ"
   },
   "milestones": {
     "safetyEyebrow": "ಸುರಕ್ಷತೆ",
@@ -345,6 +363,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "kn",
-    "lastGeneratedAt": "2026-06-19T01:50:01.999Z"
+    "lastGeneratedAt": "2026-06-19T11:39:19.850Z"
   }
 }

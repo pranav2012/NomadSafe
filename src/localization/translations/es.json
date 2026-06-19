@@ -140,8 +140,6 @@
     "welcomeHeadlinePrefix": "Viaja,",
     "welcomeHeadlineAccent": "protegido",
     "welcomeLede": "Un compañero de seguridad para viajes largos — check-ins, compartición y dinero, todo en tu teléfono. Nada en nuestros servidores, nunca.",
-    "travellers": "Viajeros",
-    "appStore": "App Store",
     "servers": "Servidores",
     "stepOf": "Paso {{step}} de {{total}}",
     "safetyHeadlinePrefix": "Tu",
@@ -285,7 +283,27 @@
     "modelAssignedTitle": "Modelo adaptado a tu dispositivo",
     "modelAssigned": "Asignado: {{model}} · {{quant}}",
     "unknownError": "Algo salió mal. Por favor, inténtalo de nuevo.",
-    "modelQuantLabel": "cuantización {{quant}}"
+    "modelQuantLabel": "cuantización {{quant}}",
+    "onDeviceStat": "IA en el dispositivo",
+    "encryptedStat": "Cifrado",
+    "modelPaused": "Pausado · {{progress}}%",
+    "pauseDownload": "Pausar",
+    "resumeDownload": "Reanudar",
+    "downloadBackgroundHint": "La descarga continuará en segundo plano — puedes continuar con la configuración.",
+    "aiCapabilities": "Lo que puede hacer",
+    "ledgerFeaturesLabel": "También integrado",
+    "continueDownloadBg": "Continuar — descargar en segundo plano",
+    "chooseFromContacts": "Elegir de los contactos",
+    "trustedThreeFull": "Tres de confianza seleccionados",
+    "notifyWhenReady": "Notificarme cuando esté listo",
+    "notifyWhenReadySub": "Recibe una notificación cuando el modelo termine de descargarse.",
+    "backupPinHeadlinePrefix": "Establece un",
+    "backupPinHeadlineAccent": "PIN de respaldo",
+    "backupPinLede": "Si {{biometricName}} o tu huella digital no funcionan, un PIN de 6 dígitos desbloquea la bóveda. Solo se almacena en este dispositivo.",
+    "setBackupPin": "Establecer un PIN de respaldo",
+    "safetyFocusedStat": "Enfoque en la seguridad",
+    "funStat": "Aventura",
+    "unnamedContact": "Contacto"
   },
   "milestones": {
     "safetyEyebrow": "Seguridad",
@@ -345,6 +363,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "es",
-    "lastGeneratedAt": "2026-06-19T01:50:01.999Z"
+    "lastGeneratedAt": "2026-06-19T11:39:19.850Z"
   }
 }

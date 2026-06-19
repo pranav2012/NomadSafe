@@ -140,8 +140,6 @@
     "welcomeHeadlinePrefix": "Voyagez,",
     "welcomeHeadlineAccent": "protégé",
     "welcomeLede": "Un compagnon de sécurité pour les longs voyages — points de contrôle, partage et argent, le tout sur votre téléphone. Rien sur nos serveurs, jamais.",
-    "travellers": "Voyageurs",
-    "appStore": "App Store",
     "servers": "Serveurs",
     "stepOf": "Étape {{step}} sur {{total}}",
     "safetyHeadlinePrefix": "Votre",
@@ -285,7 +283,27 @@
     "modelAssignedTitle": "Modèle correspondant à votre appareil",
     "modelAssigned": "Attribué : {{model}} · {{quant}}",
     "unknownError": "Une erreur est survenue. Veuillez réessayer.",
-    "modelQuantLabel": "{{quant}} quant"
+    "modelQuantLabel": "{{quant}} quant",
+    "onDeviceStat": "IA sur l'appareil",
+    "encryptedStat": "Chiffré",
+    "modelPaused": "En pause · {{progress}} %",
+    "pauseDownload": "Mettre en pause",
+    "resumeDownload": "Reprendre",
+    "downloadBackgroundHint": "Le téléchargement se poursuit en arrière-plan — vous pouvez continuer la configuration.",
+    "aiCapabilities": "Ce qu'il peut faire",
+    "ledgerFeaturesLabel": "Également intégré",
+    "continueDownloadBg": "Continuer — télécharger en arrière-plan",
+    "chooseFromContacts": "Choisir parmi les contacts",
+    "trustedThreeFull": "Trois contacts de confiance sélectionnés",
+    "notifyWhenReady": "M'avertir quand c'est prêt",
+    "notifyWhenReadySub": "Recevez une notification lorsque le téléchargement du modèle est terminé.",
+    "backupPinHeadlinePrefix": "Définir un",
+    "backupPinHeadlineAccent": "code PIN de secours",
+    "backupPinLede": "Si {{biometricName}} ou votre empreinte digitale ne fonctionne pas, un code PIN à 6 chiffres déverrouille le coffre-fort. Il est stocké uniquement sur cet appareil.",
+    "setBackupPin": "Définir un code PIN de secours",
+    "safetyFocusedStat": "Axé sur la sécurité",
+    "funStat": "Aventure",
+    "unnamedContact": "Contact"
   },
   "milestones": {
     "safetyEyebrow": "Sécurité",
@@ -345,6 +363,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "fr",
-    "lastGeneratedAt": "2026-06-19T01:50:01.999Z"
+    "lastGeneratedAt": "2026-06-19T11:39:19.850Z"
   }
 }

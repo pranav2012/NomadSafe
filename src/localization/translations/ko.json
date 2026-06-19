@@ -140,8 +140,6 @@
     "welcomeHeadlinePrefix": "여행을,",
     "welcomeHeadlineAccent": "안전하게",
     "welcomeLede": "장거리 여행을 위한 안전 동반자 — 체크인, 공유, 지출을 모두 휴대폰에서 관리하세요. 서버에는 어떤 것도 저장되지 않습니다.",
-    "travellers": "여행자",
-    "appStore": "App Store",
     "servers": "서버",
     "stepOf": "{{step}} / {{total}} 단계",
     "safetyHeadlinePrefix": "당신의",
@@ -285,7 +283,27 @@
     "modelAssignedTitle": "기기에 맞는 모델이 매칭되었습니다",
     "modelAssigned": "할당됨: {{model}} · {{quant}}",
     "unknownError": "문제가 발생했습니다. 다시 시도해 주세요.",
-    "modelQuantLabel": "{{quant}} 양자화"
+    "modelQuantLabel": "{{quant}} 양자화",
+    "onDeviceStat": "온디바이스 AI",
+    "encryptedStat": "암호화됨",
+    "modelPaused": "일시 중지됨 · {{progress}}%",
+    "pauseDownload": "일시 중지",
+    "resumeDownload": "재개",
+    "downloadBackgroundHint": "백그라운드에서 다운로드가 계속 진행됩니다. 설정을 계속 진행하실 수 있습니다.",
+    "aiCapabilities": "수행할 수 있는 작업",
+    "ledgerFeaturesLabel": "함께 탑재된 기능",
+    "continueDownloadBg": "계속 — 백그라운드에서 다운로드",
+    "chooseFromContacts": "연락처에서 선택",
+    "trustedThreeFull": "신뢰할 수 있는 3명 선택됨",
+    "notifyWhenReady": "준비되면 알림 받기",
+    "notifyWhenReadySub": "모델 다운로드가 완료되면 알림을 받습니다.",
+    "backupPinHeadlinePrefix": "백업",
+    "backupPinHeadlineAccent": "PIN 설정",
+    "backupPinLede": "{{biometricName}} 또는 지문이 작동하지 않는 경우, 6자리 PIN으로 보관함 잠금을 해제합니다. 이 기기에만 저장됩니다.",
+    "setBackupPin": "백업 PIN 설정",
+    "safetyFocusedStat": "안전 중심",
+    "funStat": "모험",
+    "unnamedContact": "연락처"
   },
   "milestones": {
     "safetyEyebrow": "안전",
@@ -345,6 +363,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "ko",
-    "lastGeneratedAt": "2026-06-19T01:50:01.999Z"
+    "lastGeneratedAt": "2026-06-19T11:39:19.850Z"
   }
 }

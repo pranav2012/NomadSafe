@@ -185,6 +185,13 @@ export const aiModelService = {
       : `${Paths.cache.uri}models/${model.id}/`;
   },
 
+  async ensureModelDir(model: AiModel): Promise<void> {
+    const dir = new Directory(aiModelService.getLocalModelDir(model));
+    if (!dir.exists) {
+      await dir.create({ intermediates: true });
+    }
+  },
+
   getLocalModelPath(model: AiModel): string {
     // Models live in the app's documents directory so they are not backed up to iCloud
     // and can be loaded on demand by llama.rn.
