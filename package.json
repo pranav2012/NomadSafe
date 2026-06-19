@@ -19,6 +19,7 @@
     "@expo-google-fonts/geist": "^0.4.2",
     "@expo-google-fonts/geist-mono": "^0.4.2",
     "@expo/dom-webview": "^56.0.5",
+    "@expo/ui": "~56.0.18",
     "@expo/vector-icons": "^15.1.1",
     "better-auth": "1.6.19",
     "convex": "^1.41.0",
