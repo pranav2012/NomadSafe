@@ -197,10 +197,15 @@ export function TripForm({ editingTrip, onSave, onCancel }: TripFormProps) {
   const [isEstimatingBudget, setIsEstimatingBudget] = useState(false);
   const [budgetEstimate, setBudgetEstimate] = useState<TripBudgetEstimate | null>(null);
   const [budgetEstimateError, setBudgetEstimateError] = useState<string | null>(null);
+  const [isGeneratingName, setIsGeneratingName] = useState(false);
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [hasGeneratedName, setHasGeneratedName] = useState(Boolean(editingTrip));
+  const [hasEstimatedBudget, setHasEstimatedBudget] = useState(false);
 
   const aiDownload = useModelDownload();
   const scrollRef = useRef<ScrollView>(null);
   const budgetEstimateKeyRef = useRef<string | null>(null);
+  const nameGenerationKeyRef = useRef<string | null>(null);
 
   const offlineDestinationResults = useMemo(
     () => searchOfflineDestinations(form.destinationQuery, locale, form.destinations),
@@ -234,16 +239,33 @@ export function TripForm({ editingTrip, onSave, onCancel }: TripFormProps) {
     };
   }, [aiDownload.modelId, aiDownload.status]);
 
+  const clearBudgetEstimate = useCallback(() => {
+    setBudgetEstimate(null);
+    setBudgetEstimateError(null);
+  }, []);
+
+  const clearNameState = useCallback(() => {
+    setNameError(null);
+  }, []);
+
   const updateForm = useCallback(<Key extends keyof FormState>(
     key: Key,
     value: FormState[Key],
   ) => {
     setForm((current) => ({ ...current, [key]: value }));
     if (key === "mode") {
-      setBudgetEstimate(null);
-      setBudgetEstimateError(null);
+      clearBudgetEstimate();
+      clearNameState();
     }
-  }, []);
+  }, [clearBudgetEstimate, clearNameState]);
+
+  const isFormCompleteForAi = useMemo(() => {
+    return (
+      form.destinations.length > 0 &&
+      Number(form.budget) > 0 &&
+      form.endDate >= form.startDate
+    );
+  }, [form.budget, form.destinations.length, form.endDate, form.startDate]);
 
   const handleDestinationQueryChange = (value: string) => {
     setWebDestinationResults([]);
@@ -266,8 +288,7 @@ export function TripForm({ editingTrip, onSave, onCancel }: TripFormProps) {
     });
     setWebDestinationResults([]);
     setWebDestinationError(null);
-    setBudgetEstimate(null);
-    setBudgetEstimateError(null);
+    clearBudgetEstimate();
   };
 
   const handleRemoveDestination = (destination: string) => {
@@ -275,8 +296,7 @@ export function TripForm({ editingTrip, onSave, onCancel }: TripFormProps) {
       ...current,
       destinations: current.destinations.filter((item) => item !== destination),
     }));
-    setBudgetEstimate(null);
-    setBudgetEstimateError(null);
+    clearBudgetEstimate();
   };
 
   const handleSearchWebDestinations = async () => {
@@ -347,8 +367,7 @@ export function TripForm({ editingTrip, onSave, onCancel }: TripFormProps) {
         companions: exists ? current.companions : [...current.companions, name],
       };
     });
-    setBudgetEstimate(null);
-    setBudgetEstimateError(null);
+    clearBudgetEstimate();
   };
 
   const handleRemoveTraveler = (traveler: string) => {
@@ -356,15 +375,13 @@ export function TripForm({ editingTrip, onSave, onCancel }: TripFormProps) {
       ...current,
       companions: current.companions.filter((companion) => companion !== traveler),
     }));
-    setBudgetEstimate(null);
-    setBudgetEstimateError(null);
+    clearBudgetEstimate();
   };
 
   const handleSelectCurrency = (currency: string) => {
     updateForm("currency", currency);
     setIsCurrencyPickerOpen(false);
-    setBudgetEstimate(null);
-    setBudgetEstimateError(null);
+    clearBudgetEstimate();
   };
 
   const handleEstimateBudget = useCallback(async () => {
@@ -374,15 +391,30 @@ export function TripForm({ editingTrip, onSave, onCancel }: TripFormProps) {
     setIsEstimatingBudget(true);
     setBudgetEstimateError(null);
 
+    const maxRetries = 3;
+    let lastError: unknown;
+
     try {
-      const estimate = await localModelService.estimateTripBudget({
-        destinations: form.destinations,
-        days: countInclusiveDays(form.startDate, form.endDate),
-        travelerCount: form.mode === "group" ? form.companions.length + 1 : 1,
-        currency: form.currency,
-      });
-      setBudgetEstimate(estimate);
-    } catch {
+      for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
+        try {
+          const estimate = await localModelService.estimateTripBudget({
+            destinations: form.destinations,
+            days: countInclusiveDays(form.startDate, form.endDate),
+            travelerCount: form.mode === "group" ? form.companions.length + 1 : 1,
+            currency: form.currency,
+          });
+          setBudgetEstimate(estimate);
+          setHasEstimatedBudget(true);
+          return;
+        } catch (error) {
+          lastError = error;
+          if (attempt < maxRetries) {
+            await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
+          }
+        }
+      }
+
+      console.warn("Budget estimate failed after retries:", lastError);
       setBudgetEstimate(null);
       setBudgetEstimateError(t("trip.aiBudgetError"));
     } finally {
@@ -407,11 +439,11 @@ export function TripForm({ editingTrip, onSave, onCancel }: TripFormProps) {
   };
 
   useEffect(() => {
-    if (!shouldShowBudgetEstimate || isEstimatingBudget) return;
+    if (!shouldShowBudgetEstimate || isEstimatingBudget || hasEstimatedBudget) return;
     if (budgetEstimateKeyRef.current === budgetEstimateKey) return;
 
     handleEstimateBudget();
-  }, [budgetEstimateKey, handleEstimateBudget, isEstimatingBudget, shouldShowBudgetEstimate]);
+  }, [budgetEstimateKey, handleEstimateBudget, isEstimatingBudget, shouldShowBudgetEstimate, hasEstimatedBudget]);
 
   useEffect(() => {
     if (!shouldShowBudgetEstimate) return;
@@ -422,6 +454,74 @@ export function TripForm({ editingTrip, onSave, onCancel }: TripFormProps) {
 
     return () => clearTimeout(id);
   }, [shouldShowBudgetEstimate, budgetEstimateKey]);
+
+  const nameGenerationKey = useMemo(
+    () =>
+      [
+        form.destinations.join("|"),
+        toDateKey(form.startDate),
+        toDateKey(form.endDate),
+        form.mode,
+        form.companions.length,
+      ].join("::"),
+    [form.companions.length, form.destinations, form.endDate, form.mode, form.startDate],
+  );
+
+  const handleGenerateName = useCallback(async () => {
+    if (form.destinations.length === 0 || isGeneratingName) return;
+
+    nameGenerationKeyRef.current = nameGenerationKey;
+    setIsGeneratingName(true);
+    setNameError(null);
+
+    const maxRetries = 3;
+    let lastError: unknown;
+
+    try {
+      for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
+        try {
+          const suggestion = await localModelService.suggestTripName({
+            destinations: form.destinations,
+            days: countInclusiveDays(form.startDate, form.endDate),
+            mode: form.mode,
+            travelerCount: form.mode === "group" ? form.companions.length + 1 : 1,
+          });
+          updateForm("name", suggestion.name);
+          setHasGeneratedName(true);
+          return;
+        } catch (error) {
+          lastError = error;
+          if (attempt < maxRetries) {
+            await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
+          }
+        }
+      }
+
+      console.warn("Trip name generation failed after retries:", lastError);
+      setNameError(t("trip.aiNameError"));
+    } finally {
+      await localModelService.release();
+      setIsGeneratingName(false);
+    }
+  }, [
+    form.companions.length,
+    form.destinations,
+    form.endDate,
+    form.mode,
+    form.startDate,
+    isGeneratingName,
+    nameGenerationKey,
+    t,
+    updateForm,
+  ]);
+
+  useEffect(() => {
+    if (!isBudgetAiAvailable || isGeneratingName || hasGeneratedName) return;
+    if (!isFormCompleteForAi) return;
+    if (nameGenerationKeyRef.current === nameGenerationKey) return;
+
+    handleGenerateName();
+  }, [isBudgetAiAvailable, isFormCompleteForAi, isGeneratingName, nameGenerationKey, handleGenerateName, hasGeneratedName]);
 
   const handleDateChange = (field: DateField, date: Date) => {
     const selectedDate = startOfLocalDay(date);
@@ -437,8 +537,7 @@ export function TripForm({ editingTrip, onSave, onCancel }: TripFormProps) {
 
       return { ...current, endDate: selectedDate };
     });
-    setBudgetEstimate(null);
-    setBudgetEstimateError(null);
+    clearBudgetEstimate();
   };
 
   const handleSave = async () => {
@@ -517,12 +616,6 @@ export function TripForm({ editingTrip, onSave, onCancel }: TripFormProps) {
             { backgroundColor: theme.paperSoft, borderColor: theme.hairline },
           ]}
         >
-          <TripTextInput
-            label={t("trip.tripName")}
-            value={form.name}
-            placeholder={t("trip.tripNamePlaceholder")}
-            onChangeText={(value) => updateForm("name", value)}
-          />
           <DestinationSelector
             label={t("trip.destination")}
             value={form.destinationQuery}
@@ -625,6 +718,16 @@ export function TripForm({ editingTrip, onSave, onCancel }: TripFormProps) {
               })}
             </View>
           ) : null}
+
+          <NameInput
+            value={form.name}
+            generated={hasGeneratedName}
+            isGenerating={isGeneratingName}
+            error={nameError}
+            canGenerate={isBudgetAiAvailable && form.destinations.length > 0}
+            onChangeText={(value) => updateForm("name", value)}
+            onGenerate={handleGenerateName}
+          />
 
           {shouldShowBudgetEstimate ? (
             <BudgetEstimateCard
@@ -1106,6 +1209,66 @@ function RemovableChip({
       <Pressable onPress={onRemove} hitSlop={8}>
         <Icon name="x" size={14} color={theme.inkSoft} />
       </Pressable>
+    </View>
+  );
+}
+
+function NameInput({
+  value,
+  generated,
+  isGenerating,
+  error,
+  canGenerate,
+  onChangeText,
+  onGenerate,
+}: {
+  value: string;
+  generated: boolean;
+  isGenerating: boolean;
+  error: string | null;
+  canGenerate: boolean;
+  onChangeText: (value: string) => void;
+  onGenerate: () => void;
+}) {
+  const { nomad } = useTheme();
+  const theme = nomad.colors;
+  const { t } = useLocalization();
+
+  return (
+    <View style={styles.inputGroup}>
+      <View style={styles.inputHeader}>
+        <Text style={[styles.inputLabel, { color: theme.inkMuted }]}>{t("trip.tripName")}</Text>
+        <Pressable onPress={onGenerate} disabled={!canGenerate || isGenerating} hitSlop={8}>
+          <Text
+            style={[
+              styles.inputMeta,
+              { color: canGenerate && !isGenerating ? theme.teal : theme.inkMuted },
+            ]}
+          >
+            {isGenerating ? t("trip.aiNameGenerating") : generated ? t("trip.aiNameRegenerate") : t("trip.aiNameGenerate")}
+          </Text>
+        </Pressable>
+      </View>
+      <View
+        style={[
+          styles.inputShell,
+          {
+            backgroundColor: theme.paper,
+            borderColor: theme.hairline,
+          },
+        ]}
+      >
+        <TextInput
+          value={value}
+          placeholder={t("trip.tripNamePlaceholder")}
+          placeholderTextColor={theme.inkMuted}
+          onChangeText={onChangeText}
+          style={[styles.input, { color: theme.inkDeep }]}
+        />
+      </View>
+      {error ? (
+        <Text style={[styles.nameError, { color: theme.inkSoft }]}>{error}</Text>
+      ) : null}
     </View>
   );
 }
@@ -1699,6 +1862,11 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     fontFamily: NOMAD_FONTS.uiSemi,
     fontSize: 15,
+  },
+  nameError: {
+    fontFamily: NOMAD_FONTS.ui,
+    fontSize: 12.5,
+    lineHeight: 17,
   },
   encryptedNote: {
     textAlign: "center",

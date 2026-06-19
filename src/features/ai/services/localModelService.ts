@@ -20,6 +20,56 @@ export interface TripBudgetEstimate {
   rationale: string;
 }
 
+export const LOCAL_AI_PROMPTS = {
+  systemBudgetEstimator:
+    "You are NomadSafe's on-device travel budget estimator. " +
+    "Produce a realistic mid-range trip budget in the requested currency. " +
+    "Account for lodging, meals, local transport, activities, tips, and a small buffer. " +
+    "Exclude international flights and visa costs. " +
+    "Use local price knowledge for the destinations. " +
+    "Return only a JSON object with keys: total (number), daily (number), rationale (string under 140 characters). " +
+    "Do not add markdown, explanations, or extra keys.",
+
+  budgetRequest: (input: TripBudgetEstimateInput): string =>
+    [
+      `Destinations: ${input.destinations.join(", ")}`,
+      `Trip length: ${input.days} day${input.days === 1 ? "" : "s"}`,
+      `Travelers: ${input.travelerCount}`,
+      `Currency: ${input.currency}`,
+      "JSON:",
+    ].join("\n"),
+
+  systemTripNameGenerator:
+    "You are a concise trip-title writer. " +
+    "Write exactly one short, cool trip title (2-5 words) using ONLY the destinations and trip length provided below. " +
+    "The title MUST contain real destination names from the provided list. Do not use any destination that was not provided. " +
+    "Do not use placeholders, variables, or angle brackets. " +
+    "Good examples for Lisbon: '7 Days in Lisbon', 'Lisbon to Porto Run', 'Lisbon Solo Sprint'. " +
+    "Bad examples: '[short trip title]', '<trip_title>', 'My Trip', 'Vietnam Hop' when the destination is not Vietnam. " +
+    "Return only a JSON object with a single key: name. The value must be the actual title string. " +
+    "Do not add markdown, explanations, or extra keys.",
+
+  tripNameRequest: (input: TripNameInput): string =>
+    [
+      `Destinations: ${input.destinations.join(", ")}`,
+      `Trip length: ${input.days} day${input.days === 1 ? "" : "s"}`,
+      `Travel mode: ${input.mode}`,
+      `Travelers: ${input.travelerCount}`,
+      "JSON:",
+    ].join("\n"),
+};
+
+export interface TripNameInput {
+  destinations: string[];
+  days: number;
+  mode: "solo" | "group";
+  travelerCount: number;
+}
+
+export interface TripNameSuggestion {
+  name: string;
+}
+
 let activeContext: LlamaContext | null = null;
 let activeModelId: string | null = null;
 
@@ -158,25 +208,42 @@ export const localModelService = {
     }
 
     const context = await localModelService.loadModel(model);
-    const prompt = [
-      "You are NomadSafe's on-device travel budget estimator.",
-      "Estimate a realistic mid-range trip budget using local spending knowledge.",
-      "Include lodging, food, local transport, activities, and buffer. Exclude flights.",
-      "Return only JSON with keys: total, daily, rationale.",
-      `Destinations: ${input.destinations.join(", ")}`,
-      `Trip length: ${input.days} days`,
-      `Travelers: ${input.travelerCount}`,
-      `Currency: ${input.currency}`,
-      "JSON:",
-    ].join("\n");
+    const prompt =
+      LOCAL_AI_PROMPTS.systemBudgetEstimator + "\n\n" + LOCAL_AI_PROMPTS.budgetRequest(input);
 
     const result = await context.completion({
       prompt,
-      n_predict: 180,
-      temperature: 0.2,
+      n_predict: 220,
+      temperature: 0.25,
       response_format: { type: "json_object" },
     });
 
     return normalizeEstimate(JSON.parse(extractJsonObject(result.text)));
+  },
+
+  async suggestTripName(input: TripNameInput): Promise<TripNameSuggestion> {
+    const model = await localModelService.getReadyModel();
+    if (!model) {
+      throw new Error("Local AI model is not downloaded.");
+    }
+
+    const context = await localModelService.loadModel(model);
+    const prompt =
+      LOCAL_AI_PROMPTS.systemTripNameGenerator + "\n\n" + LOCAL_AI_PROMPTS.tripNameRequest(input);
+
+    const result = await context.completion({
+      prompt,
+      n_predict: 90,
+      temperature: 0.65,
+      response_format: { type: "json_object" },
+    });
+
+    const parsed = JSON.parse(extractJsonObject(result.text)) as Partial<TripNameSuggestion>;
+    const name = typeof parsed.name === "string" ? parsed.name.trim() : "";
+    if (!name) {
+      throw new Error("Local model returned an empty trip name.");
+    }
+
+    return { name };
   },
 };

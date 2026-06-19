@@ -42,6 +42,50 @@ function interpolate(value: string, params?: Params) {
   return value.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(params[name] ?? ""));
 }
 
+function formatCompactCurrency(amount: number, currency: string, locale: string): string | null {
+  const absAmount = Math.abs(amount);
+  const sign = amount < 0 ? "-" : "";
+
+  // Indian numbering system (lakhs & crores)
+  if (locale === "hi" || locale === "ta" || locale === "te" || locale === "ml" || locale === "kn") {
+    if (absAmount >= 1_00_00_000) {
+      const crores = absAmount / 1_00_00_000;
+      return `${sign}${formatCurrencyNumber(crores, locale, currency)} Cr`;
+    }
+    if (absAmount >= 1_00_000) {
+      const lakhs = absAmount / 1_00_000;
+      return `${sign}${formatCurrencyNumber(lakhs, locale, currency)} L`;
+    }
+  }
+
+  // K / M / B / T for other locales
+  if (absAmount >= 1_000_000_000_000) {
+    return `${sign}${formatCurrencyNumber(absAmount / 1_000_000_000_000, locale, currency)}T`;
+  }
+  if (absAmount >= 1_000_000_000) {
+    return `${sign}${formatCurrencyNumber(absAmount / 1_000_000_000, locale, currency)}B`;
+  }
+  if (absAmount >= 1_000_000) {
+    return `${sign}${formatCurrencyNumber(absAmount / 1_000_000, locale, currency)}M`;
+  }
+  if (absAmount >= 1_000) {
+    return `${sign}${formatCurrencyNumber(absAmount / 1_000, locale, currency)}K`;
+  }
+
+  return null;
+}
+
+function formatCurrencyNumber(value: number, locale: string, currency: string): string {
+  const formatted = new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency,
+    maximumFractionDigits: value < 10 ? 1 : 0,
+  }).format(value);
+
+  // Strip the currency symbol/suffix for compact suffix labels
+  return formatted.replace(/[^\d.,\s٬٫'’-]/g, "").trim() || formatted;
+}
+
 export function LocalizationProvider({ children }: { children: React.ReactNode }) {
   const localeOverride = useSettingsStore((s) => s.localeOverride);
   const currencyOverride = useSettingsStore((s) => s.currencyOverride);
@@ -75,12 +119,14 @@ export function LocalizationProvider({ children }: { children: React.ReactNode }
         const valueAtKey = getValue(key);
         return Array.isArray(valueAtKey) ? valueAtKey.filter((item) => typeof item === "string") : [];
       },
-      formatCurrency: (amount, selectedCurrency = currency, options) =>
-        new Intl.NumberFormat(formatLocale, {
+      formatCurrency: (amount, selectedCurrency = currency, options) => {
+        const compact = formatCompactCurrency(amount, selectedCurrency, formatLocale);
+        return compact ?? new Intl.NumberFormat(formatLocale, {
           style: "currency",
           currency: selectedCurrency,
           ...options,
-        }).format(amount),
+        }).format(amount);
+      },
       formatDate: (value, options) =>
         new Intl.DateTimeFormat(formatLocale, { dateStyle: "medium", ...options }).format(value),
       formatTime: (value, options) =>
