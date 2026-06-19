@@ -45,7 +45,8 @@ export default function OnboardingWelcomeScreen() {
 
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState<1 | -1>(1);
-  const [selectedContacts, setSelectedContacts] = useState<number[]>([0, 1]);
+  const [safetyReady, setSafetyReady] = useState(false);
+  const [securityReady, setSecurityReady] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
   const last = step === steps.length - 1;
@@ -55,11 +56,18 @@ export default function OnboardingWelcomeScreen() {
     router.replace("/(auth)/sign-in");
   };
 
+  const canProceed = () => {
+    if (step === 1) return safetyReady;
+    if (step === 4) return securityReady;
+    return true;
+  };
+
   const next = () => {
     setDirection(1);
     if (last) {
       onDone();
     } else {
+      if (!canProceed()) return;
       setStep((s) => s + 1);
       scrollRef.current?.scrollTo({ y: 0, animated: false });
     }
@@ -84,8 +92,7 @@ export default function OnboardingWelcomeScreen() {
             theme={theme}
             dark={isDark}
             totalSteps={steps.length}
-            selectedContacts={selectedContacts}
-            setSelectedContacts={setSelectedContacts}
+            onPermissionsReady={setSafetyReady}
           />
         );
       case 2:
@@ -93,12 +100,12 @@ export default function OnboardingWelcomeScreen() {
       case 3:
         return <AIStep theme={theme} totalSteps={steps.length} />;
       case 4:
-        return <SecureStep theme={theme} totalSteps={steps.length} biometric={biometric} />;
+        return <SecureStep theme={theme} totalSteps={steps.length} biometric={biometric} onSecurityReady={setSecurityReady} />;
       default:
         return (
           <ReadyStep
             theme={theme}
-            selectedContactsCount={selectedContacts.length}
+            selectedContactsCount={3}
             biometric={biometric}
           />
         );
@@ -109,7 +116,7 @@ export default function OnboardingWelcomeScreen() {
     step === 0
       ? t("onboarding.beginSetup")
       : step === 1
-        ? t("onboarding.enableSafetyNet", { count: selectedContacts.length })
+        ? t("onboarding.enableSafetyNet", { count: safetyReady ? 3 : 0 })
         : step === 2
           ? t("common.continue")
           : step === 3
@@ -188,6 +195,7 @@ export default function OnboardingWelcomeScreen() {
               full
               variant={last ? "teal" : "primary"}
               onPress={next}
+              disabled={!canProceed()}
               icon={
                 last ? (
                   <Icon name="check" size={18} color={theme.inverse} strokeWidth={2.4} />

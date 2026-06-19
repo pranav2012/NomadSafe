@@ -20,6 +20,7 @@ interface ButtonProps {
   icon?: React.ReactNode;
   full?: boolean;
   style?: StyleProp<ViewStyle>;
+  disabled?: boolean;
 }
 
 export function NomadButton({
@@ -30,6 +31,7 @@ export function NomadButton({
   icon,
   full,
   style,
+  disabled,
 }: ButtonProps) {
   const { nomad } = useTheme();
   const theme = themeProp ?? nomad.colors;
@@ -57,16 +59,18 @@ export function NomadButton({
   return (
     <Pressable
       onPress={onPress}
+      disabled={disabled}
       style={({ pressed }) => [
         styles.base,
         {
-          backgroundColor: v.bg,
-          borderColor: v.border,
+          backgroundColor: disabled ? theme.hairline : v.bg,
+          borderColor: disabled ? theme.hairline : v.border,
           borderRadius: button.borderRadius,
           paddingVertical: button.paddingVertical,
           paddingHorizontal: button.paddingHorizontal,
           width: full ? "100%" : undefined,
-          transform: [{ scale: pressed ? 0.98 : 1 }],
+          transform: [{ scale: pressed && !disabled ? 0.98 : 1 }],
+          opacity: disabled ? 0.5 : 1,
         },
         style,
       ]}

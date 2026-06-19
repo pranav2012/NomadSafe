@@ -239,7 +239,23 @@
     "trustedThreeLabel": "भरोसेमंद तीन",
     "people": "{{count}} लोग",
     "offlineFallbackValue": "SMS + 1.2 GB मैप्स",
-    "vault": "वॉल्ट"
+    "vault": "वॉल्ट",
+    "contacts": "संपर्क",
+    "sms": "SMS",
+    "locationAlwaysSub": "SOS और शेयरिंग के लिए लोकेशन की अनुमति देने के लिए टैप करें",
+    "contactsPermissionSub": "अपने संपर्कों में से तीन भरोसेमंद लोगों को चुनने के लिए टैप करें",
+    "smsPermissionSub": "यह सत्यापित करने के लिए टैप करें कि ऑफलाइन अलर्ट के लिए SMS उपलब्ध है",
+    "permissionNote": "आप इन्हें बाद में डिवाइस की सेटिंग्स में बदल सकते हैं। अभी केवल आवश्यक अनुमतियों का ही अनुरोध किया जा रहा है।",
+    "loadingContacts": "संपर्क लोड हो रहे हैं…",
+    "noPhone": "कोई फ़ोन नंबर नहीं",
+    "locationRequiredTitle": "लोकेशन आवश्यक है",
+    "locationRequiredBody": "NomadSafe को SOS अलर्ट, लाइव शेयरिंग और चेक-इन के लिए लोकेशन एक्सेस की आवश्यकता है। कृपया इसे सेटिंग्स में सक्षम करें।",
+    "contactsRequiredTitle": "संपर्कों तक पहुंच आवश्यक है",
+    "contactsRequiredBody": "NomadSafe को संपर्कों तक पहुंच की आवश्यकता है ताकि आप अपने तीन भरोसेमंद लोगों को चुन सकें। कृपया इसे सेटिंग्स में सक्षम करें।",
+    "biometricPrompt": "NomadSafe को सुरक्षित करने के लिए अपनी पहचान की पुष्टि करें",
+    "checkingBiometric": "बायोमेट्रिक उपलब्धता की जांच की जा रही है…",
+    "biometricNotSetUp": "बायोमेट्रिक सेटअप नहीं है",
+    "biometricSetUpSub": "पहले डिवाइस की सेटिंग्स में Face ID, Touch ID या फिंगरप्रिंट सेटअप करें"
   },
   "milestones": {
     "safetyEyebrow": "सुरक्षा",
@@ -299,6 +315,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "hi",
-    "lastGeneratedAt": "2026-06-18T23:31:27.901Z"
+    "lastGeneratedAt": "2026-06-19T01:08:08.119Z"
   }
 }

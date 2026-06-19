@@ -239,7 +239,23 @@
     "trustedThreeLabel": "நம்பகமான மூவர்",
     "people": "{{count}} பேர்",
     "offlineFallbackValue": "SMS + 1.2 GB வரைபடங்கள்",
-    "vault": "பாதுகாப்புப் பெட்டி"
+    "vault": "பாதுகாப்புப் பெட்டி",
+    "contacts": "தொடர்புகள்",
+    "sms": "SMS",
+    "locationAlwaysSub": "SOS மற்றும் பகிர்தலுக்கு இருப்பிடத்தை அனுமதிக்க தட்டவும்",
+    "contactsPermissionSub": "தொடர்புகளிலிருந்து உங்களது நம்பகமான மூன்று நபர்களைத் தேர்ந்தெடுக்க தட்டவும்",
+    "smsPermissionSub": "ஆஃப்லைன் விழிப்பூட்டல்களுக்கு SMS சேவை உள்ளதா என்பதைச் சரிபார்க்க தட்டவும்",
+    "permissionNote": "இவற்றை நீங்கள் பின்னர் சாதன அமைப்புகளில் (Settings) மாற்றிக்கொள்ளலாம். இப்போது தேவையான அனுமதிகள் மட்டுமே கோரப்படுகின்றன.",
+    "loadingContacts": "தொடர்புகள் ஏற்றப்படுகின்றன…",
+    "noPhone": "தொலைபேசி எண் இல்லை",
+    "locationRequiredTitle": "இருப்பிடம் தேவை",
+    "locationRequiredBody": "SOS எச்சரிக்கைகள், நேரடிப் பகிர்வு மற்றும் செக்-இன்களுக்கு NomadSafe-க்கு இருப்பிட அனுமதி தேவை. அமைப்புகளில் (Settings) இதைச் செயல்படுத்தவும்.",
+    "contactsRequiredTitle": "தொடர்புகள் தேவை",
+    "contactsRequiredBody": "உங்களது நம்பகமான மூன்று நபர்களைத் தேர்ந்தெடுக்க NomadSafe-க்கு தொடர்புகளுக்கான அனுமதி தேவை. அமைப்புகளில் (Settings) இதைச் செயல்படுத்தவும்.",
+    "biometricPrompt": "NomadSafe-ஐப் பாதுகாக்க உங்களது அடையாளத்தை உறுதிப்படுத்தவும்",
+    "checkingBiometric": "பயோமெட்ரிக் வசதி உள்ளதா எனச் சரிபார்க்கப்படுகிறது…",
+    "biometricNotSetUp": "பயோமெட்ரிக் அமைக்கப்படவில்லை",
+    "biometricSetUpSub": "முதலில் சாதன அமைப்புகளில் (Settings) Face ID, Touch ID அல்லது கைரேகையை அமைக்கவும்"
   },
   "milestones": {
     "safetyEyebrow": "பாதுகாப்பு",
@@ -299,6 +315,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "ta",
-    "lastGeneratedAt": "2026-06-18T23:31:27.901Z"
+    "lastGeneratedAt": "2026-06-19T01:08:08.119Z"
   }
 }

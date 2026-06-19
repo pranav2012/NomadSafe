@@ -239,7 +239,23 @@
     "trustedThreeLabel": "신뢰할 수 있는 사람 세 명",
     "people": "{{count}}명",
     "offlineFallbackValue": "SMS + 1.2GB 지도",
-    "vault": "금고"
+    "vault": "금고",
+    "contacts": "연락처",
+    "sms": "SMS",
+    "locationAlwaysSub": "탭하여 SOS 및 공유를 위한 위치 권한 허용",
+    "contactsPermissionSub": "탭하여 연락처에서 신뢰할 수 있는 3인 선택",
+    "smsPermissionSub": "탭하여 오프라인 알림용 SMS 이용 가능 여부 확인",
+    "permissionNote": "이 설정은 나중에 기기 설정에서 변경할 수 있습니다. 현재는 필수 권한만 요청됩니다.",
+    "loadingContacts": "연락처 불러오는 중…",
+    "noPhone": "전화번호 없음",
+    "locationRequiredTitle": "위치 권한 필요",
+    "locationRequiredBody": "NomadSafe는 SOS 알림, 실시간 공유 및 체크인을 위해 위치 접근 권한이 필요합니다. 설정에서 권한을 허용해 주세요.",
+    "contactsRequiredTitle": "연락처 권한 필요",
+    "contactsRequiredBody": "NomadSafe에서 신뢰할 수 있는 연락처 3명을 선택하려면 연락처 접근 권한이 필요합니다. 설정에서 권한을 허용해 주세요.",
+    "biometricPrompt": "NomadSafe 보안을 위해 본인 인증을 진행해 주세요",
+    "checkingBiometric": "생체 인식 사용 가능 여부 확인 중…",
+    "biometricNotSetUp": "생체 인식 설정되지 않음",
+    "biometricSetUpSub": "먼저 기기 설정에서 Face ID, Touch ID 또는 지문을 설정해 주세요"
   },
   "milestones": {
     "safetyEyebrow": "안전",
@@ -299,6 +315,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "ko",
-    "lastGeneratedAt": "2026-06-18T23:31:27.901Z"
+    "lastGeneratedAt": "2026-06-19T01:08:08.119Z"
   }
 }

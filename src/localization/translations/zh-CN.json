@@ -239,7 +239,23 @@
     "trustedThreeLabel": "可信联系人",
     "people": "{{count}} 人",
     "offlineFallbackValue": "短信 + 1.2 GB 地图",
-    "vault": "保险库"
+    "vault": "保险库",
+    "contacts": "联系人",
+    "sms": "短信",
+    "locationAlwaysSub": "点击允许获取位置信息，以便进行 SOS 紧急求助和分享",
+    "contactsPermissionSub": "点击从联系人中选择您的三位信赖联系人",
+    "smsPermissionSub": "点击以验证短信是否可用于离线警报",
+    "permissionNote": "您稍后可以在设备“设置”中修改这些设置。目前仅请求必要的权限。",
+    "loadingContacts": "正在加载联系人…",
+    "noPhone": "无电话号码",
+    "locationRequiredTitle": "需要位置权限",
+    "locationRequiredBody": "NomadSafe 需要访问位置信息以用于 SOS 警报、实时分享和签到。请在“设置”中启用该权限。",
+    "contactsRequiredTitle": "需要联系人权限",
+    "contactsRequiredBody": "NomadSafe 需要访问您的联系人，以便您选择三位信赖的联系人。请在“设置”中启用该权限。",
+    "biometricPrompt": "验证您的身份以保障 NomadSafe 的安全",
+    "checkingBiometric": "正在检查生物识别功能是否可用…",
+    "biometricNotSetUp": "未设置生物识别",
+    "biometricSetUpSub": "请先在设备“设置”中设置面容 ID、触控 ID 或指纹"
   },
   "milestones": {
     "safetyEyebrow": "安全",
@@ -299,6 +315,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "zh-CN",
-    "lastGeneratedAt": "2026-06-18T23:31:27.901Z"
+    "lastGeneratedAt": "2026-06-19T01:08:08.119Z"
   }
 }

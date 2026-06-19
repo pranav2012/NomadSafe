@@ -32,7 +32,9 @@ export type IconName =
   | "heart"
   | "trendDown"
   | "trendUp"
-  | "x";
+  | "x"
+  | "alertTriangle"
+  | "messageCircle";
 
 interface IconProps {
   name: IconName;
@@ -288,6 +290,21 @@ export function Icon({
         <G {...p}>
           <Path d="M3 17l6-6 4 4 8-8" />
           <Path d="M21 7v4h-4" />
+        </G>
+      );
+      break;
+    case "alertTriangle":
+      body = (
+        <G {...p}>
+          <Path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+          <Path d="M12 9v4M12 17h.01" />
+        </G>
+      );
+      break;
+    case "messageCircle":
+      body = (
+        <G {...p}>
+          <Path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7A8.38 8.38 0 014 11.5a8.5 8.5 0 0117 0z" />
         </G>
       );
       break;

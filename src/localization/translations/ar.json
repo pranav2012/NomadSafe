@@ -239,7 +239,23 @@
     "trustedThreeLabel": "الثلاثة الموثوقون",
     "people": "{{count}} أشخاص",
     "offlineFallbackValue": "SMS + 1.2 جيجابايت خرائط",
-    "vault": "الخزنة"
+    "vault": "الخزنة",
+    "contacts": "جهات الاتصال",
+    "sms": "الرسائل النصية (SMS)",
+    "locationAlwaysSub": "اضغط للسماح بالوصول إلى الموقع الجغرافي لطوارئ SOS والمشاركة",
+    "contactsPermissionSub": "اضغط لاختيار جهات الاتصال الثلاث الموثوقة لديك",
+    "smsPermissionSub": "اضغط للتحقق من توفر الرسائل النصية (SMS) للتنبيهات دون اتصال بالإنترنت",
+    "permissionNote": "يمكنك تغيير هذه الإعدادات لاحقًا في إعدادات الجهاز. نطلب الأذونات المطلوبة فقط حاليًا.",
+    "loadingContacts": "جاري تحميل جهات الاتصال…",
+    "noPhone": "لا يوجد رقم هاتف",
+    "locationRequiredTitle": "الموقع الجغرافي مطلوب",
+    "locationRequiredBody": "يحتاج NomadSafe إلى الوصول للموقع الجغرافي لتنبيهات طوارئ SOS، والمشاركة المباشرة، وتسجيلات الوصول. يرجى تفعيله في الإعدادات.",
+    "contactsRequiredTitle": "الوصول لجهات الاتصال مطلوب",
+    "contactsRequiredBody": "يحتاج NomadSafe إلى الوصول لجهات الاتصال ليتيح لك اختيار جهات الاتصال الثلاث الموثوقة لديك. يرجى تفعيله في الإعدادات.",
+    "biometricPrompt": "تأكيد هويتك لتأمين NomadSafe",
+    "checkingBiometric": "جاري التحقق من توفر المصادقة البيومترية…",
+    "biometricNotSetUp": "لم يتم إعداد المصادقة البيومترية",
+    "biometricSetUpSub": "قم بإعداد Face ID أو Touch ID أو بصمة الإصبع في إعدادات الجهاز أولاً"
   },
   "milestones": {
     "safetyEyebrow": "السلامة",
@@ -299,6 +315,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "ar",
-    "lastGeneratedAt": "2026-06-18T23:31:27.901Z"
+    "lastGeneratedAt": "2026-06-19T01:08:08.119Z"
   }
 }

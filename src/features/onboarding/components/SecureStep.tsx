@@ -1,5 +1,5 @@
-import React, { useEffect } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import React, { useEffect, useState } from "react";
+import { View, Text, Pressable, StyleSheet, ActivityIndicator } from "react-native";
 import Svg, { Circle, Path, Line } from "react-native-svg";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
@@ -12,18 +12,61 @@ import Animated, {
 } from "react-native-reanimated";
 import { NOMAD_FONTS, type NomadTheme } from "@/constants/nomadTokens";
 import { useLocalization } from "@/localization";
+import { localAuth } from "@/features/auth";
 import type { BiometricPresentation } from "@/features/auth";
 import { PermissionRow } from "@/components/nomad/PermissionRow";
+import { Icon } from "@/components/nomad/Icon";
 import { Eyebrow, HugeHeadline, HeadlineItalic } from "@/components/nomad/Typography";
 
 interface Props {
   theme: NomadTheme;
   totalSteps: number;
   biometric: BiometricPresentation;
+  onSecurityReady?: (ready: boolean) => void;
 }
 
-export function SecureStep({ theme, totalSteps, biometric }: Props) {
+export function SecureStep({ theme, totalSteps, biometric, onSecurityReady }: Props) {
   const { t } = useLocalization();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isEnrolled, setIsEnrolled] = useState(false);
+  const [isChecking, setIsChecking] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    const run = async () => {
+      try {
+        const { available } = await localAuth.checkBiometricAvailability();
+        if (!mounted) return;
+        setIsEnrolled(available);
+        onSecurityReady?.(available || isAuthenticated);
+      } catch {
+        if (!mounted) return;
+        setIsEnrolled(false);
+        onSecurityReady?.(isAuthenticated);
+      } finally {
+        if (mounted) setIsChecking(false);
+      }
+    };
+    run();
+    return () => {
+      mounted = false;
+    };
+  }, [isAuthenticated, onSecurityReady]);
+
+  const authenticate = async () => {
+    const { available } = await localAuth.checkBiometricAvailability();
+    if (!available) {
+      onSecurityReady?.(false);
+      return;
+    }
+    const success = await localAuth.authenticateWithBiometric({
+      promptMessage: t("onboarding.biometricPrompt"),
+      cancelLabel: t("common.cancel"),
+    });
+    setIsAuthenticated(success);
+    onSecurityReady?.(success);
+  };
+
   // scan-line animation
   const y = useSharedValue(-22);
   const op = useSharedValue(0);
@@ -64,7 +107,7 @@ export function SecureStep({ theme, totalSteps, biometric }: Props) {
   return (
     <View style={{ flex: 1 }}>
       <View style={{ paddingHorizontal: 26, paddingTop: 20, alignItems: "center" }}>
-        <View style={styles.faceBox}>
+        <Pressable onPress={authenticate} style={styles.faceBox}>
           <LinearGradient
             colors={[theme.inkDeep, "#2A332E"]}
             start={{ x: 0, y: 0 }}
@@ -150,7 +193,7 @@ export function SecureStep({ theme, totalSteps, biometric }: Props) {
               style={StyleSheet.absoluteFill}
             />
           </Animated.View>
-        </View>
+        </Pressable>
 
         <View style={{ marginTop: 22, alignSelf: "stretch", alignItems: "flex-start" }}>
           <Eyebrow color={theme.sky}>
@@ -171,10 +214,44 @@ export function SecureStep({ theme, totalSteps, biometric }: Props) {
       </View>
 
       <View style={{ paddingHorizontal: 16, paddingTop: 18, gap: 8 }}>
-        <PermissionRow theme={theme} title={biometric.name} sub={t("onboarding.unlockVault")} on />
-        <PermissionRow theme={theme} title={biometric.keyStoreName} sub={t("onboarding.keysStayOnDevice")} on />
-        <PermissionRow theme={theme} title={t("onboarding.autoLock")} sub={t("onboarding.afterThirtySeconds")} on />
+        {isChecking ? (
+          <View style={[styles.statusRow, { backgroundColor: theme.paperSoft, borderColor: theme.hairline }]}>
+            <ActivityIndicator size="small" color={theme.inkSoft} />
+            <Text style={[styles.statusText, { color: theme.inkSoft }]}>{t("onboarding.checkingBiometric")}</Text>
+          </View>
+        ) : (
+          <>
+            <PermissionRow
+              theme={theme}
+              title={isEnrolled ? biometric.name : t("onboarding.biometricNotSetUp")}
+              sub={isEnrolled ? t("onboarding.unlockVault") : t("onboarding.biometricSetUpSub")}
+              on={isEnrolled}
+              onPress={authenticate}
+            />
+            <PermissionRow
+              theme={theme}
+              title={biometric.keyStoreName}
+              sub={t("onboarding.keysStayOnDevice")}
+              on
+            />
+            <PermissionRow
+              theme={theme}
+              title={t("onboarding.autoLock")}
+              sub={t("onboarding.afterThirtySeconds")}
+              on
+            />
+          </>
+        )}
       </View>
+
+      {isAuthenticated && (
+        <View style={{ paddingHorizontal: 26, paddingTop: 18 }}>
+            <View style={[styles.matchedPill, { backgroundColor: theme.tealSoft, borderColor: theme.teal }]}>
+              <Icon name="check" size={14} color={theme.teal} strokeWidth={2.4} />
+              <Text style={[styles.matchedText, { color: theme.teal }]}>{biometric.matchedLabel}</Text>
+            </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -239,5 +316,33 @@ const styles = StyleSheet.create({
     fontFamily: NOMAD_FONTS.ui,
     alignSelf: "stretch",
     textAlign: "left",
+  },
+  statusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  statusText: {
+    fontSize: 14,
+    fontFamily: NOMAD_FONTS.ui,
+  },
+  matchedPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+    borderWidth: 1,
+    alignSelf: "flex-start",
+  },
+  matchedText: {
+    fontSize: 13,
+    fontWeight: "600",
+    fontFamily: NOMAD_FONTS.uiSemi,
   },
 });

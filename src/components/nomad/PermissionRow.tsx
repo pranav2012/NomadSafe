@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Icon } from "./Icon";
 import { NOMAD_FONTS, type NomadTheme } from "@/constants/nomadTokens";
 import { useTheme } from "@/hooks/useTheme";
@@ -9,19 +9,26 @@ interface PermissionRowProps {
   title: string;
   sub: string;
   on: boolean;
+  disabled?: boolean;
+  onPress?: () => void;
 }
 
-export function PermissionRow({ theme: themeProp, title, sub, on }: PermissionRowProps) {
+export function PermissionRow({ theme: themeProp, title, sub, on, disabled, onPress }: PermissionRowProps) {
   const { nomad } = useTheme();
   const theme = themeProp ?? nomad.colors;
 
+  const Root = onPress ? Pressable : View;
+
   return (
-    <View
-      style={[
+    <Root
+      onPress={onPress}
+      disabled={disabled}
+      style={({ pressed }: { pressed?: boolean }) => [
         styles.root,
         {
           backgroundColor: theme.paperSoft,
           borderColor: theme.hairline,
+          opacity: disabled ? 0.6 : pressed ? 0.9 : 1,
         },
       ]}
     >
@@ -59,7 +66,7 @@ export function PermissionRow({ theme: themeProp, title, sub, on }: PermissionRo
           ]}
         />
       </View>
-    </View>
+    </Root>
   );
 }
 

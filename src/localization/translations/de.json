@@ -239,7 +239,23 @@
     "trustedThreeLabel": "Vertrauenspersonen",
     "people": "{{count}} Personen",
     "offlineFallbackValue": "SMS + 1,2 GB Karten",
-    "vault": "Tresor"
+    "vault": "Tresor",
+    "contacts": "Kontakte",
+    "sms": "SMS",
+    "locationAlwaysSub": "Tippen, um den Standort für SOS und Freigabe zu erlauben",
+    "contactsPermissionSub": "Tippen, um deine drei Vertrauenspersonen aus den Kontakten auszuwählen",
+    "smsPermissionSub": "Tippen, um zu bestätigen, dass SMS für Offline-Alarme verfügbar ist",
+    "permissionNote": "Du kannst diese später in den Geräteeinstellungen ändern. Nur erforderliche Berechtigungen werden jetzt angefordert.",
+    "loadingContacts": "Kontakte werden geladen…",
+    "noPhone": "Keine Telefonnummer",
+    "locationRequiredTitle": "Standort erforderlich",
+    "locationRequiredBody": "NomadSafe benötigt Zugriff auf deinen Standort für SOS-Alarme, Live-Freigaben und Check-ins. Bitte aktiviere diesen in den Einstellungen.",
+    "contactsRequiredTitle": "Kontakte erforderlich",
+    "contactsRequiredBody": "NomadSafe benötigt Zugriff auf deine Kontakte, damit du deine drei Vertrauenspersonen auswählen kannst. Bitte aktiviere diesen in den Einstellungen.",
+    "biometricPrompt": "Bestätige deine Identität, um NomadSafe zu sichern",
+    "checkingBiometric": "Biometrische Verfügbarkeit wird geprüft…",
+    "biometricNotSetUp": "Biometrie nicht eingerichtet",
+    "biometricSetUpSub": "Richte zuerst Face ID, Touch ID oder Fingerabdruck in den Geräteeinstellungen ein"
   },
   "milestones": {
     "safetyEyebrow": "Sicherheit",
@@ -299,6 +315,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "de",
-    "lastGeneratedAt": "2026-06-18T23:31:27.901Z"
+    "lastGeneratedAt": "2026-06-19T01:08:08.119Z"
   }
 }

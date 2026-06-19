@@ -239,7 +239,23 @@
     "trustedThreeLabel": "Trois personnes de confiance",
     "people": "{{count}} personnes",
     "offlineFallbackValue": "SMS + cartes 1.2 GB",
-    "vault": "Coffre"
+    "vault": "Coffre",
+    "contacts": "Contacts",
+    "sms": "SMS",
+    "locationAlwaysSub": "Appuyez pour autoriser la localisation pour les SOS et le partage",
+    "contactsPermissionSub": "Appuyez pour choisir vos trois contacts de confiance",
+    "smsPermissionSub": "Appuyez pour vérifier si les SMS sont disponibles pour les alertes hors ligne",
+    "permissionNote": "Vous pouvez modifier ces autorisations plus tard dans les paramètres de l'appareil. Seules les autorisations nécessaires vous sont demandées pour le moment.",
+    "loadingContacts": "Chargement des contacts…",
+    "noPhone": "Aucun numéro de téléphone",
+    "locationRequiredTitle": "Localisation requise",
+    "locationRequiredBody": "NomadSafe a besoin d'accéder à votre position pour les alertes SOS, le partage en direct et les check-ins. Veuillez l'activer dans les paramètres.",
+    "contactsRequiredTitle": "Contacts requis",
+    "contactsRequiredBody": "NomadSafe a besoin d'accéder à vos contacts pour vous permettre de choisir vos trois personnes de confiance. Veuillez l'activer dans les paramètres.",
+    "biometricPrompt": "Confirmez votre identité pour sécuriser NomadSafe",
+    "checkingBiometric": "Vérification de la disponibilité de la biométrie…",
+    "biometricNotSetUp": "Biométrie non configurée",
+    "biometricSetUpSub": "Configurez d'abord Face ID, Touch ID ou l'empreinte digitale dans les paramètres de l'appareil"
   },
   "milestones": {
     "safetyEyebrow": "Sécurité",
@@ -299,6 +315,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "fr",
-    "lastGeneratedAt": "2026-06-18T23:31:27.901Z"
+    "lastGeneratedAt": "2026-06-19T01:08:08.119Z"
   }
 }

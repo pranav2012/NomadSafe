@@ -239,7 +239,23 @@
     "trustedThreeLabel": "信頼できる3人",
     "people": "{{count}}人",
     "offlineFallbackValue": "SMS + 1.2 GBの地図",
-    "vault": "保管庫"
+    "vault": "保管庫",
+    "contacts": "連絡先",
+    "sms": "SMS",
+    "locationAlwaysSub": "タップしてSOS機能や共有のための位置情報を許可します",
+    "contactsPermissionSub": "タップして連絡先から「信頼できる3人」を選択します",
+    "smsPermissionSub": "タップしてオフライン通知用にSMSが利用可能か確認します",
+    "permissionNote": "これらは後でデバイスの設定から変更できます。現時点では必要な権限のみを要求しています。",
+    "loadingContacts": "連絡先を読み込み中…",
+    "noPhone": "電話番号なし",
+    "locationRequiredTitle": "位置情報の許可が必要です",
+    "locationRequiredBody": "NomadSafeはSOSアラート、リアルタイム共有、チェックインに位置情報へのアクセスが必要です。設定から有効にしてください。",
+    "contactsRequiredTitle": "連絡先へのアクセスが必要です",
+    "contactsRequiredBody": "NomadSafeは「信頼できる3人」を選択するために連絡先へのアクセスが必要です。設定から有効にしてください。",
+    "biometricPrompt": "NomadSafeを保護するために本人確認を行ってください",
+    "checkingBiometric": "生体認証の利用可能性を確認中…",
+    "biometricNotSetUp": "生体認証が設定されていません",
+    "biometricSetUpSub": "最初にデバイスの設定でFace ID、Touch ID、または指紋認証を設定してください"
   },
   "milestones": {
     "safetyEyebrow": "安全",
@@ -299,6 +315,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "ja",
-    "lastGeneratedAt": "2026-06-18T23:31:27.901Z"
+    "lastGeneratedAt": "2026-06-19T01:08:08.119Z"
   }
 }

@@ -239,7 +239,23 @@
     "trustedThreeLabel": "Tre persone fidate",
     "people": "{{count}} persone",
     "offlineFallbackValue": "SMS + mappe da 1,2 GB",
-    "vault": "Caveau"
+    "vault": "Caveau",
+    "contacts": "Contatti",
+    "sms": "SMS",
+    "locationAlwaysSub": "Tocca per consentire la posizione per SOS e condivisione",
+    "contactsPermissionSub": "Tocca per scegliere i tuoi tre contatti fidati",
+    "smsPermissionSub": "Tocca per verificare che gli SMS siano disponibili per gli avvisi offline",
+    "permissionNote": "Puoi modificarle in seguito nelle Impostazioni del dispositivo. Al momento vengono richieste solo le autorizzazioni necessarie.",
+    "loadingContacts": "Caricamento contatti…",
+    "noPhone": "Nessun numero di telefono",
+    "locationRequiredTitle": "Posizione richiesta",
+    "locationRequiredBody": "NomadSafe ha bisogno dell'accesso alla posizione per gli avvisi SOS, la condivisione in tempo reale e i check-in. Abilitalo nelle Impostazioni.",
+    "contactsRequiredTitle": "Contatti richiesti",
+    "contactsRequiredBody": "NomadSafe ha bisogno dell'accesso ai contatti per consentirti di scegliere i tuoi tre contatti fidati. Abilitalo nelle Impostazioni.",
+    "biometricPrompt": "Conferma la tua identità per proteggere NomadSafe",
+    "checkingBiometric": "Verifica della disponibilità dei dati biometrici…",
+    "biometricNotSetUp": "Dati biometrici non configurati",
+    "biometricSetUpSub": "Configura prima Face ID, Touch ID o l'impronta digitale nelle Impostazioni del dispositivo"
   },
   "milestones": {
     "safetyEyebrow": "Sicurezza",
@@ -299,6 +315,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "it",
-    "lastGeneratedAt": "2026-06-18T23:31:27.901Z"
+    "lastGeneratedAt": "2026-06-19T01:08:08.119Z"
   }
 }

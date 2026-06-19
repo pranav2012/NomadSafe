@@ -239,7 +239,23 @@
     "trustedThreeLabel": "Tres de confianza",
     "people": "{{count}} personas",
     "offlineFallbackValue": "SMS + 1.2 GB de mapas",
-    "vault": "Bóveda"
+    "vault": "Bóveda",
+    "contacts": "Contactos",
+    "sms": "SMS",
+    "locationAlwaysSub": "Toca para permitir el acceso a la ubicación para SOS y compartir",
+    "contactsPermissionSub": "Toca para elegir a tus tres contactos de confianza",
+    "smsPermissionSub": "Toca para verificar que los SMS estén disponibles para alertas sin conexión",
+    "permissionNote": "Puedes cambiar esto más tarde en la configuración del dispositivo. Solo se solicitan los permisos necesarios en este momento.",
+    "loadingContacts": "Cargando contactos…",
+    "noPhone": "Sin número de teléfono",
+    "locationRequiredTitle": "Ubicación requerida",
+    "locationRequiredBody": "NomadSafe necesita acceso a la ubicación para alertas SOS, compartir en tiempo real y check-ins. Por favor, actívalo en la configuración.",
+    "contactsRequiredTitle": "Contactos requeridos",
+    "contactsRequiredBody": "NomadSafe necesita acceso a los contactos para que puedas elegir a tus tres personas de confianza. Por favor, actívalo en la configuración.",
+    "biometricPrompt": "Confirma tu identidad para proteger NomadSafe",
+    "checkingBiometric": "Comprobando la disponibilidad de datos biométricos…",
+    "biometricNotSetUp": "Datos biométricos no configurados",
+    "biometricSetUpSub": "Configura primero Face ID, Touch ID o huella dactilar en la configuración del dispositivo"
   },
   "milestones": {
     "safetyEyebrow": "Seguridad",
@@ -299,6 +315,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "es",
-    "lastGeneratedAt": "2026-06-18T23:31:27.901Z"
+    "lastGeneratedAt": "2026-06-19T01:08:08.119Z"
   }
 }

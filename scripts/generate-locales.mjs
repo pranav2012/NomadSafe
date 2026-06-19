@@ -158,8 +158,14 @@ async function requestTranslation(locale, entries) {
   }
 
   const data = await response.json();
-  const text = data.choices?.[0]?.message?.content;
+  let text = data.choices?.[0]?.message?.content;
   if (!text) throw new Error(`Localization proxy response for ${locale} did not include JSON text.`);
+
+  // Some model responses wrap JSON in markdown fences; strip them.
+  text = text.trim();
+  if (text.startsWith("```")) {
+    text = text.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "").trim();
+  }
 
   return normalizeTranslations(JSON.parse(text), entries, locale);
 }

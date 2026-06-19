@@ -239,7 +239,23 @@
     "trustedThreeLabel": "నమ్మిన ముగ్గురు",
     "people": "{{count}} మంది",
     "offlineFallbackValue": "SMS + 1.2 GB మ్యాప్స్",
-    "vault": "వాల్ట్"
+    "vault": "వాల్ట్",
+    "contacts": "పరిచయాలు",
+    "sms": "SMS",
+    "locationAlwaysSub": "SOS మరియు షేరింగ్ కోసం లొకేషన్‌ను అనుమతించడానికి నొక్కండి",
+    "contactsPermissionSub": "మీ పరిచయాల నుండి మీ నమ్మకమైన ముగ్గురిని ఎంచుకోవడానికి నొక్కండి",
+    "smsPermissionSub": "ఆఫ్‌లైన్ అలర్ట్‌ల కోసం SMS అందుబాటులో ఉందో లేదో వెరిఫై చేయడానికి నొక్కండి",
+    "permissionNote": "వీటిని మీరు తర్వాత పరికర సెట్టింగ్స్‌లో మార్చుకోవచ్చు. ఇప్పుడు అవసరమైన పర్మిషన్లు మాత్రమే అడగబడుతున్నాయి.",
+    "loadingContacts": "పరిచయాలను లోడ్ చేస్తోంది…",
+    "noPhone": "ఫోన్ నంబర్ లేదు",
+    "locationRequiredTitle": "లొకేషన్ అవసరం",
+    "locationRequiredBody": "SOS అలర్ట్‌లు, లైవ్ షేరింగ్ మరియు చెక్-ఇన్‌ల కోసం NomadSafeకి లొకేషన్ యాక్సెస్ అవసరం. దయచేసి దీన్ని సెట్టింగ్స్‌లో ఎనేబుల్ చేయండి.",
+    "contactsRequiredTitle": "పరిచయాలు అవసరం",
+    "contactsRequiredBody": "మీ నమ్మకమైన ముగ్గురిని ఎంచుకోవడానికి NomadSafeకి మీ పరిచయాల యాక్సెస్ అవసరం. దయచేసి దీన్ని సెట్టింగ్స్‌లో ఎనేబుల్ చేయండి.",
+    "biometricPrompt": "NomadSafeని సురక్షితం చేయడానికి మీ గుర్తింపును ధృవీకరించండి",
+    "checkingBiometric": "బయోమెట్రిక్ లభ్యతను తనిఖీ చేస్తోంది…",
+    "biometricNotSetUp": "బయోమెట్రిక్ సెటప్ చేయబడలేదు",
+    "biometricSetUpSub": "ముందుగా పరికర సెట్టింగ్స్‌లో Face ID, Touch ID లేదా వేలిముద్రను సెటప్ చేయండి"
   },
   "milestones": {
     "safetyEyebrow": "భద్రత",
@@ -299,6 +315,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "te",
-    "lastGeneratedAt": "2026-06-18T23:31:27.901Z"
+    "lastGeneratedAt": "2026-06-19T01:08:08.119Z"
   }
 }

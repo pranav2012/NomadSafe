@@ -239,7 +239,23 @@
     "trustedThreeLabel": "ವಿಶ್ವಾಸಾರ್ಹ ಮೂವರು",
     "people": "{{count}} ಜನ",
     "offlineFallbackValue": "SMS + 1.2 GB ನಕ್ಷೆಗಳು",
-    "vault": "ವಾಲ್ಟ್"
+    "vault": "ವಾಲ್ಟ್",
+    "contacts": "ಸಂಪರ್ಕಗಳು",
+    "sms": "SMS",
+    "locationAlwaysSub": "SOS ಮತ್ತು ಹಂಚಿಕೆಗಾಗಿ ಸ್ಥಳವನ್ನು ಅನುಮತಿಸಲು ಟ್ಯಾಪ್ ಮಾಡಿ",
+    "contactsPermissionSub": "ನಿಮ್ಮ ಸಂಪರ್ಕಗಳಿಂದ ವಿಶ್ವಾಸಾರ್ಹ ಮೂವರನ್ನು ಆಯ್ಕೆ ಮಾಡಲು ಟ್ಯಾಪ್ ಮಾಡಿ",
+    "smsPermissionSub": "ಆಫ್‌ಲೈನ್ ಎಚ್ಚರಿಕೆಗಳಿಗಾಗಿ SMS ಲಭ್ಯವಿದೆಯೇ ಎಂದು ಪರಿಶೀಲಿಸಲು ಟ್ಯಾಪ್ ಮಾಡಿ",
+    "permissionNote": "ಸಾಧನದ ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ ನೀವು ಇವುಗಳನ್ನು ನಂತರ ಬದಲಾಯಿಸಬಹುದು. ಪ್ರಸ್ತುತ ಅಗತ್ಯವಿರುವ ಅನುಮತಿಗಳನ್ನು ಮಾತ್ರ ವಿನಂತಿಸಲಾಗುತ್ತಿದೆ.",
+    "loadingContacts": "ಸಂಪರ್ಕಗಳನ್ನು ಲೋಡ್ ಮಾಡಲಾಗುತ್ತಿದೆ…",
+    "noPhone": "ಫೋನ್ ಸಂಖ್ಯೆ ಇಲ್ಲ",
+    "locationRequiredTitle": "ಸ್ಥಳದ ಅಗತ್ಯವಿದೆ",
+    "locationRequiredBody": "SOS ಎಚ್ಚರಿಕೆಗಳು, ಲೈವ್ ಹಂಚಿಕೆ ಮತ್ತು ಚೆಕ್-ಇನ್‌ಗಳಿಗಾಗಿ NomadSafe ಗೆ ಸ್ಥಳದ ಪ್ರವೇಶದ ಅಗತ್ಯವಿದೆ. ದಯವಿಟ್ಟು ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ ಇದನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ.",
+    "contactsRequiredTitle": "ಸಂಪರ್ಕಗಳ ಅಗತ್ಯವಿದೆ",
+    "contactsRequiredBody": "ನಿಮ್ಮ ವಿಶ್ವಾಸಾರ್ಹ ಮೂವರನ್ನು ಆಯ್ಕೆ ಮಾಡಲು NomadSafe ಗೆ ಸಂಪರ್ಕಗಳ ಪ್ರವೇಶದ ಅಗತ್ಯವಿದೆ. ದಯವಿಟ್ಟು ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ ಇದನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ.",
+    "biometricPrompt": "NomadSafe ಅನ್ನು ಸುರಕ್ಷಿತಗೊಳಿಸಲು ನಿಮ್ಮ ಗುರುತನ್ನು ದೃಢೀಕರಿಸಿ",
+    "checkingBiometric": "ಬಯೋಮೆಟ್ರಿಕ್ ಲಭ್ಯತೆಯನ್ನು ಪರಿಶೀಲಿಸಲಾಗುತ್ತಿದೆ…",
+    "biometricNotSetUp": "ಬಯೋಮೆಟ್ರಿಕ್ ಹೊಂದಿಸಲಾಗಿಲ್ಲ",
+    "biometricSetUpSub": "ಮೊದಲು ಸಾಧನದ ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ Face ID, Touch ID ಅಥವಾ ಫಿಂಗರ್‌ಪ್ರಿಂಟ್ ಅನ್ನು ಹೊಂದಿಸಿ"
   },
   "milestones": {
     "safetyEyebrow": "ಸುರಕ್ಷತೆ",
@@ -299,6 +315,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "kn",
-    "lastGeneratedAt": "2026-06-18T23:31:27.901Z"
+    "lastGeneratedAt": "2026-06-19T01:08:08.119Z"
   }
 }

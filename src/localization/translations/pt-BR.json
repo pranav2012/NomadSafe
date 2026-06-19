@@ -239,7 +239,23 @@
     "trustedThreeLabel": "Três confiáveis",
     "people": "{{count}} pessoas",
     "offlineFallbackValue": "SMS + mapas de 1,2 GB",
-    "vault": "Cofre"
+    "vault": "Cofre",
+    "contacts": "Contatos",
+    "sms": "SMS",
+    "locationAlwaysSub": "Toque para permitir a localização para SOS e compartilhamento",
+    "contactsPermissionSub": "Toque para escolher seus três contatos de confiança",
+    "smsPermissionSub": "Toque para verificar se o SMS está disponível para alertas offline",
+    "permissionNote": "Você pode alterar isso mais tarde nas Configurações do dispositivo. Apenas as permissões necessárias são solicitadas agora.",
+    "loadingContacts": "Carregando contatos…",
+    "noPhone": "Sem número de telefone",
+    "locationRequiredTitle": "Localização necessária",
+    "locationRequiredBody": "O NomadSafe precisa de acesso à localização para alertas SOS, compartilhamento em tempo real e check-ins. Por favor, ative nas Configurações.",
+    "contactsRequiredTitle": "Contatos necessários",
+    "contactsRequiredBody": "O NomadSafe precisa de acesso aos contatos para que você possa escolher seus três contatos de confiança. Por favor, ative nas Configurações.",
+    "biometricPrompt": "Confirme sua identidade para proteger o NomadSafe",
+    "checkingBiometric": "Verificando a disponibilidade da biometria…",
+    "biometricNotSetUp": "Biometria não configurada",
+    "biometricSetUpSub": "Configure o Face ID, Touch ID ou a impressão digital primeiro nas Configurações do dispositivo"
   },
   "milestones": {
     "safetyEyebrow": "Segurança",
@@ -299,6 +315,6 @@
   "__generated": {
     "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
     "locale": "pt-BR",
-    "lastGeneratedAt": "2026-06-18T23:31:27.901Z"
+    "lastGeneratedAt": "2026-06-19T01:08:08.119Z"
   }
 }

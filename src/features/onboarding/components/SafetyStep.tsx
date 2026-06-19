@@ -1,7 +1,16 @@
-import React from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  Pressable,
+  StyleSheet,
+  ActivityIndicator,
+  Alert,
+  Platform,
+} from "react-native";
 import Svg, { Line, Path, Polygon } from "react-native-svg";
 import { LinearGradient } from "expo-linear-gradient";
+import * as Contacts from "expo-contacts";
 import { NOMAD_FONTS, type NomadTheme } from "@/constants/nomadTokens";
 import { useLocalization } from "@/localization";
 import { NomadCard } from "@/components/nomad/Card";
@@ -14,54 +23,200 @@ import {
   HeadlineItalic,
   SectionLabel,
 } from "@/components/nomad/Typography";
+import {
+  permissionsService,
+  type PermissionKind,
+} from "@/features/onboarding/services/permissions";
+import {
+  emergencyContactsStorage,
+  type EmergencyContact,
+} from "@/features/onboarding/services/emergencyContactsStorage";
 
 interface Props {
   theme: NomadTheme;
   dark: boolean;
   totalSteps: number;
-  selectedContacts: number[];
-  setSelectedContacts: React.Dispatch<React.SetStateAction<number[]>>;
+  onPermissionsReady?: (ready: boolean) => void;
 }
 
-const contacts = [
-  { nameKey: "onboarding.mum", init: "M", colorKey: "teal", sub: "+44 · London" },
-  { n: "Jamie", init: "J", colorKey: "mustard", sub: "+44 · Brighton" },
-  { n: "Priya", init: "P", colorKey: "sky", sub: "+91 · Bangalore" },
-  { nameKey: "onboarding.dad", init: "D", colorKey: "stamp", sub: "+44 · Leeds" },
-  { n: "Ravi", init: "R", colorKey: "teal", sub: "+61 · Melbourne" },
-] as const;
+interface PermissionState {
+  locationGranted: boolean;
+  contactsGranted: boolean;
+  smsGranted: boolean;
+  loading: boolean;
+}
+
+interface SelectableContact extends EmergencyContact {
+  init: string;
+  color: string;
+}
+
+const FALLBACK_CONTACTS: SelectableContact[] = [
+  { id: "mum", name: "Mum", phone: null, init: "M", color: "teal" },
+  { id: "dad", name: "Dad", phone: null, init: "D", color: "stamp" },
+];
+
+function hexFromName(
+  theme: NomadTheme,
+  name: string,
+): string {
+  return (theme[name as keyof NomadTheme] as string) ?? theme.inkDeep;
+}
 
 export function SafetyStep({
   theme,
   dark,
   totalSteps,
-  selectedContacts,
-  setSelectedContacts,
+  onPermissionsReady,
 }: Props) {
   const { t } = useLocalization();
-  const resolvedContacts = contacts.map((c) => ({
-    ...c,
-    n: "nameKey" in c ? t(c.nameKey) : c.n,
-    color: theme[c.colorKey as keyof NomadTheme] as string,
-  }));
 
-  const toggle = (i: number) => {
-    setSelectedContacts((sc) => {
-      if (sc.includes(i)) return sc.filter((x) => x !== i);
-      if (sc.length >= 3) return [sc[1], sc[2], i];
-      return [...sc, i];
+  const [permissions, setPermissions] = useState<PermissionState>({
+    locationGranted: false,
+    contactsGranted: false,
+    smsGranted: true,
+    loading: true,
+  });
+
+  const [selectedContacts, setSelectedContacts] = useState<SelectableContact[]>([]);
+  const [deviceContacts, setDeviceContacts] = useState<SelectableContact[]>([]);
+  const [loadingContacts, setLoadingContacts] = useState(false);
+  const [initialChecked, setInitialChecked] = useState(false);
+
+  const getLocationSub = () => {
+    if (permissions.locationGranted) return t("onboarding.sosSharingGeofences");
+    return t("onboarding.locationAlwaysSub");
+  };
+
+  const getContactsSub = () => {
+    if (permissions.contactsGranted) return t("onboarding.pickYourThreeOffline");
+    return t("onboarding.contactsPermissionSub");
+  };
+
+  const getSmsSub = () => {
+    if (permissions.smsGranted) return t("onboarding.pickYourThreeOffline");
+    return t("onboarding.smsPermissionSub");
+  };
+
+  const loadContacts = React.useCallback(async () => {
+    setLoadingContacts(true);
+    try {
+      const { data } = await Contacts.getContactsAsync({
+        fields: [Contacts.Fields.PhoneNumbers],
+        pageSize: 100,
+      });
+      const mapped: SelectableContact[] = data
+        .filter((c) => c.name)
+        .slice(0, 30)
+        .map((c, i) => ({
+          id: c.id,
+          name: c.name,
+          phone: c.phoneNumbers?.[0]?.number ?? null,
+          init: c.name.charAt(0).toUpperCase(),
+          color: ["teal", "mustard", "sky", "stamp"][i % 4],
+        }));
+      setDeviceContacts(mapped.length ? mapped : FALLBACK_CONTACTS);
+    } catch {
+      setDeviceContacts(FALLBACK_CONTACTS);
+    } finally {
+      setLoadingContacts(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    const run = async () => {
+      if (initialChecked) return;
+      const status = await permissionsService.checkAll();
+      if (!mounted) return;
+      setPermissions({
+        locationGranted: status.location.granted,
+        contactsGranted: status.contacts.granted,
+        smsGranted: status.sms.granted,
+        loading: false,
+      });
+      if (status.contacts.granted && deviceContacts.length === 0) {
+        await loadContacts();
+      }
+      setInitialChecked(true);
+    };
+    run();
+    return () => {
+      mounted = false;
+    };
+  }, [deviceContacts.length, initialChecked, loadContacts]);
+
+  useEffect(() => {
+    const ready =
+      permissions.locationGranted &&
+      permissions.contactsGranted &&
+      selectedContacts.length > 0;
+    onPermissionsReady?.(ready);
+    if (ready) {
+      emergencyContactsStorage.set(
+        selectedContacts.map(({ id, name, phone }) => ({ id, name, phone })),
+      );
+    }
+  }, [permissions, selectedContacts, onPermissionsReady]);
+
+  const requestPermission = async (kind: PermissionKind) => {
+    try {
+      if (kind === "location" || kind === "locationAlways") {
+        const status = await permissionsService.requestLocation();
+        setPermissions((p) => ({
+          ...p,
+          locationGranted: status.granted,
+        }));
+        if (!status.granted && !status.canAskAgain) {
+          Alert.alert(
+            t("onboarding.locationRequiredTitle"),
+            t("onboarding.locationRequiredBody"),
+          );
+        }
+      } else if (kind === "contacts") {
+        const status = await permissionsService.requestContacts();
+        setPermissions((p) => ({ ...p, contactsGranted: status.granted }));
+        if (status.granted) {
+          await loadContacts();
+        } else if (!status.canAskAgain) {
+          Alert.alert(
+            t("onboarding.contactsRequiredTitle"),
+            t("onboarding.contactsRequiredBody"),
+          );
+        }
+      } else if (kind === "sms") {
+        const status = await permissionsService.requestSms();
+        setPermissions((p) => ({ ...p, smsGranted: status.granted }));
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const toggleContact = (contact: SelectableContact) => {
+    setSelectedContacts((prev) => {
+      const exists = prev.find((c) => c.id === contact.id);
+      if (exists) {
+        return prev.filter((c) => c.id !== contact.id);
+      }
+      if (prev.length >= 3) return prev;
+      return [...prev, contact];
     });
   };
+
+  const resolvedContacts = deviceContacts.length
+    ? deviceContacts
+    : FALLBACK_CONTACTS;
+
+  const slotNames =
+    selectedContacts.map((c) => c.name).join(" · ") ||
+    t("onboarding.pickUpToThree");
 
   const mapPins = [
     { x: 110, y: 120, color: theme.stamp, pulse: true },
     { x: 220, y: 85, color: theme.teal },
     { x: 280, y: 160, color: theme.mustard },
   ];
-
-  const slotNames =
-    selectedContacts.map((i) => resolvedContacts[i].n).join(" · ") ||
-    t("onboarding.pickUpToThree");
 
   return (
     <View style={{ flex: 1 }}>
@@ -82,11 +237,31 @@ export function SafetyStep({
       {/* 01 · LOCATION */}
       <View style={{ paddingHorizontal: 16 }}>
         <View style={{ paddingHorizontal: 10 }}>
-          <SectionLabel step={1} color={theme.teal} title={t("onboarding.liveLocation")} theme={theme} />
+          <SectionLabel
+            step={1}
+            color={theme.teal}
+            title={t("onboarding.liveLocation")}
+            theme={theme}
+          />
         </View>
-        <NomadCard theme={theme} padding={10} style={{ position: "relative", overflow: "hidden" }}>
-          <TravelMap theme={theme} dark={dark} pins={mapPins} height={148}
-            route={[{x:110,y:120},{x:160,y:100},{x:220,y:85},{x:250,y:120},{x:280,y:160}]}/>
+        <NomadCard
+          theme={theme}
+          padding={10}
+          style={{ position: "relative", overflow: "hidden" }}
+        >
+          <TravelMap
+            theme={theme}
+            dark={dark}
+            pins={mapPins}
+            height={148}
+            route={[
+              { x: 110, y: 120 },
+              { x: 160, y: 100 },
+              { x: 220, y: 85 },
+              { x: 250, y: 120 },
+              { x: 280, y: 160 },
+            ]}
+          />
           <View
             style={{
               position: "absolute",
@@ -98,7 +273,12 @@ export function SafetyStep({
               alignItems: "flex-end",
             }}
           >
-            <View style={[styles.gpsPill, { backgroundColor: "rgba(26,22,18,0.88)" }]}>
+            <View
+              style={[
+                styles.gpsPill,
+                { backgroundColor: "rgba(26,22,18,0.88)" },
+              ]}
+            >
               <Text style={[styles.gpsPillText, { color: theme.paperSoft }]}>
                 {t("onboarding.gpsStatus")}
               </Text>
@@ -121,7 +301,9 @@ export function SafetyStep({
           <SectionLabel
             step={2}
             color={theme.mustard}
-            title={t("onboarding.trustedThree", { count: selectedContacts.length })}
+            title={t("onboarding.trustedThree", {
+              count: selectedContacts.length,
+            })}
             theme={theme}
           />
         </View>
@@ -137,7 +319,7 @@ export function SafetyStep({
           ]}
         >
           {[0, 1, 2].map((slot) => {
-            const c = resolvedContacts[selectedContacts[slot]];
+            const c = selectedContacts[slot];
             if (!c) {
               return (
                 <View
@@ -154,7 +336,7 @@ export function SafetyStep({
                 style={[
                   styles.slotFilled,
                   {
-                    backgroundColor: c.color,
+                    backgroundColor: hexFromName(theme, c.color),
                     borderColor: theme.paperSoft,
                   },
                 ]}
@@ -176,14 +358,24 @@ export function SafetyStep({
           </View>
         </View>
 
-        {/* Contact list */}
+        {/* Loading state */}
+        {permissions.contactsGranted && loadingContacts && (
+          <View style={[styles.loadingRow, { borderColor: theme.hairline }]}>
+            <ActivityIndicator size="small" color={theme.mustard} />
+            <Text style={[styles.loadingText, { color: theme.inkSoft }]}>
+              {t("onboarding.loadingContacts")}
+            </Text>
+          </View>
+        )}
+
+        {/* Device contact list */}
         <View style={{ gap: 6 }}>
-          {resolvedContacts.map((c, i) => {
-            const on = selectedContacts.includes(i);
+          {resolvedContacts.map((c) => {
+            const on = selectedContacts.some((s) => s.id === c.id);
             return (
               <Pressable
-                key={i}
-                onPress={() => toggle(i)}
+                key={c.id}
+                onPress={() => toggleContact(c)}
                 style={[
                   styles.contactRow,
                   {
@@ -195,17 +387,17 @@ export function SafetyStep({
                 <View
                   style={[
                     styles.contactAvatar,
-                    { backgroundColor: c.color },
+                    { backgroundColor: hexFromName(theme, c.color) },
                   ]}
                 >
                   <Text style={styles.contactAvatarText}>{c.init}</Text>
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.contactName, { color: theme.inkDeep }]}>
-                    {c.n}
+                    {c.name}
                   </Text>
                   <Text style={[styles.contactSub, { color: theme.inkSoft }]}>
-                    {c.sub}
+                    {c.phone ?? t("onboarding.noPhone")}
                   </Text>
                 </View>
                 <View
@@ -230,7 +422,12 @@ export function SafetyStep({
       {/* 03 · OFFLINE FALLBACK */}
       <View style={{ paddingHorizontal: 16, paddingTop: 22 }}>
         <View style={{ paddingHorizontal: 10 }}>
-          <SectionLabel step={3} color={theme.stamp} title={t("onboarding.offlineFallback")} theme={theme} />
+          <SectionLabel
+            step={3}
+            color={theme.stamp}
+            title={t("onboarding.offlineFallback")}
+            theme={theme}
+          />
         </View>
 
         <View style={styles.offlineHero}>
@@ -271,14 +468,16 @@ export function SafetyStep({
 
           {/* phone (you) */}
           <View
-            style={[
-              styles.offlinePhone,
-              { backgroundColor: theme.stamp },
-            ]}
+            style={[styles.offlinePhone, { backgroundColor: theme.stamp }]}
           >
             <Icon name="shield" size={24} color="#fff" />
           </View>
-          <Text style={[styles.offlineLabelLeft, { color: "rgba(255,255,255,0.65)" }]}>
+          <Text
+            style={[
+              styles.offlineLabelLeft,
+              { color: "rgba(255,255,255,0.65)" },
+            ]}
+          >
             {t("onboarding.offline")}
           </Text>
 
@@ -296,12 +495,7 @@ export function SafetyStep({
             </Svg>
           </View>
 
-          <View
-            style={[
-              styles.smsBadge,
-              { backgroundColor: theme.mustard },
-            ]}
-          >
+          <View style={[styles.smsBadge, { backgroundColor: theme.mustard }]}>
             <Text style={[styles.smsBadgeText, { color: theme.inkDeep }]}>
               {t("onboarding.smsNoData")}
             </Text>
@@ -313,7 +507,12 @@ export function SafetyStep({
           >
             <Text style={styles.offlineContactInit}>M</Text>
           </View>
-          <Text style={[styles.offlineLabelRight, { color: "rgba(255,255,255,0.65)" }]}>
+          <Text
+            style={[
+              styles.offlineLabelRight,
+              { color: "rgba(255,255,255,0.65)" },
+            ]}
+          >
             {t("onboarding.mumUpper")}
           </Text>
         </View>
@@ -326,13 +525,47 @@ export function SafetyStep({
       {/* Consolidated permissions */}
       <View style={{ paddingHorizontal: 16, paddingTop: 20 }}>
         <View style={{ paddingHorizontal: 10 }}>
-          <SectionLabel step={4} color={theme.sky} title={t("onboarding.permissions")} theme={theme} />
+          <SectionLabel
+            step={4}
+            color={theme.sky}
+            title={t("onboarding.permissions")}
+            theme={theme}
+          />
         </View>
         <View style={{ gap: 6 }}>
-          <PermissionRow theme={theme} title={t("onboarding.locationAlways")} sub={t("onboarding.sosSharingGeofences")} on />
-          <PermissionRow theme={theme} title={t("onboarding.contactsSms")} sub={t("onboarding.pickYourThreeOffline")} on />
-          <PermissionRow theme={theme} title={t("onboarding.offlineMaps")} sub={t("onboarding.preCachesRegion")} on />
+          {permissions.loading ? (
+            <ActivityIndicator color={theme.inkSoft} />
+          ) : (
+            <>
+              <PermissionRow
+                theme={theme}
+                title={t("onboarding.locationAlways")}
+                sub={getLocationSub()}
+                on={permissions.locationGranted}
+                onPress={() => requestPermission("locationAlways")}
+              />
+              <PermissionRow
+                theme={theme}
+                title={t("onboarding.contacts")}
+                sub={getContactsSub()}
+                on={permissions.contactsGranted}
+                onPress={() => requestPermission("contacts")}
+              />
+              {Platform.OS === "android" && (
+                <PermissionRow
+                  theme={theme}
+                  title={t("onboarding.sms")}
+                  sub={getSmsSub()}
+                  on={permissions.smsGranted}
+                  onPress={() => requestPermission("sms")}
+                />
+              )}
+            </>
+          )}
         </View>
+        <Text style={[styles.bodyCopy, { color: theme.inkSoft, marginTop: 10 }]}>
+          {t("onboarding.permissionNote")}
+        </Text>
       </View>
     </View>
   );
@@ -421,6 +654,21 @@ const styles = StyleSheet.create({
   slotSub: {
     fontSize: 10,
     marginTop: 1,
+    fontFamily: NOMAD_FONTS.ui,
+  },
+  loadingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    marginBottom: 8,
+  },
+  loadingText: {
+    fontSize: 13,
     fontFamily: NOMAD_FONTS.ui,
   },
   contactRow: {
