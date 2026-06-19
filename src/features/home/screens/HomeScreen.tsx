@@ -10,6 +10,9 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { useRouter } from "expo-router";
+import MapView, { Marker, Polyline, PROVIDER_DEFAULT, type Region } from "react-native-maps";
+import * as Location from "expo-location";
 import { DateTimePicker } from "@expo/ui/community/datetime-picker";
 import { DatePicker as SwiftDatePicker, Host } from "@expo/ui/swift-ui";
 import { datePickerStyle, environment, tint } from "@expo/ui/swift-ui/modifiers";
@@ -20,12 +23,14 @@ import { NOMAD_FONTS } from "@/constants/nomadTokens";
 import { localModelService, useModelDownload } from "@/features/ai";
 import type { TripBudgetEstimate } from "@/features/ai/services/localModelService";
 import { useSettingsStore } from "@/features/settings";
+import { useAuthStore } from "@/features/auth";
 import {
   type DestinationOption,
   normalizeSearchText,
   searchOfflineDestinations,
 } from "@/features/trips/data/destinations";
 import {
+  type LatLng,
   type Trip,
   type TripMode,
   useTripsStore,
@@ -160,10 +165,6 @@ function makeInitialForm(currency: string): FormState {
   };
 }
 
-function formatDestinationList(destinations: string[]) {
-  return destinations.join(" • ");
-}
-
 function formatWebDestination(result: WebDestinationResult) {
   const city =
     result.address?.city ??
@@ -175,10 +176,11 @@ function formatWebDestination(result: WebDestinationResult) {
 }
 
 export default function HomeScreen() {
-  const { nomad, isDark } = useTheme();
+  const { nomad } = useTheme();
   const theme = nomad.colors;
   const { t, locale, formatCurrency, formatDate } = useLocalization();
   const defaultCurrency = useSettingsStore((state) => state.defaultCurrency);
+  const user = useAuthStore((state) => state.user);
   const trips = useTripsStore((state) => state.trips);
   const activeTripId = useTripsStore((state) => state.activeTripId);
   const createTrip = useTripsStore((state) => state.createTrip);
@@ -186,6 +188,51 @@ export default function HomeScreen() {
   const aiDownload = useModelDownload();
   const scrollRef = useRef<ScrollView>(null);
   const budgetEstimateKeyRef = useRef<string | null>(null);
+  const [userLocation, setUserLocation] = useState<{
+    city?: string;
+    country?: string;
+    region?: string;
+    latitude?: number;
+    longitude?: number;
+  } | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function fetchLocation() {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== Location.PermissionStatus.GRANTED) return;
+
+        const location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+
+        const [reverse] = await Location.reverseGeocodeAsync({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        });
+
+        if (isMounted && reverse) {
+          setUserLocation({
+            city: reverse.city ?? reverse.subregion ?? undefined,
+            country: reverse.country ?? undefined,
+            region: reverse.region ?? undefined,
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+          });
+        }
+      } catch {
+        // Location is optional; fallback to null.
+      }
+    }
+
+    fetchLocation();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const [form, setForm] = useState<FormState>(() => makeInitialForm(defaultCurrency));
   const [pickerField, setPickerField] = useState<DateField | null>(null);
   const [isCurrencyPickerOpen, setIsCurrencyPickerOpen] = useState(false);
@@ -484,7 +531,9 @@ export default function HomeScreen() {
         {activeTrip ? (
           <TripDashboard
             trip={activeTrip}
-            isDark={isDark}
+            user={user}
+            userLocation={userLocation}
+            locale={locale}
             formatCurrency={formatCurrency}
             formatDate={formatDate}
           />
@@ -789,90 +838,245 @@ function CreateTripForm({
 
 function TripDashboard({
   trip,
-  isDark,
+  user,
+  userLocation,
+  locale,
   formatCurrency,
   formatDate,
 }: {
   trip: Trip;
-  isDark: boolean;
+  user: ReturnType<typeof useAuthStore.getState>["user"];
+  userLocation: {
+    city?: string;
+    country?: string;
+    region?: string;
+    latitude?: number;
+    longitude?: number;
+  } | null;
+  locale: string;
   formatCurrency: (amount: number, currency?: string) => string;
   formatDate: (value: Date | number, options?: Intl.DateTimeFormatOptions) => string;
 }) {
   const { nomad } = useTheme();
   const theme = nomad.colors;
   const { t } = useLocalization();
+  const router = useRouter();
   const startDate = useMemo(() => fromDateKey(trip.startDate), [trip.startDate]);
   const endDate = useMemo(() => fromDateKey(trip.endDate), [trip.endDate]);
-  const destinationSummary = formatDestinationList(trip.destinations);
   const duration = countInclusiveDays(startDate, endDate);
   const progress = getTripProgress(trip);
   const dailyBudget = trip.budget / duration;
   const companionCount = trip.mode === "group" ? trip.companions.length : 0;
-  const statusLabel =
-    progress.status === "active"
-      ? t("trip.activeNow")
-      : progress.status === "upcoming"
-        ? t("trip.upcoming")
-        : t("trip.completed");
+  const safetyStatus: "idle" | "active" | "emergency" =
+    progress.status === "active" ? "active" : "idle";
+
+  const statusColors =
+    safetyStatus === "active"
+      ? { bg: theme.mustardSoft, fg: theme.mustard }
+      : { bg: theme.tealSoft, fg: theme.teal };
+
+  const today = new Date();
+  const hour = today.getHours();
+  const greetingKey =
+    hour < 12 ? "trip.goodMorning" : hour < 17 ? "trip.goodAfternoon" : "trip.goodNight";
+
+  const dayFormatter = new Intl.DateTimeFormat(locale, { month: "short", day: "numeric" });
+  const fullDateFormatter = new Intl.DateTimeFormat(locale, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+
+  const estimatedSpent = dailyBudget * progress.day;
+  const budgetRemaining = Math.max(0, trip.budget - estimatedSpent);
+
+  const currentIndex = Math.max(0, Math.min(progress.day - 1, trip.destinations.length - 1));
+  const currentTripLocation = trip.destinations[currentIndex] ?? "";
+  const currentLocation = userLocation?.city
+    ? [userLocation.city, userLocation.country].filter(Boolean).join(", ")
+    : currentTripLocation;
+  const nextDestination =
+    trip.destinations[progress.day] ??
+    trip.destinations[trip.destinations.length - 1] ??
+    trip.destinations[0] ??
+    "—";
+
+  const userName = user?.name?.split(" ")[0] ?? t("common.fallbackUser");
 
   return (
     <View style={styles.stack}>
-      <View style={styles.heroHeader}>
-        <Text style={[styles.eyebrow, { color: theme.inkMuted }]}>
-          {t("trip.dashboardEyebrow")}
-        </Text>
-        <Text style={[styles.heroTitle, { color: theme.inkDeep }]}>
-          {trip.name}
-        </Text>
-        <Text style={[styles.heroBody, { color: theme.inkSoft }]}>
-          {destinationSummary}
-        </Text>
+      <View style={styles.greetingHeader}>
+        <View style={styles.greetingTop}>
+          <View>
+            <Text style={[styles.greetingEyebrow, { color: theme.inkMuted }]}>
+              {fullDateFormatter.format(today)} · {t("trip.dayProgress", { day: progress.day, total: duration })}
+            </Text>
+            <Text style={[styles.greetingTitle, { color: theme.inkDeep }]}>
+              {t(greetingKey)},
+            </Text>
+            <Text style={[styles.greetingTitle, { color: theme.inkDeep }]}>
+              <Text style={[styles.greetingTitleAccent, { color: theme.inkDeep }]}>
+                {userName}
+              </Text>
+            </Text>
+          </View>
+          <Pressable
+            onPress={() => router.push("/settings")}
+            style={({ pressed }) => [styles.avatarButton, { opacity: pressed ? 0.85 : 1 }]}
+          >
+            <View
+              style={[
+                styles.avatar,
+                {
+                  backgroundColor: theme.mustard,
+                  borderColor: theme.paperSoft,
+                },
+              ]}
+            >
+              <Text style={[styles.avatarText, { color: theme.inverse }]}>
+                {userName.charAt(0).toUpperCase()}
+              </Text>
+            </View>
+            <View
+              style={[
+                styles.avatarBadge,
+                { backgroundColor: theme.teal, borderColor: theme.paper },
+              ]}
+            />
+          </Pressable>
+        </View>
+
+        <View style={styles.progressBarSection}>
+          <View style={[styles.progressBarTrack, { backgroundColor: theme.hairline }]}>
+            <View
+              style={[
+                styles.progressBarFill,
+                {
+                  width: `${progress.percent}%`,
+                  backgroundColor: theme.teal,
+                },
+              ]}
+            />
+            <View
+              style={[
+                styles.progressBarThumb,
+                {
+                  left: `${progress.percent}%`,
+                  borderColor: theme.mustard,
+                  backgroundColor: theme.inverse,
+                },
+              ]}
+            />
+          </View>
+          <View style={styles.progressBarLabels}>
+            <Text style={[styles.progressBarLabel, { color: theme.inkMuted }]}>
+              {dayFormatter.format(startDate)} · {t("trip.start")}
+            </Text>
+            <Text style={[styles.progressBarLabelActive, { color: theme.mustard }]}>
+              {progress.status === "upcoming"
+                ? t("trip.startsIn", { count: Math.max(1, countInclusiveDays(today, startDate) - 1) })
+                : progress.status === "complete"
+                  ? t("trip.completed")
+                  : `${t("trip.dayProgress", { day: progress.day, total: duration })} · ${currentLocation}`}
+            </Text>
+            <Text style={[styles.progressBarLabel, { color: theme.inkMuted }]}>
+              {dayFormatter.format(endDate)} · {t("trip.end")}
+            </Text>
+          </View>
+        </View>
       </View>
 
       <View
         style={[
-          styles.tripHeroCard,
-          {
-            backgroundColor: theme.inkDeep,
-            borderColor: isDark ? theme.hairline : theme.inkDeep,
-          },
+          styles.homeTripCard,
+          { backgroundColor: theme.paperSoft, borderColor: theme.hairline },
         ]}
       >
-        <View style={styles.tripHeroTop}>
-          <View style={[styles.heroIcon, { backgroundColor: theme.whiteOverlay }]}>
-            <Icon name="mapPin" size={21} color={theme.paperSoft} />
+        <View style={styles.homeTripHeader}>
+          <View style={styles.homeTripHeaderLeft}>
+            <Text style={[styles.homeTripLabel, { color: theme.inkMuted }]}>
+              {t("trip.currentTrip")}
+            </Text>
+            <Pressable
+              onPress={() => router.push("/trips")}
+              style={({ pressed }) => [
+                styles.switchPill,
+                { backgroundColor: theme.tealSoft, opacity: pressed ? 0.75 : 1 },
+              ]}
+            >
+              <Icon name="swap" size={10} color={theme.teal} />
+              <Text style={[styles.switchPillText, { color: theme.teal }]}>
+                {t("trip.switch")}
+              </Text>
+            </Pressable>
           </View>
-          <View style={[styles.statusPill, { backgroundColor: theme.whiteOverlay }]}>
-            <Text style={[styles.statusPillText, { color: theme.paperSoft }]}>
-              {statusLabel}
+          <View
+            style={[styles.homeTripStatusPill, { backgroundColor: statusColors.bg }]}
+          >
+            <View style={[styles.homeTripStatusDot, { backgroundColor: statusColors.fg }]} />
+            <Text style={[styles.homeTripStatusText, { color: statusColors.fg }]}>
+              {safetyStatus === "active" ? t("trip.tracking") : t("trip.idle")}
             </Text>
           </View>
         </View>
-        <Text style={[styles.tripHeroTitle, { color: theme.paperSoft }]}>
-          {formatDate(startDate)} - {formatDate(endDate)}
+
+        <Text style={[styles.homeTripName, { color: theme.inkDeep }]}>
+          {trip.name}
         </Text>
-        <Text style={[styles.tripHeroSub, { color: theme.whiteTextMuted }]}>
-          {t("trip.durationSummary", { count: duration })}
+        <Text style={[styles.homeTripSub, { color: theme.inkSoft }]}>
+          {formatDate(startDate)} — {formatDate(endDate)} ·{" "}
+          {trip.mode === "solo" ? t("trip.solo") : t("trip.groupWithCount", { count: companionCount + 1 })} ·{" "}
+          {trip.destinations.length} {t("trip.countries")}
         </Text>
 
-        <View style={[styles.progressTrack, { backgroundColor: theme.whiteOverlay }]}>
-          <View
-            style={[
-              styles.progressFill,
-              {
-                width: `${progress.percent}%`,
-                backgroundColor: theme.mustard,
-              },
-            ]}
+        <View style={[styles.mapPlaceholder, { backgroundColor: theme.paper }]}>
+          <TripMap
+            trip={trip}
+            userLocation={userLocation}
+            currentIndex={currentIndex}
+            theme={theme}
+            t={t}
           />
         </View>
-        <View style={styles.progressMeta}>
-          <Text style={[styles.progressText, { color: theme.whiteTextMuted }]}>
-            {t("trip.dayProgress", { day: progress.day, total: progress.totalDays })}
-          </Text>
-          <Text style={[styles.progressText, { color: theme.whiteTextMuted }]}>
-            {Math.round(progress.percent)}%
-          </Text>
+
+        <View style={styles.homeTripMetrics}>
+          <View style={[styles.homeTripMetric, { backgroundColor: theme.paper }]}>
+            <Text style={[styles.homeTripMetricLabel, { color: theme.inkMuted }]}>
+              {progress.status === "upcoming" ? t("trip.starts") : progress.status === "complete" ? t("trip.ended") : t("trip.next")}
+            </Text>
+            <Text style={[styles.homeTripMetricValue, { color: theme.inkDeep }]} numberOfLines={1}>
+              {progress.status === "upcoming" ? formatDate(startDate) : progress.status === "complete" ? formatDate(endDate) : nextDestination}
+            </Text>
+            <Text style={[styles.homeTripMetricSub, { color: theme.inkSoft }]}>
+              {progress.status === "upcoming"
+                ? t("trip.inDays", { count: Math.max(1, countInclusiveDays(today, startDate) - 1) })
+                : progress.status === "complete"
+                  ? t("trip.daysAgo", { count: Math.max(1, countInclusiveDays(endDate, today) - 1) })
+                  : t("trip.inDays", { count: progress.day + 1 })}
+            </Text>
+          </View>
+          <View style={[styles.homeTripMetric, { backgroundColor: theme.paper }]}>
+            <Text style={[styles.homeTripMetricLabel, { color: theme.inkMuted }]}>
+              {t("trip.remaining")}
+            </Text>
+            <Text style={[styles.homeTripMetricValue, { color: theme.inkDeep }]}>
+              {formatCurrency(budgetRemaining, trip.currency)}
+            </Text>
+            <Text style={[styles.homeTripMetricSub, { color: theme.inkSoft }]}>
+              {t("trip.ofBudget", { total: formatCurrency(trip.budget, trip.currency) })}
+            </Text>
+          </View>
+          <View style={[styles.homeTripMetric, { backgroundColor: theme.paper }]}>
+            <Text style={[styles.homeTripMetricLabel, { color: theme.inkMuted }]}>
+              {t("trip.dailyBudget")}
+            </Text>
+            <Text style={[styles.homeTripMetricValue, { color: theme.inkDeep }]}>
+              {formatCurrency(dailyBudget, trip.currency)}
+            </Text>
+            <Text style={[styles.homeTripMetricSub, { color: theme.inkSoft }]}>
+              {t("trip.perDay")}
+            </Text>
+          </View>
         </View>
       </View>
 
@@ -918,22 +1122,6 @@ function TripDashboard({
           </View>
         </View>
       ) : null}
-
-      <View style={[styles.detailsCard, { backgroundColor: theme.paperSoft, borderColor: theme.hairline }]}>
-        <View style={styles.detailsHeader}>
-          <View style={[styles.detailIcon, { backgroundColor: theme.mustardSoft }]}>
-            <Icon name="shield" size={18} color={theme.mustard} />
-          </View>
-          <View style={styles.detailsCopy}>
-            <Text style={[styles.detailsTitle, { color: theme.inkDeep }]}>
-              {t("trip.nextSetupTitle")}
-            </Text>
-            <Text style={[styles.detailsSub, { color: theme.inkSoft }]}>
-              {t("trip.nextSetupBody")}
-            </Text>
-          </View>
-        </View>
-      </View>
     </View>
   );
 }
@@ -1525,6 +1713,168 @@ function ModeButton({
   );
 }
 
+function TripMap({
+  trip,
+  userLocation,
+  currentIndex,
+  theme,
+  t,
+}: {
+  trip: Trip;
+  userLocation: { latitude?: number; longitude?: number } | null;
+  currentIndex: number;
+  theme: ReturnType<typeof useTheme>["nomad"]["colors"];
+  t: ReturnType<typeof useLocalization>["t"];
+}) {
+  const mapRef = useRef<MapView>(null);
+  const destinations = useMemo(() => trip.destinationCoordinates ?? [], [trip.destinationCoordinates]);
+  const userCoords = useMemo((): LatLng | null => {
+    const lat = userLocation?.latitude;
+    const lon = userLocation?.longitude;
+    if (lat != null && lon != null) {
+      return { latitude: lat, longitude: lon };
+    }
+    return null;
+  }, [userLocation?.latitude, userLocation?.longitude]);
+  const allPoints = useMemo((): LatLng[] => {
+    return userCoords ? [userCoords, ...destinations] : destinations;
+  }, [destinations, userCoords]);
+  const hasAnyCoords = allPoints.length > 0;
+
+  const destinationRoutePath = useMemo((): LatLng[] => {
+    const points = userCoords ? [userCoords, ...destinations] : destinations;
+    if (points.length < 2) return points;
+
+    const result: LatLng[] = [];
+    for (let i = 0; i < points.length - 1; i += 1) {
+      const start = points[i];
+      const end = points[i + 1];
+      result.push(start);
+      const mid = {
+        latitude: (start.latitude + end.latitude) / 2 + (end.longitude - start.longitude) * 0.12,
+        longitude: (start.longitude + end.longitude) / 2 - (start.latitude - end.latitude) * 0.12,
+      };
+      const steps = 16;
+      for (let s = 1; s < steps; s += 1) {
+        const t1 = s / steps;
+        const t2 = 1 - t1;
+        result.push({
+          latitude: t2 * t2 * start.latitude + 2 * t2 * t1 * mid.latitude + t1 * t1 * end.latitude,
+          longitude: t2 * t2 * start.longitude + 2 * t2 * t1 * mid.longitude + t1 * t1 * end.longitude,
+        });
+      }
+    }
+    result.push(points[points.length - 1]);
+    return result;
+  }, [destinations, userCoords]);
+
+  const initialRegion = useMemo((): Region => {
+    if (allPoints.length === 0) {
+      return {
+        latitude: 20,
+        longitude: 0,
+        latitudeDelta: 120,
+        longitudeDelta: 120,
+      };
+    }
+
+    const minLat = Math.min(...allPoints.map((p) => p.latitude));
+    const maxLat = Math.max(...allPoints.map((p) => p.latitude));
+    const minLon = Math.min(...allPoints.map((p) => p.longitude));
+    const maxLon = Math.max(...allPoints.map((p) => p.longitude));
+
+    const latDelta = Math.max(10, (maxLat - minLat) * 1.8 + 4);
+    const lonDelta = Math.max(10, (maxLon - minLon) * 1.8 + 4);
+
+    return {
+      latitude: (minLat + maxLat) / 2,
+      longitude: (minLon + maxLon) / 2,
+      latitudeDelta: latDelta,
+      longitudeDelta: lonDelta,
+    };
+  }, [allPoints]);
+
+  const fitMap = useCallback(() => {
+    if (!mapRef.current || allPoints.length === 0) return;
+
+    const edgePadding = { top: 60, right: 60, bottom: 60, left: 60 };
+
+    if (allPoints.length === 1) {
+      mapRef.current.animateToRegion(
+        {
+          ...allPoints[0],
+          latitudeDelta: 2,
+          longitudeDelta: 2,
+        },
+        500,
+      );
+      return;
+    }
+
+    mapRef.current.fitToCoordinates(destinationRoutePath.length > 1 ? destinationRoutePath : allPoints, {
+      edgePadding,
+      animated: true,
+    });
+  }, [allPoints, destinationRoutePath]);
+
+  useEffect(() => {
+    const timer = setTimeout(fitMap, 300);
+    return () => clearTimeout(timer);
+  }, [fitMap]);
+
+  if (!hasAnyCoords) {
+    return (
+      <View style={styles.mapFallback}>
+        <Icon name="globe" size={34} color={theme.inkMuted} />
+        <Text style={[styles.mapFallbackText, { color: theme.inkMuted }]}>
+          {t("trip.mapNoCoordinates")}
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <MapView
+      ref={mapRef}
+      style={styles.map}
+      provider={PROVIDER_DEFAULT}
+      initialRegion={initialRegion}
+      onLayout={fitMap}
+      scrollEnabled={false}
+      zoomEnabled={false}
+      rotateEnabled={false}
+      pitchEnabled={false}
+      toolbarEnabled={false}
+      mapType="standard"
+    >
+      {destinationRoutePath.length > 1 ? (
+        <Polyline
+          coordinates={destinationRoutePath}
+          strokeColor={theme.inkSoft}
+          strokeWidth={2.5}
+          lineDashPattern={[6, 6]}
+          zIndex={1}
+        />
+      ) : null}
+      {userCoords ? (
+        <Marker
+          coordinate={userCoords}
+          title={t("trip.currentLocation")}
+          pinColor={theme.teal}
+        />
+      ) : null}
+      {destinations.map((coord, index) => (
+        <Marker
+          key={`${trip.id}-dest-${index}`}
+          coordinate={coord}
+          title={trip.destinations[index] ?? t("trip.destination")}
+          pinColor={index === currentIndex ? theme.mustard : theme.stamp}
+        />
+      ))}
+    </MapView>
+  );
+}
+
 function MetricCard({
   icon,
   label,
@@ -1955,12 +2305,229 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
+  tripHeroHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
   heroIcon: {
     width: 40,
     height: 40,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
+  },
+  greetingHeader: {
+    paddingHorizontal: 6,
+    paddingTop: 8,
+    paddingBottom: 14,
+    gap: 16,
+  },
+  greetingTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  greetingEyebrow: {
+    fontFamily: NOMAD_FONTS.uiBold,
+    fontSize: 10.5,
+    letterSpacing: 1.4,
+    textTransform: "uppercase",
+  },
+  greetingTitle: {
+    fontFamily: NOMAD_FONTS.display,
+    fontSize: 34,
+    lineHeight: 38,
+    letterSpacing: -0.7,
+    marginTop: 6,
+  },
+  greetingTitleAccent: {
+    fontStyle: "italic",
+  },
+  avatarButton: {
+    position: "relative",
+    borderRadius: 999,
+  },
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 999,
+    borderWidth: 2,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarText: {
+    fontFamily: NOMAD_FONTS.uiSemi,
+    fontSize: 16,
+  },
+  avatarBadge: {
+    position: "absolute",
+    top: -2,
+    right: -2,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    borderWidth: 2,
+  },
+  progressBarSection: {
+    gap: 8,
+  },
+  progressBarTrack: {
+    height: 8,
+    borderRadius: 999,
+    position: "relative",
+    overflow: "hidden",
+  },
+  progressBarFill: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    borderRadius: 999,
+  },
+  progressBarThumb: {
+    position: "absolute",
+    top: -4,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 3,
+    transform: [{ translateX: -8 }],
+  },
+  progressBarLabels: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  progressBarLabel: {
+    fontFamily: NOMAD_FONTS.mono,
+    fontSize: 10,
+    letterSpacing: 0.3,
+  },
+  progressBarLabelActive: {
+    fontFamily: NOMAD_FONTS.mono,
+    fontSize: 10,
+    letterSpacing: 0.3,
+    fontWeight: "700",
+  },
+  homeTripCard: {
+    borderWidth: 1,
+    borderRadius: 18,
+    overflow: "hidden",
+    padding: 16,
+    gap: 10,
+  },
+  homeTripHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingBottom: 2,
+  },
+  homeTripHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  homeTripLabel: {
+    fontFamily: NOMAD_FONTS.uiBold,
+    fontSize: 10.5,
+    letterSpacing: 1.4,
+    textTransform: "uppercase",
+  },
+  switchPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    borderRadius: 999,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+  },
+  switchPillText: {
+    fontFamily: NOMAD_FONTS.uiBold,
+    fontSize: 9,
+    letterSpacing: 0.4,
+  },
+  homeTripStatusPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+  },
+  homeTripStatusDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+  },
+  homeTripStatusText: {
+    fontFamily: NOMAD_FONTS.uiSemi,
+    fontSize: 10.5,
+    letterSpacing: 0.3,
+  },
+  homeTripName: {
+    fontFamily: NOMAD_FONTS.display,
+    fontSize: 26,
+    lineHeight: 30,
+    letterSpacing: -0.4,
+    marginTop: 2,
+  },
+  homeTripSub: {
+    fontFamily: NOMAD_FONTS.ui,
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  mapPlaceholder: {
+    height: 200,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 4,
+    position: "relative",
+    overflow: "hidden",
+  },
+  map: {
+    width: "100%",
+    height: "100%",
+  },
+  mapFallback: {
+    width: "100%",
+    height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
+  mapFallbackText: {
+    fontFamily: NOMAD_FONTS.uiMedium,
+    fontSize: 13,
+    textAlign: "center",
+  },
+  homeTripMetrics: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 4,
+  },
+  homeTripMetric: {
+    flex: 1,
+    borderRadius: 12,
+    padding: 10,
+    gap: 2,
+  },
+  homeTripMetricLabel: {
+    fontFamily: NOMAD_FONTS.uiBold,
+    fontSize: 9.5,
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+  },
+  homeTripMetricValue: {
+    fontFamily: NOMAD_FONTS.display,
+    fontSize: 17,
+    lineHeight: 21,
+    letterSpacing: -0.3,
+  },
+  homeTripMetricSub: {
+    fontFamily: NOMAD_FONTS.ui,
+    fontSize: 10,
+    lineHeight: 14,
   },
   statusPill: {
     borderRadius: 999,

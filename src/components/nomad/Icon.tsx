@@ -34,7 +34,22 @@ export type IconName =
   | "trendUp"
   | "x"
   | "alertTriangle"
-  | "messageCircle";
+  | "messageCircle"
+  | "trash"
+  | "calendar"
+  | "edit"
+  | "swap"
+  | "search"
+  | "globe"
+  | "star"
+  | "bookmark"
+  | "info"
+  | "ticket"
+  | "building"
+  | "car"
+  | "utensils"
+  | "plug"
+  | "faceId";
 
 interface IconProps {
   name: IconName;
@@ -305,6 +320,120 @@ export function Icon({
       body = (
         <G {...p}>
           <Path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7A8.38 8.38 0 014 11.5a8.5 8.5 0 0117 0z" />
+        </G>
+      );
+      break;
+    case "trash":
+      body = (
+        <G {...p}>
+          <Path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+        </G>
+      );
+      break;
+    case "calendar":
+      body = (
+        <G {...p}>
+          <Rect x="3" y="5" width="18" height="16" rx="2" />
+          <Path d="M16 3v4M8 3v4M3 10h18" />
+        </G>
+      );
+      break;
+    case "edit":
+      body = (
+        <G {...p}>
+          <Path d="M12 20h9M15.5 5.5l3 3L7 20H4v-3L15.5 5.5z" />
+        </G>
+      );
+      break;
+    case "swap":
+      body = (
+        <G {...p}>
+          <Path d="M7 4L3 8l4 4M3 8h13M17 20l4-4-4-4M21 16H8" />
+        </G>
+      );
+      break;
+    case "search":
+      body = (
+        <G {...p}>
+          <Circle cx="11" cy="11" r="7" />
+          <Path d="M16.5 16.5L21 21" />
+        </G>
+      );
+      break;
+    case "globe":
+      body = (
+        <G {...p}>
+          <Circle cx="12" cy="12" r="9" />
+          <Path d="M3 12h18M12 3c2.5 2.5 3.8 5.7 3.8 9s-1.3 6.5-3.8 9c-2.5-2.5-3.8-5.7-3.8-9S9.5 5.5 12 3z" />
+        </G>
+      );
+      break;
+    case "star":
+      body = (
+        <G {...p}>
+          <Path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.8 6.6 19.5l1.2-6L3.3 9.3l6.1-.7L12 3z" />
+        </G>
+      );
+      break;
+    case "bookmark":
+      body = (
+        <G {...p}>
+          <Path d="M6 3h12v18l-6-4.5L6 21V3z" />
+        </G>
+      );
+      break;
+    case "info":
+      body = (
+        <G {...p}>
+          <Circle cx="12" cy="12" r="9" />
+          <Path d="M12 11v5" />
+          <Circle cx="12" cy="8" r="0.6" fill={color} stroke={color} strokeWidth="1.4" />
+        </G>
+      );
+      break;
+    case "ticket":
+      body = (
+        <G {...p}>
+          <Path d="M3 8a2 2 0 012-2h14a2 2 0 012 2 2 2 0 000 4 2 2 0 000 4 2 2 0 01-2 2H5a2 2 0 01-2-2 2 2 0 000-4 2 2 0 000-4z" />
+        </G>
+      );
+      break;
+    case "building":
+      body = (
+        <G {...p}>
+          <Path d="M5 21V5a2 2 0 012-2h6a2 2 0 012 2v16M15 21V11h3a1 1 0 011 1v9M8 7h2M8 11h2M8 15h2" />
+        </G>
+      );
+      break;
+    case "car":
+      body = (
+        <G {...p}>
+          <Path d="M3 13l2-6h14l2 6v6h-3v-2H6v2H3v-6z" />
+          <Circle cx="7" cy="16" r="1.3" fill={color} stroke="none" />
+          <Circle cx="17" cy="16" r="1.3" fill={color} stroke="none" />
+        </G>
+      );
+      break;
+    case "utensils":
+      body = (
+        <G {...p}>
+          <Path d="M5 3v8a2 2 0 004 0V3M7 11v10M16 3c-1.5 0-2.5 2-2.5 5s1 4 2.5 4m0-9v18" />
+        </G>
+      );
+      break;
+    case "plug":
+      body = (
+        <G {...p}>
+          <Path d="M9 3v5M15 3v5M6 8h12v3a6 6 0 01-12 0V8zM12 17v4" />
+        </G>
+      );
+      break;
+    case "faceId":
+      body = (
+        <G {...p}>
+          <Path d="M4 8V6a2 2 0 012-2h2M16 4h2a2 2 0 012 2v2M20 16v2a2 2 0 01-2 2h-2M8 20H6a2 2 0 01-2-2v-2" />
+          <Path d="M9 10v1M15 10v1M12 9v4l-1 1" />
+          <Path d="M9 15s1 1.2 3 1.2S15 15 15 15" />
         </G>
       );
       break;

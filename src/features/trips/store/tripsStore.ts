@@ -4,10 +4,16 @@ import { mmkvStateStorage } from "@/stores/storage";
 
 export type TripMode = "solo" | "group";
 
+export interface LatLng {
+  latitude: number;
+  longitude: number;
+}
+
 export interface Trip {
   id: string;
   name: string;
   destinations: string[];
+  destinationCoordinates?: LatLng[];
   startDate: string;
   endDate: string;
   mode: TripMode;
@@ -17,9 +23,10 @@ export interface Trip {
   createdAt: string;
 }
 
-interface CreateTripInput {
+export interface CreateTripInput {
   name: string;
   destinations: string[];
+  destinationCoordinates?: LatLng[];
   startDate: string;
   endDate: string;
   mode: TripMode;
@@ -28,10 +35,14 @@ interface CreateTripInput {
   companions: string[];
 }
 
+export type UpdateTripInput = Partial<Omit<Trip, "id" | "createdAt">>;
+
 interface TripsState {
   trips: Trip[];
   activeTripId: string | null;
   createTrip: (input: CreateTripInput) => Trip;
+  updateTrip: (tripId: string, input: UpdateTripInput) => Trip | null;
+  deleteTrip: (tripId: string) => void;
   setActiveTrip: (tripId: string) => void;
   clearActiveTrip: () => void;
 }
@@ -56,13 +67,31 @@ export const useTripsStore = create<TripsState>()(
 
         return trip;
       },
+      updateTrip: (tripId, input) => {
+        let updated: Trip | null = null;
+        set((state) => {
+          const trips = state.trips.map((trip) => {
+            if (trip.id !== tripId) return trip;
+            updated = { ...trip, ...input };
+            return updated;
+          });
+          return { trips };
+        });
+        return updated;
+      },
+      deleteTrip: (tripId) =>
+        set((state) => ({
+          trips: state.trips.filter((trip) => trip.id !== tripId),
+          activeTripId:
+            state.activeTripId === tripId ? null : state.activeTripId,
+        })),
       setActiveTrip: (tripId) => set({ activeTripId: tripId }),
       clearActiveTrip: () => set({ activeTripId: null }),
     }),
     {
       name: "trips-store",
       storage: createJSONStorage(() => mmkvStateStorage),
-      version: 2,
+      version: 3,
       migrate: (persistedState) => {
         const state = persistedState as Partial<TripsState> | undefined;
         if (!state?.trips) return persistedState;
