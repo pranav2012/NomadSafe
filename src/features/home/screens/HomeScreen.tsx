@@ -38,6 +38,7 @@ import {
 import { useTheme } from "@/hooks/useTheme";
 import { useLocalization } from "@/localization";
 import { CURRENCY_OPTIONS } from "@/utils/currency";
+import { useTripExpenseSummary } from "@/features/expenses/hooks/useTripExpenseSummary";
 
 type DateField = "start" | "end";
 
@@ -987,7 +988,7 @@ function TripDashboard({
   const endDate = useMemo(() => fromDateKey(trip.endDate), [trip.endDate]);
   const duration = countInclusiveDays(startDate, endDate);
   const progress = getTripProgress(trip);
-  const dailyBudget = trip.budget / duration;
+  const expenseSummary = useTripExpenseSummary(trip);
   const companionCount = trip.mode === "group" ? trip.companions.length : 0;
   const safetyStatus: "idle" | "active" | "emergency" =
     progress.status === "active" ? "active" : "idle";
@@ -1009,8 +1010,7 @@ function TripDashboard({
     day: "numeric",
   });
 
-  const estimatedSpent = dailyBudget * progress.day;
-  const budgetRemaining = Math.max(0, trip.budget - estimatedSpent);
+  const budgetRemaining = Math.max(0, trip.budget - expenseSummary.total);
 
   const currentIndex = Math.max(0, Math.min(progress.day - 1, trip.destinations.length - 1));
   const currentTripLocation = trip.destinations[currentIndex] ?? "";

@@ -18,6 +18,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { useLocalization } from "@/localization";
 import { TripForm } from "@/features/trips/components/TripForm";
 import { type Trip, useTripsStore } from "@/features/trips/store/tripsStore";
+import { useChatStore } from "@/features/ai/store/chatStore";
 
 function getTripProgress(trip: Trip) {
   const today = new Date();
@@ -114,6 +115,7 @@ export default function TripsScreen() {
       return;
     }
     deleteTrip(deleteTarget.id);
+    useChatStore.getState().removeConversation(deleteTarget.id);
     setDeleteTarget(null);
     setConfirmText("");
   };

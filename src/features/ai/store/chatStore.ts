@@ -10,79 +10,157 @@ export interface ChatMessage {
   from: "ai" | "you";
   text: string;
   generating?: boolean;
-  /** Error/system bubbles are shown but not fed back to the model as context. */
   error?: boolean;
 }
 
-/** Localized strings the store needs for error bubbles (passed in by the UI). */
 export interface ChatErrorLabels {
   noModel: string;
   error: string;
 }
 
-interface ChatState {
+export const GENERAL_CHAT_KEY = "general";
+
+type PromptTurn = Pick<ChatTurn, "role" | "content">;
+
+export interface ChatConversation {
   messages: ChatMessage[];
-  isGenerating: boolean;
-  send: (text: string, labels: ChatErrorLabels) => void;
-  clear: () => void;
+  summary: string | null;
+  contextMessages: PromptTurn[];
+}
+
+interface ChatState {
+  conversations: Record<string, ChatConversation>;
+  generatingConversationKey: string | null;
+  send: (conversationKey: string, text: string, labels: ChatErrorLabels) => void;
+  clear: (conversationKey: string) => void;
+  removeConversation: (conversationKey: string) => void;
+}
+
+function emptyConversation(): ChatConversation {
+  return { messages: [], summary: null, contextMessages: [] };
+}
+
+function historyFromMessages(messages: ChatMessage[]): PromptTurn[] {
+  return messages
+    .filter((message) => !message.error)
+    .map((message) => ({
+      role: message.from === "you" ? "user" as const : "assistant" as const,
+      content: message.text,
+    }));
 }
 
 export const useChatStore = create<ChatState>()(
   persist(
     (set, get) => {
-      const updateLast = (updater: (msg: ChatMessage) => ChatMessage) =>
+      const updateLast = (conversationKey: string, updater: (message: ChatMessage) => ChatMessage) =>
         set((state) => {
-          const messages = [...state.messages];
+          const conversation = state.conversations[conversationKey] ?? emptyConversation();
+          const messages = [...conversation.messages];
           messages[messages.length - 1] = updater(messages[messages.length - 1]);
-          return { messages };
+          return {
+            conversations: {
+              ...state.conversations,
+              [conversationKey]: { ...conversation, messages },
+            },
+          };
         });
 
       return {
-        messages: [],
-        isGenerating: false,
+        conversations: {},
+        generatingConversationKey: null,
 
-        send: (text, labels) => {
-          if (get().isGenerating) return;
-          const q = text.trim();
-          if (!q) return;
+        send: (conversationKey, text, labels) => {
+          if (get().generatingConversationKey) return;
+          const question = text.trim();
+          if (!question) return;
 
-          const history: ChatTurn[] = [...get().messages, { from: "you" as const, text: q }]
-            .filter((m) => m.text.trim().length > 0 && !("error" in m && m.error))
-            .map((m) => ({ role: m.from === "you" ? "user" : "assistant", content: m.text }));
+          set((state) => {
+            const conversation = state.conversations[conversationKey] ?? emptyConversation();
+            return {
+              conversations: {
+                ...state.conversations,
+                [conversationKey]: {
+                  ...conversation,
+                  messages: [
+                    ...conversation.messages,
+                    { from: "you", text: question },
+                    { from: "ai", text: "", generating: true },
+                  ],
+                },
+              },
+              generatingConversationKey: conversationKey,
+            };
+          });
 
-          set((state) => ({
-            messages: [
-              ...state.messages,
-              { from: "you", text: q },
-              { from: "ai", text: "", generating: true },
-            ],
-            isGenerating: true,
-          }));
+          const conversation = get().conversations[conversationKey] ?? emptyConversation();
+          const systemContext = buildTripMoneyContext() ?? undefined;
+          const history: ChatTurn[] = [
+            ...conversation.contextMessages,
+            { role: "user", content: question },
+          ];
 
           localModelService
-            .chat(history, {
-              systemContext: buildTripMoneyContext() ?? undefined,
-              onToken: (_delta, accumulated) => {
-                updateLast((msg) => ({ ...msg, text: accumulated, generating: false }));
-              },
+            .prepareChatMemory(history, {
+              systemContext,
+              conversationSummary: conversation.summary ?? undefined,
             })
-            .then((full) => {
-              updateLast((msg) => ({ ...msg, text: full, generating: false }));
+            .then((memory) => {
+              set((state) => {
+                const current = state.conversations[conversationKey] ?? emptyConversation();
+                return {
+                  conversations: {
+                    ...state.conversations,
+                    [conversationKey]: {
+                      ...current,
+                      summary: memory.summary,
+                      contextMessages: memory.history,
+                    },
+                  },
+                };
+              });
+              return localModelService.chat(memory.history, {
+                systemContext,
+                conversationSummary: memory.summary ?? undefined,
+                contextTokens: memory.contextTokens,
+                onToken: (_delta, accumulated) => {
+                  updateLast(conversationKey, (message) => ({
+                    ...message,
+                    text: accumulated,
+                    generating: false,
+                  }));
+                },
+              });
             })
-            .catch((err: unknown) => {
-              console.warn("[chatStore] reply generation failed", err);
-              const noModel = err instanceof Error && err.message.includes("not downloaded");
-              updateLast((msg) => ({
-                ...msg,
+            .then((reply) => {
+              updateLast(conversationKey, (message) => ({ ...message, text: reply, generating: false }));
+              set((state) => {
+                const current = state.conversations[conversationKey] ?? emptyConversation();
+                return {
+                  conversations: {
+                    ...state.conversations,
+                    [conversationKey]: {
+                      ...current,
+                      contextMessages: [
+                        ...current.contextMessages,
+                        { role: "assistant", content: reply },
+                      ],
+                    },
+                  },
+                };
+              });
+            })
+            .catch((error: unknown) => {
+              console.warn("[chatStore] reply generation failed", error);
+              const noModel = error instanceof Error && error.message.includes("not downloaded");
+              updateLast(conversationKey, (message) => ({
+                ...message,
                 text: noModel ? labels.noModel : labels.error,
                 generating: false,
                 error: true,
               }));
             })
             .finally(() => {
-              set({ isGenerating: false });
-              // If the user left the app while we were generating, let them know
-              // the reply landed and free the model RAM that we kept alive for it.
+              set({ generatingConversationKey: null });
               if (AppState.currentState !== "active") {
                 modelNotifications.notifyAssistantReply();
                 localModelService.release();
@@ -90,21 +168,52 @@ export const useChatStore = create<ChatState>()(
             });
         },
 
-        clear: () => set({ messages: [] }),
+        clear: (conversationKey) =>
+          set((state) => ({
+            conversations: {
+              ...state.conversations,
+              [conversationKey]: emptyConversation(),
+            },
+          })),
+
+        removeConversation: (conversationKey) =>
+          set((state) => {
+            const { [conversationKey]: _removed, ...conversations } = state.conversations;
+            return { conversations };
+          }),
       };
     },
     {
       name: "ai-chat-store",
       storage: createJSONStorage(() => mmkvStateStorage),
-      partialize: (state) => ({ messages: state.messages }),
-      // Drop any half-finished bubble from a previous run and never restore a
-      // stuck "generating" flag.
+      partialize: (state) => ({ conversations: state.conversations }),
       merge: (persisted, current) => {
-        const saved = (persisted as Partial<ChatState> | undefined)?.messages ?? [];
-        const messages = saved
-          .map((m) => ({ ...m, generating: false }))
-          .filter((m) => m.text.trim().length > 0);
-        return { ...current, messages, isGenerating: false };
+        const stored = persisted as (Partial<ChatState> & Partial<ChatConversation>) | undefined;
+        const conversations = Object.fromEntries(
+          Object.entries(stored?.conversations ?? {}).map(([key, conversation]) => [
+            key,
+            {
+              ...conversation,
+              messages: conversation.messages
+                .map((message) => ({ ...message, generating: false }))
+                .filter((message) => message.text.trim().length > 0),
+            },
+          ]),
+        ) as Record<string, ChatConversation>;
+        const legacyMessages = stored?.messages ?? [];
+
+        if (legacyMessages.length > 0 && !conversations[GENERAL_CHAT_KEY]) {
+          const messages = legacyMessages
+            .map((message) => ({ ...message, generating: false }))
+            .filter((message) => message.text.trim().length > 0);
+          conversations[GENERAL_CHAT_KEY] = {
+            messages,
+            summary: stored?.summary ?? null,
+            contextMessages: stored?.contextMessages ?? historyFromMessages(messages),
+          };
+        }
+
+        return { ...current, conversations, generatingConversationKey: null };
       },
     },
   ),

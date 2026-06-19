@@ -13,10 +13,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { NOMAD_FONTS, type NomadColors } from "@/constants/nomadTokens";
 import { useLocalization } from "@/localization";
 import { Icon } from "@/components/nomad/Icon";
-import { NomadCard } from "@/components/nomad/Card";
-import { useChatStore } from "../store/chatStore";
+import { GENERAL_CHAT_KEY, useChatStore } from "../store/chatStore";
 import { localModelService } from "../services/localModelService";
 import { modelNotifications } from "../services/modelNotifications";
+import { useTripsStore } from "@/features/trips/store/tripsStore";
 
 interface Props {
   theme: NomadColors;
@@ -26,9 +26,10 @@ interface Props {
 type Message = {
   from: "ai" | "you";
   text: string;
-  attach?: { kind: "stat"; stat: string; label: string } | { kind: "chart"; bars: number[]; highlight: number };
   generating?: boolean;
 };
+
+const EMPTY_CONVERSATION = { messages: [], summary: null, contextMessages: [] };
 
 function formatText(text: string, theme: NomadColors) {
   const parts = text.split(/(\*\*[^*]+\*\*)/);
@@ -83,7 +84,6 @@ function ChatBubble({ msg, theme }: { msg: Message; theme: NomadColors }) {
           </Text>
         )}
       </View>
-      {msg.attach && !msg.generating && <AIAttachment attach={msg.attach} theme={theme} />}
     </View>
   );
 }
@@ -106,69 +106,14 @@ function GeneratingBars({ theme }: { theme: NomadColors }) {
   );
 }
 
-function AIAttachment({
-  attach,
-  theme,
-}: {
-  attach: NonNullable<Message["attach"]>;
-  theme: NomadColors;
-}) {
-  if (attach.kind === "stat") {
-    return (
-      <NomadCard
-        theme={theme}
-        style={{
-          backgroundColor: theme.teal,
-          borderColor: theme.teal,
-          marginTop: 8,
-        }}
-        padding={14}
-      >
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-          <Text style={[styles.statBig, { color: theme.inverse }]}>{attach.stat}</Text>
-          <View style={{ width: 1, height: 26, backgroundColor: "rgba(255,255,255,0.3)" }} />
-          <Text style={[styles.statLabel, { color: theme.inverse }]}>{attach.label}</Text>
-        </View>
-      </NomadCard>
-    );
-  }
-
-  const max = Math.max(...attach.bars);
-  return (
-    <NomadCard theme={theme} style={{ marginTop: 8 }} padding={12}>
-      <Text style={[styles.sectionLabel, { color: theme.inkMuted, marginBottom: 8 }]}>
-        Daily spend · last 7
-      </Text>
-      <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 6, height: 70 }}>
-        {attach.bars.map((v, i) => {
-          const hl = i === attach.highlight;
-          return (
-            <View key={i} style={{ flex: 1, alignItems: "center", gap: 3 }}>
-              <View
-                style={{
-                  width: "100%",
-                  height: max > 0 ? (v / max) * 50 : 0,
-                  backgroundColor: hl ? theme.stamp : theme.teal,
-                  opacity: hl ? 1 : 0.65,
-                  borderRadius: 3,
-                }}
-              />
-              <Text style={{ fontFamily: NOMAD_FONTS.monoMedium, fontSize: 9, color: hl ? theme.stamp : theme.inkMuted }}>
-                ${v}
-              </Text>
-            </View>
-          );
-        })}
-      </View>
-    </NomadCard>
-  );
-}
-
 export function AiChat({ theme, activeModelName }: Props) {
   const { t } = useLocalization();
   const insets = useSafeAreaInsets();
-  const messages = useChatStore((s) => s.messages);
-  const isGenerating = useChatStore((s) => s.isGenerating);
+  const activeTripId = useTripsStore((state) => state.activeTripId);
+  const conversationKey = activeTripId ?? GENERAL_CHAT_KEY;
+  const conversation = useChatStore((state) => state.conversations[conversationKey] ?? EMPTY_CONVERSATION);
+  const messages = conversation.messages;
+  const isGenerating = useChatStore((state) => state.generatingConversationKey === conversationKey);
   const sendMessage = useChatStore((s) => s.send);
   const [input, setInput] = useState("");
   const [notifyEnabled, setNotifyEnabled] = useState(() => modelNotifications.isEnabled());
@@ -176,12 +121,6 @@ export function AiChat({ theme, activeModelName }: Props) {
   const scrollRef = useRef<ScrollView>(null);
 
   const isEmpty = messages.length === 0;
-
-  const welcome: Message = {
-    from: "ai",
-    text: t("aiTab.chatWelcome"),
-    attach: { kind: "stat", stat: "$312", label: t("aiTab.projectedSurplus") },
-  };
 
   useEffect(() => {
     scrollRef.current?.scrollToEnd({ animated: true });
@@ -202,7 +141,7 @@ export function AiChat({ theme, activeModelName }: Props) {
     const q = (text ?? input).trim();
     if (!q) return;
     setInput("");
-    sendMessage(q, { noModel: t("aiTab.chatNoModel"), error: t("aiTab.chatError") });
+    sendMessage(conversationKey, q, { noModel: t("aiTab.chatNoModel"), error: t("aiTab.chatError") });
   };
 
   const enableNotifications = async () => {
@@ -246,8 +185,6 @@ export function AiChat({ theme, activeModelName }: Props) {
             <Text style={[styles.dividerText, { color: theme.inkMuted }]}>{t("aiTab.today")}</Text>
             <View style={[styles.dividerLine, { backgroundColor: theme.hairline }]} />
           </View>
-
-          {isEmpty && <ChatBubble msg={welcome} theme={theme} />}
 
           {messages.map((m, i) => (
             <ChatBubble key={i} msg={m} theme={theme} />
@@ -381,14 +318,6 @@ const styles = StyleSheet.create({
     borderRadius: 18,
   },
   bubbleText: { fontFamily: NOMAD_FONTS.ui, fontSize: 14, lineHeight: 20 },
-  statBig: { fontFamily: NOMAD_FONTS.display, fontSize: 34, lineHeight: 36, letterSpacing: -0.5 },
-  statLabel: { fontFamily: NOMAD_FONTS.ui, fontSize: 11, lineHeight: 15, flex: 1, opacity: 0.92 },
-  sectionLabel: {
-    fontFamily: NOMAD_FONTS.uiBold,
-    fontSize: 10,
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
-  },
   tryAsking: {
     fontFamily: NOMAD_FONTS.uiBold,
     fontSize: 10.5,

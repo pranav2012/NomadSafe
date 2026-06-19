@@ -8,6 +8,7 @@ import {
 } from "expo-file-system";
 import { Platform } from "react-native";
 import { storage } from "@/stores/storage";
+import { memoryInfo } from "./memoryInfo";
 
 export function formatModelSize(sizeMb: number): string {
   if (sizeMb >= 1024) return `${(sizeMb / 1024).toFixed(1)} GB`;
@@ -37,6 +38,11 @@ export interface AiModel {
   hfFilename: string;
   /** Quantization label shown to the user. */
   quantLabel: string;
+}
+
+export interface ContextWindowPlan {
+  tokens: number;
+  availableMemoryBytes: number | null;
 }
 
 /**
@@ -115,7 +121,25 @@ function assignCategory(totalMemoryGb: number): AiModelCategory {
   return "compact";
 }
 
+function contextWindowFor(model: AiModel, availableMemoryBytes: number | null): number {
+  if (availableMemoryBytes === null) return 4096;
+
+  const availableMb = availableMemoryBytes / 1024 / 1024;
+  if (availableMb < 1200) return 4096;
+  if (availableMb < 2800) return Math.min(model.id === "compact" ? 8192 : 6144, 8192);
+  if (availableMb < 5000) return model.id === "capable" ? 8192 : 12288;
+  return model.id === "capable" ? 16384 : 12288;
+}
+
 export const aiModelService = {
+  getContextWindowPlan(model: AiModel): ContextWindowPlan {
+    const availableMemoryBytes = memoryInfo.getAvailableMemoryBytes();
+    return {
+      tokens: contextWindowFor(model, availableMemoryBytes),
+      availableMemoryBytes,
+    };
+  },
+
   async checkDeviceCapability(): Promise<DeviceCapability> {
     const totalMemoryGb = getTotalMemoryGb();
     const osVersion = getOsVersion();

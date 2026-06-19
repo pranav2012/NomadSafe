@@ -59,7 +59,7 @@ function AppStateLock() {
           updateLastActive();
           // Keep the model loaded if a chat reply is still streaming; the chat
           // store releases it once the reply finishes (and notifies the user).
-          if (!useChatStore.getState().isGenerating) {
+          if (!useChatStore.getState().generatingConversationKey) {
             localModelService.release();
           }
         }

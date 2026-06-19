@@ -1,4 +1,6 @@
 import { useTripsStore, type Trip } from "@/features/trips/store/tripsStore";
+import { useExpensesStore } from "@/features/expenses/store/expensesStore";
+import { getCachedExchangeRate } from "@/features/expenses/services/currencyConversion";
 
 function startOfLocalDay(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -39,19 +41,25 @@ function money(amount: number, currency: string): string {
  * Builds a factual context block about the user's active trip and its budget
  * for the chat model. Returns null when there is no trip to talk about.
  *
- * Spend figures are a straight-line estimate (budget spread evenly across trip
- * days) because a real expense ledger does not exist yet — the block says so
- * explicitly so the model doesn't invent transactions.
+ * Includes recorded expenses already converted by the dashboard's shared rate cache.
  */
 export function buildTripMoneyContext(): string | null {
   const { trips, activeTripId } = useTripsStore.getState();
-  const trip = trips.find((t) => t.id === activeTripId) ?? trips[0] ?? null;
+  const trip = trips.find((t) => t.id === activeTripId) ?? null;
   if (!trip) return null;
 
   const { status, day, totalDays } = tripProgress(trip);
   const dailyBudget = trip.budget / totalDays;
-  const estimatedSpent = day * dailyBudget;
-  const remaining = Math.max(0, trip.budget - estimatedSpent);
+  const tripExpenses = useExpensesStore
+    .getState()
+    .expenses.filter((expense) => expense.tripId === trip.id);
+  const convertedExpenses = tripExpenses.flatMap((expense) => {
+    const rate = getCachedExchangeRate(expense.currency, trip.currency, expense.date);
+    return rate ? [expense.amount * rate.rate] : [];
+  });
+  const actualSpent = convertedExpenses.reduce((sum, amount) => sum + amount, 0);
+  const pendingConversions = tripExpenses.length - convertedExpenses.length;
+  const remaining = Math.max(0, trip.budget - actualSpent);
   const travelers =
     trip.mode === "group" ? `group of ${trip.companions.length + 1}` : "solo";
 
@@ -69,9 +77,11 @@ export function buildTripMoneyContext(): string | null {
     `Currency: ${trip.currency}`,
     `Total budget: ${money(trip.budget, trip.currency)}`,
     `Daily budget: ${money(dailyBudget, trip.currency)}`,
-    `Estimated spent so far: ${money(estimatedSpent, trip.currency)} (rough straight-line estimate)`,
-    `Estimated budget remaining: ${money(remaining, trip.currency)}`,
-    "Note: detailed per-expense logging is not available yet, so exact category breakdowns and individual transactions are unknown. Be honest about this when asked.",
+    `Recorded spend so far: ${money(actualSpent, trip.currency)} across ${convertedExpenses.length} expenses`,
+    `Budget remaining: ${money(remaining, trip.currency)}`,
+    pendingConversions > 0
+      ? `${pendingConversions} expense(s) are excluded until their reference exchange rates load.`
+      : "All recorded trip expenses are included using their expense-date reference rates.",
   ];
 
   return lines.join("\n");

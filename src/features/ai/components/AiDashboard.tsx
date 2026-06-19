@@ -3,13 +3,14 @@ import { View, Text, StyleSheet, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
 import Svg, { Circle, Defs, G, Line, LinearGradient, Path, Stop } from "react-native-svg";
 import { NOMAD_FONTS, type NomadColors } from "@/constants/nomadTokens";
-import { useTheme } from "@/hooks/useTheme";
 import { useLocalization } from "@/localization";
 import { Icon } from "@/components/nomad/Icon";
 import { NomadCard } from "@/components/nomad/Card";
 import { NomadButton } from "@/components/nomad/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useTripsStore, type Trip } from "@/features/trips/store/tripsStore";
+import { getCategoryMeta } from "@/features/expenses/constants/categories";
+import { useTripExpenseSummary } from "@/features/expenses/hooks/useTripExpenseSummary";
 
 interface Props {
   theme: NomadColors;
@@ -52,21 +53,15 @@ function getTripProgress(trip: Trip) {
   };
 }
 
-function formatCurrencyCompact(amount: number, locale: string, currency: string): string {
-  return new Intl.NumberFormat(locale, {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
-
 function DayBars({
   theme,
   data,
+  formatAmount,
   height = 92,
 }: {
   theme: NomadColors;
   data: { d: string; v: number; highlight?: boolean }[];
+  formatAmount: (amount: number) => string;
   height?: number;
 }) {
   const max = Math.max(...data.map((d) => d.v));
@@ -76,7 +71,7 @@ function DayBars({
         const pct = max > 0 ? d.v / max : 0;
         return (
           <View key={i} style={styles.dayColumn}>
-            <Text style={[styles.dayValue, { color: theme.inkMuted }]}>${d.v}</Text>
+            <Text style={[styles.dayValue, { color: theme.inkMuted }]}>{formatAmount(d.v)}</Text>
             <View
               style={{
                 width: "100%",
@@ -164,15 +159,13 @@ function Donut({
 }) {
   const r = size / 2 - 11;
   const c = 2 * Math.PI * r;
-  let acc = 0;
   return (
     <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
       <Circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={theme.hairline} strokeWidth={14} />
       {data.map((d, i) => {
         const frac = total > 0 ? d.v / total : 0;
         const dash = frac * c;
-        const offset = -acc * c;
-        acc += frac;
+        const offset = -data.slice(0, i).reduce((sum, entry) => sum + entry.v / total, 0) * c;
         return (
           <Circle
             key={i}
@@ -222,28 +215,43 @@ function InsightCard({
 
 export function AiDashboard({ theme }: Props) {
   const router = useRouter();
-  const { isDark } = useTheme();
   const { t, locale, formatCurrency, formatDate } = useLocalization();
 
   const trips = useTripsStore((state) => state.trips);
   const activeTripId = useTripsStore((state) => state.activeTripId);
   const activeTrip = trips.find((trip) => trip.id === activeTripId) ?? trips[0] ?? null;
+  const expenseSummary = useTripExpenseSummary(activeTrip);
 
-  const { progress, dailyBudget, remaining, estimatedSpent, totalDays, duration } = useMemo(() => {
+  const { progress, dailyBudget, totalDays, duration } = useMemo(() => {
     if (!activeTrip) {
-      return { progress: null, dailyBudget: 0, remaining: 0, estimatedSpent: 0, totalDays: 0, duration: 0 };
+      return { progress: null, dailyBudget: 0, totalDays: 0, duration: 0 };
     }
     const startDate = fromDateKey(activeTrip.startDate);
     const endDate = fromDateKey(activeTrip.endDate);
     const dur = countInclusiveDays(startDate, endDate);
     const prog = getTripProgress(activeTrip);
     const db = activeTrip.budget / dur;
-    const spent = prog.day * db;
-    const rem = Math.max(0, activeTrip.budget - spent);
-    return { progress: prog, dailyBudget: db, remaining: rem, estimatedSpent: spent, totalDays: prog.totalDays, duration: dur };
+    return { progress: prog, dailyBudget: db, totalDays: prog.totalDays, duration: dur };
   }, [activeTrip]);
 
-  const hasExpenseData = false; // Wired when expenses store exists.
+  const actualSpent = expenseSummary.total;
+  const remaining = Math.max(0, (activeTrip?.budget ?? 0) - actualSpent);
+  const hasExpenseData = expenseSummary.convertedExpenses.length > 0;
+  const dailyData = useMemo(() => {
+    const values = new Map(expenseSummary.dailyTotals.map((entry) => [entry.date, entry.amount]));
+    return Array.from({ length: 7 }, (_, index) => {
+      const date = new Date();
+      date.setDate(date.getDate() - (6 - index));
+      const key = date.toISOString().slice(0, 10);
+      return {
+        d: new Intl.DateTimeFormat(locale, { weekday: "narrow" }).format(date),
+        v: values.get(key) ?? 0,
+        highlight: index === 6,
+      };
+    });
+  }, [expenseSummary.dailyTotals, locale]);
+  const todaySpent = dailyData.at(-1)?.v ?? 0;
+  const spendPercent = activeTrip?.budget ? Math.round((actualSpent / activeTrip.budget) * 100) : 0;
 
   if (!activeTrip) {
     return (
@@ -310,8 +318,8 @@ export function AiDashboard({ theme }: Props) {
         <InsightCard
           theme={theme}
           icon={<Icon name="wallet" size={18} color={theme.mustard} strokeWidth={2} />}
-          label={t("aiTab.estimatedSpent")}
-          value={formatCurrency(estimatedSpent, activeTrip.currency)}
+          label={t("aiTab.actual")}
+          value={formatCurrency(actualSpent, activeTrip.currency)}
           sub={t("aiTab.ofBudget", { total: formatCurrency(activeTrip.budget, activeTrip.currency) })}
           color="mustard"
         />
@@ -324,7 +332,7 @@ export function AiDashboard({ theme }: Props) {
               <View>
                 <Text style={[styles.sectionLabel, { color: theme.inkMuted }]}>{t("aiTab.dailySpend")}</Text>
                 <Text style={[styles.chartValue, { color: theme.inkDeep }]}>
-                  {formatCurrencyCompact(40, locale, activeTrip.currency)}{" "}
+                  {formatCurrency(todaySpent, activeTrip.currency)}{" "}
                   <Text style={[styles.chartValueSub, { color: theme.inkMuted }]}>{t("aiTab.today")}</Text>
                 </Text>
               </View>
@@ -335,7 +343,7 @@ export function AiDashboard({ theme }: Props) {
                 <Text style={[styles.legendText, { color: theme.inkSoft }]}>{t("aiTab.budget")}</Text>
               </View>
             </View>
-            <SpendChart theme={theme} data={[38, 42, 51, 29, 45, 62, 40]} budget={dailyBudget} />
+            <SpendChart theme={theme} data={dailyData.map((entry) => entry.v)} budget={dailyBudget} />
           </NomadCard>
 
           <NomadCard theme={theme}>
@@ -343,32 +351,29 @@ export function AiDashboard({ theme }: Props) {
             <View style={styles.donutRow}>
               <Donut
                 theme={theme}
-                data={[
-                  { v: 127, color: theme.stamp },
-                  { v: 98, color: theme.teal },
-                  { v: 42, color: theme.mustard },
-                  { v: 20, color: theme.sky },
-                ]}
-                total={287}
+                data={expenseSummary.categoryTotals.map((entry) => ({
+                  v: entry.amount,
+                  color: theme[getCategoryMeta(entry.category).color],
+                }))}
+                total={actualSpent}
               />
               <View style={styles.categoryList}>
-                {[
-                  { name: "Food", v: 127, color: theme.stamp, pct: 44 },
-                  { name: "Stays", v: 98, color: theme.teal, pct: 34 },
-                  { name: "Transit", v: 42, color: theme.mustard, pct: 15 },
-                  { name: "Other", v: 20, color: theme.sky, pct: 7 },
-                ].map((c, i) => (
-                  <View key={i} style={styles.categoryRow}>
-                    <View style={[styles.categoryDot, { backgroundColor: c.color }]} />
-                    <View style={{ flex: 1 }}>
-                      <View style={styles.categoryTop}>
-                        <Text style={[styles.categoryName, { color: theme.inkDeep }]}>{c.name}</Text>
-                        <Text style={[styles.categoryValue, { color: theme.inkDeep }]}>${c.v}</Text>
+                {expenseSummary.categoryTotals.map((entry) => {
+                  const color = theme[getCategoryMeta(entry.category).color];
+                  const percent = actualSpent > 0 ? Math.round((entry.amount / actualSpent) * 100) : 0;
+                  return (
+                    <View key={entry.category} style={styles.categoryRow}>
+                      <View style={[styles.categoryDot, { backgroundColor: color }]} />
+                      <View style={{ flex: 1 }}>
+                        <View style={styles.categoryTop}>
+                          <Text style={[styles.categoryName, { color: theme.inkDeep }]}>{t(`expenses.category.${entry.category}`)}</Text>
+                          <Text style={[styles.categoryValue, { color: theme.inkDeep }]}>{formatCurrency(entry.amount, activeTrip.currency)}</Text>
+                        </View>
+                        <Text style={[styles.categoryPct, { color: theme.inkMuted }]}>{percent}% {t("aiTab.ofTotal")}</Text>
                       </View>
-                      <Text style={[styles.categoryPct, { color: theme.inkMuted }]}>{c.pct}% {t("aiTab.ofTotal")}</Text>
                     </View>
-                  </View>
-                ))}
+                  );
+                })}
               </View>
             </View>
           </NomadCard>
@@ -377,20 +382,13 @@ export function AiDashboard({ theme }: Props) {
             <View style={styles.chartHeader}>
               <View>
                 <Text style={[styles.sectionLabel, { color: theme.inkMuted }]}>{t("aiTab.byDay")}</Text>
-                <Text style={[styles.chartCaption, { color: theme.inkSoft }]}>{t("aiTab.byDayCaption", { percent: 38 })}</Text>
+                <Text style={[styles.chartCaption, { color: theme.inkSoft }]}>{t("aiTab.byDayCaption", { percent: spendPercent })}</Text>
               </View>
             </View>
             <DayBars
               theme={theme}
-              data={[
-                { d: "M", v: 38 },
-                { d: "T", v: 42 },
-                { d: "W", v: 51 },
-                { d: "T", v: 29 },
-                { d: "F", v: 45 },
-                { d: "S", v: 62, highlight: true },
-                { d: "S", v: 40 },
-              ]}
+              data={dailyData}
+              formatAmount={(amount) => formatCurrency(amount, activeTrip.currency, { maximumFractionDigits: 0 })}
             />
           </NomadCard>
         </>
