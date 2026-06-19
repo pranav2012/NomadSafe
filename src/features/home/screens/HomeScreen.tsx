@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, Alert } from "react-native";
+import { View, Text, StyleSheet, Alert, Pressable } from "react-native";
 import { router } from "expo-router";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuthStore } from "@/features/auth";
@@ -60,7 +60,9 @@ export default function HomeScreen() {
             {user?.name ?? t("common.fallbackTraveler")}
           </Text>
         </View>
-        <Avatar name={user?.name ?? t("common.fallbackUser")} imageUri={user?.avatarUrl} />
+        <Pressable onPress={() => router.push("/settings")}>
+          <Avatar name={user?.name ?? t("common.fallbackUser")} imageUri={user?.avatarUrl} />
+        </Pressable>
       </View>
 
       <View style={{ gap: spacing.md }}>
