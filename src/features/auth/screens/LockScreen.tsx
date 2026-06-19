@@ -17,6 +17,7 @@ import Animated, {
 import { NOMAD_FONTS } from "@/constants/nomadTokens";
 import { useTheme } from "@/hooks/useTheme";
 import {
+  authClient,
   localAuth,
   secureStorage,
   useAuthStore,
@@ -161,7 +162,12 @@ export default function LockScreen() {
     }
   };
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
+    try {
+      await authClient.signOut();
+    } catch {
+      // Ignore network errors; local state will still be cleared below.
+    }
     signOut();
     router.replace("/(auth)/sign-in");
   };

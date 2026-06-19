@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -76,7 +76,7 @@ export default function SignInScreen() {
   const { isDark, nomad } = useTheme();
   const { t } = useLocalization();
   const theme = nomad.colors;
-  const { isPinSet, setSignedIn, setUnlocked } = useAuthStore();
+  const { isSignedIn, isPinSet, setUnlocked } = useAuthStore();
 
   const [dial, setDial] = useState("+44");
   const [dialOpen, setDialOpen] = useState(false);
@@ -86,21 +86,25 @@ export default function SignInScreen() {
   const digits = num.replace(/\D/g, "");
   const ready = digits.length >= 7;
 
-  const handlePostSignIn = () => {
-    setSignedIn(true);
+  // Once the session listener confirms we are signed in, route forward.
+  useEffect(() => {
+    if (!isSignedIn) return;
     if (!isPinSet) {
       router.replace("/(auth)/setup-pin");
     } else {
       setUnlocked(true);
       router.replace("/(tabs)");
     }
-  };
+  }, [isSignedIn, isPinSet, router, setUnlocked]);
 
   const handleGoogleSignIn = async () => {
     try {
       setLoading("google");
-      await authClient.signIn.social({ provider: "google" });
-      handlePostSignIn();
+      await authClient.signIn.social({
+        provider: "google",
+        callbackURL: "nomadsafe://",
+      });
+      // Navigation is handled by the useEffect above once session syncs.
     } catch (error) {
       void error;
     } finally {

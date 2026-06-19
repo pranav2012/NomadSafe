@@ -20,11 +20,19 @@ import {
   GeistMono_400Regular,
   GeistMono_500Medium,
 } from "@expo-google-fonts/geist-mono";
-import { authClient, useAuthStore } from "@/features/auth";
+import { authClient, useAuthStore, useSyncAuthSession } from "@/features/auth";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { LocalizationProvider } from "@/localization";
 
-const convex = new ConvexReactClient(process.env.EXPO_PUBLIC_CONVEX_URL!, {
+const convexUrl = process.env.EXPO_PUBLIC_CONVEX_URL;
+
+if (!convexUrl) {
+  throw new Error(
+    "Missing EXPO_PUBLIC_CONVEX_URL. Add it to your .env.local file.",
+  );
+}
+
+const convex = new ConvexReactClient(convexUrl, {
   unsavedChangesWarning: false,
 });
 
@@ -81,6 +89,8 @@ export default function RootLayout() {
     GeistMono_400Regular,
     GeistMono_500Medium,
   });
+
+  useSyncAuthSession();
 
   if (!fontsLoaded) return null;
 

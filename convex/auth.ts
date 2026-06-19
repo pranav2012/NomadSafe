@@ -8,22 +8,35 @@ import { DataModel } from "./_generated/dataModel";
 import { query } from "./_generated/server";
 import authConfig from "./auth.config";
 
+const SITE_URL = process.env.SITE_URL;
+const BASE_URL = process.env.BETTER_AUTH_URL || SITE_URL;
+
+if (!BASE_URL) {
+  throw new Error(
+    "Missing SITE_URL or BETTER_AUTH_URL environment variable. Set it with: npx convex env set SITE_URL <url>",
+  );
+}
+
 export const authComponent = createClient<DataModel>(components.betterAuth);
 
 /** Creates a Better Auth instance bound to a Convex request context */
 export const createAuth = (ctx: GenericCtx<DataModel>) => {
+  const googleClientId = process.env.GOOGLE_CLIENT_ID;
+  const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
   return betterAuth({
-    trustedOrigins: ["nomadsafe://"],
+    baseURL: BASE_URL,
+    trustedOrigins: ["nomadsafe://", SITE_URL].filter(Boolean) as string[],
     database: authComponent.adapter(ctx),
     socialProviders: {
-      google: {
-        clientId: process.env.GOOGLE_CLIENT_ID!,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      },
-      apple: {
-        clientId: process.env.APPLE_CLIENT_ID!,
-        clientSecret: process.env.APPLE_CLIENT_SECRET!,
-      },
+      ...(googleClientId && googleClientSecret
+        ? {
+            google: {
+              clientId: googleClientId,
+              clientSecret: googleClientSecret,
+            },
+          }
+        : {}),
     },
     plugins: [
       expo(),

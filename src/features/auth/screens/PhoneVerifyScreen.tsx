@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -27,7 +27,7 @@ export default function PhoneVerifyScreen() {
   const { isDark, nomad } = useTheme();
   const { t, formatDuration } = useLocalization();
   const theme = nomad.colors;
-  const { isPinSet, setSignedIn, setUnlocked } = useAuthStore();
+  const { isSignedIn, isPinSet, setUnlocked } = useAuthStore();
 
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
@@ -48,26 +48,41 @@ export default function PhoneVerifyScreen() {
     return () => clearInterval(t);
   }, [secs]);
 
-  const handleVerify = async (otp: string) => {
-    if (otp.length !== OTP_LENGTH) return;
-    try {
-      setLoading(true);
-      setError("");
-      await authClient.phoneNumber.verify({ phoneNumber: phone!, code: otp });
-      setSignedIn(true);
-      if (!isPinSet) {
-        router.replace("/(auth)/setup-pin");
-      } else {
-        setUnlocked(true);
-        router.replace("/(tabs)");
-      }
-    } catch {
-      setError(t("auth.invalidCode"));
-      setCode("");
-    } finally {
-      setLoading(false);
+  // Once the session listener confirms we are signed in, route forward.
+  useEffect(() => {
+    if (!isSignedIn) return;
+    if (!isPinSet) {
+      router.replace("/(auth)/setup-pin");
+    } else {
+      setUnlocked(true);
+      router.replace("/(tabs)");
     }
-  };
+  }, [isSignedIn, isPinSet, router, setUnlocked]);
+
+  const handleVerify = useCallback(
+    async (otp: string) => {
+      if (otp.length !== OTP_LENGTH) return;
+      try {
+        setLoading(true);
+        setError("");
+        const result = await authClient.phoneNumber.verify({
+          phoneNumber: phone!,
+          code: otp,
+        });
+        const error = (result as { error?: { message?: string } } | undefined)?.error;
+        if (error) {
+          throw new Error(error.message ?? "Verification failed");
+        }
+        // Navigation is handled by the useEffect above once session syncs.
+      } catch {
+        setError(t("auth.invalidCode"));
+        setCode("");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [phone, t],
+  );
 
   const handleChange = (v: string) => {
     const next = v.replace(/\D/g, "").slice(0, OTP_LENGTH);

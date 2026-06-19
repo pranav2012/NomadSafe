@@ -13,3 +13,4 @@ export default function Index() {
   if (isPinSet && !isUnlocked) return <Redirect href="/(auth)/lock-screen" />;
   return <Redirect href="/(tabs)" />;
 }
+
