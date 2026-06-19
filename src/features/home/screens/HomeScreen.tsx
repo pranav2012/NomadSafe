@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -1926,7 +1927,7 @@ function TripMap({
   const fitMap = useCallback(() => {
     if (!mapRef.current || allPoints.length === 0) return;
 
-    const edgePadding = { top: 60, right: 60, bottom: 60, left: 60 };
+    const edgePadding = { top: 80, right: 80, bottom: 80, left: 80 };
 
     if (allPoints.length === 1) {
       mapRef.current.animateToRegion(
@@ -1940,16 +1941,44 @@ function TripMap({
       return;
     }
 
-    mapRef.current.fitToCoordinates(destinationRoutePath.length > 1 ? destinationRoutePath : allPoints, {
+    // Use raw markers (not the curved route polyline) for fitting so Android
+    // Google Maps reliably includes every destination pin in the viewport.
+    const fitPoints =
+      destinations.length > 0
+        ? userCoords
+          ? [userCoords, ...destinations]
+          : destinations
+        : allPoints;
+
+    mapRef.current.fitToCoordinates(fitPoints, {
       edgePadding,
       animated: true,
     });
-  }, [allPoints, destinationRoutePath]);
+  }, [allPoints, destinations, userCoords]);
+
 
   useEffect(() => {
-    const timer = setTimeout(fitMap, 300);
+    const timer = setTimeout(fitMap, Platform.OS === "android" ? 600 : 300);
     return () => clearTimeout(timer);
   }, [fitMap]);
+
+  useEffect(() => {
+    // Android sometimes ignores the first fitToCoordinates call while the map
+    // is still laying out; retry once after a short delay when points change.
+    if (Platform.OS !== "android" || allPoints.length === 0) return;
+
+    const timer = setTimeout(() => {
+      mapRef.current?.fitToCoordinates(
+        destinations.length > 0
+          ? userCoords
+            ? [userCoords, ...destinations]
+            : destinations
+          : allPoints,
+        { edgePadding: { top: 80, right: 80, bottom: 80, left: 80 }, animated: true },
+      );
+    }, 900);
+    return () => clearTimeout(timer);
+  }, [allPoints, destinations, userCoords]);
 
   if (!hasAnyCoords) {
     return (
@@ -1975,6 +2004,16 @@ function TripMap({
       pitchEnabled={false}
       toolbarEnabled={false}
       mapType="standard"
+      // On Android, tapping a marker centers it by default and can push far-away
+      // destinations off-screen. Since map interactions are already disabled,
+      // ignoring marker selections keeps the original fitted view intact.
+      onMarkerSelect={() => {
+        if (Platform.OS === "android") {
+          // Returning nothing/undefined keeps native default behavior. Instead,
+          // we re-fit after a short delay so every destination stays visible.
+          setTimeout(() => fitMap(), 150);
+        }
+      }}
     >
       {destinationRoutePath.length > 1 ? (
         <Polyline

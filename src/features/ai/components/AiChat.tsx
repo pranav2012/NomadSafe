@@ -141,7 +141,10 @@ export function AiChat({ theme, activeModelName }: Props) {
     const q = (text ?? input).trim();
     if (!q) return;
     setInput("");
-    sendMessage(conversationKey, q, { noModel: t("aiTab.chatNoModel"), error: t("aiTab.chatError") });
+    sendMessage(conversationKey, q, {
+      noModel: t("aiTab.chatNoModel"),
+      error: t("aiTab.chatModelLoadError"),
+    });
   };
 
   const enableNotifications = async () => {

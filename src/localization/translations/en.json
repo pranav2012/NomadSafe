@@ -489,6 +489,7 @@
     "chatModel": "Using {{model}}",
     "chatNoModel": "No model is downloaded yet. Open the Models tab to download one, then I can answer right here on your device.",
     "chatError": "Something went wrong generating a reply. Please try again.",
+    "chatModelLoadError": "Could not load the local model. Re-download it from the Models tab and try again.",
     "notifyBannerText": "Get notified when Nomad finishes a reply while you're away.",
     "notifyBannerAction": "Turn on",
     "tryAsking": "Try asking",

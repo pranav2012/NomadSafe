@@ -307,6 +307,15 @@ export const localModelService = {
           flash_attn_type: "auto",
         });
       } catch (err) {
+        const message = err instanceof Error ? err.message : "";
+        const isMissingFile = /(?:no such file|couldn't open|failed to open|not found|does not exist)/i.test(message);
+        if (isMissingFile) {
+          // The model file referenced in storage is gone; clear selection so the
+          // UI prompts a re-download instead of crashing on every chat message.
+          aiModelService.setDownloadedModelId(null);
+          aiModelService.setActiveModelId(null);
+          throw new Error("Local AI model is not downloaded.");
+        }
         console.warn("[localModelService] fast load failed, retrying on CPU", err);
         context = await initLlama({ ...baseParams, n_gpu_layers: 0 });
       }

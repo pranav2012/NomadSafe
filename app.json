@@ -103,7 +103,8 @@
       "expo-web-browser",
       "expo-status-bar",
       "expo-background-task",
-      "./plugins/withoutPushEntitlement"
+      "./plugins/withoutPushEntitlement",
+      "./plugins/withGoogleMapsApiKey"
     ],
     "experiments": {
       "typedRoutes": true,
