@@ -4,6 +4,7 @@ export interface EmergencyContact {
   id: string;
   name: string;
   phone: string | null;
+  email?: string | null;
 }
 
 const EMERGENCY_CONTACTS_KEY = "emergency-contacts";
@@ -29,3 +30,10 @@ export const emergencyContactsStorage = {
     storage.set(EMERGENCY_CONTACTS_KEY, "");
   },
 };
+
+/**
+ * Normalise an email for reliable lookups.
+ */
+export function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
+}

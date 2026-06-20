@@ -1,1 +1,1 @@
-export { default } from "@/features/safety/screens/SosScreen";
+export { default } from "@/features/safety/screens/SafetyScreen";

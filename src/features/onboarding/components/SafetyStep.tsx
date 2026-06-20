@@ -105,7 +105,7 @@ export function SafetyStep({
     onPermissionsReady?.(ready);
     if (ready) {
       emergencyContactsStorage.set(
-        selectedContacts.map(({ id, name, phone }) => ({ id, name, phone })),
+        selectedContacts.map(({ id, name, phone, email }) => ({ id, name, phone, email })),
       );
     }
   }, [permissions.locationOn, selectedContacts, onPermissionsReady]);
@@ -148,11 +148,13 @@ export function SafetyStep({
       // Resolve a display name across the fields the picker may populate; the
       // chosen contact can lack a composed `name` (e.g. first/last only).
       const phone = contact.phoneNumbers?.[0]?.number ?? null;
+      const email = contact.emails?.[0]?.email ?? null;
       const displayName =
         contact.name?.trim() ||
         [contact.firstName, contact.lastName].filter(Boolean).join(" ").trim() ||
         contact.company?.trim() ||
         phone ||
+        email ||
         t("onboarding.unnamedContact");
       const id = contact.id ?? `picked-${Date.now()}`;
 
@@ -164,6 +166,7 @@ export function SafetyStep({
             id,
             name: displayName,
             phone,
+            email,
             init: displayName.charAt(0).toUpperCase(),
             color: SLOT_COLORS[prev.length % SLOT_COLORS.length],
           },

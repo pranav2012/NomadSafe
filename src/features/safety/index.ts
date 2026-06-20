@@ -1,1 +1,2 @@
-export { default as SosScreen } from "./screens/SosScreen";
+export { default as SafetyScreen } from "./screens/SafetyScreen";
+export * from "./store/safetyStore";

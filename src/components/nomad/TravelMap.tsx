@@ -21,7 +21,7 @@ import type { NomadTheme } from "@/constants/nomadTokens";
 export type MapPin = {
   x: number;
   y: number;
-  color?: string;
+  color?: `#${string}` | `rgba(${string})` | string;
   label?: string;
   pulse?: boolean;
   type?: "user" | "stamp" | "default";
