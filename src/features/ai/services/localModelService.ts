@@ -84,6 +84,16 @@ export const LOCAL_AI_PROMPTS = {
       `Travelers: ${input.travelerCount}`,
       "JSON:",
     ].join("\n"),
+
+  systemItineraryRefiner:
+    "You refine a travel itinerary using only the event records provided. " +
+    "Return only a JSON object with one key: keepIds (an array of existing event IDs). " +
+    "Never invent IDs. Keep only these useful events: one check-in per stay, transit departures and arrivals for flights, trains, or buses, and activities on their actual day. " +
+    "Remove check-outs and duplicate/noisy records. When duplicate check-ins represent the same stay, keep the one with the latest createdAt. " +
+    "For other duplicates, keep the latest createdAt record. Do not add markdown, explanations, or extra keys.",
+
+  itineraryRefinementRequest: (events: ItineraryEventRefinementInput[]): string =>
+    `Events:\n${JSON.stringify(events)}\nJSON:`,
 };
 
 export type ChatRole = "system" | "user" | "assistant";
@@ -116,6 +126,19 @@ export interface TripNameInput {
 
 export interface TripNameSuggestion {
   name: string;
+}
+
+export interface ItineraryEventRefinementInput {
+  id: string;
+  type: "transit" | "stay" | "activity";
+  title: string;
+  detail?: string;
+  startAt: string;
+  createdAt: string;
+}
+
+export interface ItineraryEventRefinement {
+  keepIds: string[];
 }
 
 export type ExpenseCategoryId = "food" | "stays" | "travel" | "shopping" | "other";
@@ -543,6 +566,49 @@ export const localModelService = {
     });
 
     return normalizeEstimate(JSON.parse(extractJsonObject(result.text)));
+  },
+
+  async refineItinerary(
+    events: ItineraryEventRefinementInput[],
+  ): Promise<ItineraryEventRefinement> {
+    const model = await localModelService.getReadyModel();
+    if (!model) {
+      throw new Error("Local AI model is not downloaded.");
+    }
+
+    const context = await localModelService.loadModel(model);
+    const refinementEvents = events.map(({ id, type, title, detail, startAt, createdAt }) => ({
+      id,
+      type,
+      title,
+      detail,
+      startAt,
+      createdAt,
+    }));
+    const result = await context.completion({
+      prompt:
+        LOCAL_AI_PROMPTS.systemItineraryRefiner +
+        "\n\n" +
+        LOCAL_AI_PROMPTS.itineraryRefinementRequest(refinementEvents),
+      n_predict: 300,
+      temperature: 0.1,
+      response_format: { type: "json_object" },
+    });
+    const parsed = JSON.parse(extractJsonObject(result.text)) as Partial<ItineraryEventRefinement>;
+    const knownIds = new Set(events.map((event) => event.id));
+    const keepIds = Array.from(
+      new Set(
+        (Array.isArray(parsed.keepIds) ? parsed.keepIds : []).filter(
+          (id): id is string => typeof id === "string" && knownIds.has(id),
+        ),
+      ),
+    );
+
+    if (events.length > 0 && keepIds.length === 0) {
+      throw new Error("Local model did not return any valid itinerary events.");
+    }
+
+    return { keepIds };
   },
 
   /**

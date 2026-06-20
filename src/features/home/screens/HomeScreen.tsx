@@ -37,6 +37,8 @@ import {
   useTripsStore,
 } from "@/features/trips/store/tripsStore";
 import { TripWeather } from "@/features/trips/components/TripWeather";
+import { TripItinerary, useItineraryAutoSync } from "@/features/itinerary";
+import { NearbyPlaces } from "@/features/places/components/NearbyPlaces";
 import { useTheme } from "@/hooks/useTheme";
 import { useLocalization } from "@/localization";
 import { CURRENCY_OPTIONS } from "@/utils/currency";
@@ -190,6 +192,7 @@ export default function HomeScreen() {
   const createTrip = useTripsStore((state) => state.createTrip);
   const activeTrip = trips.find((trip) => trip.id === activeTripId) ?? trips[0] ?? null;
   const aiDownload = useModelDownload();
+  useItineraryAutoSync(activeTrip);
   const scrollRef = useRef<ScrollView>(null);
   const budgetEstimateKeyRef = useRef<string | null>(null);
   const nameGenerationKeyRef = useRef<string | null>(null);
@@ -1196,6 +1199,10 @@ function TripDashboard({
       </View>
 
       <TripWeather trip={trip} userLocation={userLocation} currentIndex={currentIndex} />
+
+      <TripItinerary trip={trip} />
+
+      <NearbyPlaces userLocation={userLocation} />
     </View>
   );
 }

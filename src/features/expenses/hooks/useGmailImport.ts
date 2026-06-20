@@ -55,6 +55,9 @@ export interface GmailImport {
   connected: boolean;
   connect: () => Promise<void>;
   fetchEmails: () => Promise<RawMessage[]>;
+  /** Fetches emails after `since` without touching the expense sync checkpoint,
+   *  so other consumers (e.g. itinerary) can keep an independent checkpoint. */
+  fetchEmailsSince: (since: number | null) => Promise<RawMessage[]>;
   completeSync: () => Promise<void>;
 }
 
@@ -133,13 +136,21 @@ export function useGmailImport(): GmailImport {
     await promptAsync();
   }, [configured, promptAsync]);
 
-  const fetchEmails = useCallback(async () => {
-    const token = await getValidAccessToken();
-    if (!token) {
-      throw new Error("Gmail is not connected.");
-    }
-    return fetchTransactionEmails(token, await loadGmailLastSyncAt());
-  }, [getValidAccessToken]);
+  const fetchEmailsSince = useCallback(
+    async (since: number | null) => {
+      const token = await getValidAccessToken();
+      if (!token) {
+        throw new Error("Gmail is not connected.");
+      }
+      return fetchTransactionEmails(token, since);
+    },
+    [getValidAccessToken],
+  );
+
+  const fetchEmails = useCallback(
+    async () => fetchEmailsSince(await loadGmailLastSyncAt()),
+    [fetchEmailsSince],
+  );
 
   const completeSync = useCallback(async () => {
     await saveGmailLastSyncAt(Date.now());
@@ -156,6 +167,7 @@ export function useGmailImport(): GmailImport {
     connected,
     connect,
     fetchEmails,
+    fetchEmailsSince,
     completeSync,
   };
 }

@@ -9,6 +9,8 @@ export {
 } from "./services/aiModelService";
 export {
   localModelService,
+  type ItineraryEventRefinement,
+  type ItineraryEventRefinementInput,
   type TripBudgetEstimate,
   type TripNameInput,
   type TripNameSuggestion,
