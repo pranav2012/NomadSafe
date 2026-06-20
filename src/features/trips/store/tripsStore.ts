@@ -45,6 +45,7 @@ interface TripsState {
   deleteTrip: (tripId: string) => void;
   setActiveTrip: (tripId: string) => void;
   clearActiveTrip: () => void;
+  reset: () => void;
 }
 
 export const useTripsStore = create<TripsState>()(
@@ -87,6 +88,7 @@ export const useTripsStore = create<TripsState>()(
         })),
       setActiveTrip: (tripId) => set({ activeTripId: tripId }),
       clearActiveTrip: () => set({ activeTripId: null }),
+      reset: () => set({ trips: [], activeTripId: null }),
     }),
     {
       name: "trips-store",

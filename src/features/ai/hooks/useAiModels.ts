@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSettingsStore } from "@/features/settings";
 import {
   aiModelService,
   AI_MODELS,
@@ -28,6 +29,8 @@ export interface ModelListItem {
   isPaused: boolean;
   /** Progress 0-100 when downloading or paused. */
   progress: number;
+  /** Local AI is globally disabled in Settings. */
+  isAiDisabled: boolean;
 }
 
 export interface UseAiModelsResult {
@@ -43,6 +46,8 @@ export interface UseAiModelsResult {
   downloadError: string | null;
   /** Format helper used by the UI. */
   formatSize: (sizeMb: number) => string;
+  /** Whether local AI is globally disabled in Settings. */
+  localAiEnabled: boolean;
   /** Set a downloaded model as the current default active model. */
   setDefaultModel: (model: AiModel) => void;
   /** Start downloading a model. */
@@ -76,6 +81,7 @@ export function useAiModels(): UseAiModelsResult {
     localModelService.getActiveModelId(),
   );
   const [tick, setTick] = useState(0);
+  const localAiEnabled = useSettingsStore((s) => s.localAiEnabled);
 
   // Subscribe to download manager updates and periodically recheck loaded model.
   useEffect(() => {
@@ -133,13 +139,14 @@ export function useAiModels(): UseAiModelsResult {
       return {
         model,
         isDownloaded,
-        isLoaded: loadedId === model.id && isDownloaded,
+        isLoaded: loadedId === model.id && isDownloaded && localAiEnabled,
         isActive,
         isAvailable: availableIds.has(model.id),
         isRecommended: recommendedId === model.id,
         isDownloading,
         isPaused,
         progress: download.modelId === model.id ? download.progress : 0,
+        isAiDisabled: !localAiEnabled,
       };
     });
   }, [
@@ -151,6 +158,7 @@ export function useAiModels(): UseAiModelsResult {
     download.modelId,
     download.status,
     download.progress,
+    localAiEnabled,
   ]);
 
   const setDefaultModel = (model: AiModel) => {
@@ -183,6 +191,7 @@ export function useAiModels(): UseAiModelsResult {
     activeModelId,
     downloadError: download.status === "error" ? download.error : null,
     formatSize: formatModelSize,
+    localAiEnabled,
     setDefaultModel,
     startDownload,
     pauseDownload: () => modelDownloadManager.pause(),

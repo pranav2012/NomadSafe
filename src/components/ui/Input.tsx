@@ -15,6 +15,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
+import { NOMAD_FONTS } from "@/constants/nomadTokens";
 
 interface InputProps {
   label?: string;
@@ -28,6 +29,8 @@ interface InputProps {
   onRightIconPress?: () => void;
   keyboardType?: KeyboardTypeOptions;
   autoCapitalize?: "none" | "sentences" | "words";
+  multiline?: boolean;
+  numberOfLines?: number;
 }
 
 const AnimatedView = Animated.createAnimatedComponent(View);
@@ -44,8 +47,11 @@ export function Input({
   onRightIconPress,
   keyboardType = "default",
   autoCapitalize = "sentences",
+  multiline,
+  numberOfLines,
 }: InputProps) {
-  const { colors, typography, spacing, radii } = useTheme();
+  const { nomad, typography, spacing, radii } = useTheme();
+  const colors = nomad.colors;
   const [isFocused, setIsFocused] = useState(false);
   const focusProgress = useSharedValue(0);
 
@@ -53,7 +59,7 @@ export function Input({
     const borderColor = interpolateColor(
       focusProgress.value,
       [0, 1],
-      [error ? colors.error : colors.border, colors.borderFocused],
+      [error ? colors.stamp : colors.hairline, colors.teal],
     );
     return { borderColor };
   });
@@ -75,9 +81,9 @@ export function Input({
           style={[
             styles.label,
             {
-              color: colors.text,
+              color: colors.inkDeep,
+              fontFamily: NOMAD_FONTS.uiMedium,
               fontSize: typography.sizes.sm,
-              fontWeight: typography.weights.medium,
               marginBottom: spacing.xs,
             },
           ]}
@@ -92,18 +98,19 @@ export function Input({
           {
             borderRadius: radii.md,
             borderWidth: 1.5,
-            backgroundColor: colors.surface,
+            backgroundColor: colors.paperSoft,
             paddingHorizontal: spacing.md,
+            alignItems: multiline ? "flex-start" : "center",
           },
           animatedBorderStyle,
-          error && !isFocused && { borderColor: colors.error },
+          error && !isFocused && { borderColor: colors.stamp },
         ]}
       >
         {leftIcon && (
           <Ionicons
             name={leftIcon}
             size={20}
-            color={colors.textSecondary}
+            color={colors.inkMuted}
             style={styles.leftIcon}
           />
         )}
@@ -112,18 +119,25 @@ export function Input({
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          placeholderTextColor={colors.textTertiary}
+          placeholderTextColor={colors.inkMuted}
           secureTextEntry={secureTextEntry}
           keyboardType={keyboardType}
           autoCapitalize={autoCapitalize}
+          multiline={multiline}
+          numberOfLines={numberOfLines}
           onFocus={handleFocus}
           onBlur={handleBlur}
           style={[
             styles.input,
+            { outlineWidth: 0 } as object,
             {
-              color: colors.text,
+              color: colors.inkDeep,
+              fontFamily: NOMAD_FONTS.ui,
               fontSize: typography.sizes.base,
             },
+            multiline
+              ? { minHeight: 96, textAlignVertical: "top", paddingVertical: 12 }
+              : { height: 48 },
           ]}
         />
 
@@ -132,7 +146,7 @@ export function Input({
             <Ionicons
               name={rightIcon}
               size={20}
-              color={colors.textSecondary}
+              color={colors.inkMuted}
             />
           </Pressable>
         )}
@@ -143,7 +157,8 @@ export function Input({
           style={[
             styles.error,
             {
-              color: colors.error,
+              color: colors.stamp,
+              fontFamily: NOMAD_FONTS.ui,
               fontSize: typography.sizes.xs,
               marginTop: spacing.xs,
             },
@@ -161,10 +176,9 @@ const styles = StyleSheet.create({
   label: {},
   inputContainer: {
     flexDirection: "row",
-    alignItems: "center",
-    height: 48,
+    minHeight: 48,
   },
   leftIcon: { marginRight: 8 },
-  input: { flex: 1, height: "100%" },
+  input: { flex: 1 },
   error: {},
 });

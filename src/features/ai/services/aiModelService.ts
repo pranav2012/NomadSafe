@@ -23,7 +23,7 @@ export interface DeviceCapability {
   assignedCategory: AiModelCategory;
 }
 
-export type AiModelCategory = "compact" | "balanced" | "capable";
+export type AiModelCategory = "compact" | "balanced";
 
 export interface AiModel {
   id: AiModelCategory;
@@ -46,16 +46,15 @@ export interface ContextWindowPlan {
 }
 
 /**
- * Three device tiers mapped to real, openly licensed Qwen 3.5 GGUF models.
+ * Two device tiers mapped to real, openly licensed Qwen 3.5 GGUF models.
  *
  * We chose Qwen 3.5 because the app is a text-first travel assistant that must
  * work across 14 locales. Qwen 3.5 is explicitly optimized for multilingual text,
  * supports 201 languages/dialects, and its vision encoder can be skipped entirely
  * for a text-only deployment, keeping disk/RAM/battery usage lower.
  *
- * Compact  -> Qwen3.5-0.8B-Instruct Q4_K_M (~520 MB)
- * Balanced -> Qwen3.5-4B-Instruct  Q4_K_M (~2.6 GB)
- * Capable  -> Qwen3.5-9B-Instruct  Q4_K_M (~5.7 GB)
+ * Base -> Qwen3.5-0.8B-Instruct Q4_K_M (~520 MB)
+ * Pro  -> Qwen3.5-4B-Instruct  Q4_K_M (~2.6 GB)
  *
  * All GGUFs are from the bartowski community mirror, which is the de facto
  * standard for llama.cpp / llama.rn users.
@@ -63,7 +62,7 @@ export interface ContextWindowPlan {
 export const AI_MODELS: AiModel[] = [
   {
     id: "compact",
-    name: "NomadMini",
+    name: "NomadBase",
     sizeMb: 520,
     minRamGb: 3,
     recommendedRamGb: 4,
@@ -74,24 +73,13 @@ export const AI_MODELS: AiModel[] = [
   },
   {
     id: "balanced",
-    name: "NomadBase",
+    name: "NomadPro",
     sizeMb: 2620,
     minRamGb: 4,
     recommendedRamGb: 6,
     descriptionKey: "onboarding.modelSizeBalanced",
     hfRepoId: "bartowski/Qwen_Qwen3.5-4B-GGUF",
     hfFilename: "Qwen_Qwen3.5-4B-Q4_K_M.gguf",
-    quantLabel: "Q4_K_M",
-  },
-  {
-    id: "capable",
-    name: "NomadPro",
-    sizeMb: 5700,
-    minRamGb: 6,
-    recommendedRamGb: 8,
-    descriptionKey: "onboarding.modelSizeCapable",
-    hfRepoId: "bartowski/Qwen_Qwen3.5-9B-GGUF",
-    hfFilename: "Qwen_Qwen3.5-9B-Q4_K_M.gguf",
     quantLabel: "Q4_K_M",
   },
 ];
@@ -116,8 +104,7 @@ function getTotalMemoryGb(): number {
 }
 
 function assignCategory(totalMemoryGb: number): AiModelCategory {
-  if (totalMemoryGb >= AI_MODELS[2].recommendedRamGb) return "capable";
-  if (totalMemoryGb >= AI_MODELS[1].minRamGb) return "balanced";
+  if (totalMemoryGb >= AI_MODELS[1].recommendedRamGb) return "balanced";
   return "compact";
 }
 
@@ -127,8 +114,7 @@ function contextWindowFor(model: AiModel, availableMemoryBytes: number | null): 
   const availableMb = availableMemoryBytes / 1024 / 1024;
   if (availableMb < 1200) return 4096;
   if (availableMb < 2800) return Math.min(model.id === "compact" ? 8192 : 6144, 8192);
-  if (availableMb < 5000) return model.id === "capable" ? 8192 : 12288;
-  return model.id === "capable" ? 16384 : 12288;
+  return model.id === "compact" ? 8192 : 12288;
 }
 
 export const aiModelService = {

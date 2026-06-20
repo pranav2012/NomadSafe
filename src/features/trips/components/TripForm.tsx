@@ -129,7 +129,12 @@ function getCurrencyAffix(locale: string, currency: string) {
   }
 }
 
-function makeInitialForm(currency: string, seed?: Partial<FormState>): FormState {
+function makeInitialForm(
+  currency: string,
+  defaultMode: TripMode,
+  tripModeEnabled: boolean,
+  seed?: Partial<FormState>,
+): FormState {
   const startDate = startOfLocalDay(new Date());
   return {
     name: "",
@@ -137,7 +142,7 @@ function makeInitialForm(currency: string, seed?: Partial<FormState>): FormState
     destinations: [],
     startDate,
     endDate: addDays(startDate, 6),
-    mode: "solo",
+    mode: tripModeEnabled ? defaultMode : "solo",
     budget: "",
     currency,
     travelerName: "",
@@ -176,6 +181,9 @@ export function TripForm({ editingTrip, onSave, onCancel }: TripFormProps) {
   const theme = nomad.colors;
   const { t, locale, formatCurrency } = useLocalization();
   const defaultCurrency = useSettingsStore((state) => state.defaultCurrency);
+  const defaultTripMode = useSettingsStore((state) => state.defaultTripMode);
+  const tripModeEnabled = useSettingsStore((state) => state.tripModeEnabled);
+  const localAiEnabled = useSettingsStore((state) => state.localAiEnabled);
   const createTrip = useTripsStore((state) => state.createTrip);
   const updateTrip = useTripsStore((state) => state.updateTrip);
 
@@ -183,8 +191,8 @@ export function TripForm({ editingTrip, onSave, onCancel }: TripFormProps) {
     () =>
       editingTrip
         ? tripToFormState(editingTrip)
-        : makeInitialForm(defaultCurrency),
-    [editingTrip, defaultCurrency],
+        : makeInitialForm(defaultCurrency, defaultTripMode, tripModeEnabled),
+    [editingTrip, defaultCurrency, defaultTripMode, tripModeEnabled],
   );
 
   const [form, setForm] = useState<FormState>(initialForm);
@@ -211,7 +219,8 @@ export function TripForm({ editingTrip, onSave, onCancel }: TripFormProps) {
     () => searchOfflineDestinations(form.destinationQuery, locale, form.destinations),
     [form.destinationQuery, form.destinations, locale],
   );
-  const shouldShowBudgetEstimate = isBudgetAiAvailable && form.destinations.length > 0;
+  const isAiReady = localAiEnabled && isBudgetAiAvailable;
+  const shouldShowBudgetEstimate = isAiReady && form.destinations.length > 0;
   const budgetEstimateKey = useMemo(
     () =>
       [
@@ -516,12 +525,12 @@ export function TripForm({ editingTrip, onSave, onCancel }: TripFormProps) {
   ]);
 
   useEffect(() => {
-    if (!isBudgetAiAvailable || isGeneratingName || hasGeneratedName) return;
+    if (!isAiReady || isGeneratingName || hasGeneratedName) return;
     if (!isFormCompleteForAi) return;
     if (nameGenerationKeyRef.current === nameGenerationKey) return;
 
     handleGenerateName();
-  }, [isBudgetAiAvailable, isFormCompleteForAi, isGeneratingName, nameGenerationKey, handleGenerateName, hasGeneratedName]);
+  }, [isAiReady, isFormCompleteForAi, isGeneratingName, nameGenerationKey, handleGenerateName, hasGeneratedName]);
 
   const handleDateChange = (field: DateField, date: Date) => {
     const selectedDate = startOfLocalDay(date);
@@ -724,7 +733,7 @@ export function TripForm({ editingTrip, onSave, onCancel }: TripFormProps) {
             generated={hasGeneratedName}
             isGenerating={isGeneratingName}
             error={nameError}
-            canGenerate={isBudgetAiAvailable && form.destinations.length > 0}
+            canGenerate={isAiReady && form.destinations.length > 0}
             onChangeText={(value) => updateForm("name", value)}
             onGenerate={handleGenerateName}
           />
@@ -754,24 +763,26 @@ export function TripForm({ editingTrip, onSave, onCancel }: TripFormProps) {
             />
           ) : null}
 
-          <View style={styles.segmentWrap}>
-            <ModeButton
-              active={form.mode === "solo"}
-              icon="compass"
-              title={t("trip.solo")}
-              subtitle={t("trip.soloSub")}
-              onPress={() => updateForm("mode", "solo")}
-            />
-            <ModeButton
-              active={form.mode === "group"}
-              icon="users"
-              title={t("trip.group")}
-              subtitle={t("trip.groupSub")}
-              onPress={() => updateForm("mode", "group")}
-            />
-          </View>
+          {tripModeEnabled && (
+            <View style={styles.segmentWrap}>
+              <ModeButton
+                active={form.mode === "solo"}
+                icon="compass"
+                title={t("trip.solo")}
+                subtitle={t("trip.soloSub")}
+                onPress={() => updateForm("mode", "solo")}
+              />
+              <ModeButton
+                active={form.mode === "group"}
+                icon="users"
+                title={t("trip.group")}
+                subtitle={t("trip.groupSub")}
+                onPress={() => updateForm("mode", "group")}
+              />
+            </View>
+          )}
 
-          {form.mode === "group" ? (
+          {form.mode === "group" && tripModeEnabled && (
             <TravelerSelector
               label={t("trip.travelers")}
               value={form.travelerName}
@@ -781,7 +792,7 @@ export function TripForm({ editingTrip, onSave, onCancel }: TripFormProps) {
               onAdd={handleAddTraveler}
               onRemove={handleRemoveTraveler}
             />
-          ) : null}
+          )}
         </View>
 
         <View style={styles.actions}>

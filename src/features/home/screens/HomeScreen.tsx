@@ -182,6 +182,7 @@ export default function HomeScreen() {
   const theme = nomad.colors;
   const { t, locale, formatCurrency, formatDate } = useLocalization();
   const defaultCurrency = useSettingsStore((state) => state.defaultCurrency);
+  const localAiEnabled = useSettingsStore((state) => state.localAiEnabled);
   const user = useAuthStore((state) => state.user);
   const trips = useTripsStore((state) => state.trips);
   const activeTripId = useTripsStore((state) => state.activeTripId);
@@ -255,7 +256,8 @@ export default function HomeScreen() {
     () => searchOfflineDestinations(form.destinationQuery, locale, form.destinations),
     [form.destinationQuery, form.destinations, locale],
   );
-  const shouldShowBudgetEstimate = isBudgetAiAvailable && form.destinations.length > 0;
+  const isAiReady = localAiEnabled && isBudgetAiAvailable;
+  const shouldShowBudgetEstimate = isAiReady && form.destinations.length > 0;
   const budgetEstimateKey = useMemo(
     () =>
       [
@@ -560,12 +562,12 @@ export default function HomeScreen() {
   ]);
 
   useEffect(() => {
-    if (!isBudgetAiAvailable || isGeneratingName || hasGeneratedName) return;
+    if (!isAiReady || isGeneratingName || hasGeneratedName) return;
     if (!isFormCompleteForAi) return;
     if (nameGenerationKeyRef.current === nameGenerationKey) return;
 
     handleGenerateName();
-  }, [isBudgetAiAvailable, isFormCompleteForAi, isGeneratingName, nameGenerationKey, handleGenerateName, hasGeneratedName]);
+  }, [isAiReady, isFormCompleteForAi, isGeneratingName, nameGenerationKey, handleGenerateName, hasGeneratedName]);
 
   const handleDateChange = (field: DateField, date: Date) => {
     const selectedDate = startOfLocalDay(date);
@@ -668,7 +670,7 @@ export default function HomeScreen() {
             isGeneratingName={isGeneratingName}
             nameError={nameError}
             hasGeneratedName={hasGeneratedName}
-            canGenerateName={isBudgetAiAvailable && form.destinations.length > 0}
+            canGenerateName={isAiReady && form.destinations.length > 0}
             onGenerateName={handleGenerateName}
             onEstimateBudget={handleEstimateBudget}
             onUseBudgetEstimate={handleUseBudgetEstimate}

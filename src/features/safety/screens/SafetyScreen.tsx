@@ -9,45 +9,45 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import MapView, { Marker, PROVIDER_DEFAULT } from "react-native-maps";
 import * as Location from "expo-location";
 import * as SMS from "expo-sms";
 import { StatusBar } from "expo-status-bar";
 import { Icon } from "@/components/nomad/Icon";
 import { NomadCard } from "@/components/nomad/Card";
 import { NomadButton } from "@/components/nomad/Button";
-import { Stamp } from "@/components/nomad/Stamp";
-import { TravelMap } from "@/components/nomad/TravelMap";
 import { NOMAD_FONTS } from "@/constants/nomadTokens";
 import { useTheme } from "@/hooks/useTheme";
 import { useLocalization } from "@/localization";
 import { emergencyContactsStorage } from "@/features/onboarding/services/emergencyContactsStorage";
 import { useTripsStore } from "@/features/trips/store/tripsStore";
+import { useSettingsStore } from "@/features/settings";
+import { smsFallbackStorage } from "@/features/safety/services/smsFallbackStorage";
+import {
+  computeSafetyScore,
+  fetchAdvisory,
+  type AdvisoryResult,
+} from "@/features/safety/services/safetyAdvisoryService";
+import {
+  fetchEmergencyNumbers,
+  type EmergencyNumbers,
+} from "@/features/safety/services/emergencyNumberService";
 import { useSafetyStore, type SafetyTrustedContact } from "../store/safetyStore";
 import { heavyImpact, successNotification } from "@/utils/haptics";
 
 const PRESETS = [
+  { label: "15 min", duration: 15 * 60, sub: "Quick" },
   { label: "30 min", duration: 30 * 60, sub: "Quick" },
   { label: "1 hr", duration: 60 * 60, sub: "Walk" },
   { label: "2 hr", duration: 2 * 60 * 60, sub: "Hike" },
   { label: "4 hr", duration: 4 * 60 * 60, sub: "Bus" },
+  { label: "8 hr", duration: 8 * 60 * 60, sub: "Day" },
 ];
-
-function useNowTick() {
-  const [now, setNow] = useState(0);
-  useEffect(() => {
-    const update = () => setNow(Date.now());
-    const id = setInterval(update, 1000);
-    update();
-    return () => clearInterval(id);
-  }, []);
-  return now;
-}
 
 export default function SafetyScreen() {
   const { nomad, isDark } = useTheme();
   const theme = nomad.colors;
   const { t } = useLocalization();
-  const nowTick = useNowTick();
 
   const status = useSafetyStore((s) => s.status);
   const checkInEndsAt = useSafetyStore((s) => s.checkInEndsAt);
@@ -59,15 +59,20 @@ export default function SafetyScreen() {
   const storeContacts = useSafetyStore((s) => s.trustedContacts);
   const setStoreContacts = useSafetyStore((s) => s.setTrustedContacts);
   const events = useSafetyStore((s) => s.events);
-  const lastTriggeredAt = useSafetyStore((s) => s.lastTriggeredAt);
 
   const trips = useTripsStore((s) => s.trips);
   const activeTripId = useTripsStore((s) => s.activeTripId);
   const activeTrip = trips.find((trip) => trip.id === activeTripId) ?? trips[0] ?? null;
+  const defaultCheckInDuration = useSettingsStore((s) => s.defaultCheckInDuration);
 
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [sosHoldSeconds, setSosHoldSeconds] = useState(0);
+  const [locationGranted, setLocationGranted] = useState(false);
+  const [smsAvailable, setSmsAvailable] = useState(false);
+  const [advisory, setAdvisory] = useState<AdvisoryResult | null>(null);
+  const [advisoryLoading, setAdvisoryLoading] = useState(true);
+  const [emergency, setEmergency] = useState<EmergencyNumbers | null>(null);
 
   // Sync emergency contacts from onboarding storage into safety store.
   useEffect(() => {
@@ -96,20 +101,50 @@ export default function SafetyScreen() {
     return () => clearInterval(id);
   }, [status, checkInEndsAt]);
 
-  // Get location for safety context.
+  // Get location + SMS availability for safety context.
   useEffect(() => {
     let mounted = true;
-    async function fetchLocation() {
+    async function bootstrap() {
+      if (mounted) setSmsAvailable(await SMS.isAvailableAsync());
       const { status: perm } = await Location.requestForegroundPermissionsAsync();
-      if (perm !== Location.PermissionStatus.GRANTED) return;
+      const granted = perm === Location.PermissionStatus.GRANTED;
+      if (mounted) setLocationGranted(granted);
+      if (!granted) return;
       const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       if (mounted) {
         setLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
       }
     }
-    fetchLocation();
+    bootstrap();
     return () => { mounted = false; };
   }, []);
+
+  // Fetch the live travel advisory for the destination (or current location).
+  const advisoryCoords = activeTrip?.destinationCoordinates?.[0] ?? location;
+  const advisoryLat = advisoryCoords?.latitude;
+  const advisoryLng = advisoryCoords?.longitude;
+  useEffect(() => {
+    if (advisoryLat == null || advisoryLng == null) return;
+    let mounted = true;
+    fetchAdvisory({ latitude: advisoryLat, longitude: advisoryLng })
+      .then((result) => {
+        if (mounted) setAdvisory(result);
+      })
+      .finally(() => {
+        if (mounted) setAdvisoryLoading(false);
+      });
+    return () => { mounted = false; };
+  }, [advisoryLat, advisoryLng]);
+
+  // Resolve local emergency numbers from the device's current location.
+  useEffect(() => {
+    if (!location) return;
+    let mounted = true;
+    fetchEmergencyNumbers(location).then((result) => {
+      if (mounted) setEmergency(result);
+    });
+    return () => { mounted = false; };
+  }, [location]);
 
   const formatCountdown = useCallback((totalSeconds: number) => {
     const h = Math.floor(totalSeconds / 3600);
@@ -144,11 +179,13 @@ export default function SafetyScreen() {
 
     const contacts = emergencyContactsStorage.get();
     const phones = contacts.map((c) => c.phone).filter(Boolean) as string[];
-    const body = location
-      ? `SOS from NomadSafe. Location: https://maps.google.com/?q=${location.latitude},${location.longitude}`
-      : "SOS from NomadSafe. I need help.";
+    const template = smsFallbackStorage.get("sos");
+    const locationSuffix = location
+      ? ` https://maps.google.com/?q=${location.latitude},${location.longitude}`
+      : "";
+    const body = `${template}${locationSuffix}`;
 
-    if (phones.length > 0 && await SMS.isAvailableAsync()) {
+    if (phones.length > 0 && (await SMS.isAvailableAsync())) {
       await SMS.sendSMSAsync(phones, body);
     }
   }, [triggerSos, location]);
@@ -160,28 +197,16 @@ export default function SafetyScreen() {
     ]);
   }, [cancelSos, t]);
 
-  const trustedContacts = storeContacts.length > 0
-    ? storeContacts
-    : [
-        { id: "add", name: t("safety.addContact"), relation: "+", color: theme.inkMuted },
-      ];
+  const smsReady = smsAvailable && storeContacts.length > 0;
 
   const sensors = useMemo(() => [
     {
       icon: "mapPin" as const,
       title: t("safety.locationSensor"),
-      sub: t("safety.locationNormal"),
+      sub: locationGranted ? t("safety.locationNormal") : t("safety.off"),
       tint: theme.tealSoft,
       color: theme.teal,
-      on: true,
-    },
-    {
-      icon: "trendUp" as const,
-      title: t("safety.motionSensor"),
-      sub: t("safety.motionIdle"),
-      tint: theme.skySoft,
-      color: theme.sky,
-      on: true,
+      on: locationGranted,
     },
     {
       icon: "bell" as const,
@@ -189,7 +214,7 @@ export default function SafetyScreen() {
       sub: t("safety.smsVerified", { count: storeContacts.length }),
       tint: theme.mustardSoft,
       color: theme.mustard,
-      on: storeContacts.length > 0,
+      on: smsReady,
     },
     {
       icon: "wifi" as const,
@@ -199,23 +224,73 @@ export default function SafetyScreen() {
       color: theme.stamp,
       on: true,
     },
-  ], [storeContacts.length, t, theme]);
+  ], [storeContacts.length, locationGranted, smsReady, t, theme]);
 
-  const safetyScore = useMemo(() => {
-    let score = 92;
-    if (storeContacts.length === 0) score -= 20;
-    if (!location) score -= 8;
-    return Math.max(40, score);
-  }, [storeContacts.length, location]);
+  const safetyScore = useMemo(
+    () =>
+      computeSafetyScore(advisory, {
+        hasContacts: storeContacts.length > 0,
+        locationGranted,
+        timerActive: isActive,
+        smsReady,
+      }),
+    [advisory, storeContacts.length, locationGranted, isActive, smsReady],
+  );
 
-  const elapsedSec = lastTriggeredAt ? Math.floor((nowTick - lastTriggeredAt) / 1000) : 0;
-  const liveLog = useMemo(() => [
-    { t: "0:00", m: t("sos.logTriggered"), done: true },
-    { t: "0:02", m: t("sos.logSms"), done: true },
-    { t: "0:04", m: t("sos.logStream"), done: true },
-    ...(storeContacts.length > 0 ? [{ t: "0:45", m: t("sos.logAck", { name: storeContacts[0].name }), done: true }] : []),
-    { t: formatCountdown(elapsedSec), m: t("sos.logListening"), done: false },
-  ], [elapsedSec, storeContacts, t, formatCountdown]);
+  const FACTOR_GOOD = "#9FD4B8";
+  const FACTOR_WARN = "#E8D29A";
+  const FACTOR_BAD = "#E8A89A";
+
+  const advisoryLabel = useMemo(() => {
+    if (!advisory) return null;
+    return {
+      low: t("safety.riskLow"),
+      moderate: t("safety.riskModerate"),
+      high: t("safety.riskHigh"),
+      extreme: t("safety.riskExtreme"),
+    }[advisory.level];
+  }, [advisory, t]);
+
+  const heroStats = useMemo(() => {
+    const advisoryColor = advisory
+      ? { low: FACTOR_GOOD, moderate: FACTOR_WARN, high: FACTOR_BAD, extreme: FACTOR_BAD }[advisory.level]
+      : FACTOR_WARN;
+    return [
+      { l: t("safety.factorAdvisory"), v: advisoryLabel ?? t("safety.none"), c: advisoryColor },
+      {
+        l: t("safety.factorContacts"),
+        v: storeContacts.length > 0 ? t("safety.factorContactsSet", { count: storeContacts.length }) : t("safety.none"),
+        c: storeContacts.length > 0 ? FACTOR_GOOD : FACTOR_BAD,
+      },
+      {
+        l: t("safety.factorLocation"),
+        v: locationGranted ? t("safety.on") : t("safety.off"),
+        c: locationGranted ? FACTOR_GOOD : FACTOR_BAD,
+      },
+      {
+        l: t("safety.factorCheckIn"),
+        v: isActive ? t("safety.active") : t("safety.idle"),
+        c: isActive ? FACTOR_GOOD : FACTOR_WARN,
+      },
+    ];
+  }, [advisory, advisoryLabel, storeContacts.length, locationGranted, isActive, t]);
+
+  const heroBody = advisory
+    ? t("safety.advisoryBody", {
+        country: advisory.countryName ?? destinationName,
+        level: advisoryLabel,
+      })
+    : advisoryLoading && advisoryCoords
+      ? t("safety.advisoryLoading")
+      : t("safety.advisoryUnknown");
+
+  const defaultDurationLabel = useMemo(() => {
+    const hours = defaultCheckInDuration / 3600;
+    if (hours >= 1) return `${Number.isInteger(hours) ? hours : hours.toFixed(1)} hr`;
+    return `${Math.round(defaultCheckInDuration / 60)} min`;
+  }, [defaultCheckInDuration]);
+
+  const emergencyNumber = emergency?.general ?? "112";
 
   if (status === "emergency") {
     return (
@@ -223,16 +298,6 @@ export default function SafetyScreen() {
         <StatusBar style="light" />
         <SafeAreaView edges={["top", "left", "right"]} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={styles.emergencyScroll} showsVerticalScrollIndicator={false}>
-            <View style={{ paddingHorizontal: 22, paddingTop: 16 }}>
-              <Text style={styles.emergencyEyebrow}>{t("sos.codeRed")}</Text>
-              <Text style={styles.emergencyTitle}>{t("sos.helpOnTheWay")}</Text>
-              <Text style={styles.emergencySub}>
-                {t("sos.contactsNotified", { count: storeContacts.length })}
-                {"\n"}
-                {t("sos.policeFallback")}
-              </Text>
-            </View>
-
             <View style={styles.pulseWrap}>
               <View style={[styles.pulseRing, { borderColor: "rgba(255,255,255,0.4)" }]} />
               <View style={styles.pulseCore}>
@@ -240,42 +305,59 @@ export default function SafetyScreen() {
               </View>
             </View>
 
-            <NomadCard theme={theme} style={[styles.logCard, { backgroundColor: "rgba(255,255,255,0.1)", borderColor: "transparent" }]}>
-              <Text style={styles.logTitle}>{t("sos.liveBroadcast", { duration: formatCountdown(elapsedSec) })}</Text>
-              {liveLog.map((e, i) => (
-                <View key={i} style={styles.logRow}>
-                  <Text style={styles.logTime}>{e.t}</Text>
-                  <View style={[styles.logDot, e.done ? { backgroundColor: "rgba(255,255,255,0.9)" } : null]}>
-                    {e.done ? <Icon name="check" size={9} color={theme.stamp} strokeWidth={3} /> : <View style={styles.logDotPulse} />}
-                  </View>
-                  <Text style={[styles.logMessage, { opacity: e.done ? 0.92 : 1 }]}>{e.m}</Text>
-                </View>
-              ))}
-            </NomadCard>
+            <View style={{ paddingHorizontal: 22, marginTop: 20 }}>
+              <Text style={styles.emergencyEyebrow}>{t("sos.codeRed")}</Text>
+              <Text style={styles.emergencyTitle}>{t("sos.helpOnTheWay")}</Text>
+              <Text style={styles.emergencySub}>
+                {t("sos.contactsNotified", { count: storeContacts.length })}
+                {"\n"}
+                {t("sos.policeFallback", { number: emergencyNumber })}
+              </Text>
+            </View>
 
             <View style={{ paddingHorizontal: 16, marginTop: 14 }}>
               <View style={{ borderRadius: nomad.radii.xl, overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.2)" }}>
-                <TravelMap
-                  theme={theme}
-                  dark={isDark}
-                  pins={[{ x: 265, y: 160, type: "user", initial: t("safety.youInitial"), color: theme.stamp, pulse: true, name: t("sos.broadcasting") }]}
-                  height={160}
-                />
+                {location ? (
+                  <MapView
+                    style={styles.emergencyMap}
+                    provider={PROVIDER_DEFAULT}
+                    initialRegion={{
+                      latitude: location.latitude,
+                      longitude: location.longitude,
+                      latitudeDelta: 0.01,
+                      longitudeDelta: 0.01,
+                    }}
+                    scrollEnabled={false}
+                    zoomEnabled={false}
+                    rotateEnabled={false}
+                    pitchEnabled={false}
+                    toolbarEnabled={false}
+                    mapType="standard"
+                  >
+                    <Marker
+                      coordinate={location}
+                      title={t("sos.broadcasting")}
+                      pinColor={theme.stamp}
+                    />
+                  </MapView>
+                ) : (
+                  <View style={[styles.emergencyMap, styles.emergencyMapFallback]}>
+                    <Icon name="mapPin" size={28} color="rgba(255,255,255,0.7)" />
+                    <Text style={styles.emergencyMapFallbackText}>{t("sos.locating")}</Text>
+                  </View>
+                )}
               </View>
             </View>
 
             <View style={styles.emergencyActions}>
               <Pressable
                 onPress={() => {
-                  const url = location
-                    ? `tel:113`
-                    : "tel:113";
-                  Linking.openURL(url).catch(() => {});
+                  Linking.openURL(`tel:${emergencyNumber}`).catch(() => {});
                 }}
                 style={styles.emergencySecondary}
               >
                 <Icon name="phone" size={18} color="#fff" />
-                <Text style={styles.emergencySecondaryText}>{t("sos.callEmergency")}</Text>
+                <Text style={styles.emergencySecondaryText}>{t("sos.callEmergency", { number: emergencyNumber })}</Text>
               </Pressable>
               <NomadButton theme={theme} variant="ghost" full onPress={handleCancelSos}>
                 {t("sos.cancelSos")}
@@ -320,16 +402,11 @@ export default function SafetyScreen() {
                 </Text>
               </View>
               <Text style={styles.heroBody}>
-                {t("safety.scoreBody", { destination: destinationName })}
+                {heroBody}
               </Text>
             </View>
             <View style={[styles.heroFooter, { borderTopColor: "rgba(255,255,255,0.18)" }]}>
-              {[
-                { l: t("safety.crime"), v: t("safety.low"), c: "#9FD4B8" },
-                { l: t("safety.health"), v: t("safety.low"), c: "#9FD4B8" },
-                { l: t("safety.weather"), v: t("safety.ok"), c: "#E8D29A" },
-                { l: t("safety.political"), v: t("safety.calm"), c: "#9FD4B8" },
-              ].map((s, i) => (
+              {heroStats.map((s, i) => (
                 <View key={i} style={styles.heroStat}>
                   <Text style={styles.heroStatLabel}>{s.l}</Text>
                   <Text style={[styles.heroStatValue, { color: s.c }]}>{s.v}</Text>
@@ -378,19 +455,9 @@ export default function SafetyScreen() {
 
           <View style={styles.actions}>
             {!isActive ? (
-              <>
-                <NomadButton theme={theme} variant="teal" full icon={<Icon name="clock" size={18} color="#fff" />} onPress={() => handleStart(2 * 60 * 60)}>
-                  {t("safety.startTwoHour")}
-                </NomadButton>
-                <View style={styles.actionRow}>
-                  <NomadButton theme={theme} variant="ghost" full icon={<Icon name="plus" size={16} />} onPress={() => handleStart(30 * 60)}>
-                    {t("safety.customTimer")}
-                  </NomadButton>
-                  <NomadButton theme={theme} variant="ghost" full icon={<Icon name="mapPin" size={16} />} onPress={() => handleStart(4 * 60 * 60)}>
-                    {t("safety.geofenceArrival")}
-                  </NomadButton>
-                </View>
-              </>
+              <NomadButton theme={theme} variant="teal" full icon={<Icon name="clock" size={18} color="#fff" />} onPress={() => handleStart(defaultCheckInDuration)}>
+                {t("safety.startDefault", { duration: defaultDurationLabel })}
+              </NomadButton>
             ) : (
               <>
                 <NomadButton theme={theme} variant="teal" full icon={<Icon name="check" size={18} color="#fff" />} onPress={handleCheckIn}>
@@ -485,24 +552,6 @@ export default function SafetyScreen() {
               </NomadCard>
             ))}
           </View>
-
-          <View style={styles.sectionRow}>
-            <Text style={[styles.sectionLabel, { color: theme.inkMuted }]}>{t("safety.trustedContacts")}</Text>
-            <View style={[styles.sectionLine, { backgroundColor: theme.hairline }]} />
-          </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.stamps}>
-            {trustedContacts.map((c, i) => (
-              <View key={c.id} style={styles.stampItem}>
-                <Stamp
-                  label={c.name}
-                  sub={c.relation ?? "Trusted"}
-                  color={c.color as string | undefined}
-                  size={72}
-                  rot={-6 + ((i * 7) % 12)}
-                />
-              </View>
-            ))}
-          </ScrollView>
 
           <View style={{ height: 140 }} />
         </ScrollView>
@@ -635,30 +684,32 @@ const styles = StyleSheet.create({
   },
   presets: {
     flexDirection: "row",
-    gap: 6,
-    marginBottom: 10,
+    flexWrap: "wrap",
+    gap: 10,
+    marginBottom: 16,
   },
   preset: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 12,
+    width: "31.5%",
+    flexGrow: 1,
+    paddingVertical: 16,
+    borderRadius: 16,
     borderWidth: 1,
     alignItems: "center",
-    gap: 2,
+    gap: 3,
   },
   presetLabel: {
     fontFamily: NOMAD_FONTS.display,
-    fontSize: 16,
+    fontSize: 19,
     fontWeight: "500",
   },
   presetSub: {
     fontFamily: NOMAD_FONTS.ui,
-    fontSize: 10,
+    fontSize: 10.5,
     fontWeight: "600",
-    letterSpacing: 0.4,
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
   },
   actions: { gap: 8, marginBottom: 14 },
-  actionRow: { flexDirection: "row", gap: 8 },
   sosCard: { marginBottom: 14 },
   sosRow: { flexDirection: "row", alignItems: "center", gap: 14 },
   sosButton: {
@@ -786,12 +837,6 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: "#fff",
   },
-  stamps: {
-    paddingHorizontal: 6,
-    gap: 10,
-    paddingBottom: 6,
-  },
-  stampItem: { paddingVertical: 4 },
   emptyText: {
     fontFamily: NOMAD_FONTS.ui,
     fontSize: 13,
@@ -829,8 +874,9 @@ const styles = StyleSheet.create({
   pulseWrap: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 20,
-    height: 180,
+    paddingTop: 8,
+    paddingBottom: 18,
+    height: 158,
   },
   pulseRing: {
     position: "absolute",
@@ -847,49 +893,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  logCard: { marginHorizontal: 16, marginTop: 4 },
-  logTitle: {
-    fontFamily: NOMAD_FONTS.uiBold,
-    fontSize: 10,
-    letterSpacing: 1.4,
-    color: "rgba(255,255,255,0.7)",
-    textTransform: "uppercase",
-    marginBottom: 10,
-  },
-  logRow: {
-    flexDirection: "row",
-    gap: 10,
-    paddingVertical: 6,
-    alignItems: "flex-start",
-  },
-  logTime: {
-    width: 28,
-    fontFamily: NOMAD_FONTS.mono,
-    fontSize: 10,
-    color: "rgba(255,255,255,0.7)",
-    paddingTop: 2,
-  },
-  logDot: {
-    width: 14,
-    height: 14,
-    borderRadius: 999,
-    borderWidth: 1.5,
-    borderColor: "rgba(255,255,255,0.6)",
+  emergencyMap: { width: "100%", height: 160 },
+  emergencyMapFallback: {
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 2,
+    gap: 8,
+    backgroundColor: "rgba(255,255,255,0.1)",
   },
-  logDotPulse: {
-    width: 5,
-    height: 5,
-    borderRadius: 999,
-    backgroundColor: "#fff",
-  },
-  logMessage: {
-    flex: 1,
+  emergencyMapFallbackText: {
     fontFamily: NOMAD_FONTS.ui,
-    fontSize: 13,
-    color: "#fff",
+    fontSize: 12,
+    color: "rgba(255,255,255,0.75)",
   },
   emergencyActions: {
     paddingHorizontal: 16,

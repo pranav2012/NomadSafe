@@ -34,6 +34,7 @@ interface ChatState {
   send: (conversationKey: string, text: string, labels: ChatErrorLabels) => void;
   clear: (conversationKey: string) => void;
   removeConversation: (conversationKey: string) => void;
+  reset: () => void;
 }
 
 function emptyConversation(): ChatConversation {
@@ -181,6 +182,7 @@ export const useChatStore = create<ChatState>()(
             const { [conversationKey]: _removed, ...conversations } = state.conversations;
             return { conversations };
           }),
+        reset: () => set({ conversations: {}, generatingConversationKey: null }),
       };
     },
     {

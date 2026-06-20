@@ -8,13 +8,21 @@ import {
 } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { useTheme } from "@/hooks/useTheme";
-import { Button } from "./Button";
+import { NOMAD_FONTS } from "@/constants/nomadTokens";
+import { NomadButton } from "@/components/nomad/Button";
 
 interface ModalAction {
   title: string;
   onPress: () => void;
   variant?: "primary" | "secondary" | "ghost" | "danger";
 }
+
+const ACTION_VARIANT = {
+  primary: "primary",
+  secondary: "secondary",
+  ghost: "ghost",
+  danger: "stamp",
+} as const;
 
 interface ModalProps {
   visible: boolean;
@@ -31,7 +39,8 @@ export function Modal({
   children,
   actions,
 }: ModalProps) {
-  const { colors, typography, spacing, radii } = useTheme();
+  const { nomad, typography, spacing, radii } = useTheme();
+  const theme = nomad.colors;
 
   return (
     <RNModal
@@ -41,7 +50,7 @@ export function Modal({
       onRequestClose={onClose}
     >
       <Pressable
-        style={[styles.backdrop, { backgroundColor: colors.overlay }]}
+        style={[styles.backdrop, { backgroundColor: theme.scrim }]}
         onPress={onClose}
       >
         <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(150)}>
@@ -49,7 +58,7 @@ export function Modal({
             style={[
               styles.content,
               {
-                backgroundColor: colors.surfaceElevated,
+                backgroundColor: theme.paper,
                 borderRadius: radii.xl,
                 padding: spacing["2xl"],
               },
@@ -61,9 +70,9 @@ export function Modal({
                 style={[
                   styles.title,
                   {
-                    color: colors.text,
+                    color: theme.inkDeep,
+                    fontFamily: NOMAD_FONTS.display,
                     fontSize: typography.sizes.xl,
-                    fontWeight: typography.weights.semibold,
                     marginBottom: spacing.lg,
                   },
                 ]}
@@ -84,12 +93,14 @@ export function Modal({
                       index > 0 && { marginLeft: spacing.sm },
                     ]}
                   >
-                    <Button
-                      title={action.title}
+                    <NomadButton
                       onPress={action.onPress}
-                      variant={action.variant ?? "primary"}
-                      fullWidth
-                    />
+                      variant={ACTION_VARIANT[action.variant ?? "primary"]}
+                      theme={theme}
+                      full
+                    >
+                      {action.title}
+                    </NomadButton>
                   </View>
                 ))}
               </View>

@@ -4,6 +4,7 @@ import {
   initLlama,
   type LlamaContext,
 } from "llama.rn";
+import { useSettingsStore } from "@/features/settings";
 import { aiModelService, AI_MODELS, type AiModel } from "./aiModelService";
 
 export type { AiModel };
@@ -205,7 +206,13 @@ function normalizeEstimate(value: unknown): TripBudgetEstimate {
   };
 }
 
+function isLocalAiEnabled(): boolean {
+  return useSettingsStore.getState().localAiEnabled;
+}
+
 async function getReadyModel(): Promise<AiModel | null> {
+  if (!isLocalAiEnabled()) return null;
+
   const activeId = aiModelService.getActiveModelId();
   const selectedIds = [
     activeId,
@@ -248,9 +255,10 @@ export const localModelService = {
 
   /**
    * Returns whether the given model is loaded and ready for inference.
+   * Returns false when local AI is globally disabled in Settings.
    */
   isModelLoaded(model: AiModel): boolean {
-    return isActiveModelId(model.id) && activeContext !== null;
+    return isLocalAiEnabled() && isActiveModelId(model.id) && activeContext !== null;
   },
 
   /**
@@ -265,9 +273,13 @@ export const localModelService = {
 
   /**
    * Loads the model into memory only when needed. Keeps at most one context
-   * alive at a time to avoid running out of RAM.
+   * alive at a time to avoid running out of RAM. Throws when local AI is disabled.
    */
   async loadModel(model: AiModel, contextTokens?: number): Promise<LlamaContext> {
+    if (!isLocalAiEnabled()) {
+      throw new Error("Local AI is disabled in Settings.");
+    }
+
     const requestedContextTokens = Math.max(
       MIN_CONTEXT_TOKENS,
       contextTokens ?? aiModelService.getContextWindowPlan(model).tokens,
@@ -364,6 +376,7 @@ export const localModelService = {
    * Quick sanity check that the GGUF file can be read by llama.cpp.
    */
   async validateModel(model: AiModel): Promise<void> {
+    if (!isLocalAiEnabled()) return;
     const path = aiModelService.getLocalModelPath(model);
     await loadLlamaModelInfo(path);
   },
@@ -375,9 +388,10 @@ export const localModelService = {
   /**
    * Warms up the downloaded model by loading it into memory ahead of the first
    * message, so initial replies aren't stuck behind a multi-second model load.
-   * No-op if no model is downloaded or one is already loaded.
+   * No-op if local AI is disabled, no model is downloaded, or one is already loaded.
    */
   async preload(): Promise<void> {
+    if (!isLocalAiEnabled()) return;
     const model = await getReadyModel();
     if (!model) return;
     try {

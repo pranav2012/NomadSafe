@@ -8,9 +8,11 @@ import {
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 import { NOMAD_FONTS } from "@/constants/nomadTokens";
 import { useTheme } from "@/hooks/useTheme";
 import { useLocalization } from "@/localization";
+import { useSettingsStore } from "@/features/settings";
 import { Icon } from "@/components/nomad/Icon";
 import { AiModelManager } from "../components/AiModelManager";
 import { AiDashboard } from "../components/AiDashboard";
@@ -22,12 +24,49 @@ type Tab = "dashboard" | "chat" | "models";
 export default function AiScreen() {
   const { isDark, nomad } = useTheme();
   const { t } = useLocalization();
+  const router = useRouter();
   const theme = nomad.colors;
+  const localAiEnabled = useSettingsStore((s) => s.localAiEnabled);
   const { activeModelId, models } = useAiModels();
   const [tab, setTab] = useState<Tab>("dashboard");
 
   const activeModel = models.find((m) => m.isActive) ?? null;
   const anyDownloaded = models.some((m) => m.isDownloaded);
+
+  if (!localAiEnabled) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: theme.paper }} edges={["top", "left", "right"]}>
+        <StatusBar style={isDark ? "light" : "dark"} />
+        <RNStatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+
+        <View style={styles.header}>
+          <View>
+            <Text style={[styles.eyebrow, { color: theme.inkMuted }]}>{t("aiTab.onDevice")}</Text>
+            <Text style={[styles.title, { color: theme.inkDeep }]}>{t("tabs.ai")}</Text>
+          </View>
+        </View>
+
+        <View style={styles.disabledWrap}>
+          <View style={[styles.disabledIcon, { backgroundColor: theme.paperSoft }]}>
+            <Icon name="sparkle" size={28} color={theme.inkMuted} strokeWidth={2} />
+          </View>
+          <Text style={[styles.disabledTitle, { color: theme.inkDeep }]}>{t("aiTab.disabledTitle")}</Text>
+          <Text style={[styles.disabledBody, { color: theme.inkSoft }]}>{t("aiTab.disabledBody")}</Text>
+          <Pressable
+            onPress={() => router.push("/settings")}
+            style={({ pressed }) => [
+              styles.disabledButton,
+              { backgroundColor: theme.teal, opacity: pressed ? 0.9 : 1 },
+            ]}
+          >
+            <Text style={[styles.disabledButtonText, { color: theme.inverse }]}>
+              {t("aiTab.disabledAction")}
+            </Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.paper }} edges={["top", "left", "right"]}>
@@ -165,4 +204,41 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   tabLabel: { fontFamily: NOMAD_FONTS.uiSemi, fontSize: 13 },
+  disabledWrap: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 32,
+    gap: 12,
+  },
+  disabledIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+  },
+  disabledTitle: {
+    fontFamily: NOMAD_FONTS.display,
+    fontSize: 24,
+    textAlign: "center",
+    lineHeight: 28,
+  },
+  disabledBody: {
+    fontFamily: NOMAD_FONTS.ui,
+    fontSize: 14,
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  disabledButton: {
+    marginTop: 8,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+  },
+  disabledButtonText: {
+    fontFamily: NOMAD_FONTS.uiSemi,
+    fontSize: 15,
+  },
 });

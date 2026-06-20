@@ -67,6 +67,7 @@ interface ExpensesState {
   deleteExpense: (id: string) => void;
   hasFingerprint: (fingerprint: string) => boolean;
   hasExternalId: (externalId: string) => boolean;
+  reset: () => void;
 }
 
 let idCounter = 0;
@@ -123,6 +124,7 @@ export const useExpensesStore = create<ExpensesState>()(
         ),
       hasExternalId: (externalId) =>
         get().expenses.some((expense) => expense.externalId === externalId),
+      reset: () => set({ expenses: [] }),
     }),
     {
       name: "expenses-store",

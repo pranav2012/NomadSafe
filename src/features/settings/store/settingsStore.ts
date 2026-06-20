@@ -5,6 +5,7 @@ import type { SupportedLocale } from "@/localization/languages";
 import { normalizeCurrencyCode } from "@/utils/currency";
 
 type ThemeMode = "light" | "dark" | "system";
+export type DefaultTripMode = "solo" | "group";
 
 interface SettingsState {
   themeMode: ThemeMode;
@@ -13,6 +14,10 @@ interface SettingsState {
   defaultCurrency: string;
   currencyOverride: string | null;
   localeOverride: SupportedLocale | null;
+  tripModeEnabled: boolean;
+  defaultTripMode: DefaultTripMode;
+  defaultCheckInDuration: number; // seconds
+  localAiEnabled: boolean;
 
   setThemeMode: (mode: ThemeMode) => void;
   setOnboardingCompleted: (value: boolean) => void;
@@ -20,6 +25,11 @@ interface SettingsState {
   setDefaultCurrency: (currency: string) => void;
   setCurrencyOverride: (currency: string | null) => void;
   setLocaleOverride: (locale: SupportedLocale | null) => void;
+  setTripModeEnabled: (value: boolean) => void;
+  setDefaultTripMode: (mode: DefaultTripMode) => void;
+  setDefaultCheckInDuration: (seconds: number) => void;
+  setLocalAiEnabled: (value: boolean) => void;
+  reset: () => void;
 }
 
 type PersistedSettingsState = Partial<SettingsState>;
@@ -33,6 +43,10 @@ export const useSettingsStore = create<SettingsState>()(
       defaultCurrency: "USD",
       currencyOverride: null,
       localeOverride: null,
+      tripModeEnabled: true,
+      defaultTripMode: "solo",
+      defaultCheckInDuration: 2 * 60 * 60,
+      localAiEnabled: true,
 
       setThemeMode: (mode) => set({ themeMode: mode }),
       setOnboardingCompleted: (value) =>
@@ -50,6 +64,23 @@ export const useSettingsStore = create<SettingsState>()(
         });
       },
       setLocaleOverride: (locale) => set({ localeOverride: locale }),
+      setTripModeEnabled: (value) => set({ tripModeEnabled: value }),
+      setDefaultTripMode: (mode) => set({ defaultTripMode: mode }),
+      setDefaultCheckInDuration: (seconds) => set({ defaultCheckInDuration: seconds }),
+      setLocalAiEnabled: (value) => set({ localAiEnabled: value }),
+      reset: () =>
+        set({
+          themeMode: "system",
+          onboardingCompleted: false,
+          onboardingStep: 0,
+          defaultCurrency: "USD",
+          currencyOverride: null,
+          localeOverride: null,
+          tripModeEnabled: true,
+          defaultTripMode: "solo",
+          defaultCheckInDuration: 2 * 60 * 60,
+          localAiEnabled: true,
+        }),
     }),
     {
       name: "settings-store",

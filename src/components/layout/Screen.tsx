@@ -24,7 +24,7 @@ export function Screen({
   edges = ["top"],
   padding = true,
 }: ScreenProps) {
-  const { colors, spacing } = useTheme();
+  const { nomad, spacing } = useTheme();
 
   const content = (
     <View
@@ -60,7 +60,7 @@ export function Screen({
   return (
     <SafeAreaView
       edges={edges}
-      style={[styles.flex, { backgroundColor: colors.background }]}
+      style={[styles.flex, { backgroundColor: nomad.colors.paper }]}
     >
       {keyboardContent}
     </SafeAreaView>
