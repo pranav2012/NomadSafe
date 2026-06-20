@@ -149,7 +149,32 @@
     "mapNoCoordinates": "Add destinations to see your trip map",
     "currentLocation": "Current location",
     "countries": "countries",
-    "groupWithCount": "{{count}} travellers"
+    "groupWithCount": "{{count}} travellers",
+    "weatherTitle": "Weather forecast",
+    "weatherLoading": "Loading forecast…",
+    "weatherOutsideWindow": "Forecast available closer to your trip",
+    "weatherUnavailable": "Weather couldn't be loaded right now",
+    "weatherToday": "Today",
+    "weatherFeelsLike": "feels like {{temp}}°",
+    "weatherUv": "UV {{value}}",
+    "weatherOutlookRain": "RAIN AHEAD",
+    "weatherOutlookShowers": "SHOWERS",
+    "weatherOutlookDry": "MOSTLY DRY",
+    "weatherRainDays": "Rain {{days}} · {{prob}}%",
+    "weatherShowersSub": "Up to {{prob}}% rain",
+    "weatherDrySub": "Clear skies ahead",
+    "weatherConditions": {
+      "clear": "Clear",
+      "partlyCloudy": "Partly cloudy",
+      "overcast": "Overcast",
+      "fog": "Fog",
+      "drizzle": "Drizzle",
+      "rain": "Rain",
+      "snow": "Snow",
+      "showers": "Showers",
+      "snowShowers": "Snow showers",
+      "thunderstorm": "Thunderstorm"
+    }
   },
   "settings": {
     "title": "Settings",

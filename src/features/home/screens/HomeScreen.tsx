@@ -36,6 +36,7 @@ import {
   type TripMode,
   useTripsStore,
 } from "@/features/trips/store/tripsStore";
+import { TripWeather } from "@/features/trips/components/TripWeather";
 import { useTheme } from "@/hooks/useTheme";
 import { useLocalization } from "@/localization";
 import { CURRENCY_OPTIONS } from "@/utils/currency";
@@ -1194,6 +1195,7 @@ function TripDashboard({
         </View>
       </View>
 
+      <TripWeather trip={trip} userLocation={userLocation} currentIndex={currentIndex} />
     </View>
   );
 }
