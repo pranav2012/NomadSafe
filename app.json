@@ -43,7 +43,9 @@
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.READ_CONTACTS",
         "android.permission.POST_NOTIFICATIONS",
-        "android.permission.VIBRATE"
+        "android.permission.VIBRATE",
+        "android.permission.USE_FINGERPRINT",
+        "android.permission.WRITE_CONTACTS"
       ],
       "allowBackup": false,
       "softwareKeyboardLayoutMode": "resize",
@@ -143,6 +145,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "10d0b7a8-3f54-4ae4-9991-cfe3f5d1ef41"
+      }
+    },
+    "owner": "pranav2012"
   }
 }
