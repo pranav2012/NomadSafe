@@ -19,8 +19,20 @@ export const smsFallbackStorage = {
     return storage.getString(key(purpose)) ?? DEFAULT_TEMPLATES[purpose];
   },
 
+  /** The user's customized template, or null when they're on the (localizable) default. */
+  getCustom(purpose: SmsTemplatePurpose): string | null {
+    const stored = storage.getString(key(purpose))?.trim();
+    if (!stored || stored === DEFAULT_TEMPLATES[purpose]) return null;
+    return stored;
+  },
+
   set(purpose: SmsTemplatePurpose, template: string) {
-    storage.set(key(purpose), template.trim() || DEFAULT_TEMPLATES[purpose]);
+    const trimmed = template.trim();
+    if (!trimmed || trimmed === DEFAULT_TEMPLATES[purpose]) {
+      storage.remove(key(purpose));
+      return;
+    }
+    storage.set(key(purpose), trimmed);
   },
 
   reset() {
