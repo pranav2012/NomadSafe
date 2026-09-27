@@ -104,7 +104,9 @@
       "expo-status-bar",
       "expo-background-task",
       "./plugins/withoutPushEntitlement",
-      "./plugins/withGoogleMapsApiKey"
+      "./plugins/withGoogleMapsApiKey",
+      "expo-build-properties",
+      "expo-localization"
     ],
     "experiments": {
       "typedRoutes": true,
