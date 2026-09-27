@@ -1,9 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-  <!-- Adaptive-icon foreground: art kept inside the central 66% safe zone -->
-  <circle cx="512" cy="512" r="300" fill="none" stroke="#C6432A" stroke-width="14" stroke-dasharray="4 26" stroke-linecap="round"/>
-  <circle cx="512" cy="512" r="262" fill="none" stroke="#C6432A" stroke-width="6" opacity="0.55"/>
-  <g transform="translate(512 520) scale(17.5) translate(-12 -12)">
-    <path d="M12 3l8 3v5c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6l8-3z" fill="#D9A441"/>
-    <path d="M8.6 12.2l2.4 2.4 4.6-4.8" fill="none" stroke="#1A1612" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 512 512">
+<g transform="translate(256 256) scale(0.86) translate(-247 -264)">
+  <path d="M80 300 C140 200 200 200 256 260 C320 330 360 320 400 260" fill="none" stroke="#22D3EE" stroke-width="5.5" stroke-linecap="round" stroke-dasharray="3 12" opacity="0.75"/>
+  <g transform="translate(400,260) rotate(-50)"><path d="M-14 -10 L14 0 L-14 10 L-6 0 Z" fill="#E6F6FF"/></g>
+  <path d="M196 184 L316 360" stroke="#E6F6FF" stroke-width="40" stroke-linecap="round" opacity="0.32"/>
+  <rect x="176" y="168" width="44" height="176" rx="22" fill="#E6F6FF"/>
+  <rect x="292" y="168" width="44" height="176" rx="22" fill="#E6F6FF"/>
+  <path d="M200 168 L320 344" stroke="#E6F6FF" stroke-width="40" stroke-linecap="round"/>
+</g>
 </svg>

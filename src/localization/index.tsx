@@ -67,6 +67,17 @@ function formatCurrencyNumber(value: number, locale: string, currency: string): 
   }).format(value);
 }
 
+const DATE_COMPONENTS = ["weekday", "era", "year", "month", "day", "hour", "minute", "second", "dayPeriod", "timeZoneName", "fractionalSecondDigits"] as const;
+
+/** Intl throws if dateStyle/timeStyle are mixed with explicit components, so only default when none are given. */
+function withDefaultStyle(
+  options: Intl.DateTimeFormatOptions | undefined,
+  defaults: Intl.DateTimeFormatOptions,
+): Intl.DateTimeFormatOptions {
+  if (options && DATE_COMPONENTS.some((key) => options[key] !== undefined)) return options;
+  return { ...defaults, ...options };
+}
+
 /**
  * RN only applies a layout-direction change after a restart. Force the new
  * direction and reload once; the stored target stops a reload loop if the
@@ -127,11 +138,14 @@ export function LocalizationProvider({ children }: { children: React.ReactNode }
         }).format(amount);
       },
       formatDate: (value, options) =>
-        new Intl.DateTimeFormat(formatLocale, { dateStyle: "medium", ...options }).format(value),
+        new Intl.DateTimeFormat(formatLocale, withDefaultStyle(options, { dateStyle: "medium" })).format(value),
       formatTime: (value, options) =>
-        new Intl.DateTimeFormat(formatLocale, { timeStyle: "short", ...options }).format(value),
+        new Intl.DateTimeFormat(formatLocale, withDefaultStyle(options, { timeStyle: "short" })).format(value),
       formatDateTime: (value, options) =>
-        new Intl.DateTimeFormat(formatLocale, { dateStyle: "medium", timeStyle: "short", ...options }).format(value),
+        new Intl.DateTimeFormat(
+          formatLocale,
+          withDefaultStyle(options, { dateStyle: "medium", timeStyle: "short" }),
+        ).format(value),
       formatDuration: (seconds) => {
         try {
           return new Intl.NumberFormat(formatLocale, {
