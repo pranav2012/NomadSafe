@@ -147,7 +147,7 @@ If you want to launch before that finishes, ship with Gmail limited to test user
 
 1. Create a React Native project at <https://sentry.io>.
 2. Add EAS env vars (production): `EXPO_PUBLIC_SENTRY_DSN` (plaintext), `SENTRY_ORG`, `SENTRY_PROJECT` (plaintext), `SENTRY_AUTH_TOKEN` (**secret**).
-3. Rebuild. Crash reporting stays off until the DSN is set.
+3. Remove `SENTRY_DISABLE_AUTO_UPLOAD` from `build.base.env` in `eas.json` so source maps upload, then rebuild. Crash reporting stays off until the DSN is set.
 
 ## 12. Translations 🧑
 
