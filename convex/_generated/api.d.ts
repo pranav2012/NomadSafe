@@ -8,10 +8,13 @@
  * @module
  */
 
+import type * as account from "../account.js";
 import type * as auth from "../auth.js";
 import type * as http from "../http.js";
+import type * as legalPages from "../legalPages.js";
 import type * as places from "../places.js";
 import type * as sharing from "../sharing.js";
+import type * as users from "../users.js";
 
 import type {
   ApiFromModules,
@@ -20,10 +23,13 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  account: typeof account;
   auth: typeof auth;
   http: typeof http;
+  legalPages: typeof legalPages;
   places: typeof places;
   sharing: typeof sharing;
+  users: typeof users;
 }>;
 
 /**

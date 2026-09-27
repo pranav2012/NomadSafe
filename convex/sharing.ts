@@ -1,89 +1,60 @@
 import { v } from "convex/values";
-import { query, mutation, httpAction } from "./_generated/server";
-import { api } from "./_generated/api";
-import { authComponent } from "./auth";
-import type { QueryCtx, MutationCtx } from "./_generated/server";
+import { query, mutation } from "./_generated/server";
+import {
+  findAuthUserByEmail,
+  findAuthUserById,
+  getAuthenticatedUser,
+  normalizeEmail,
+  requireUser,
+} from "./users";
 
-/**
- * Normalise an email for reliable lookups. Lowercases and trims whitespace.
- */
-function normalizeEmail(email: string) {
-  return email.trim().toLowerCase();
+const MAX_NAME = 80;
+const MAX_EMAIL = 254;
+const MAX_PHONE = 32;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const modeValidator = v.union(
+  v.literal("normal"),
+  v.literal("low"),
+  v.literal("emergency"),
+);
+
+function cleanName(name: string) {
+  const trimmed = name.trim().slice(0, MAX_NAME);
+  if (!trimmed) throw new Error("Name is required");
+  return trimmed;
 }
 
-/**
- * Returns the currently signed-in user from Better Auth.
- * The Better Auth user document uses `_id` for the Convex document id and
- * `userId` for the public Better Auth user id we expose to clients.
- */
-async function getAuthenticatedUser(ctx: QueryCtx | MutationCtx) {
-  const user = await authComponent.getAuthUser(ctx);
-  return user
-    ? {
-        id: (user as unknown as { _id: string; userId?: string | null }).userId ?? (user as unknown as { _id: string })._id,
-        name: user.name ?? "",
-        email: (user as unknown as { email?: string | null }).email ?? null,
-        phone: (user as unknown as { phone?: string | null }).phone ?? null,
-        image: (user as unknown as { image?: string | null }).image ?? null,
-      }
-    : null;
-}
-function userId(user: { _id: string; userId?: string | null }) {
-  return user.userId ?? user._id;
-}
-
-
-/**
- * Query the current user's public profile.
- */
 export const me = query({
   args: {},
   handler: async (ctx) => {
-    const user = await getAuthenticatedUser(ctx);
-    if (!user) return null;
-    return {
-      id: user.id,
-      name: user.name ?? "",
-      email: user.email ?? null,
-      phone: user.phone ?? null,
-      image: user.image ?? null,
-    };
+    return getAuthenticatedUser(ctx);
   },
 });
 
 /**
- * Search for a NomadSafe user by email address. Returns null if no match.
- * Used during onboarding / sharing to suggest a link instead of SMS-only.
+ * Checks whether an email belongs to a NomadSafe user. Auth-only and returns
+ * just the display name so it can't be used to harvest profiles.
  */
 export const findUserByEmail = query({
   args: { email: v.string() },
   handler: async (ctx, { email }) => {
-    const normalized = normalizeEmail(email);
-    const match = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", normalized))
-      .unique();
-    if (!match) return null;
-    return {
-      id: userId(match as any),
-      userId: userId(match as any),
-      name: match.name,
-      email: match.email ?? null,
-      avatarUrl: match.avatarUrl ?? null,
-    };
+    const user = await getAuthenticatedUser(ctx);
+    if (!user) return null;
+    if (email.length > MAX_EMAIL || !EMAIL_RE.test(email.trim())) return null;
+    const match = await findAuthUserByEmail(ctx, email);
+    if (!match || match.id === user.id) return null;
+    return { id: match.id, name: match.name };
   },
 });
 
-/**
- * Get all contact links for the current user (outgoing + incoming).
- */
 export const getContactLinks = query({
   args: {},
   handler: async (ctx) => {
     const user = await getAuthenticatedUser(ctx);
-    if (!user) return [];
+    if (!user) return { outgoing: [], incoming: [], invites: [] };
 
-    const [outgoing, incoming] = await Promise.all([
+    const [outgoing, incoming, invites] = await Promise.all([
       ctx.db
         .query("contactLinks")
         .withIndex("by_owner", (q) => q.eq("ownerUserId", user.id))
@@ -92,7 +63,25 @@ export const getContactLinks = query({
         .query("contactLinks")
         .withIndex("by_linked", (q) => q.eq("linkedUserId", user.id))
         .collect(),
+      ctx.db
+        .query("pendingInvites")
+        .withIndex("by_owner", (q) => q.eq("ownerUserId", user.id))
+        .collect(),
     ]);
+
+    const incomingWithOwner = await Promise.all(
+      incoming.map(async (link) => {
+        const owner = await findAuthUserById(ctx, link.ownerUserId);
+        return {
+          id: link._id,
+          ownerUserId: link.ownerUserId,
+          ownerName: owner?.name || owner?.email || "",
+          ownerEmail: owner?.email ?? null,
+          status: link.status,
+          createdAt: link.createdAt,
+        };
+      }),
+    );
 
     return {
       outgoing: outgoing.map((link) => ({
@@ -102,21 +91,22 @@ export const getContactLinks = query({
         email: link.email,
         status: link.status,
       })),
-      incoming: incoming.map((link) => ({
-        id: link._id,
-        ownerUserId: link.ownerUserId,
-        name: link.name,
-        email: link.email,
-        status: link.status,
+      incoming: incomingWithOwner,
+      invites: invites.map((invite) => ({
+        id: invite._id,
+        name: invite.name,
+        email: invite.email ?? null,
+        phone: invite.phone ?? null,
+        invitedAt: invite.invitedAt,
       })),
     };
   },
 });
 
 /**
- * Create or re-create an outgoing contact link to another NomadSafe user by email.
- * If the target user exists, a pending link request is created.
- * If not, a pending invite record is stored for the invite flow.
+ * Asks another user to receive the caller's live location. Existing users get
+ * a pending link they must accept; unknown emails become a pending invite that
+ * is claimed when that person signs up (see `claimInvites`).
  */
 export const requestContactLink = mutation({
   args: {
@@ -124,127 +114,181 @@ export const requestContactLink = mutation({
     email: v.string(),
     phone: v.optional(v.string()),
   },
-  handler: async (ctx, { name, email, phone }) => {
-    const user = await getAuthenticatedUser(ctx);
-    if (!user) throw new Error("Not authenticated");
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx);
+    const name = cleanName(args.name);
+    const email = normalizeEmail(args.email);
+    if (email.length > MAX_EMAIL || !EMAIL_RE.test(email)) throw new Error("Invalid email");
+    const phone = args.phone?.trim().slice(0, MAX_PHONE) || undefined;
+    if (email === user.email) throw new Error("Cannot link to yourself");
 
-    const normalizedEmail = normalizeEmail(email);
     const existingLink = await ctx.db
       .query("contactLinks")
-      .withIndex("by_owner_email", (q) =>
-        q.eq("ownerUserId", user.id).eq("email", normalizedEmail),
-      )
+      .withIndex("by_owner_email", (q) => q.eq("ownerUserId", user.id).eq("email", email))
       .unique();
-    if (existingLink) return { linkId: existingLink._id, status: existingLink.status };
 
-    const target = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", normalizedEmail))
-      .unique();
+    const target = await findAuthUserByEmail(ctx, email);
+    if (target && target.id === user.id) throw new Error("Cannot link to yourself");
+
+    if (existingLink) {
+      if (existingLink.status === "declined") {
+        await ctx.db.patch(existingLink._id, { status: "pending", updatedAt: Date.now() });
+        return { linkId: existingLink._id, status: "pending" as const, linkedUserId: existingLink.linkedUserId };
+      }
+      return { linkId: existingLink._id, status: existingLink.status, linkedUserId: existingLink.linkedUserId };
+    }
 
     if (!target) {
-      // No NomadSafe account yet; store a pending invite.
-      await ctx.db.insert("pendingInvites", {
-        ownerUserId: user.id,
-        name,
-        email: normalizedEmail,
-        phone,
-        invitedAt: Date.now(),
-      });
-      return { linkId: null, status: "invite_pending" as const };
+      const invite = await ctx.db
+        .query("pendingInvites")
+        .withIndex("by_owner_email", (q) => q.eq("ownerUserId", user.id).eq("email", email))
+        .first();
+      if (!invite) {
+        await ctx.db.insert("pendingInvites", {
+          ownerUserId: user.id,
+          name,
+          email,
+          phone,
+          invitedAt: Date.now(),
+        });
+      }
+      return { linkId: null, status: "invite_pending" as const, linkedUserId: null };
     }
 
-    if (userId(target) === user.id) {
-      throw new Error("Cannot link to yourself");
-    }
-
+    const now = Date.now();
     const linkId = await ctx.db.insert("contactLinks", {
       ownerUserId: user.id,
-      linkedUserId: userId(target),
+      linkedUserId: target.id,
       name,
-      email: normalizedEmail,
+      email,
       status: "pending",
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
+      createdAt: now,
+      updatedAt: now,
     });
-
-    return { linkId, status: "pending" as const };
+    return { linkId, status: "pending" as const, linkedUserId: target.id };
   },
 });
 
-/**
- * Accept or decline an incoming contact-link request.
- */
+/** Converts invites addressed to the caller's email into pending link requests. */
+export const claimInvites = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const user = await getAuthenticatedUser(ctx);
+    if (!user?.email) return { claimed: 0 };
+    const email = normalizeEmail(user.email);
+
+    const invites = await ctx.db
+      .query("pendingInvites")
+      .withIndex("by_email", (q) => q.eq("email", email))
+      .collect();
+
+    let claimed = 0;
+    for (const invite of invites) {
+      await ctx.db.delete(invite._id);
+      if (invite.ownerUserId === user.id) continue;
+      const existing = await ctx.db
+        .query("contactLinks")
+        .withIndex("by_owner_email", (q) => q.eq("ownerUserId", invite.ownerUserId).eq("email", email))
+        .unique();
+      if (existing) continue;
+      const now = Date.now();
+      await ctx.db.insert("contactLinks", {
+        ownerUserId: invite.ownerUserId,
+        linkedUserId: user.id,
+        name: invite.name,
+        email,
+        status: "pending",
+        createdAt: now,
+        updatedAt: now,
+      });
+      claimed += 1;
+    }
+    return { claimed };
+  },
+});
+
 export const respondToContactLink = mutation({
   args: {
     linkId: v.id("contactLinks"),
     accept: v.boolean(),
   },
   handler: async (ctx, { linkId, accept }) => {
-    const user = await getAuthenticatedUser(ctx);
-    if (!user) throw new Error("Not authenticated");
-
+    const user = await requireUser(ctx);
     const link = await ctx.db.get(linkId);
-    if (!link || link.linkedUserId !== user.id) {
-      throw new Error("Link not found");
-    }
+    if (!link || link.linkedUserId !== user.id) throw new Error("Link not found");
 
     const nextStatus = accept ? "accepted" : "declined";
-    await ctx.db.patch(linkId, {
-      status: nextStatus,
-      updatedAt: Date.now(),
-    });
+    await ctx.db.patch(linkId, { status: nextStatus, updatedAt: Date.now() });
 
+    if (!accept) {
+      const share = await ctx.db
+        .query("locationShares")
+        .withIndex("by_owner_recipient", (q) =>
+          q.eq("ownerUserId", link.ownerUserId).eq("recipientUserId", user.id),
+        )
+        .unique();
+      if (share) await ctx.db.delete(share._id);
+    }
     return { status: nextStatus };
   },
 });
 
-/**
- * Remove an outgoing contact link (and any active share).
- */
+/** Removes a link from either side, along with any location share on it. */
 export const removeContactLink = mutation({
   args: { linkId: v.id("contactLinks") },
   handler: async (ctx, { linkId }) => {
-    const user = await getAuthenticatedUser(ctx);
-    if (!user) throw new Error("Not authenticated");
-
+    const user = await requireUser(ctx);
     const link = await ctx.db.get(linkId);
-    if (!link || link.ownerUserId !== user.id) {
+    if (!link || (link.ownerUserId !== user.id && link.linkedUserId !== user.id)) {
       throw new Error("Link not found");
     }
 
     await ctx.db.delete(linkId);
-
     const share = await ctx.db
       .query("locationShares")
       .withIndex("by_owner_recipient", (q) =>
-        q.eq("ownerUserId", user.id).eq("recipientUserId", link.linkedUserId),
+        q.eq("ownerUserId", link.ownerUserId).eq("recipientUserId", link.linkedUserId),
       )
       .unique();
     if (share) await ctx.db.delete(share._id);
+    return { ok: true };
+  },
+});
 
+export const removeInvite = mutation({
+  args: { inviteId: v.id("pendingInvites") },
+  handler: async (ctx, { inviteId }) => {
+    const user = await requireUser(ctx);
+    const invite = await ctx.db.get(inviteId);
+    if (!invite || invite.ownerUserId !== user.id) throw new Error("Invite not found");
+    await ctx.db.delete(inviteId);
     return { ok: true };
   },
 });
 
 /**
- * Publish the current user's location from the mobile background task.
- * Upserts an active share row for each accepted contact link.
+ * Publishes the caller's location to every accepted link, skipping recipients
+ * the caller paused. Called by the foreground app and the background task.
  */
 export const publishLocation = mutation({
   args: {
     latitude: v.number(),
     longitude: v.number(),
     battery: v.optional(v.number()),
-    mode: v.union(
-      v.literal("normal"),
-      v.literal("low"),
-      v.literal("emergency"),
-    ),
+    mode: modeValidator,
   },
   handler: async (ctx, { latitude, longitude, battery, mode }) => {
-    const user = await getAuthenticatedUser(ctx);
-    if (!user) throw new Error("Not authenticated");
+    const user = await requireUser(ctx);
+    if (
+      !Number.isFinite(latitude) ||
+      !Number.isFinite(longitude) ||
+      Math.abs(latitude) > 90 ||
+      Math.abs(longitude) > 180
+    ) {
+      throw new Error("Invalid coordinates");
+    }
+    const safeBattery =
+      typeof battery === "number" && battery >= 0 && battery <= 1 ? battery : undefined;
 
     const acceptedLinks = await ctx.db
       .query("contactLinks")
@@ -253,7 +297,7 @@ export const publishLocation = mutation({
       .collect();
 
     const now = Date.now();
-
+    let recipients = 0;
     for (const link of acceptedLinks) {
       const existing = await ctx.db
         .query("locationShares")
@@ -262,11 +306,13 @@ export const publishLocation = mutation({
         )
         .unique();
 
+      if (existing?.paused) continue;
+      recipients += 1;
       if (existing) {
         await ctx.db.patch(existing._id, {
           latitude,
           longitude,
-          battery,
+          battery: safeBattery,
           mode,
           updatedAt: now,
           active: true,
@@ -277,28 +323,22 @@ export const publishLocation = mutation({
           recipientUserId: link.linkedUserId,
           latitude,
           longitude,
-          battery,
+          battery: safeBattery,
           mode,
           active: true,
+          paused: false,
           updatedAt: now,
         });
       }
     }
-
-    return { recipients: acceptedLinks.length };
+    return { recipients };
   },
 });
 
-/**
- * Pause sharing with a specific recipient (sets active=false). The background
- * task will skip paused recipients until toggled back on.
- */
-export const pauseShare = mutation({
-  args: { recipientUserId: v.string() },
-  handler: async (ctx, { recipientUserId }) => {
-    const user = await getAuthenticatedUser(ctx);
-    if (!user) throw new Error("Not authenticated");
-
+export const setSharePaused = mutation({
+  args: { recipientUserId: v.string(), paused: v.boolean() },
+  handler: async (ctx, { recipientUserId, paused }) => {
+    const user = await requireUser(ctx);
     const existing = await ctx.db
       .query("locationShares")
       .withIndex("by_owner_recipient", (q) =>
@@ -306,16 +346,45 @@ export const pauseShare = mutation({
       )
       .unique();
     if (existing) {
-      await ctx.db.patch(existing._id, { active: false, updatedAt: Date.now() });
+      await ctx.db.patch(existing._id, {
+        paused,
+        active: paused ? false : existing.active,
+        updatedAt: Date.now(),
+      });
+    } else if (paused) {
+      await ctx.db.insert("locationShares", {
+        ownerUserId: user.id,
+        recipientUserId,
+        latitude: 0,
+        longitude: 0,
+        mode: "normal",
+        active: false,
+        paused: true,
+        updatedAt: Date.now(),
+      });
     }
     return { ok: true };
   },
 });
 
-/**
- * Get the latest incoming location shares for the current user.
- * Live Convex subscription feeds the Sharing map + recipient list.
- */
+/** Marks all of the caller's shares inactive so contacts stop seeing "live". */
+export const stopSharing = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const user = await getAuthenticatedUser(ctx);
+    if (!user) return { ok: false };
+    const shares = await ctx.db
+      .query("locationShares")
+      .withIndex("by_owner", (q) => q.eq("ownerUserId", user.id))
+      .collect();
+    const now = Date.now();
+    for (const share of shares) {
+      if (share.active) await ctx.db.patch(share._id, { active: false, updatedAt: now });
+    }
+    return { ok: true };
+  },
+});
+
 export const getIncomingShares = query({
   args: {},
   handler: async (ctx) => {
@@ -326,23 +395,25 @@ export const getIncomingShares = query({
       .query("locationShares")
       .withIndex("by_recipient", (q) => q.eq("recipientUserId", user.id))
       .filter((q) => q.eq(q.field("active"), true))
-      .order("desc")
       .take(50);
 
-    return shares.map((share) => ({
-      ownerUserId: share.ownerUserId,
-      latitude: share.latitude,
-      longitude: share.longitude,
-      battery: share.battery ?? null,
-      mode: share.mode,
-      updatedAt: share.updatedAt,
-    }));
+    return Promise.all(
+      shares.map(async (share) => {
+        const owner = await findAuthUserById(ctx, share.ownerUserId);
+        return {
+          ownerUserId: share.ownerUserId,
+          ownerName: owner?.name || owner?.email || "",
+          latitude: share.latitude,
+          longitude: share.longitude,
+          battery: share.battery ?? null,
+          mode: share.mode,
+          updatedAt: share.updatedAt,
+        };
+      }),
+    );
   },
 });
 
-/**
- * Get outgoing shares for the current user (used to show who is receiving).
- */
 export const getOutgoingShares = query({
   args: {},
   handler: async (ctx) => {
@@ -356,47 +427,10 @@ export const getOutgoingShares = query({
 
     return shares.map((share) => ({
       recipientUserId: share.recipientUserId,
-      latitude: share.latitude,
-      longitude: share.longitude,
-      battery: share.battery ?? null,
-      mode: share.mode,
       active: share.active,
+      paused: share.paused ?? false,
+      mode: share.mode,
       updatedAt: share.updatedAt,
     }));
   },
-});
-
-/**
- * HTTP action that the mobile background task can call to publish location.
- * Better Auth session cookies are forwarded by fetch, so ctx.auth.getUser()
- * still works. Accepts a JSON body and delegates to publishLocation.
- */
-export const publishLocationHttp = httpAction(async (ctx, req) => {
-  try {
-    const body = await req.json();
-    const { latitude, longitude, battery, mode } = body;
-
-    const validMode =
-      mode === "normal" || mode === "low" || mode === "emergency"
-        ? mode
-        : "normal";
-
-    const result = await ctx.runMutation(api.sharing.publishLocation, {
-      latitude,
-      longitude,
-      battery: typeof battery === "number" ? battery : undefined,
-      mode: validMode,
-    });
-
-    return new Response(JSON.stringify(result), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Internal error";
-    return new Response(JSON.stringify({ error: message }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
 });

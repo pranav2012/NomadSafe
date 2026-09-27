@@ -2,17 +2,6 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
-  users: defineTable({
-    name: v.string(),
-    email: v.optional(v.string()),
-    phone: v.optional(v.string()),
-    avatarUrl: v.optional(v.string()),
-    defaultCurrency: v.string(),
-    createdAt: v.number(),
-  })
-    .index("by_email", ["email"])
-    .index("by_phone", ["phone"]),
-
   // Links a contact (owner) to another NomadSafe user (linkedUser) by email.
   contactLinks: defineTable({
     ownerUserId: v.string(),
@@ -45,6 +34,7 @@ export default defineSchema({
       v.literal("emergency"),
     ),
     active: v.boolean(),
+    paused: v.optional(v.boolean()),
     updatedAt: v.number(),
   })
     .index("by_owner", ["ownerUserId"])
@@ -61,5 +51,14 @@ export default defineSchema({
   })
     .index("by_owner", ["ownerUserId"])
     .index("by_owner_email", ["ownerUserId", "email"])
-    .index("by_owner_phone", ["ownerUserId", "phone"]),
+    .index("by_owner_phone", ["ownerUserId", "phone"])
+    .index("by_email", ["email"]),
+
+  // Web deletion requests from users who can no longer open the app.
+  deletionRequests: defineTable({
+    email: v.string(),
+    reason: v.optional(v.string()),
+    requestedAt: v.number(),
+    status: v.union(v.literal("pending"), v.literal("completed")),
+  }).index("by_email", ["email"]),
 });
