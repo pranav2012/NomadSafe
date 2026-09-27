@@ -1,50 +1,42 @@
-# Welcome to your Expo app 👋
+# NomadSafe
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A travel safety and planning app for Android (iOS later). It brings together trips and itineraries, expense tracking, SOS and check-ins, live location sharing with trusted contacts, and an on-device AI travel assistant.
 
-## Get started
+Stack: Expo SDK 57 · React Native 0.86 · React 19.2 (React Compiler) · Expo Router · Convex + Better Auth · zustand + encrypted MMKV · llama.rn.
 
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Getting started
 
 ```bash
-npm run reset-project
+pnpm install
+cp .env.example .env.local        # fill in the values
+npx convex dev                    # backend (separate terminal)
+pnpm android                      # dev client build + run on a device or emulator
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+This app uses native modules (llama.rn, MMKV, Maps), so it **won't run in Expo Go**. Use a dev-client build (`pnpm android` or `eas build --profile development`).
 
-## Learn more
+## Scripts
 
-To learn more about developing your project with Expo, look at the following resources:
+| Command | What it does |
+|---|---|
+| `pnpm start` | Metro dev server |
+| `pnpm android` / `pnpm ios` | Build and run the dev client |
+| `pnpm lint` | ESLint |
+| `pnpm exec tsc --noEmit` | Type-check |
+| `pnpm test:expense-import` | Transaction parser / import tests |
+| `node scripts/check-i18n-keys.mjs` | Lists `t("…")` keys missing from `en.json` |
+| `pnpm localize` | Generates the other 14 locales from `en.json` |
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Project layout
 
-## Join the community
+- `src/app/`: Expo Router routes (thin wrappers around feature screens)
+- `src/features/<feature>/`: screens, components, hooks, services and stores per feature
+- `src/localization/`: i18n provider, `translate()` for code outside React, translations
+- `src/stores/storage.ts`: the encrypted MMKV instance shared by every store
+- `convex/`: backend (auth, sharing, account deletion, privacy and deletion web pages)
+- `index.ts`: app entry. Defines background tasks before the router loads.
+- `docs/PLAY_RELEASE.md`: Play Store release runbook
 
-Join our community of developers creating universal apps.
+## Releasing
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+See [`docs/PLAY_RELEASE.md`](docs/PLAY_RELEASE.md).
