@@ -1,9 +1,8 @@
-import { Platform } from "react-native";
 import * as Location from "expo-location";
 import * as Contacts from "expo-contacts";
-import * as SMS from "expo-sms";
+import * as Notifications from "expo-notifications";
 
-export type PermissionKind = "location" | "locationAlways" | "contacts" | "sms";
+export type PermissionKind = "location" | "contacts" | "notifications";
 
 export interface PermissionStatus {
   kind: PermissionKind;
@@ -12,104 +11,58 @@ export interface PermissionStatus {
   denied: boolean;
 }
 
-async function getLocationStatus(): Promise<PermissionStatus> {
-  const foreground = await Location.getForegroundPermissionsAsync();
-  if (!foreground.granted) {
-    return {
-      kind: "location",
-      granted: false,
-      canAskAgain: foreground.canAskAgain,
-      denied: foreground.status === Location.PermissionStatus.DENIED,
-    };
+interface RawPermission {
+  granted: boolean;
+  canAskAgain: boolean;
+  status: string;
+}
+
+function toStatus(kind: PermissionKind, raw: RawPermission): PermissionStatus {
+  return {
+    kind,
+    granted: raw.granted,
+    canAskAgain: raw.canAskAgain,
+    denied: raw.status === "denied",
+  };
+}
+
+/** Never throws: a failed permission call is reported as not granted. */
+async function safely(
+  kind: PermissionKind,
+  call: () => Promise<RawPermission>,
+): Promise<PermissionStatus> {
+  try {
+    return toStatus(kind, await call());
+  } catch (err) {
+    console.warn(`[permissions] ${kind} check failed`, err);
+    return { kind, granted: false, canAskAgain: true, denied: false };
   }
-  const background = await Location.getBackgroundPermissionsAsync();
-  return {
-    kind: "locationAlways",
-    granted: background.granted,
-    canAskAgain: background.canAskAgain,
-    denied: background.status === Location.PermissionStatus.DENIED,
-  };
 }
 
-async function getContactsStatus(): Promise<PermissionStatus> {
-  const status = await Contacts.getPermissionsAsync();
-  return {
-    kind: "contacts",
-    granted: status.granted,
-    canAskAgain: status.canAskAgain,
-    denied: status.status === Contacts.PermissionStatus.DENIED,
-  };
-}
-
-async function getSmsStatus(): Promise<PermissionStatus> {
-  const isAvailable = await SMS.isAvailableAsync();
-  return {
-    kind: "sms",
-    granted: isAvailable,
-    canAskAgain: false,
-    denied: !isAvailable,
-  };
-}
-
+// Foreground location only; background is requested from Sharing after its disclosure.
 export const permissionsService = {
   async checkAll(): Promise<Record<PermissionKind, PermissionStatus>> {
-    const [location, contacts, sms] = await Promise.all([
-      getLocationStatus(),
-      getContactsStatus(),
-      getSmsStatus(),
+    const [location, contacts, notifications] = await Promise.all([
+      safely("location", () => Location.getForegroundPermissionsAsync()),
+      safely("contacts", () => Contacts.getPermissionsAsync()),
+      safely("notifications", () => Notifications.getPermissionsAsync()),
     ]);
-    return {
-      location,
-      locationAlways: location,
-      contacts,
-      sms,
-    };
+    return { location, contacts, notifications };
   },
 
-  async requestLocation(): Promise<PermissionStatus> {
-    const foreground = await Location.requestForegroundPermissionsAsync();
-    if (!foreground.granted) {
-      return {
-        kind: "location",
-        granted: false,
-        canAskAgain: foreground.canAskAgain,
-        denied: foreground.status === Location.PermissionStatus.DENIED,
-      };
-    }
-    if (Platform.OS === "android") {
-      const background = await Location.requestBackgroundPermissionsAsync();
-      return {
-        kind: "locationAlways",
-        granted: background.granted,
-        canAskAgain: background.canAskAgain,
-        denied: background.status === Location.PermissionStatus.DENIED,
-      };
-    }
-    return {
-      kind: "locationAlways",
-      granted: true,
-      canAskAgain: true,
-      denied: false,
-    };
+  requestLocation(): Promise<PermissionStatus> {
+    return safely("location", () => Location.requestForegroundPermissionsAsync());
   },
 
-  async requestContacts(): Promise<PermissionStatus> {
-    const status = await Contacts.requestPermissionsAsync();
-    return {
-      kind: "contacts",
-      granted: status.granted,
-      canAskAgain: status.canAskAgain,
-      denied: status.status === Contacts.PermissionStatus.DENIED,
-    };
+  requestContacts(): Promise<PermissionStatus> {
+    return safely("contacts", () => Contacts.requestPermissionsAsync());
   },
 
-  async requestSms(): Promise<PermissionStatus> {
-    const isAvailable = await SMS.isAvailableAsync();
-    return {
-      kind: "sms",
-      granted: isAvailable,
-      canAskAgain: false,
-      denied: !isAvailable,
-    };
+  requestNotifications(): Promise<PermissionStatus> {
+    return safely("notifications", async () => {
+      const current = await Notifications.getPermissionsAsync();
+      if (current.granted || !current.canAskAgain) return current;
+      return Notifications.requestPermissionsAsync();
+    });
   },
 };

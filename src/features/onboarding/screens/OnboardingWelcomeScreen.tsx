@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useCallback, useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,28 +6,33 @@ import {
   ScrollView,
   StyleSheet,
   Platform,
+  Alert,
+  BackHandler,
+  Linking,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import Animated, {
   FadeInRight,
   FadeInLeft,
 } from "react-native-reanimated";
 import { NOMAD_FONTS } from "@/constants/nomadTokens";
+import { LEGAL_URLS } from "@/constants/legal";
 import { useTheme } from "@/hooks/useTheme";
 import { useSettingsStore } from "@/features/settings";
 import { NomadButton } from "@/components/nomad/Button";
 import { Icon } from "@/components/nomad/Icon";
 import { WelcomeStep } from "@/features/onboarding/components/WelcomeStep";
-import { SafetyStep } from "@/features/onboarding/components/SafetyStep";
+import { SafetyStep, type ContactsSummary } from "@/features/onboarding/components/SafetyStep";
 import { LedgerStep } from "@/features/onboarding/components/LedgerStep";
-import { AIStep } from "@/features/onboarding/components/AIStep";
+import { AIStep, type AiSetupStatus } from "@/features/onboarding/components/AIStep";
 import { SecureStep } from "@/features/onboarding/components/SecureStep";
 import { ReadyStep } from "@/features/onboarding/components/ReadyStep";
+import { emergencyContactsStorage } from "@/features/onboarding/services/emergencyContactsStorage";
 import { useBiometricPresentation, useAuthStore } from "@/features/auth";
-import { useModelDownload } from "@/features/ai";
+import { isValidPhone } from "@/features/safety/utils/phone";
 import { useLocalization } from "@/localization";
 
 const STEP_IDS = ["welcome", "safety", "ledger", "ai", "secure", "ready"] as const;
@@ -35,6 +40,16 @@ const STEP_IDS = ["welcome", "safety", "ledger", "ai", "secure", "ready"] as con
 // The four numbered setup steps shown with a "Step X of N" eyebrow.
 // Welcome (intro) and Ready (summary) are not numbered.
 const NUMBERED_TOTAL = 4;
+
+const clampStep = (value: number) => Math.min(Math.max(value, 0), STEP_IDS.length - 1);
+
+function readContactsSummary(): ContactsSummary {
+  const contacts = emergencyContactsStorage.get();
+  return {
+    count: contacts.length,
+    withPhone: contacts.filter((c) => isValidPhone(c.phone)).length,
+  };
+}
 
 export default function OnboardingWelcomeScreen() {
   const router = useRouter();
@@ -46,67 +61,98 @@ export default function OnboardingWelcomeScreen() {
   const theme = nomad.colors;
   const biometric = useBiometricPresentation();
   const isPinSet = useAuthStore((s) => s.isPinSet);
-  const aiDownload = useModelDownload();
-  const aiDownloading =
-    aiDownload.status === "downloading" || aiDownload.status === "paused";
-  const steps = STEP_IDS.map((id) => ({
-    id,
-    label: id === "secure" ? biometric.name : t(`onboarding.steps.${id === "safety" ? "safetyNet" : id === "ai" ? "onDeviceAi" : id}`),
-  }));
 
-  const [step, setStep] = useState(() =>
-    Math.min(Math.max(persistedStep, 0), STEP_IDS.length - 1),
-  );
+  const [step, setStep] = useState(() => clampStep(persistedStep));
   const [direction, setDirection] = useState<1 | -1>(1);
-  const [safetyReady, setSafetyReady] = useState(false);
-  const [aiReady, setAiReady] = useState(false);
+  const [contacts, setContacts] = useState<ContactsSummary>(readContactsSummary);
+  const [aiStatus, setAiStatus] = useState<AiSetupStatus>("checking");
   const scrollRef = useRef<ScrollView>(null);
 
-  const last = step === steps.length - 1;
+  const last = step === STEP_IDS.length - 1;
 
   // Persist progress so a killed/relaunched session resumes where it left off.
   useEffect(() => {
     setOnboardingStep(step);
   }, [step, setOnboardingStep]);
 
+  // SetupPin writes the next step to the store; pick it up when we regain focus.
+  useFocusEffect(
+    useCallback(() => {
+      setDirection(1);
+      setStep(clampStep(useSettingsStore.getState().onboardingStep));
+    }, []),
+  );
+
+  // Android hardware back walks to the previous step instead of leaving onboarding.
+  useFocusEffect(
+    useCallback(() => {
+      if (Platform.OS !== "android" || step === 0) return;
+      const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+        setDirection(-1);
+        setStep((s) => Math.max(s - 1, 0));
+        scrollRef.current?.scrollTo({ y: 0, animated: false });
+        return true;
+      });
+      return () => sub.remove();
+    }, [step]),
+  );
+
   const onDone = () => {
     setOnboardingCompleted(true);
     router.replace("/(auth)/sign-in");
   };
 
-  const canProceed = () => {
-    if (step === 1) return safetyReady;
-    if (step === 3) return aiReady;
-    // Step 4 (backup PIN) is always actionable — its CTA opens the PIN screen.
-    return true;
+  const advance = () => {
+    setDirection(1);
+    setStep((s) => Math.min(s + 1, STEP_IDS.length - 1));
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
   };
 
-  const next = () => {
-    setDirection(1);
-    if (last) {
-      onDone();
-    } else {
-      if (!canProceed()) return;
-      setStep((s) => s + 1);
-      scrollRef.current?.scrollTo({ y: 0, animated: false });
+  // Contacts are optional, but SOS can't text anyone without a phone number.
+  const confirmSafetyContinue = () => {
+    if (contacts.withPhone > 0) {
+      advance();
+      return;
     }
+    Alert.alert(
+      t("onboarding.noContactsTitle"),
+      contacts.count === 0
+        ? t("onboarding.noContactsWarning")
+        : t("emergencyContacts.noneWithPhone"),
+      [
+        { text: t("onboarding.addContactAction"), style: "cancel" },
+        { text: t("onboarding.skipForNow"), onPress: advance },
+      ],
+    );
   };
 
   const handleCta = () => {
+    if (last) {
+      onDone();
+      return;
+    }
+    if (step === 1) {
+      confirmSafetyContinue();
+      return;
+    }
     // On the security step, route to the PIN setup screen unless a PIN already
     // exists. SetupPin returns to the next onboarding step (Ready) when done.
     if (step === 4 && !isPinSet) {
       router.push("/(auth)/setup-pin?from=onboarding");
       return;
     }
-    next();
+    advance();
   };
 
   const back = () => {
     if (step === 0) return;
     setDirection(-1);
-    setStep((s) => s - 1);
+    setStep((s) => Math.max(s - 1, 0));
     scrollRef.current?.scrollTo({ y: 0, animated: false });
+  };
+
+  const openPrivacyPolicy = () => {
+    Linking.openURL(LEGAL_URLS.privacy).catch(() => {});
   };
 
   const entering = direction > 0 ? FadeInRight.duration(420) : FadeInLeft.duration(420);
@@ -121,39 +167,37 @@ export default function OnboardingWelcomeScreen() {
             theme={theme}
             dark={isDark}
             totalSteps={NUMBERED_TOTAL}
-            onPermissionsReady={setSafetyReady}
+            onContactsChange={setContacts}
           />
         );
       case 2:
         return <LedgerStep theme={theme} totalSteps={NUMBERED_TOTAL} />;
       case 3:
-        return <AIStep theme={theme} totalSteps={NUMBERED_TOTAL} onModelReady={setAiReady} />;
+        return <AIStep theme={theme} totalSteps={NUMBERED_TOTAL} onStatusChange={setAiStatus} />;
       case 4:
         return <SecureStep theme={theme} totalSteps={NUMBERED_TOTAL} biometric={biometric} />;
       default:
-        return (
-          <ReadyStep
-            theme={theme}
-            selectedContactsCount={3}
-            biometric={biometric}
-          />
-        );
+        return <ReadyStep theme={theme} biometric={biometric} />;
     }
+  };
+
+  const aiCtaLabel = () => {
+    if (aiStatus === "downloading") return t("onboarding.continueDownloadBg");
+    if (aiStatus === "downloaded" || aiStatus === "unsupported") return t("common.continue");
+    return t("onboarding.skipForNow");
   };
 
   const ctaLabel =
     step === 0
       ? t("onboarding.beginSetup")
       : step === 1
-        ? t("onboarding.enableSafetyNet", { count: safetyReady ? 3 : 0 })
+        ? contacts.count > 0
+          ? t("onboarding.enableSafetyNet", { count: contacts.count })
+          : t("onboarding.skipForNow")
         : step === 2
           ? t("common.continue")
-          :       step === 3
-            ? aiReady
-              ? aiDownloading
-                ? t("onboarding.continueDownloadBg")
-                : t("common.continue")
-              : t("onboarding.selectModel")
+          : step === 3
+            ? aiCtaLabel()
             : step === 4
               ? isPinSet ? t("common.continue") : t("onboarding.setBackupPin")
               : t("onboarding.startMyTrip");
@@ -167,6 +211,10 @@ export default function OnboardingWelcomeScreen() {
           <Pressable
             onPress={back}
             disabled={step === 0}
+            accessibilityRole="button"
+            accessibilityLabel={t("common.back")}
+            accessibilityState={{ disabled: step === 0 }}
+            hitSlop={8}
             style={[
               styles.backBtn,
               {
@@ -179,10 +227,15 @@ export default function OnboardingWelcomeScreen() {
             <Icon name="chevronLeft" size={16} color={theme.inkSoft} />
           </Pressable>
 
-          <View style={styles.progressRow}>
-            {steps.map((_, i) => (
+          <View
+            style={styles.progressRow}
+            accessible
+            accessibilityRole="progressbar"
+            accessibilityValue={{ min: 1, max: STEP_IDS.length, now: step + 1 }}
+          >
+            {STEP_IDS.map((id, i) => (
               <View
-                key={i}
+                key={id}
                 style={[
                   styles.progressBar,
                   {
@@ -193,7 +246,7 @@ export default function OnboardingWelcomeScreen() {
             ))}
           </View>
 
-          {/* Onboarding is mandatory — no skip. Spacer keeps the bar balanced. */}
+          {/* Spacer keeps the progress bar centred. */}
           <View style={{ width: 34 }} />
         </View>
 
@@ -223,7 +276,6 @@ export default function OnboardingWelcomeScreen() {
               full
               variant={last ? "teal" : "primary"}
               onPress={handleCta}
-              disabled={!canProceed()}
               icon={
                 last ? (
                   <Icon name="check" size={18} color={theme.inverse} strokeWidth={2.4} />
@@ -232,9 +284,20 @@ export default function OnboardingWelcomeScreen() {
             >
               {ctaLabel}
             </NomadButton>
-            <Text style={[styles.ctaHint, { color: theme.inkMuted }]}>
-              {t("common.encryptedFooter")}
-            </Text>
+            <View style={styles.footerRow}>
+              <Text style={[styles.ctaHint, { color: theme.inkMuted }]}>
+                {t("onboarding.footerLocal")}
+              </Text>
+              <Pressable
+                onPress={openPrivacyPolicy}
+                accessibilityRole="link"
+                hitSlop={8}
+              >
+                <Text style={[styles.ctaHint, styles.link, { color: theme.inkSoft }]}>
+                  {t("onboarding.privacyPolicy")}
+                </Text>
+              </Pressable>
+            </View>
           </View>
         </View>
       </SafeAreaView>
@@ -270,8 +333,8 @@ const styles = StyleSheet.create({
   },
   ctaWrap: {
     position: "absolute",
-    left: 0,
-    right: 0,
+    start: 0,
+    end: 0,
     bottom: 0,
   },
   ctaInner: {
@@ -279,11 +342,21 @@ const styles = StyleSheet.create({
     paddingTop: 14,
     paddingBottom: Platform.OS === "ios" ? 38 : 24,
   },
+  footerRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    alignItems: "center",
+    columnGap: 8,
+    marginTop: 10,
+  },
   ctaHint: {
     textAlign: "center",
     fontSize: 11,
     fontFamily: NOMAD_FONTS.mono,
-    marginTop: 10,
     letterSpacing: 0.3,
+  },
+  link: {
+    textDecorationLine: "underline",
   },
 });

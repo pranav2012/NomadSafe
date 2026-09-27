@@ -6,7 +6,10 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  AppState,
+  Linking,
   Platform,
+  TextInput,
 } from "react-native";
 import Svg, { Line, Path, Polygon } from "react-native-svg";
 import { LinearGradient } from "expo-linear-gradient";
@@ -14,32 +17,36 @@ import * as Contacts from "expo-contacts/legacy";
 import { NOMAD_FONTS, type NomadTheme } from "@/constants/nomadTokens";
 import { useLocalization } from "@/localization";
 import { NomadCard } from "@/components/nomad/Card";
+import { NomadButton } from "@/components/nomad/Button";
 import { TravelMap } from "@/components/nomad/TravelMap";
 import { Icon } from "@/components/nomad/Icon";
-import { PermissionRow } from "@/components/nomad/PermissionRow";
 import {
   Eyebrow,
   HugeHeadline,
   HeadlineItalic,
   SectionLabel,
 } from "@/components/nomad/Typography";
-import { permissionsService } from "@/features/onboarding/services/permissions";
+import {
+  permissionsService,
+  type PermissionStatus,
+} from "@/features/onboarding/services/permissions";
 import {
   emergencyContactsStorage,
   type EmergencyContact,
 } from "@/features/onboarding/services/emergencyContactsStorage";
+import { isValidPhone, normalizePhone } from "@/features/safety/utils/phone";
+import { ToggleRow } from "@/features/onboarding/components/ToggleRow";
+
+export interface ContactsSummary {
+  count: number;
+  withPhone: number;
+}
 
 interface Props {
   theme: NomadTheme;
   dark: boolean;
   totalSteps: number;
-  onPermissionsReady?: (ready: boolean) => void;
-}
-
-interface PermissionState {
-  locationOn: boolean;
-  smsOn: boolean;
-  loading: boolean;
+  onContactsChange?: (summary: ContactsSummary) => void;
 }
 
 interface SelectableContact extends EmergencyContact {
@@ -48,6 +55,7 @@ interface SelectableContact extends EmergencyContact {
 }
 
 const SLOT_COLORS = ["teal", "mustard", "sky", "stamp"] as const;
+const MAX_CONTACTS = 3;
 
 function hexFromName(
   theme: NomadTheme,
@@ -56,98 +64,138 @@ function hexFromName(
   return (theme[name as keyof NomadTheme] as string) ?? theme.inkDeep;
 }
 
+function toSelectable(contact: EmergencyContact, index: number): SelectableContact {
+  return {
+    ...contact,
+    init: contact.name.charAt(0).toUpperCase(),
+    color: SLOT_COLORS[index % SLOT_COLORS.length],
+  };
+}
+
+/** Prefers a mobile number (SMS-capable) over landlines/work numbers. */
+function pickBestPhone(numbers: Contacts.PhoneNumber[] | undefined): string | null {
+  if (!numbers?.length) return null;
+  const mobile = numbers.find((n) => /mobile|cell|iphone/i.test(n.label ?? ""));
+  return normalizePhone((mobile ?? numbers[0]).number ?? null);
+}
+
 export function SafetyStep({
   theme,
   dark,
   totalSteps,
-  onPermissionsReady,
+  onContactsChange,
 }: Props) {
-  const { t } = useLocalization();
+  const { t, isRTL } = useLocalization();
 
-  const [permissions, setPermissions] = useState<PermissionState>({
-    locationOn: false,
-    smsOn: false,
-    loading: true,
-  });
-
-  const [selectedContacts, setSelectedContacts] = useState<SelectableContact[]>([]);
+  const [location, setLocation] = useState<PermissionStatus | null>(null);
+  const [notifications, setNotifications] = useState<PermissionStatus | null>(null);
+  const [selectedContacts, setSelectedContacts] = useState<SelectableContact[]>(() =>
+    emergencyContactsStorage.get().map((c, i) => toSelectable({ ...c, phone: normalizePhone(c.phone) }, i)),
+  );
   const [picking, setPicking] = useState(false);
+  const [manualOpen, setManualOpen] = useState(false);
+  const [manualName, setManualName] = useState("");
+  const [manualPhone, setManualPhone] = useState("");
+  const [manualError, setManualError] = useState<string | null>(null);
 
-  const getLocationSub = () => {
-    if (permissions.locationOn) return t("onboarding.sosSharingGeofences");
-    return t("onboarding.locationAlwaysSub");
-  };
+  const isFull = selectedContacts.length >= MAX_CONTACTS;
+  const withPhone = selectedContacts.filter((c) => isValidPhone(c.phone)).length;
 
-  const getSmsSub = () => {
-    if (permissions.smsOn) return t("onboarding.pickYourThreeOffline");
-    return t("onboarding.smsPermissionSub");
-  };
-
+  // Re-read on return from system Settings so the rows reflect the real grant.
   useEffect(() => {
     let mounted = true;
-    const run = async () => {
-      const status = await permissionsService.checkAll();
-      if (!mounted) return;
-      setPermissions({
-        locationOn: status.location.granted,
-        smsOn: status.sms.granted,
-        loading: false,
+    const refresh = () =>
+      permissionsService.checkAll().then((status) => {
+        if (!mounted) return;
+        setLocation(status.location);
+        setNotifications(status.notifications);
       });
-    };
-    run();
+    refresh();
+    const sub = AppState.addEventListener("change", (next) => {
+      if (next === "active") refresh();
+    });
     return () => {
       mounted = false;
+      sub.remove();
     };
   }, []);
 
   useEffect(() => {
-    const ready = permissions.locationOn && selectedContacts.length > 0;
-    onPermissionsReady?.(ready);
-    if (ready) {
-      emergencyContactsStorage.set(
-        selectedContacts.map(({ id, name, phone, email }) => ({ id, name, phone, email })),
-      );
-    }
-  }, [permissions.locationOn, selectedContacts, onPermissionsReady]);
+    emergencyContactsStorage.set(
+      selectedContacts.map(({ id, name, phone, email }) => ({ id, name, phone, email })),
+    );
+    onContactsChange?.({ count: selectedContacts.length, withPhone });
+  }, [selectedContacts, withPhone, onContactsChange]);
 
-  // Toggles are two-way: tapping an enabled row turns the feature off (the OS
-  // grant can't be revoked from here, but the in-app feature is disabled).
-  const toggleLocation = async () => {
-    if (permissions.locationOn) {
-      setPermissions((p) => ({ ...p, locationOn: false }));
-      return;
-    }
-    const status = await permissionsService.requestLocation();
-    setPermissions((p) => ({ ...p, locationOn: status.granted }));
-    if (!status.granted && !status.canAskAgain) {
-      Alert.alert(
-        t("onboarding.locationRequiredTitle"),
-        t("onboarding.locationRequiredBody"),
-      );
-    }
+  const permissionSub = (
+    status: PermissionStatus | null,
+    copy: { granted: string; ask: string; denied: string },
+  ) => {
+    if (status?.granted) return copy.granted;
+    if (status && !status.canAskAgain) return t("onboarding.permissionDeniedSettings");
+    if (status?.denied) return copy.denied;
+    return copy.ask;
   };
 
-  const toggleSms = async () => {
-    if (permissions.smsOn) {
-      setPermissions((p) => ({ ...p, smsOn: false }));
+  const requestOrOpenSettings = async (
+    status: PermissionStatus | null,
+    request: () => Promise<PermissionStatus>,
+    apply: (next: PermissionStatus) => void,
+  ) => {
+    if (status?.granted) return;
+    if (status && !status.canAskAgain) {
+      Linking.openSettings().catch(() => {});
       return;
     }
-    const status = await permissionsService.requestSms();
-    setPermissions((p) => ({ ...p, smsOn: status.granted }));
+    apply(await request());
   };
 
-  // Opens the OS contact picker so the user always selects from their real
-  // contacts (no contacts permission required for the system picker).
+  const onLocationPress = () =>
+    requestOrOpenSettings(location, permissionsService.requestLocation, setLocation);
+
+  const onNotificationsPress = () =>
+    requestOrOpenSettings(notifications, permissionsService.requestNotifications, setNotifications);
+
+  const isDuplicate = (list: SelectableContact[], contact: EmergencyContact) =>
+    list.some((c) => c.id === contact.id || (!!contact.phone && c.phone === contact.phone));
+
+  const addContact = (contact: EmergencyContact): boolean => {
+    if (selectedContacts.length >= MAX_CONTACTS || isDuplicate(selectedContacts, contact)) return false;
+    setSelectedContacts((prev) => {
+      if (prev.length >= MAX_CONTACTS || isDuplicate(prev, contact)) return prev;
+      return [...prev, toSelectable(contact, prev.length)];
+    });
+    return true;
+  };
+
+  const openManualEntry = () => {
+    setManualError(null);
+    setManualOpen(true);
+  };
+
+  // Android reads the picked contact via a Data query that needs READ_CONTACTS at runtime.
+  const ensureContactsPermission = async (): Promise<boolean> => {
+    if (Platform.OS !== "android") return true;
+    const { granted } = await permissionsService.requestContacts();
+    if (granted) return true;
+    Alert.alert(t("emergencyContacts.permissionTitle"), t("emergencyContacts.permissionBody"), [
+      { text: t("common.cancel"), style: "cancel" },
+      { text: t("emergencyContacts.addManually"), onPress: openManualEntry },
+      { text: t("emergencyContacts.openSettings"), onPress: () => Linking.openSettings().catch(() => {}) },
+    ]);
+    return false;
+  };
+
   const pickContact = async () => {
-    if (selectedContacts.length >= 3 || picking) return;
+    if (isFull || picking) return;
     setPicking(true);
     try {
+      if (!(await ensureContactsPermission())) return;
       const contact = await Contacts.presentContactPickerAsync();
       if (!contact) return;
 
-      // Resolve a display name across the fields the picker may populate; the
-      // chosen contact can lack a composed `name` (e.g. first/last only).
-      const phone = contact.phoneNumbers?.[0]?.number ?? null;
+      // The picked contact can lack a composed `name` (e.g. first/last only).
+      const phone = pickBestPhone(contact.phoneNumbers);
       const email = contact.emails?.[0]?.email ?? null;
       const displayName =
         contact.name?.trim() ||
@@ -158,29 +206,47 @@ export function SafetyStep({
         t("onboarding.unnamedContact");
       const id = contact.id ?? `picked-${Date.now()}`;
 
-      setSelectedContacts((prev) => {
-        if (prev.length >= 3 || prev.some((c) => c.id === id)) return prev;
-        return [
-          ...prev,
-          {
-            id,
-            name: displayName,
-            phone,
-            email,
-            init: displayName.charAt(0).toUpperCase(),
-            color: SLOT_COLORS[prev.length % SLOT_COLORS.length],
-          },
-        ];
-      });
+      if (!addContact({ id, name: displayName, phone, email })) {
+        Alert.alert(t("onboarding.trustedContactsTitle"), t("emergencyContacts.duplicate"));
+        return;
+      }
+      if (!isValidPhone(phone)) {
+        Alert.alert(displayName, t("emergencyContacts.noPhoneWarning"));
+      }
     } catch (err) {
       console.warn("Contact picker failed", err);
+      Alert.alert(t("onboarding.trustedContactsTitle"), t("emergencyContacts.pickerFailed"), [
+        { text: t("common.cancel"), style: "cancel" },
+        { text: t("emergencyContacts.addManually"), onPress: openManualEntry },
+      ]);
     } finally {
       setPicking(false);
     }
   };
 
+  const saveManualContact = () => {
+    const name = manualName.trim();
+    const phone = normalizePhone(manualPhone);
+    if (!name) {
+      setManualError(t("emergencyContacts.nameRequired"));
+      return;
+    }
+    if (!isValidPhone(phone)) {
+      setManualError(t("emergencyContacts.invalidPhone"));
+      return;
+    }
+    if (!addContact({ id: `manual-${Date.now()}`, name, phone, email: null })) {
+      setManualError(t("emergencyContacts.duplicate"));
+      return;
+    }
+    setManualName("");
+    setManualPhone("");
+    setManualError(null);
+    setManualOpen(false);
+  };
+
   const removeContact = (id: string) => {
-    setSelectedContacts((prev) => prev.filter((c) => c.id !== id));
+    setSelectedContacts((prev) => prev.filter((c) => c.id !== id).map(toSelectable));
   };
 
   const slotNames =
@@ -192,6 +258,8 @@ export function SafetyStep({
     { x: 220, y: 85, color: theme.teal },
     { x: 280, y: 160, color: theme.mustard },
   ];
+
+  const exampleContactName = t("onboarding.mumUpper");
 
   return (
     <View style={{ flex: 1 }}>
@@ -215,7 +283,7 @@ export function SafetyStep({
           <SectionLabel
             step={1}
             color={theme.teal}
-            title={t("onboarding.liveLocation")}
+            title={t("onboarding.location")}
             theme={theme}
           />
         </View>
@@ -224,68 +292,58 @@ export function SafetyStep({
           padding={10}
           style={{ position: "relative", overflow: "hidden" }}
         >
-          <TravelMap
-            theme={theme}
-            dark={dark}
-            pins={mapPins}
-            height={148}
-            route={[
-              { x: 110, y: 120 },
-              { x: 160, y: 100 },
-              { x: 220, y: 85 },
-              { x: 250, y: 120 },
-              { x: 280, y: 160 },
-            ]}
-          />
           <View
-            style={{
-              position: "absolute",
-              left: 18,
-              bottom: 18,
-              right: 18,
-              flexDirection: "row",
-              justifyContent: "space-between",
-              alignItems: "flex-end",
-            }}
+            accessible
+            accessibilityRole="image"
+            accessibilityLabel={t("onboarding.mapExampleCaption")}
           >
-            <View
-              style={[
-                styles.gpsPill,
-                { backgroundColor: "rgba(26,22,18,0.88)" },
+            <TravelMap
+              theme={theme}
+              dark={dark}
+              pins={mapPins}
+              height={148}
+              route={[
+                { x: 110, y: 120 },
+                { x: 160, y: 100 },
+                { x: 220, y: 85 },
+                { x: 250, y: 120 },
+                { x: 280, y: 160 },
               ]}
-            >
-              <Text style={[styles.gpsPillText, { color: theme.paperSoft }]}>
-                {t("onboarding.gpsStatus")}
-              </Text>
-            </View>
-            <View style={[styles.livePill, { backgroundColor: theme.tealSoft }]}>
-              <Text style={[styles.livePillText, { color: theme.teal }]}>
-                {t("onboarding.live")}
-              </Text>
-            </View>
+            />
+          </View>
+          <View style={[styles.exampleTag, { backgroundColor: "rgba(26,22,18,0.88)" }]}>
+            <Text style={[styles.exampleTagText, { color: theme.paperSoft }]}>
+              {t("onboarding.exampleTag")}
+            </Text>
           </View>
         </NomadCard>
+        <Text style={[styles.caption, { color: theme.inkMuted }]}>
+          {t("onboarding.mapExampleCaption")}
+        </Text>
         <Text style={[styles.bodyCopy, { color: theme.inkSoft }]}>
           {t("onboarding.locationBody")}
         </Text>
 
-        {/* Location toggle, right below the map */}
         <View style={{ marginTop: 12 }}>
-          {permissions.loading ? (
+          {location === null ? (
             <ActivityIndicator color={theme.inkSoft} />
           ) : (
-            <PermissionRow
+            <ToggleRow
               theme={theme}
-              title={t("onboarding.locationAlways")}
-              sub={getLocationSub()}
-              on={permissions.locationOn}
-              onPress={toggleLocation}
+              title={t("onboarding.locationWhileUsing")}
+              sub={permissionSub(location, {
+                granted: t("onboarding.locationGrantedSub"),
+                ask: t("onboarding.locationAskSub"),
+                denied: t("onboarding.locationDeniedSub"),
+              })}
+              on={location.granted}
+              onPress={location.granted ? undefined : onLocationPress}
             />
           )}
         </View>
       </View>
 
-      {/* 02 · OFFLINE FALLBACK (image) */}
+      {/* 02 · OFFLINE FALLBACK (illustration) */}
       <View style={{ paddingHorizontal: 16, paddingTop: 22 }}>
         <View style={{ paddingHorizontal: 10 }}>
           <SectionLabel
@@ -296,7 +354,7 @@ export function SafetyStep({
           />
         </View>
 
-        <View style={styles.offlineHero}>
+        <View style={styles.offlineHero} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
           <LinearGradient
             colors={[theme.inkDeep, "#2A332E"]}
             style={StyleSheet.absoluteFill}
@@ -340,7 +398,7 @@ export function SafetyStep({
           </View>
           <Text
             style={[
-              styles.offlineLabelLeft,
+              styles.offlineLabelStart,
               { color: "rgba(255,255,255,0.65)" },
             ]}
           >
@@ -348,7 +406,7 @@ export function SafetyStep({
           </Text>
 
           {/* arc */}
-          <View style={styles.offlineArc}>
+          <View style={[styles.offlineArc, isRTL && { transform: [{ scaleX: -1 }] }]}>
             <Svg width="200" height="34" viewBox="0 0 200 34">
               <Path
                 d="M0,17 Q100,-10 200,17"
@@ -371,15 +429,15 @@ export function SafetyStep({
           <View
             style={[styles.offlineContact, { backgroundColor: theme.teal }]}
           >
-            <Text style={styles.offlineContactInit}>M</Text>
+            <Text style={styles.offlineContactInit}>{exampleContactName.charAt(0)}</Text>
           </View>
           <Text
             style={[
-              styles.offlineLabelRight,
+              styles.offlineLabelEnd,
               { color: "rgba(255,255,255,0.65)" },
             ]}
           >
-            {t("onboarding.mumUpper")}
+            {exampleContactName}
           </Text>
         </View>
 
@@ -388,7 +446,7 @@ export function SafetyStep({
         </Text>
       </View>
 
-      {/* 03 · TRUSTED THREE */}
+      {/* 03 · TRUSTED CONTACTS */}
       <View style={{ paddingHorizontal: 16, paddingTop: 22 }}>
         <View style={{ paddingHorizontal: 10 }}>
           <SectionLabel
@@ -411,13 +469,15 @@ export function SafetyStep({
             },
           ]}
         >
-          {[0, 1, 2].map((slot) => {
+          {Array.from({ length: MAX_CONTACTS }, (_, slot) => {
             const c = selectedContacts[slot];
             if (!c) {
               return (
                 <Pressable
                   key={slot}
                   onPress={pickContact}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("onboarding.chooseFromContacts")}
                   style={[styles.slotEmpty, { borderColor: theme.hairline }]}
                 >
                   <Text style={{ color: theme.inkMuted, fontSize: 16 }}>+</Text>
@@ -425,9 +485,10 @@ export function SafetyStep({
               );
             }
             return (
-              <Pressable
+              <View
                 key={slot}
-                onPress={() => removeContact(c.id)}
+                accessible
+                accessibilityLabel={c.name}
                 style={[
                   styles.slotFilled,
                   {
@@ -437,10 +498,10 @@ export function SafetyStep({
                 ]}
               >
                 <Text style={styles.slotInit}>{c.init}</Text>
-              </Pressable>
+              </View>
             );
           })}
-          <View style={{ flex: 1, marginLeft: 4 }}>
+          <View style={{ flex: 1, marginStart: 4 }}>
             <Text
               numberOfLines={1}
               style={[styles.slotName, { color: theme.inkDeep }]}
@@ -453,76 +514,181 @@ export function SafetyStep({
           </View>
         </View>
 
-        {/* Choose from your real contacts via the OS picker */}
-        <Pressable
-          onPress={pickContact}
-          disabled={selectedContacts.length >= 3 || picking}
-          style={({ pressed }) => [
-            styles.pickBtn,
-            {
-              backgroundColor: theme.paperSoft,
-              borderColor: theme.mustard,
-              opacity: selectedContacts.length >= 3 ? 0.5 : pressed ? 0.9 : 1,
-            },
-          ]}
-        >
-          {picking ? (
-            <ActivityIndicator size="small" color={theme.mustard} />
-          ) : (
-            <Icon name="plus" size={16} color={theme.mustard} strokeWidth={2.4} />
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <Pressable
+            onPress={pickContact}
+            disabled={isFull || picking}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: isFull || picking, busy: picking }}
+            style={({ pressed }) => [
+              styles.pickBtn,
+              {
+                backgroundColor: theme.paperSoft,
+                borderColor: theme.mustard,
+                opacity: isFull ? 0.5 : pressed ? 0.9 : 1,
+              },
+            ]}
+          >
+            {picking ? (
+              <ActivityIndicator size="small" color={theme.mustard} />
+            ) : (
+              <Icon name="plus" size={16} color={theme.mustard} strokeWidth={2.4} />
+            )}
+            <Text style={[styles.pickBtnText, { color: theme.inkDeep }]}>
+              {isFull
+                ? t("onboarding.trustedThreeFull")
+                : t("onboarding.chooseFromContacts")}
+            </Text>
+          </Pressable>
+          {!isFull && !manualOpen && (
+            <Pressable
+              onPress={openManualEntry}
+              accessibilityRole="button"
+              style={({ pressed }) => [
+                styles.pickBtn,
+                {
+                  backgroundColor: theme.paperSoft,
+                  borderColor: theme.hairline,
+                  opacity: pressed ? 0.9 : 1,
+                },
+              ]}
+            >
+              <Icon name="edit" size={15} color={theme.inkSoft} strokeWidth={2} />
+              <Text style={[styles.pickBtnText, { color: theme.inkDeep }]}>
+                {t("emergencyContacts.addManually")}
+              </Text>
+            </Pressable>
           )}
-          <Text style={[styles.pickBtnText, { color: theme.inkDeep }]}>
-            {selectedContacts.length >= 3
-              ? t("onboarding.trustedThreeFull")
-              : t("onboarding.chooseFromContacts")}
-          </Text>
-        </Pressable>
+        </View>
 
-        {/* Selected real contacts list */}
-        {selectedContacts.length > 0 && (
-          <View style={{ gap: 6, marginTop: 10 }}>
-            {selectedContacts.map((c) => (
-              <Pressable
-                key={c.id}
-                onPress={() => removeContact(c.id)}
-                style={[
-                  styles.contactRow,
-                  { backgroundColor: theme.paperSoft, borderColor: theme.mustard },
-                ]}
-              >
-                <View
-                  style={[
-                    styles.contactAvatar,
-                    { backgroundColor: hexFromName(theme, c.color) },
-                  ]}
-                >
-                  <Text style={styles.contactAvatarText}>{c.init}</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.contactName, { color: theme.inkDeep }]}>
-                    {c.name}
-                  </Text>
-                  <Text style={[styles.contactSub, { color: theme.inkSoft }]}>
-                    {c.phone ?? t("onboarding.noPhone")}
-                  </Text>
-                </View>
-                <Icon name="x" size={14} color={theme.inkMuted} strokeWidth={2.4} />
-              </Pressable>
-            ))}
+        {manualOpen && !isFull && (
+          <View
+            style={[
+              styles.manualCard,
+              { backgroundColor: theme.paperSoft, borderColor: theme.hairline },
+            ]}
+          >
+            <Text style={[styles.manualTitle, { color: theme.inkDeep }]}>
+              {t("emergencyContacts.manualTitle")}
+            </Text>
+            <TextInput
+              value={manualName}
+              onChangeText={setManualName}
+              placeholder={t("emergencyContacts.namePlaceholder")}
+              placeholderTextColor={theme.inkMuted}
+              autoComplete="name"
+              textContentType="name"
+              returnKeyType="next"
+              accessibilityLabel={t("emergencyContacts.namePlaceholder")}
+              style={[styles.input, { color: theme.inkDeep, borderColor: theme.hairline, backgroundColor: theme.paper }]}
+            />
+            <TextInput
+              value={manualPhone}
+              onChangeText={setManualPhone}
+              placeholder={t("emergencyContacts.phonePlaceholder")}
+              placeholderTextColor={theme.inkMuted}
+              keyboardType="phone-pad"
+              autoComplete="tel"
+              textContentType="telephoneNumber"
+              returnKeyType="done"
+              onSubmitEditing={saveManualContact}
+              accessibilityLabel={t("emergencyContacts.phonePlaceholder")}
+              style={[styles.input, { color: theme.inkDeep, borderColor: theme.hairline, backgroundColor: theme.paper }]}
+            />
+            {manualError && (
+              <Text style={[styles.errorText, { color: theme.stamp }]} accessibilityLiveRegion="polite">
+                {manualError}
+              </Text>
+            )}
+            <View style={{ gap: 8, marginTop: 10 }}>
+              <NomadButton theme={theme} variant="primary" onPress={saveManualContact}>
+                {t("emergencyContacts.save")}
+              </NomadButton>
+              <NomadButton theme={theme} variant="ghost" onPress={() => setManualOpen(false)}>
+                {t("common.cancel")}
+              </NomadButton>
+            </View>
           </View>
         )}
 
-        {/* SMS fallback toggle (Android only) */}
-        {Platform.OS === "android" && !permissions.loading && (
-          <View style={{ marginTop: 10 }}>
-            <PermissionRow
-              theme={theme}
-              title={t("onboarding.sms")}
-              sub={getSmsSub()}
-              on={permissions.smsOn}
-              onPress={toggleSms}
-            />
+        {/* Selected contacts list */}
+        {selectedContacts.length > 0 && (
+          <View style={{ gap: 6, marginTop: 10 }}>
+            {selectedContacts.map((c) => {
+              const canSms = isValidPhone(c.phone);
+              return (
+                <Pressable
+                  key={c.id}
+                  onPress={() => removeContact(c.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("emergencyContacts.removeA11y", { name: c.name })}
+                  style={[
+                    styles.contactRow,
+                    { backgroundColor: theme.paperSoft, borderColor: canSms ? theme.mustard : theme.stamp },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.contactAvatar,
+                      { backgroundColor: hexFromName(theme, c.color) },
+                    ]}
+                  >
+                    <Text style={styles.contactAvatarText}>{c.init}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.contactName, { color: theme.inkDeep }]}>
+                      {c.name}
+                    </Text>
+                    <Text style={[styles.contactSub, { color: canSms ? theme.inkSoft : theme.stamp }]}>
+                      {canSms ? c.phone : t("emergencyContacts.noPhoneWarning")}
+                    </Text>
+                  </View>
+                  <Icon name="x" size={14} color={theme.inkMuted} strokeWidth={2.4} />
+                </Pressable>
+              );
+            })}
           </View>
+        )}
+
+        {withPhone === 0 && (
+          <View
+            accessibilityRole="alert"
+            style={[styles.warningRow, { backgroundColor: theme.stamp + "16", borderColor: theme.stamp }]}
+          >
+            <Icon name="alertTriangle" size={16} color={theme.stamp} strokeWidth={2} />
+            <Text style={[styles.warningText, { color: theme.inkDeep }]}>
+              {selectedContacts.length === 0
+                ? t("onboarding.noContactsWarning")
+                : t("emergencyContacts.noneWithPhone")}
+            </Text>
+          </View>
+        )}
+      </View>
+
+      {/* 04 · CHECK-IN REMINDERS */}
+      <View style={{ paddingHorizontal: 16, paddingTop: 22 }}>
+        <View style={{ paddingHorizontal: 10 }}>
+          <SectionLabel
+            step={4}
+            color={theme.sky}
+            title={t("onboarding.checkInReminders")}
+            theme={theme}
+          />
+        </View>
+        {notifications === null ? (
+          <ActivityIndicator color={theme.inkSoft} />
+        ) : (
+          <ToggleRow
+            theme={theme}
+            title={t("onboarding.notificationsTitle")}
+            sub={permissionSub(notifications, {
+              granted: t("onboarding.notificationsGrantedSub"),
+              ask: t("onboarding.notificationsAskSub"),
+              denied: t("onboarding.notificationsDeniedSub"),
+            })}
+            on={notifications.granted}
+            onPress={notifications.granted ? undefined : onNotificationsPress}
+          />
         )}
 
         <Text style={[styles.bodyCopy, { color: theme.inkSoft, marginTop: 10 }]}>
@@ -547,22 +713,22 @@ const styles = StyleSheet.create({
     lineHeight: 12 * 1.45,
     fontFamily: NOMAD_FONTS.ui,
   },
-  gpsPill: {
+  caption: {
+    fontSize: 11,
+    marginTop: 6,
+    paddingHorizontal: 10,
+    fontStyle: "italic",
+    fontFamily: NOMAD_FONTS.ui,
+  },
+  exampleTag: {
+    position: "absolute",
+    start: 18,
+    bottom: 18,
     paddingVertical: 5,
     paddingHorizontal: 9,
     borderRadius: 7,
   },
-  gpsPillText: {
-    fontSize: 9.5,
-    fontFamily: NOMAD_FONTS.mono,
-    letterSpacing: 0.5,
-  },
-  livePill: {
-    paddingVertical: 5,
-    paddingHorizontal: 9,
-    borderRadius: 7,
-  },
-  livePillText: {
+  exampleTagText: {
     fontSize: 9.5,
     fontWeight: "700",
     letterSpacing: 0.8,
@@ -618,27 +784,14 @@ const styles = StyleSheet.create({
     marginTop: 1,
     fontFamily: NOMAD_FONTS.ui,
   },
-  loadingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderStyle: "dashed",
-    marginBottom: 8,
-  },
-  loadingText: {
-    fontSize: 13,
-    fontFamily: NOMAD_FONTS.ui,
-  },
   pickBtn: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
     paddingVertical: 12,
+    paddingHorizontal: 8,
     borderRadius: 12,
     borderWidth: 1,
     borderStyle: "dashed",
@@ -647,6 +800,33 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
     fontFamily: NOMAD_FONTS.uiSemi,
+    flexShrink: 1,
+  },
+  manualCard: {
+    marginTop: 10,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  manualTitle: {
+    fontSize: 13,
+    fontWeight: "600",
+    fontFamily: NOMAD_FONTS.uiSemi,
+    marginBottom: 4,
+  },
+  input: {
+    marginTop: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    fontSize: 14,
+    fontFamily: NOMAD_FONTS.ui,
+  },
+  errorText: {
+    fontSize: 12,
+    marginTop: 8,
+    fontFamily: NOMAD_FONTS.ui,
   },
   contactRow: {
     paddingVertical: 9,
@@ -679,13 +859,21 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     fontFamily: NOMAD_FONTS.ui,
   },
-  checkBox: {
-    width: 20,
-    height: 20,
-    borderRadius: 999,
-    borderWidth: 1.5,
+  warningRow: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    gap: 8,
+    marginTop: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  warningText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 12 * 1.4,
+    fontFamily: NOMAD_FONTS.ui,
   },
   offlineHero: {
     height: 140,
@@ -695,7 +883,7 @@ const styles = StyleSheet.create({
   },
   offlinePhone: {
     position: "absolute",
-    left: 20,
+    start: 20,
     top: 34,
     width: 58,
     height: 58,
@@ -708,9 +896,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     elevation: 6,
   },
-  offlineLabelLeft: {
+  offlineLabelStart: {
     position: "absolute",
-    left: 20,
+    start: 20,
     top: 98,
     fontSize: 9,
     letterSpacing: 1,
@@ -721,12 +909,12 @@ const styles = StyleSheet.create({
   },
   offlineArc: {
     position: "absolute",
-    left: 76,
+    start: 76,
     top: 50,
   },
   smsBadge: {
     position: "absolute",
-    left: 132,
+    start: 132,
     top: 22,
     paddingVertical: 4,
     paddingHorizontal: 9,
@@ -740,7 +928,7 @@ const styles = StyleSheet.create({
   },
   offlineContact: {
     position: "absolute",
-    right: 20,
+    end: 20,
     top: 34,
     width: 58,
     height: 58,
@@ -759,9 +947,9 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontSize: 22,
   },
-  offlineLabelRight: {
+  offlineLabelEnd: {
     position: "absolute",
-    right: 20,
+    end: 20,
     top: 98,
     fontSize: 9,
     letterSpacing: 1,

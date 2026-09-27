@@ -14,7 +14,7 @@ import { NOMAD_FONTS, type NomadTheme } from "@/constants/nomadTokens";
 import { useLocalization } from "@/localization";
 import { localAuth } from "@/features/auth";
 import type { BiometricPresentation } from "@/features/auth";
-import { PermissionRow } from "@/components/nomad/PermissionRow";
+import { ToggleRow } from "@/features/onboarding/components/ToggleRow";
 import { Icon } from "@/components/nomad/Icon";
 import { Eyebrow, HugeHeadline, HeadlineItalic } from "@/components/nomad/Typography";
 
@@ -22,29 +22,22 @@ interface Props {
   theme: NomadTheme;
   totalSteps: number;
   biometric: BiometricPresentation;
-  onSecurityReady?: (ready: boolean) => void;
 }
 
-export function SecureStep({ theme, totalSteps, biometric, onSecurityReady }: Props) {
+export function SecureStep({ theme, totalSteps, biometric }: Props) {
   const { t } = useLocalization();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
-  const [keystoreOn, setKeystoreOn] = useState(true);
-  const [autoLockOn, setAutoLockOn] = useState(true);
 
   useEffect(() => {
     let mounted = true;
     const run = async () => {
       try {
         const { available } = await localAuth.checkBiometricAvailability();
-        if (!mounted) return;
-        setIsEnrolled(available);
-        onSecurityReady?.(available || isAuthenticated);
+        if (mounted) setIsEnrolled(available);
       } catch {
-        if (!mounted) return;
-        setIsEnrolled(false);
-        onSecurityReady?.(isAuthenticated);
+        if (mounted) setIsEnrolled(false);
       } finally {
         if (mounted) setIsChecking(false);
       }
@@ -53,20 +46,20 @@ export function SecureStep({ theme, totalSteps, biometric, onSecurityReady }: Pr
     return () => {
       mounted = false;
     };
-  }, [isAuthenticated, onSecurityReady]);
+  }, []);
 
   const authenticate = async () => {
-    const { available } = await localAuth.checkBiometricAvailability();
-    if (!available) {
-      onSecurityReady?.(false);
-      return;
+    try {
+      const { available } = await localAuth.checkBiometricAvailability();
+      if (!available) return;
+      const success = await localAuth.authenticateWithBiometric({
+        promptMessage: t("onboarding.biometricPrompt"),
+        cancelLabel: t("common.cancel"),
+      });
+      setIsAuthenticated(success);
+    } catch (err) {
+      console.warn("Biometric check failed", err);
     }
-    const success = await localAuth.authenticateWithBiometric({
-      promptMessage: t("onboarding.biometricPrompt"),
-      cancelLabel: t("common.cancel"),
-    });
-    setIsAuthenticated(success);
-    onSecurityReady?.(success);
   };
 
   // scan-line animation
@@ -109,7 +102,14 @@ export function SecureStep({ theme, totalSteps, biometric, onSecurityReady }: Pr
   return (
     <View style={{ flex: 1 }}>
       <View style={{ paddingHorizontal: 26, paddingTop: 20, alignItems: "center" }}>
-        <Pressable onPress={authenticate} style={styles.faceBox}>
+        <Pressable
+          onPress={authenticate}
+          disabled={!isEnrolled}
+          accessibilityRole="button"
+          accessibilityLabel={t("onboarding.tryBiometric", { biometricName: biometric.name })}
+          accessibilityState={{ disabled: !isEnrolled }}
+          style={styles.faceBox}
+        >
           <LinearGradient
             colors={[theme.inkDeep, "#2A332E"]}
             start={{ x: 0, y: 0 }}
@@ -123,10 +123,10 @@ export function SecureStep({ theme, totalSteps, biometric, onSecurityReady }: Pr
               bracket,
               {
                 top: 16,
-                left: 16,
+                start: 16,
                 borderTopWidth: 2,
-                borderLeftWidth: 2,
-                borderTopLeftRadius: 6,
+                borderStartWidth: 2,
+                borderTopStartRadius: 6,
                 borderColor: theme.mustard,
               },
             ]}
@@ -136,10 +136,10 @@ export function SecureStep({ theme, totalSteps, biometric, onSecurityReady }: Pr
               bracket,
               {
                 top: 16,
-                right: 16,
+                end: 16,
                 borderTopWidth: 2,
-                borderRightWidth: 2,
-                borderTopRightRadius: 6,
+                borderEndWidth: 2,
+                borderTopEndRadius: 6,
                 borderColor: theme.mustard,
               },
             ]}
@@ -149,10 +149,10 @@ export function SecureStep({ theme, totalSteps, biometric, onSecurityReady }: Pr
               bracket,
               {
                 bottom: 16,
-                left: 16,
+                start: 16,
                 borderBottomWidth: 2,
-                borderLeftWidth: 2,
-                borderBottomLeftRadius: 6,
+                borderStartWidth: 2,
+                borderBottomStartRadius: 6,
                 borderColor: theme.mustard,
               },
             ]}
@@ -162,10 +162,10 @@ export function SecureStep({ theme, totalSteps, biometric, onSecurityReady }: Pr
               bracket,
               {
                 bottom: 16,
-                right: 16,
+                end: 16,
                 borderBottomWidth: 2,
-                borderRightWidth: 2,
-                borderBottomRightRadius: 6,
+                borderEndWidth: 2,
+                borderBottomEndRadius: 6,
                 borderColor: theme.mustard,
               },
             ]}
@@ -222,27 +222,19 @@ export function SecureStep({ theme, totalSteps, biometric, onSecurityReady }: Pr
           </View>
         ) : (
           <>
-            <PermissionRow
+            <ToggleRow
               theme={theme}
               title={isEnrolled ? biometric.name : t("onboarding.biometricNotSetUp")}
               sub={isEnrolled ? t("onboarding.unlockVault") : t("onboarding.biometricSetUpSub")}
               on={isEnrolled}
-              onPress={authenticate}
             />
-            <PermissionRow
-              theme={theme}
-              title={biometric.keyStoreName}
-              sub={t("onboarding.keysStayOnDevice")}
-              on={keystoreOn}
-              onPress={() => setKeystoreOn((v) => !v)}
-            />
-            <PermissionRow
-              theme={theme}
-              title={t("onboarding.autoLock")}
-              sub={t("onboarding.afterThirtySeconds")}
-              on={autoLockOn}
-              onPress={() => setAutoLockOn((v) => !v)}
-            />
+            <View style={[styles.infoRow, { backgroundColor: theme.paperSoft, borderColor: theme.hairline }]}>
+              <Icon name="clock" size={16} color={theme.inkSoft} strokeWidth={2} />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.infoTitle, { color: theme.inkDeep }]}>{t("onboarding.autoLock")}</Text>
+                <Text style={[styles.infoSub, { color: theme.inkSoft }]}>{t("onboarding.autoLockSub")}</Text>
+              </View>
+            </View>
           </>
         )}
       </View>
@@ -331,6 +323,25 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 14,
+    fontFamily: NOMAD_FONTS.ui,
+  },
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  infoTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    fontFamily: NOMAD_FONTS.uiSemi,
+  },
+  infoSub: {
+    fontSize: 11.5,
+    marginTop: 1,
     fontFamily: NOMAD_FONTS.ui,
   },
   matchedPill: {

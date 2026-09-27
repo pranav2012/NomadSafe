@@ -19,18 +19,31 @@ interface Props {
 
 const HERO_H = 300;
 
+// Decorative passport-stamp dates for the illustration.
+const STAMP_DATES = {
+  tko: new Date(2024, 3, 1),
+  lis: new Date(2024, 6, 1),
+  sea: new Date(2025, 2, 1),
+};
+
 export function WelcomeStep({ theme }: Props) {
-  const { t } = useLocalization();
+  const { t, locale, isRTL, formatDate } = useLocalization();
+  const stampDate = (date: Date) =>
+    formatDate(date, { month: "short", year: "numeric" }).toLocaleUpperCase(locale);
   const kpis = [
-    { v: "24/7", l: t("onboarding.safetyFocusedStat") },
-    { v: "100%", l: t("onboarding.onDeviceStat") },
+    { v: t("onboarding.sosStatValue"), l: t("onboarding.safetyFocusedStat") },
+    { v: t("onboarding.onDeviceStatValue"), l: t("onboarding.onDeviceStat") },
     { v: "∞", l: t("onboarding.funStat") },
   ];
 
   return (
     <View style={{ flex: 1 }}>
       {/* HERO */}
-      <View style={{ height: HERO_H, overflow: "hidden", position: "relative" }}>
+      <View
+        style={{ height: HERO_H, overflow: "hidden", position: "relative" }}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+      >
         <LinearGradient
           colors={[theme.stampSoft, theme.paper]}
           locations={[0, 0.65]}
@@ -80,21 +93,21 @@ export function WelcomeStep({ theme }: Props) {
           entering={ZoomIn.delay(100).duration(600).springify().damping(10)}
           style={[styles.stampTKO]}
         >
-          <Stamp label="TKO" sub="APR 2024" color={theme.teal} rot={-14} size={82} />
+          <Stamp label="TKO" sub={stampDate(STAMP_DATES.tko)} color={theme.teal} rot={-14} size={82} />
         </Animated.View>
 
         <Animated.View
           entering={ZoomIn.delay(300).duration(600).springify().damping(10)}
           style={[styles.stampLIS]}
         >
-          <Stamp label="LIS" sub="JUL 2024" color={theme.mustard} rot={14} size={80} />
+          <Stamp label="LIS" sub={stampDate(STAMP_DATES.lis)} color={theme.mustard} rot={14} size={80} />
         </Animated.View>
 
         <Animated.View
           entering={ZoomIn.delay(500).duration(600).springify().damping(10)}
           style={[styles.stampSEA]}
         >
-          <Stamp label="SEA" sub="MAR 2025" color={theme.stamp} rot={-4} size={124} />
+          <Stamp label="SEA" sub={stampDate(STAMP_DATES.sea)} color={theme.stamp} rot={-4} size={124} />
         </Animated.View>
 
         {/* connecting dashed arcs */}
@@ -174,7 +187,7 @@ export function WelcomeStep({ theme }: Props) {
                   // aligned with the digits and the label, and it never crops.
                   kpi.v === "∞" && {
                     transform: [{ scale: 1.6 }],
-                    transformOrigin: "left bottom",
+                    transformOrigin: isRTL ? "right bottom" : "left bottom",
                   },
                 ]}
               >
@@ -192,8 +205,8 @@ export function WelcomeStep({ theme }: Props) {
 }
 
 const styles = StyleSheet.create({
-  stampTKO: { position: "absolute", left: 28, top: 42 },
-  stampLIS: { position: "absolute", right: 34, top: 54 },
+  stampTKO: { position: "absolute", start: 28, top: 42 },
+  stampLIS: { position: "absolute", end: 34, top: 54 },
   stampSEA: {
     position: "absolute",
     left: "50%",
@@ -202,7 +215,7 @@ const styles = StyleSheet.create({
   },
   shieldBadge: {
     position: "absolute",
-    right: 18,
+    end: 18,
     top: 22,
     width: 46,
     height: 46,

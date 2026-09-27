@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import Animated, { ZoomIn } from "react-native-reanimated";
 import { NOMAD_FONTS, type NomadTheme } from "@/constants/nomadTokens";
-import type { BiometricPresentation } from "@/features/auth";
+import { useAuthStore, type BiometricPresentation } from "@/features/auth";
+import { useAiModels } from "@/features/ai";
 import { useLocalization } from "@/localization";
 import { Stamp } from "@/components/nomad/Stamp";
 import { Icon, type IconName } from "@/components/nomad/Icon";
@@ -11,25 +12,104 @@ import {
   HugeHeadline,
   HeadlineItalic,
 } from "@/components/nomad/Typography";
+import { permissionsService } from "@/features/onboarding/services/permissions";
+import { emergencyContactsStorage } from "@/features/onboarding/services/emergencyContactsStorage";
+import { isValidPhone } from "@/features/safety/utils/phone";
 
 interface Props {
   theme: NomadTheme;
-  selectedContactsCount: number;
   biometric: BiometricPresentation;
 }
 
-export function ReadyStep({ theme, selectedContactsCount, biometric }: Props) {
+interface RecapRow {
+  i: IconName;
+  l: string;
+  v: string;
+  c: string;
+  done: boolean;
+}
+
+export function ReadyStep({ theme, biometric }: Props) {
   const { t } = useLocalization();
-  const rows: { i: IconName; l: string; v: string; c: string }[] = [
-    { i: "mapPin", l: t("onboarding.location"), v: t("onboarding.locationValue"), c: theme.teal },
+  const isPinSet = useAuthStore((s) => s.isPinSet);
+  const biometricEnabled = useAuthStore((s) => s.biometricEnabled);
+  const { models, capability, isChecking } = useAiModels();
+  const [locationGranted, setLocationGranted] = useState<boolean | null>(null);
+  const [notificationsGranted, setNotificationsGranted] = useState<boolean | null>(null);
+  const [contacts] = useState(() => emergencyContactsStorage.get());
+
+  useEffect(() => {
+    let mounted = true;
+    permissionsService.checkAll().then((status) => {
+      if (!mounted) return;
+      setLocationGranted(status.location.granted);
+      setNotificationsGranted(status.notifications.granted);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const notSet = t("onboarding.notSetYet");
+  const contactsWithPhone = contacts.filter((c) => isValidPhone(c.phone)).length;
+  const downloadedModel = models.find((m) => m.isDownloaded);
+  const downloadingModel = models.find((m) => m.isDownloading || m.isPaused);
+
+  const aiValue = isChecking
+    ? t("onboarding.checkingDevice")
+    : downloadedModel
+      ? t("onboarding.aiReadyValue", { model: downloadedModel.model.name })
+      : downloadingModel
+        ? t("onboarding.modelDownloading", { progress: downloadingModel.progress })
+        : capability?.supported
+          ? t("onboarding.aiSkippedValue")
+          : t("onboarding.aiUnavailableValue");
+
+  const rows: RecapRow[] = [
+    {
+      i: "mapPin",
+      l: t("onboarding.location"),
+      v: locationGranted ? t("onboarding.locationValue") : notSet,
+      c: theme.teal,
+      done: !!locationGranted,
+    },
     {
       i: "users",
       l: t("onboarding.trustedThreeLabel"),
-      v: t("onboarding.people", { count: selectedContactsCount }),
+      v:
+        contacts.length === 0
+          ? notSet
+          : contactsWithPhone === 0
+            ? t("onboarding.contactsNoPhoneValue", { count: contacts.length })
+            : t("onboarding.people", { count: contacts.length }),
       c: theme.mustard,
+      done: contactsWithPhone > 0,
     },
-    { i: "wifi", l: t("onboarding.offlineFallback"), v: t("onboarding.offlineFallbackValue"), c: theme.stamp },
-    { i: "lock", l: t("onboarding.vault"), v: biometric.vaultSummary, c: theme.sky },
+    {
+      i: "bell",
+      l: t("onboarding.checkInReminders"),
+      v: notificationsGranted ? t("onboarding.notificationsValue") : notSet,
+      c: theme.stamp,
+      done: !!notificationsGranted,
+    },
+    {
+      i: "lock",
+      l: t("onboarding.vault"),
+      v: isPinSet
+        ? biometricEnabled
+          ? `${t("onboarding.pinSetValue")} · ${biometric.vaultSummary}`
+          : t("onboarding.pinSetValue")
+        : notSet,
+      c: theme.sky,
+      done: isPinSet,
+    },
+    {
+      i: "sparkle",
+      l: t("onboarding.steps.onDeviceAi"),
+      v: aiValue,
+      c: theme.teal,
+      done: !!downloadedModel,
+    },
   ];
 
   return (
@@ -51,7 +131,9 @@ export function ReadyStep({ theme, selectedContactsCount, biometric }: Props) {
         </View>
 
         <Text style={[styles.lede, { color: theme.inkSoft }]}>
-          {t("onboarding.readyLede", { protectedBy: biometric.protectedBy })}
+          {t("onboarding.readyLede", {
+            protectedBy: biometricEnabled ? biometric.protectedBy : t("onboarding.yourPin"),
+          })}
         </Text>
       </View>
 
@@ -71,7 +153,9 @@ export function ReadyStep({ theme, selectedContactsCount, biometric }: Props) {
           </Text>
           {rows.map((r, i) => (
             <View
-              key={i}
+              key={r.i}
+              accessible
+              accessibilityLabel={`${r.l}: ${r.v}`}
               style={[
                 styles.recapRow,
                 {
@@ -90,7 +174,11 @@ export function ReadyStep({ theme, selectedContactsCount, biometric }: Props) {
                 <Text style={[styles.recapTitle, { color: theme.inkDeep }]}>{r.l}</Text>
                 <Text style={[styles.recapSub, { color: theme.inkSoft }]}>{r.v}</Text>
               </View>
-              <Icon name="check" size={16} color={theme.teal} strokeWidth={2.5} />
+              {r.done ? (
+                <Icon name="check" size={16} color={theme.teal} strokeWidth={2.5} />
+              ) : (
+                <Icon name="minus" size={16} color={theme.inkMuted} strokeWidth={2.5} />
+              )}
             </View>
           ))}
         </View>

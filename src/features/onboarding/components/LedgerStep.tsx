@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import Svg, { Line, Path } from "react-native-svg";
 import { LinearGradient } from "expo-linear-gradient";
@@ -14,7 +14,6 @@ import Animated, {
 import { NOMAD_FONTS, type NomadTheme } from "@/constants/nomadTokens";
 import { useLocalization } from "@/localization";
 import { Icon, type IconName } from "@/components/nomad/Icon";
-import { PermissionRow } from "@/components/nomad/PermissionRow";
 import { Eyebrow, HugeHeadline, HeadlineItalic } from "@/components/nomad/Typography";
 
 interface Props {
@@ -23,15 +22,19 @@ interface Props {
 }
 
 const features: { i: IconName; titleKey: string; subKey: string; colorKey: keyof NomadTheme }[] = [
-  { i: "users", titleKey: "onboarding.groupSplit", subKey: "onboarding.groupSplitSub", colorKey: "teal" },
-  { i: "trendUp", titleKey: "onboarding.interbankFx", subKey: "onboarding.interbankFxSub", colorKey: "mustard" },
-  { i: "wallet", titleKey: "onboarding.categoryBudgets", subKey: "onboarding.categoryBudgetsSub", colorKey: "stamp" },
+  { i: "receipt", titleKey: "onboarding.autoCategories", subKey: "onboarding.autoCategoriesSub", colorKey: "teal" },
+  { i: "swap", titleKey: "onboarding.currencyConversion", subKey: "onboarding.currencyConversionSub", colorKey: "mustard" },
+  { i: "wallet", titleKey: "onboarding.tripBudget", subKey: "onboarding.tripBudgetSub", colorKey: "stamp" },
+];
+
+const importMethods: { i: IconName; titleKey: string; subKey: string; colorKey: keyof NomadTheme }[] = [
+  { i: "edit", titleKey: "onboarding.pasteAlertTitle", subKey: "onboarding.pasteAlertSub", colorKey: "mustard" },
+  { i: "mail", titleKey: "onboarding.gmailLaterTitle", subKey: "onboarding.gmailLaterSub", colorKey: "sky" },
+  { i: "plus", titleKey: "onboarding.manualEntryTitle", subKey: "onboarding.manualEntrySub", colorKey: "teal" },
 ];
 
 export function LedgerStep({ theme, totalSteps }: Props) {
-  const { t } = useLocalization();
-  const [emailOn, setEmailOn] = useState(true);
-  const [smsOn, setSmsOn] = useState(true);
+  const { t, isRTL } = useLocalization();
   // parsing pulse dot
   const pulse = useSharedValue(1);
   useEffect(() => {
@@ -48,9 +51,14 @@ export function LedgerStep({ theme, totalSteps }: Props) {
 
   return (
     <View style={{ flex: 1 }}>
-      {/* HERO: email + SMS → auto-logged spend */}
+      {/* HERO: pasted alert + email receipt → logged spend (example only) */}
       <View style={{ paddingHorizontal: 16, paddingTop: 4 }}>
-        <View style={styles.hero}>
+        <View
+          style={styles.hero}
+          accessible
+          accessibilityRole="image"
+          accessibilityLabel={t("onboarding.ledgerHeroA11y")}
+        >
           <LinearGradient
             colors={[theme.inkDeep, "#2A332E"]}
             start={{ x: 0, y: 0 }}
@@ -87,8 +95,7 @@ export function LedgerStep({ theme, totalSteps }: Props) {
             </Text>
           </View>
           <View style={[styles.uploadBadge, { borderColor: "rgba(255,255,255,0.12)" }]}>
-            <Icon name="lock" size={9} color="rgba(255,255,255,0.85)" />
-            <Text style={styles.uploadText}>{t("onboarding.neverUploaded")}</Text>
+            <Text style={styles.uploadText}>{t("onboarding.exampleTag")}</Text>
           </View>
 
           {/* converging arrows */}
@@ -97,21 +104,21 @@ export function LedgerStep({ theme, totalSteps }: Props) {
             height="100%"
             viewBox="0 0 358 230"
             preserveAspectRatio="none"
-            style={StyleSheet.absoluteFill}
+            style={[StyleSheet.absoluteFill, isRTL && { transform: [{ scaleX: -1 }] }]}
             pointerEvents="none"
           >
             <Path d="M96,116 Q120,160 176,182" fill="none" stroke={theme.mustard} strokeWidth="1.2" strokeDasharray="2 3" opacity="0.6" />
             <Path d="M262,116 Q238,160 182,182" fill="none" stroke={theme.sky} strokeWidth="1.2" strokeDasharray="2 3" opacity="0.6" />
           </Svg>
 
-          {/* SMS card */}
+          {/* Pasted bank alert card */}
           <Animated.View entering={FadeIn.duration(500)} style={[styles.msgCard, styles.smsCard]}>
             <View style={styles.msgHead}>
               <View style={[styles.msgIcon, { backgroundColor: theme.mustard }]}>
-                <Icon name="phone" size={10} color={theme.inkDeep} />
+                <Icon name="edit" size={10} color={theme.inkDeep} />
               </View>
               <Text style={[styles.msgTag, { color: theme.mustard }]}>
-                {t("onboarding.smsHdfc")}
+                {t("onboarding.pastedAlertTag")}
               </Text>
             </View>
             <Text style={styles.msgBody}>
@@ -159,30 +166,34 @@ export function LedgerStep({ theme, totalSteps }: Props) {
         </Text>
       </View>
 
-      {/* Grant access */}
+      {/* How expenses get in — nothing is connected during onboarding */}
       <View style={{ paddingHorizontal: 16, paddingTop: 18 }}>
         <Text style={[styles.grantLabel, { color: theme.inkMuted }]}>
-          {t("onboarding.grantAccess")}
+          {t("onboarding.importMethodsLabel")}
         </Text>
         <View style={{ gap: 8 }}>
-          <PermissionRow
-            theme={theme}
-            title={t("onboarding.emailTransactionsOnly")}
-            sub={t("onboarding.readsReceipts")}
-            on={emailOn}
-            onPress={() => setEmailOn((v) => !v)}
-          />
-          <PermissionRow
-            theme={theme}
-            title={t("onboarding.smsSpendAlerts")}
-            sub={t("onboarding.bankDebitAlerts")}
-            on={smsOn}
-            onPress={() => setSmsOn((v) => !v)}
-          />
+          {importMethods.map((m) => {
+            const mColor = theme[m.colorKey] as string;
+            return (
+              <View
+                key={m.titleKey}
+                accessible
+                style={[styles.methodRow, { backgroundColor: theme.paperSoft, borderColor: theme.hairline }]}
+              >
+                <View style={[styles.featureTileIcon, { backgroundColor: mColor + "22", marginBottom: 0 }]}>
+                  <Icon name={m.i} size={15} color={mColor} strokeWidth={2} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.methodTitle, { color: theme.inkDeep }]}>{t(m.titleKey)}</Text>
+                  <Text style={[styles.methodSub, { color: theme.inkSoft }]}>{t(m.subKey)}</Text>
+                </View>
+              </View>
+            );
+          })}
         </View>
       </View>
 
-      {/* Feature tiles — distinct from the toggle rows above */}
+      {/* Feature tiles */}
       <View style={{ paddingHorizontal: 16, paddingTop: 18 }}>
         <Text style={[styles.featuresLabel, { color: theme.inkMuted }]}>
           {t("onboarding.ledgerFeaturesLabel")}
@@ -228,7 +239,7 @@ const styles = StyleSheet.create({
   },
   parsedBadge: {
     position: "absolute",
-    left: 14,
+    start: 14,
     top: 14,
     flexDirection: "row",
     alignItems: "center",
@@ -247,7 +258,7 @@ const styles = StyleSheet.create({
   },
   uploadBadge: {
     position: "absolute",
-    right: 14,
+    end: 14,
     top: 14,
     flexDirection: "row",
     alignItems: "center",
@@ -260,6 +271,7 @@ const styles = StyleSheet.create({
   },
   uploadText: {
     color: "rgba(255,255,255,0.72)",
+    textTransform: "uppercase",
     fontSize: 9.5,
     fontFamily: NOMAD_FONTS.mono,
     letterSpacing: 0.6,
@@ -275,8 +287,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.13)",
   },
-  smsCard: { left: 18 },
-  emailCard: { right: 18 },
+  smsCard: { start: 18 },
+  emailCard: { end: 18 },
   msgHead: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 6 },
   msgIcon: {
     width: 18,
@@ -346,8 +358,28 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     textTransform: "uppercase",
     marginBottom: 8,
-    paddingLeft: 6,
+    paddingStart: 6,
     fontFamily: NOMAD_FONTS.uiBold,
+  },
+  methodRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  methodTitle: {
+    fontSize: 13.5,
+    fontWeight: "600",
+    fontFamily: NOMAD_FONTS.uiSemi,
+  },
+  methodSub: {
+    fontSize: 11.5,
+    marginTop: 2,
+    lineHeight: 11.5 * 1.4,
+    fontFamily: NOMAD_FONTS.ui,
   },
   featuresLabel: {
     fontSize: 10,
@@ -355,7 +387,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     textTransform: "uppercase",
     marginBottom: 10,
-    paddingLeft: 2,
+    paddingStart: 2,
     fontFamily: NOMAD_FONTS.uiBold,
   },
   featureGrid: {
