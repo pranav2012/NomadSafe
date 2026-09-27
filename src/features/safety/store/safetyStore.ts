@@ -33,7 +33,8 @@ export interface SmsDelivery {
   at: number;
 }
 
-export type BroadcastOutcome = "starting" | "started" | "denied" | "failed";
+/** "needsSetup": not started because it would need a permission prompt mid-SOS. */
+export type BroadcastOutcome = "starting" | "started" | "denied" | "failed" | "needsSetup";
 
 interface SafetyState {
   status: SafetyStatus;
@@ -203,7 +204,7 @@ export const useSafetyStore = create<SafetyState>()(
 
       recordSosBroadcast: (outcome) => {
         set({ sosBroadcast: outcome });
-        if (outcome === "starting") return;
+        if (outcome === "starting" || outcome === "needsSetup") return;
         get().addEvent({
           messageKey: outcome === "started" ? "safety.eventBroadcastStarted" : "safety.eventBroadcastFailed",
           icon: "mapPin",

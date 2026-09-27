@@ -53,9 +53,10 @@ export type IconName =
   | "faceId"
   | "download"
   | "minus"
-  | "cpu";
+  | "cpu"
+  | "logout";
 
-const DIRECTIONAL: ReadonlySet<IconName> = new Set(["chevronRight", "chevronLeft", "send"]);
+const DIRECTIONAL: ReadonlySet<IconName> = new Set(["chevronRight", "chevronLeft", "send", "logout"]);
 
 interface IconProps {
   name: IconName;
@@ -176,6 +177,14 @@ export function Icon({
       );
       break;
     case "close":
+    case "logout":
+      body = (
+        <G {...p}>
+          <Path d="M15 4h3a2 2 0 012 2v12a2 2 0 01-2 2h-3" />
+          <Path d="M10 17l-5-5 5-5M5 12h11" />
+        </G>
+      );
+      break;
     case "x":
       body = (
         <G {...p}>

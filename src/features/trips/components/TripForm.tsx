@@ -44,14 +44,18 @@ import {
   toDateKey,
 } from "@/features/trips/utils/dates";
 import { parseAmount, sanitizeAmountInput } from "@/features/trips/utils/amount";
+import { defaultTripName } from "@/features/trips/utils/tripName";
 import { useLocalization } from "@/localization";
 import { useTheme } from "@/hooks/useTheme";
 import { CURRENCY_OPTIONS } from "@/utils/currency";
 
 type DateField = "start" | "end";
+/** Who set the name: "auto" names follow the destinations; "user"/"ai" names are never overwritten by the default. */
+type NameSource = "auto" | "user" | "ai";
 
 interface FormState {
   name: string;
+  nameSource: NameSource;
   destinationQuery: string;
   destinations: string[];
   startDate: Date;
@@ -110,6 +114,7 @@ function makeInitialForm(
   const startDate = startOfLocalDay(new Date());
   return {
     name: "",
+    nameSource: "auto",
     destinationQuery: "",
     destinations: [],
     startDate,
@@ -126,12 +131,13 @@ function makeInitialForm(
 function tripToFormState(trip: Trip): FormState {
   return {
     name: trip.name,
+    nameSource: "user",
     destinationQuery: "",
     destinations: trip.destinations,
     startDate: fromDateKey(trip.startDate),
     endDate: fromDateKey(trip.endDate),
     mode: trip.mode,
-    budget: String(trip.budget),
+    budget: trip.budget > 0 ? String(trip.budget) : "",
     currency: trip.currency,
     travelerName: "",
     companions: trip.companions,
@@ -233,8 +239,14 @@ export function TripForm({ editingTrip, onSave, onCancel, header }: TripFormProp
     }
   }, [clearBudgetEstimate, clearNameState]);
 
-  const isFormCompleteForAi =
-    form.destinations.length > 0 && parsedBudget > 0 && form.endDate >= form.startDate;
+  const isFormCompleteForAi = form.destinations.length > 0 && form.endDate >= form.startDate;
+  const suggestedName = defaultTripName(form.destinations, t);
+
+  const withDestinations = (current: FormState, destinations: string[]): FormState => ({
+    ...current,
+    destinations,
+    name: current.nameSource === "auto" ? defaultTripName(destinations, t) : current.name,
+  });
 
   const handleDestinationQueryChange = (value: string) => {
     webSearch.reset();
@@ -249,9 +261,11 @@ export function TripForm({ editingTrip, onSave, onCancel, header }: TripFormProp
       );
 
       return {
-        ...current,
+        ...withDestinations(
+          current,
+          exists ? current.destinations : [...current.destinations, destination],
+        ),
         destinationQuery: "",
-        destinations: exists ? current.destinations : [...current.destinations, destination],
       };
     });
     webSearch.reset();
@@ -259,10 +273,12 @@ export function TripForm({ editingTrip, onSave, onCancel, header }: TripFormProp
   };
 
   const handleRemoveDestination = (destination: string) => {
-    setForm((current) => ({
-      ...current,
-      destinations: current.destinations.filter((item) => item !== destination),
-    }));
+    setForm((current) =>
+      withDestinations(
+        current,
+        current.destinations.filter((item) => item !== destination),
+      ),
+    );
     clearBudgetEstimate();
   };
 
@@ -407,7 +423,9 @@ export function TripForm({ editingTrip, onSave, onCancel, header }: TripFormProp
             travelerCount: form.mode === "group" ? form.companions.length + 1 : 1,
           });
           setForm((current) =>
-            auto && current.name.trim() ? current : { ...current, name: suggestion.name },
+            auto && current.nameSource === "user" && current.name.trim()
+              ? current
+              : { ...current, name: suggestion.name, nameSource: "ai" },
           );
           setHasGeneratedName(true);
           return;
@@ -436,7 +454,7 @@ export function TripForm({ editingTrip, onSave, onCancel, header }: TripFormProp
     t,
   ]);
 
-  const hasTypedName = form.name.trim().length > 0;
+  const hasTypedName = form.nameSource === "user" && form.name.trim().length > 0;
 
   // Runs after the budget estimate settles (isAiBusy gate), never alongside it.
   useEffect(() => {
@@ -479,10 +497,11 @@ export function TripForm({ editingTrip, onSave, onCancel, header }: TripFormProp
   const handleSave = async () => {
     if (isSavingRef.current) return;
 
-    const trimmedName = form.name.trim();
-    const budget = parsedBudget;
+    const trimmedName = form.name.trim() || suggestedName;
+    // Budget is optional; blank or non-positive input means "no budget" (stored as 0).
+    const budget = Number.isFinite(parsedBudget) && parsedBudget > 0 ? parsedBudget : 0;
 
-    if (!trimmedName || form.destinations.length === 0 || !Number.isFinite(budget) || budget <= 0) {
+    if (form.destinations.length === 0 || !trimmedName) {
       Alert.alert(t("trip.validationTitle"), t("trip.validationBody"));
       return;
     }
@@ -531,6 +550,7 @@ export function TripForm({ editingTrip, onSave, onCancel, header }: TripFormProp
   };
 
   const budgetCurrencyAffix = getCurrencyAffix(locale, form.currency);
+  const canSave = form.destinations.length > 0;
 
   return (
     <KeyboardAvoidingView behavior="padding" style={styles.keyboardRoot}>
@@ -669,8 +689,15 @@ export function TripForm({ editingTrip, onSave, onCancel, header }: TripFormProp
               generated={hasGeneratedName}
               isGenerating={isGeneratingName}
               error={nameError}
+              placeholder={suggestedName || t("trip.tripNamePlaceholder")}
               canGenerate={isAiReady && form.destinations.length > 0 && !isEstimatingBudget}
-              onChangeText={(value) => updateForm("name", value)}
+              onChangeText={(value) =>
+                setForm((current) => ({
+                  ...current,
+                  name: value,
+                  nameSource: value.trim() ? "user" : "auto",
+                }))
+              }
               onGenerate={() => handleGenerateName()}
             />
 
@@ -751,13 +778,13 @@ export function TripForm({ editingTrip, onSave, onCancel, header }: TripFormProp
             ) : null}
             <Pressable
               onPress={handleSave}
-              disabled={isSaving}
-              accessibilityState={{ busy: isSaving, disabled: isSaving }}
+              disabled={isSaving || !canSave}
+              accessibilityState={{ busy: isSaving, disabled: isSaving || !canSave }}
               style={({ pressed }) => [
                 styles.createButton,
                 {
                   backgroundColor: theme.teal,
-                  opacity: isSaving ? 0.7 : pressed ? 0.9 : 1,
+                  opacity: !canSave ? 0.45 : isSaving ? 0.7 : pressed ? 0.9 : 1,
                 },
               ]}
             >
@@ -767,7 +794,13 @@ export function TripForm({ editingTrip, onSave, onCancel, header }: TripFormProp
                 <Icon name="flag" size={18} color={theme.inverse} />
               )}
               <Text style={[styles.createButtonText, { color: theme.inverse }]}>
-                {editingTrip ? t("trip.saveAction") : t("trip.createAction")}
+                {isSaving
+                  ? editingTrip
+                    ? t("trip.savingAction")
+                    : t("trip.creatingAction")
+                  : editingTrip
+                    ? t("trip.saveAction")
+                    : t("trip.createAction")}
               </Text>
             </Pressable>
           </View>
@@ -1169,6 +1202,7 @@ function RemovableChip({
 
 function NameInput({
   value,
+  placeholder,
   generated,
   isGenerating,
   error,
@@ -1177,6 +1211,7 @@ function NameInput({
   onGenerate,
 }: {
   value: string;
+  placeholder: string;
   generated: boolean;
   isGenerating: boolean;
   error: string | null;
@@ -1214,7 +1249,7 @@ function NameInput({
       >
         <TextInput
           value={value}
-          placeholder={t("trip.tripNamePlaceholder")}
+          placeholder={placeholder}
           placeholderTextColor={theme.inkMuted}
           onChangeText={onChangeText}
           style={[styles.input, { color: theme.inkDeep }]}

@@ -181,6 +181,10 @@ export default function SetupPinScreen() {
               <Pressable
                 key={i}
                 onPress={() => handleKeyPress(key)}
+                accessibilityRole="button"
+                accessibilityLabel={key === "delete" ? t("auth.deleteDigit") : key || undefined}
+                accessibilityElementsHidden={key === ""}
+                importantForAccessibility={key === "" ? "no-hide-descendants" : "auto"}
                 disabled={key === ""}
                 style={[
                   styles.numKey,

@@ -26,8 +26,14 @@ export const LOCAL_AI_PROMPTS = {
   systemChatAssistant:
     "You are Nomad, NomadSafe's on-device travel and money assistant. " +
     "You help travelers with budgeting, spending habits, trip planning, and general travel questions. " +
-    "Keep answers concise, practical, and friendly. Write in plain text — no markdown, headings, or JSON. " +
-    "If you don't have the data to answer something specific about the user's spending, say so and suggest what they could log. " +
+    "The app may give you a FACTS block with the user's trip, dates, and money figures, all computed exactly. " +
+    "Rules for money and dates: use ONLY the figures and dates in FACTS and copy them exactly as written. " +
+    "Never do arithmetic yourself: do not add, subtract, multiply, divide, average, estimate, or convert amounts. " +
+    "Never invent amounts, dates, merchants, or categories. " +
+    "If a figure you need is not in FACTS, say you don't know it and suggest logging expenses or setting a budget. " +
+    "If earlier messages or conversation memory disagree with FACTS, FACTS are correct. " +
+    "Keep answers short: at most 5 sentences or a short list. Be practical and friendly. " +
+    "Write in plain text — no headings or JSON. " +
     "Everything you say stays on the user's device.",
 
   systemBudgetEstimator:
@@ -273,13 +279,13 @@ async function getReadyModel(): Promise<AiModel | null> {
 
   for (const id of selectedIds) {
     const model = AI_MODELS.find((candidate) => candidate.id === id);
-    if (model && (await localModelService.isDownloaded(model))) {
+    if (model && aiModelService.fitsDeviceMemory(model) && (await localModelService.isDownloaded(model))) {
       return model;
     }
   }
 
   for (const model of AI_MODELS) {
-    if (await localModelService.isDownloaded(model)) {
+    if (aiModelService.fitsDeviceMemory(model) && (await localModelService.isDownloaded(model))) {
       aiModelService.setDownloadedModelId(model.id);
       return model;
     }
@@ -606,7 +612,7 @@ export const localModelService = {
         messages,
         jinja: true,
         n_predict: CHAT_REPLY_TOKENS,
-        temperature: 0.6,
+        temperature: 0.3,
         top_p: 0.9,
       } as const;
 

@@ -45,6 +45,27 @@ export async function getNotificationPermission(): Promise<NotificationPermissio
   }
 }
 
+/** Permission status plus whether the OS will still show a prompt. */
+export async function getNotificationPermissionDetails(): Promise<{ granted: boolean; canAskAgain: boolean }> {
+  try {
+    const { status, canAskAgain } = await Notifications.getPermissionsAsync();
+    return { granted: status === "granted", canAskAgain };
+  } catch {
+    return { granted: false, canAskAgain: false };
+  }
+}
+
+/** User-initiated prompt; creates the Android channel first so the prompt can appear. */
+export async function requestNotificationPermission(channelName: string): Promise<boolean> {
+  try {
+    await ensureChannel(channelName);
+    const { status } = await Notifications.requestPermissionsAsync();
+    return status === "granted";
+  } catch {
+    return false;
+  }
+}
+
 async function ensurePermission(): Promise<boolean> {
   const current = await Notifications.getPermissionsAsync();
   if (current.status === "granted") return true;

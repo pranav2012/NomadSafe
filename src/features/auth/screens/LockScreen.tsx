@@ -315,6 +315,10 @@ export default function LockScreen() {
                 <Pressable
                   key={i}
                   onPress={() => handleKeyPress(key)}
+                  accessibilityRole="button"
+                  accessibilityLabel={key === "delete" ? t("auth.deleteDigit") : key || undefined}
+                  accessibilityElementsHidden={key === ""}
+                  importantForAccessibility={key === "" ? "no-hide-descendants" : "auto"}
                   disabled={key === "" || isLocked}
                   style={[
                     styles.numKey,

@@ -231,15 +231,16 @@ export default function OnboardingWelcomeScreen() {
             style={styles.progressRow}
             accessible
             accessibilityRole="progressbar"
-            accessibilityValue={{ min: 1, max: STEP_IDS.length, now: step + 1 }}
+            accessibilityValue={{ min: 0, max: NUMBERED_TOTAL, now: Math.min(step, NUMBERED_TOTAL) }}
           >
-            {STEP_IDS.map((id, i) => (
+            {/* One segment per numbered step, so it matches "Step X of N". */}
+            {Array.from({ length: NUMBERED_TOTAL }, (_, i) => (
               <View
-                key={id}
+                key={i}
                 style={[
                   styles.progressBar,
                   {
-                    backgroundColor: i <= step ? theme.inkDeep : theme.hairline,
+                    backgroundColor: i < step ? theme.inkDeep : theme.hairline,
                   },
                 ]}
               />

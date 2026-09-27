@@ -20,6 +20,7 @@ export interface Trip {
   startDate: string;
   endDate: string;
   mode: TripMode;
+  /** 0 when the trip has no budget; check with `hasTripBudget`. */
   budget: number;
   currency: string;
   companions: string[];
@@ -66,6 +67,10 @@ export function pickDefaultActiveTripId(trips: Trip[]): string | null {
     byStart.find((trip) => getTripStatus(trip) === "upcoming")?.id ??
     null
   );
+}
+
+export function hasTripBudget(trip: Pick<Trip, "budget">): boolean {
+  return Number.isFinite(trip.budget) && trip.budget > 0;
 }
 
 /** Coordinates aligned to `trip.destinations`; legacy misaligned data falls back to the offline table. */

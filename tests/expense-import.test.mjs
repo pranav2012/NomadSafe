@@ -162,3 +162,58 @@ test("buckets dates by local calendar day", () => {
   const parsed = dateKey.fromLocalDayKey("2026-05-12");
   assert.deepEqual([parsed.getFullYear(), parsed.getMonth(), parsed.getDate(), parsed.getHours()], [2026, 4, 12, 0]);
 });
+
+const heuristic = loadModule("src/features/expenses/services/categoryHeuristic.ts");
+
+function categorizeAlert(body) {
+  const tx = parse(body);
+  return heuristic.categorizeHeuristic({ merchant: tx?.merchant ?? "", rawText: body });
+}
+
+test("categorizes a pasted El Corte Inglés alert as shopping, not travel", () => {
+  const body = "EUR 1.234,56 spent on your card ending 4182 at EL CORTE INGLES";
+  assert.equal(parse(body)?.merchant, "El Corte Ingles");
+  assert.deepEqual(categorizeAlert(body), { category: "shopping", matched: true });
+  assert.equal(heuristic.categorizeHeuristic({ merchant: "El Corte Inglés" }).category, "shopping");
+});
+
+test("matches keywords on word boundaries only", () => {
+  assert.equal(heuristic.categorizeHeuristic({ merchant: "Card Services Ltd" }).matched, false);
+  assert.equal(heuristic.categorizeHeuristic({ merchant: "Barcelona Tickets" }).matched, false);
+  assert.equal(heuristic.categorizeHeuristic({ merchant: "Business Centre" }).matched, false);
+  assert.equal(heuristic.categorizeHeuristic({ merchant: "Coca Cola Kiosk" }).matched, false);
+  assert.equal(heuristic.categorizeHeuristic({ merchant: "Dinner Club" }).matched, false);
+  assert.equal(heuristic.categorizeHeuristic({ merchant: "Joe's Bar" }).category, "food");
+  assert.equal(heuristic.categorizeHeuristic({ merchant: "Macy's" }).category, "shopping");
+});
+
+test("categorizes common chains across regions", () => {
+  const cases = {
+    shopping: [
+      "Carrefour Express", "LIDL", "Aldi Süd", "Tesco Metro", "Boots", "Zara", "H&M",
+      "IKEA", "Decathlon", "Uniqlo", "7-Eleven", "Walgreens", "CVS Pharmacy", "Walmart",
+      "Target", "Big Bazaar", "DMart", "Reliance Fresh", "Farmacia Central", "Monoprix",
+    ],
+    food: ["Starbucks", "Pizzeria Da Michele", "Boulangerie Paul", "Swiggy", "Uber Eats"],
+    stays: ["Hotel Avenida", "Airbnb", "Holiday Inn Express", "Generator Hostel"],
+    travel: ["Uber", "Ryanair", "Renfe", "Shell", "Indian Oil", "Hertz", "Airport Parking"],
+    other: ["Vodafone", "Airalo eSIM", "ATM cash withdrawal"],
+  };
+  for (const [category, merchants] of Object.entries(cases)) {
+    for (const merchant of merchants) {
+      assert.equal(heuristic.categorizeHeuristic({ merchant }).category, category, merchant);
+    }
+  }
+});
+
+test("prefers the merchant over alert boilerplate", () => {
+  const result = heuristic.categorizeHeuristic({
+    merchant: "Carrefour",
+    rawText: "Spent at Carrefour. Book your next flight with us!",
+  });
+  assert.equal(result.category, "shopping");
+  assert.deepEqual(
+    heuristic.categorizeHeuristic({ merchant: "Arcade Corp", rawText: "Rp 150.000 spent on card XX12" }),
+    { category: "other", matched: false },
+  );
+});

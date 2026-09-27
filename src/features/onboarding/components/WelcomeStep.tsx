@@ -1,4 +1,5 @@
 import React from "react";
+import { BRAND_NAVY, NomadLogo } from "@/components/brand/NomadLogo";
 import { View, Text, StyleSheet } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { LinearGradient } from "expo-linear-gradient";
@@ -10,7 +11,6 @@ import Animated, {
 import { NOMAD_FONTS, type NomadTheme } from "@/constants/nomadTokens";
 import { useLocalization } from "@/localization";
 import { Stamp } from "@/components/nomad/Stamp";
-import { Icon } from "@/components/nomad/Icon";
 import { Eyebrow, HugeHeadline, HeadlineItalic } from "@/components/nomad/Typography";
 
 interface Props {
@@ -143,12 +143,12 @@ export function WelcomeStep({ theme }: Props) {
           style={[
             styles.shieldBadge,
             {
-              backgroundColor: theme.inkDeep,
+              backgroundColor: BRAND_NAVY,
               shadowColor: theme.shadow,
             },
           ]}
         >
-          <Icon name="shield" size={22} color={theme.mustard} strokeWidth={2} />
+          <NomadLogo size={44} tile={false} />
         </Animated.View>
       </View>
 

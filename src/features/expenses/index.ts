@@ -10,3 +10,4 @@ export {
   getCategoryMeta,
   type ExpenseCategory,
 } from "./constants/categories";
+export { formatMoney } from "./utils/money";

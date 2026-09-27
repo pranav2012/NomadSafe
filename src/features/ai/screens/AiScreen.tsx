@@ -30,8 +30,10 @@ export default function AiScreen() {
   const { models } = useAiModels();
   const [tab, setTab] = useState<Tab>("dashboard");
 
-  const activeModel = models.find((m) => m.isActive) ?? null;
-  const anyDownloaded = models.some((m) => m.isDownloaded);
+  // Mirrors the chat's model pick: the active model if it fits this device, else any usable download.
+  const usableModels = models.filter((m) => m.isDownloaded && !m.needsMoreRam);
+  const activeModel = usableModels.find((m) => m.isActive) ?? usableModels[0] ?? null;
+  const anyDownloaded = usableModels.length > 0;
 
   if (!localAiEnabled) {
     return (

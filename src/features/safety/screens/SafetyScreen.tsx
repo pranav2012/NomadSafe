@@ -14,7 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import MapView, { Marker, PROVIDER_DEFAULT } from "react-native-maps";
 import * as Haptics from "expo-haptics";
 import * as Location from "expo-location";
-import * as SMS from "expo-sms";
+import { useNetworkState } from "expo-network";
 import { useFocusEffect, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Icon } from "@/components/nomad/Icon";
@@ -26,34 +26,42 @@ import { useLocalization } from "@/localization";
 import { emergencyContactsStorage } from "@/features/onboarding/services/emergencyContactsStorage";
 import { selectActiveTrip, useTripsStore } from "@/features/trips/store/tripsStore";
 import { useSettingsStore } from "@/features/settings";
+import { isLocationBroadcastRunning } from "@/features/location-sharing";
+import {
+  BackgroundLocationDisclosure,
+  hasAcceptedBackgroundDisclosure,
+} from "@/features/location-sharing/components/BackgroundLocationDisclosure";
 import { smsFallbackStorage } from "@/features/safety/services/smsFallbackStorage";
 import {
   computeSafetyScore,
   fetchAdvisory,
-  type AdvisoryResult,
+  type AdvisoryLookup,
+  type FcdoLevel,
 } from "@/features/safety/services/safetyAdvisoryService";
 import {
   fetchEmergencyNumbers,
+  readLastEmergencyNumbers,
   type EmergencyNumbers,
 } from "@/features/safety/services/emergencyNumberService";
 import {
   buildMapsUrl,
+  canAutoStartEmergencyBroadcast,
   composeSms,
   getBestPosition,
   getContactPhones,
-  hasBackgroundLocationPermission,
   restoreBroadcast,
   snapshotBroadcast,
   startEmergencyBroadcast,
   type AlertPosition,
   type BroadcastSnapshot,
 } from "@/features/safety/services/sosService";
+import { readLastKnownFix, saveLastKnownFix } from "@/features/safety/services/lastKnownLocation";
 import {
   cancelCheckInNotifications,
-  getNotificationPermission,
   scheduleCheckInNotifications,
-  type NotificationPermission,
 } from "@/features/safety/services/checkInNotifications";
+import { summarizeReadiness, useSafetyReadiness } from "@/features/safety/hooks/useSafetyReadiness";
+import { SafetyReadinessChecklist } from "@/features/safety/components/SafetyReadinessChecklist";
 import {
   isCheckInMissed,
   useSafetyStore,
@@ -90,6 +98,26 @@ function formatDurationLabel(seconds: number, t: Translate) {
   return t("safety.presetMinutes", { count: Math.round(seconds / 60) });
 }
 
+/** Short relative age such as "just now", "5 min ago", "2 hr ago". */
+function formatAge(ms: number, t: Translate) {
+  const minutes = Math.floor(Math.max(0, ms) / 60_000);
+  if (minutes < 1) return t("sos.ageJustNow");
+  if (minutes < 60) return t("sos.ageMinutes", { count: minutes });
+  const hours = Math.floor(minutes / 60);
+  if (hours < 48) return t("sos.ageHours", { count: hours });
+  return t("sos.ageDays", { count: Math.floor(hours / 24) });
+}
+
+const FCDO_LEVEL_KEYS: Record<FcdoLevel, { long: string; short: string }> = {
+  none: { long: "safety.fcdoNone", short: "safety.fcdoShortNone" },
+  avoidAllButEssentialParts: { long: "safety.fcdoAvoidAllButEssentialParts", short: "safety.fcdoShortParts" },
+  avoidAllParts: { long: "safety.fcdoAvoidAllParts", short: "safety.fcdoShortParts" },
+  avoidAllButEssentialWhole: { long: "safety.fcdoAvoidAllButEssentialWhole", short: "safety.fcdoShortEssential" },
+  avoidAllWhole: { long: "safety.fcdoAvoidAllWhole", short: "safety.fcdoShortAvoid" },
+};
+
+type Coords = { latitude: number; longitude: number; accuracy: number | null; timestamp: number | null };
+
 function isSameDay(a: Date, b: Date) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
@@ -114,6 +142,7 @@ export default function SafetyScreen() {
   const sosDelivery = useSafetyStore((s) => s.sosDelivery);
   const sosBroadcast = useSafetyStore((s) => s.sosBroadcast);
   const cancelSos = useSafetyStore((s) => s.cancelSos);
+  const addEvent = useSafetyStore((s) => s.addEvent);
   const storeContacts = useSafetyStore((s) => s.trustedContacts);
   const setStoreContacts = useSafetyStore((s) => s.setTrustedContacts);
   const events = useSafetyStore((s) => s.events);
@@ -122,20 +151,34 @@ export default function SafetyScreen() {
   const defaultCheckInDuration = useSettingsStore((s) => s.defaultCheckInDuration);
 
   const [now, setNow] = useState(() => Date.now());
-  const [location, setLocation] = useState<{ latitude: number; longitude: number; timestamp: number | null } | null>(null);
+  const [location, setLocation] = useState<Coords | null>(() => readLastKnownFix());
   const [sosHoldSeconds, setSosHoldSeconds] = useState(0);
-  const [locationGranted, setLocationGranted] = useState(false);
-  const [smsAvailable, setSmsAvailable] = useState(false);
-  const [advisory, setAdvisory] = useState<AdvisoryResult | null>(null);
-  const [advisoryLoading, setAdvisoryLoading] = useState(true);
-  const [emergency, setEmergency] = useState<EmergencyNumbers | null>(null);
-  const [phoneCount, setPhoneCount] = useState(() => getContactPhones().length);
-  const [notifPermission, setNotifPermission] = useState<NotificationPermission | null>(null);
+  const [advisoryLookup, setAdvisoryLookup] = useState<AdvisoryLookup | null>(null);
+  const [emergency, setEmergency] = useState<EmergencyNumbers | null>(() => readLastEmergencyNumbers());
   const [scheduleFailed, setScheduleFailed] = useState(false);
   const [sosCountdown, setSosCountdown] = useState<number | null>(null);
   const [sosBusy, setSosBusy] = useState(false);
   const [broadcastBusy, setBroadcastBusy] = useState(false);
+  const [broadcastRunning, setBroadcastRunning] = useState(false);
   const [missedBusy, setMissedBusy] = useState(false);
+  const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
+  const [disclosureFor, setDisclosureFor] = useState<"readiness" | "sos" | null>(null);
+  const [safeFollowUp, setSafeFollowUp] = useState(false);
+  const [safeBusy, setSafeBusy] = useState(false);
+
+  const network = useNetworkState();
+  const isOffline = network.isConnected === false || network.isInternetReachable === false;
+
+  const {
+    readiness,
+    refresh: refreshReadiness,
+    fixForeground,
+    requestBackground,
+    fixNotifications,
+    openBatterySettings,
+  } = useSafetyReadiness(t("safety.notifChannelName"));
+  const phoneCount = readiness.contactsWithPhone;
+  const locationGranted = readiness.foreground === "granted";
 
   const holdTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -153,16 +196,15 @@ export default function SafetyScreen() {
       if (JSON.stringify(mapped) !== JSON.stringify(useSafetyStore.getState().trustedContacts)) {
         setStoreContacts(mapped);
       }
-      setPhoneCount(getContactPhones().length);
     }, [setStoreContacts]),
   );
 
-  // Live clock while a check-in runs; also refresh immediately on foreground.
+  // Live clock while a check-in or SOS runs; also refresh immediately on foreground.
   useEffect(() => {
-    if (status !== "active") return;
+    if (status === "idle") return;
     const tick = () => setNow(Date.now());
     tick();
-    const id = setInterval(tick, 1000);
+    const id = setInterval(tick, status === "active" ? 1000 : 15_000);
     const sub = AppState.addEventListener("change", (next) => {
       if (next === "active") tick();
     });
@@ -180,24 +222,6 @@ export default function SafetyScreen() {
   useEffect(() => {
     if (isMissed) markCheckInMissed();
   }, [isMissed, markCheckInMissed]);
-
-  // Notification permission can change in system settings while backgrounded.
-  useEffect(() => {
-    let mounted = true;
-    const refresh = () => {
-      getNotificationPermission().then((p) => {
-        if (mounted) setNotifPermission(p);
-      });
-    };
-    refresh();
-    const sub = AppState.addEventListener("change", (next) => {
-      if (next === "active") refresh();
-    });
-    return () => {
-      mounted = false;
-      sub.remove();
-    };
-  }, []);
 
   const notificationCopy = useMemo(() => ({
     channelName: t("safety.notifChannelName"),
@@ -218,33 +242,30 @@ export default function SafetyScreen() {
     scheduleCheckInNotifications(checkInEndsAt, notificationCopy).then((result) => {
       if (!mounted || result === "stale") return;
       setScheduleFailed(result === "error");
-      if (result === "permission-denied") setNotifPermission("denied");
-      if (result === "scheduled") setNotifPermission("granted");
+      if (result === "permission-denied" || result === "scheduled") void refreshReadiness();
     });
     return () => {
       mounted = false;
     };
-  }, [status, checkInEndsAt, notificationCopy]);
+  }, [status, checkInEndsAt, notificationCopy, refreshReadiness]);
 
-  // Get location + SMS availability for safety context.
+  // Get a location fix for safety context and persist it for offline SOS.
   useEffect(() => {
     let mounted = true;
     async function bootstrap() {
       try {
-        const available = await SMS.isAvailableAsync();
-        if (mounted) setSmsAvailable(available);
-      } catch {
-        if (mounted) setSmsAvailable(false);
-      }
-      try {
         const { status: perm } = await Location.requestForegroundPermissionsAsync();
-        const granted = perm === Location.PermissionStatus.GRANTED;
-        if (mounted) setLocationGranted(granted);
-        if (!granted) return;
+        void refreshReadiness();
+        if (perm !== Location.PermissionStatus.GRANTED) return;
         const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-        if (mounted) {
-          setLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude, timestamp: loc.timestamp });
-        }
+        const fix = {
+          latitude: loc.coords.latitude,
+          longitude: loc.coords.longitude,
+          accuracy: loc.coords.accuracy ?? null,
+          timestamp: loc.timestamp,
+        };
+        saveLastKnownFix(fix);
+        if (mounted) setLocation(fix);
       } catch (err) {
         // Location services off or unavailable; SOS will retry for a fresh fix.
         console.warn("Safety location bootstrap failed", err);
@@ -252,9 +273,9 @@ export default function SafetyScreen() {
     }
     bootstrap();
     return () => { mounted = false; };
-  }, []);
+  }, [refreshReadiness]);
 
-  // Fetch the live travel advisory for the destination (or current location).
+  // Fetch UK FCDO travel advice for the destination (or current location).
   const advisoryCoords = activeTrip?.destinationCoordinates?.[0] ?? location;
   const advisoryLat = advisoryCoords?.latitude;
   const advisoryLng = advisoryCoords?.longitude;
@@ -263,14 +284,14 @@ export default function SafetyScreen() {
     let mounted = true;
     fetchAdvisory({ latitude: advisoryLat, longitude: advisoryLng })
       .then((result) => {
-        if (mounted) setAdvisory(result);
+        if (mounted) setAdvisoryLookup(result);
       })
-      .catch(() => {})
-      .finally(() => {
-        if (mounted) setAdvisoryLoading(false);
+      .catch(() => {
+        if (mounted) setAdvisoryLookup({ kind: "unavailable", reason: "unreachable" });
       });
     return () => { mounted = false; };
   }, [advisoryLat, advisoryLng]);
+  const advisory = advisoryLookup?.kind === "ok" ? advisoryLookup.advisory : null;
 
   // Resolve local emergency numbers from the device's current location.
   const locationLat = location?.latitude;
@@ -283,6 +304,25 @@ export default function SafetyScreen() {
     });
     return () => { mounted = false; };
   }, [locationLat, locationLng]);
+
+  // "Broadcasting" is shown only while the OS location task is really running.
+  useEffect(() => {
+    if (status !== "emergency") return;
+    let mounted = true;
+    const check = () => {
+      isLocationBroadcastRunning().then((running) => {
+        if (mounted) setBroadcastRunning(running);
+      });
+    };
+    check();
+    const sub = AppState.addEventListener("change", (next) => {
+      if (next === "active") check();
+    });
+    return () => {
+      mounted = false;
+      sub.remove();
+    };
+  }, [status, sosBroadcast]);
 
   useEffect(() => () => {
     if (holdTimerRef.current) clearInterval(holdTimerRef.current);
@@ -321,7 +361,11 @@ export default function SafetyScreen() {
     if (!position) return `${template}\n${t("sos.locationUnavailable")}`;
     const url = buildMapsUrl(position);
     const line = position.source !== "fresh" && position.timestamp
-      ? t("sos.locationLineStale", { time: formatTime(position.timestamp), url })
+      ? t("sos.locationLineStale", {
+          time: formatTime(position.timestamp),
+          age: formatAge(Date.now() - position.timestamp, t),
+          url,
+        })
       : t("sos.locationLine", { url });
     return `${template}\n${line}`;
   }, [formatTime, t]);
@@ -332,7 +376,12 @@ export default function SafetyScreen() {
     try {
       const position = await getBestPosition(location);
       if (position) {
-        setLocation({ latitude: position.latitude, longitude: position.longitude, timestamp: position.timestamp });
+        setLocation({
+          latitude: position.latitude,
+          longitude: position.longitude,
+          accuracy: position.accuracy,
+          timestamp: position.timestamp,
+        });
       }
       const outcome = await composeSms(phones, buildMessage(purpose, position));
       return { outcome, recipients: phones.length, hasLocation: !!position, at: Date.now() };
@@ -355,6 +404,21 @@ export default function SafetyScreen() {
     recordSosBroadcast(result);
   }, [recordSosBroadcast]);
 
+  // Back from system settings with "Allow all the time" granted: start sharing without another tap.
+  useEffect(() => {
+    if (status !== "emergency" || sosBroadcast !== "denied") return;
+    const sub = AppState.addEventListener("change", (next) => {
+      if (next !== "active") return;
+      void canAutoStartEmergencyBroadcast().then((ok) => {
+        const state = useSafetyStore.getState();
+        if (ok && state.status === "emergency" && state.sosBroadcast === "denied") {
+          void runEmergencyBroadcast(state.previousBroadcast);
+        }
+      });
+    });
+    return () => sub.remove();
+  }, [status, sosBroadcast, runEmergencyBroadcast]);
+
   const performSos = useCallback(async () => {
     if (sosInFlightRef.current) return;
     sosInFlightRef.current = true;
@@ -363,24 +427,21 @@ export default function SafetyScreen() {
     const previous = snapshotBroadcast();
     triggerSos(previous);
 
-    // With background permission already granted, start sharing right away (no dialogs).
-    // Otherwise wait until after the SMS so a permission prompt can't delay it.
-    let broadcastStarted = false;
-    if (await hasBackgroundLocationPermission()) {
-      broadcastStarted = true;
-      void runEmergencyBroadcast(previous);
-    }
+    // The SMS never waits on sharing. Sharing auto-starts only when it needs no
+    // prompt; otherwise the SOS screen offers the disclosure flow instead.
+    const deliveryPromise = sendAlertSms("sos");
+    void canAutoStartEmergencyBroadcast().then((canStart) => {
+      if (useSafetyStore.getState().status !== "emergency") return;
+      if (canStart) void runEmergencyBroadcast(previous);
+      else recordSosBroadcast("needsSetup");
+    });
 
-    const delivery = await sendAlertSms("sos");
+    const delivery = await deliveryPromise;
     recordSosDelivery(delivery);
     if (delivery.outcome === "failed") errorNotification();
     sosInFlightRef.current = false;
     setSosBusy(false);
-
-    if (!broadcastStarted && useSafetyStore.getState().status === "emergency") {
-      await runEmergencyBroadcast(previous);
-    }
-  }, [recordSosDelivery, runEmergencyBroadcast, sendAlertSms, triggerSos]);
+  }, [recordSosBroadcast, recordSosDelivery, runEmergencyBroadcast, sendAlertSms, triggerSos]);
 
   const clearHold = useCallback(() => {
     if (holdTimerRef.current) {
@@ -457,10 +518,32 @@ export default function SafetyScreen() {
     setSosBusy(false);
   }, [recordSosDelivery, sendAlertSms, showNoContactsAlert]);
 
-  const handleRetryBroadcast = useCallback(() => {
+  // Starts sharing directly when already consented, else shows the disclosure first.
+  const handleEnableSosSharing = useCallback(async () => {
     if (broadcastBusy) return;
-    void runEmergencyBroadcast(useSafetyStore.getState().previousBroadcast);
+    if (await canAutoStartEmergencyBroadcast()) {
+      void runEmergencyBroadcast(useSafetyStore.getState().previousBroadcast);
+      return;
+    }
+    setDisclosureFor("sos");
   }, [broadcastBusy, runEmergencyBroadcast]);
+
+  const handleFixBackground = useCallback(() => {
+    if (hasAcceptedBackgroundDisclosure()) void requestBackground();
+    else setDisclosureFor("readiness");
+  }, [requestBackground]);
+
+  const handleDisclosureAccept = useCallback(() => {
+    const purpose = disclosureFor;
+    setDisclosureFor(null);
+    if (purpose === "sos" && useSafetyStore.getState().status === "emergency") {
+      void runEmergencyBroadcast(useSafetyStore.getState().previousBroadcast).then(() => refreshReadiness());
+    } else if (purpose === "readiness") {
+      void requestBackground();
+    }
+  }, [disclosureFor, refreshReadiness, requestBackground, runEmergencyBroadcast]);
+
+  const handleDisclosureDecline = useCallback(() => setDisclosureFor(null), []);
 
   const handleStart = useCallback((duration: number) => {
     setScheduleFailed(false);
@@ -492,82 +575,70 @@ export default function SafetyScreen() {
 
   const handleCancelSos = useCallback(() => {
     Alert.alert(t("safety.cancelTitle"), t("safety.cancelBody"), [
-      { text: t("common.cancel"), style: "cancel" },
+      { text: t("safety.cancelKeep"), style: "cancel" },
       {
         text: t("safety.cancelConfirm"),
         style: "destructive",
         onPress: () => {
-          const previous = useSafetyStore.getState().previousBroadcast;
+          const { previousBroadcast, sosDelivery: delivered } = useSafetyStore.getState();
+          const contactsAlerted = delivered?.outcome === "sent" || delivered?.outcome === "opened";
           cancelSos();
           successNotification();
-          void restoreBroadcast(previous);
+          setSafeFollowUp(contactsAlerted && getContactPhones().length > 0);
+          void restoreBroadcast(previousBroadcast);
         },
       },
     ]);
   }, [cancelSos, t]);
 
-  const smsReady = smsAvailable && phoneCount > 0;
+  const handleSendSafeMessage = useCallback(async () => {
+    if (safeBusy) return;
+    setSafeBusy(true);
+    const phones = getContactPhones();
+    const outcome = await composeSms(phones, t("safety.smsTemplateSafe"));
+    setSafeBusy(false);
+    if (outcome === "sent" || outcome === "opened") {
+      setSafeFollowUp(false);
+      addEvent({
+        messageKey: outcome === "sent" ? "safety.eventSafeMessageSent" : "safety.eventSafeMessageOpened",
+        messageParams: { count: phones.length },
+        icon: "check",
+        color: "teal",
+      });
+    } else if (outcome === "failed") {
+      errorNotification();
+    }
+  }, [addEvent, safeBusy, t]);
+
   const showNotificationWarning =
-    status === "active" && (notifPermission === "denied" || scheduleFailed);
+    status === "active" && ((readiness.loaded && readiness.notifications !== "granted") || scheduleFailed);
+  const notificationsOff = readiness.loaded && readiness.notifications !== "granted";
 
-  const sensors = useMemo(() => [
-    {
-      icon: "mapPin" as const,
-      title: t("safety.locationSensor"),
-      sub: locationGranted ? t("safety.locationNormal") : t("safety.off"),
-      tint: theme.tealSoft,
-      color: theme.teal,
-      on: locationGranted,
-    },
-    {
-      icon: "bell" as const,
-      title: t("safety.smsFallback"),
-      sub: t("safety.smsVerified", { count: phoneCount }),
-      tint: theme.mustardSoft,
-      color: theme.mustard,
-      on: smsReady,
-    },
-    {
-      icon: "wifi" as const,
-      title: t("safety.offlineSensor"),
-      sub: t("safety.offlineBody"),
-      tint: theme.stampSoft,
-      color: theme.stamp,
-      on: true,
-    },
-  ], [phoneCount, locationGranted, smsReady, t, theme]);
-
-  const safetyScore = useMemo(
-    () =>
-      computeSafetyScore(advisory, {
-        hasContacts: phoneCount > 0,
-        locationGranted,
-        timerActive: isActive,
-        smsReady,
-      }),
-    [advisory, phoneCount, locationGranted, isActive, smsReady],
-  );
+  const readinessSummary = summarizeReadiness(readiness);
+  const safetyScore = computeSafetyScore(advisory, readinessSummary.ready / readinessSummary.total);
 
   const FACTOR_GOOD = "#9FD4B8";
   const FACTOR_WARN = "#E8D29A";
   const FACTOR_BAD = "#E8A89A";
 
-  const advisoryLabel = useMemo(() => {
-    if (!advisory) return null;
-    return {
-      low: t("safety.riskLow"),
-      moderate: t("safety.riskModerate"),
-      high: t("safety.riskHigh"),
-      extreme: t("safety.riskExtreme"),
-    }[advisory.level];
-  }, [advisory, t]);
+  const advisoryLabel = advisory ? t(FCDO_LEVEL_KEYS[advisory.level].long) : null;
 
   const heroStats = useMemo(() => {
     const advisoryColor = advisory
-      ? { low: FACTOR_GOOD, moderate: FACTOR_WARN, high: FACTOR_BAD, extreme: FACTOR_BAD }[advisory.level]
+      ? {
+          none: FACTOR_GOOD,
+          avoidAllButEssentialParts: FACTOR_WARN,
+          avoidAllParts: FACTOR_WARN,
+          avoidAllButEssentialWhole: FACTOR_BAD,
+          avoidAllWhole: FACTOR_BAD,
+        }[advisory.level]
       : FACTOR_WARN;
     return [
-      { l: t("safety.factorAdvisory"), v: advisoryLabel ?? t("safety.none"), c: advisoryColor },
+      {
+        l: t("safety.factorAdvisory"),
+        v: advisory ? t(FCDO_LEVEL_KEYS[advisory.level].short) : t("safety.advisoryShortUnavailable"),
+        c: advisoryColor,
+      },
       {
         l: t("safety.factorContacts"),
         v: storeContacts.length > 0 ? t("safety.factorContactsSet", { count: storeContacts.length }) : t("safety.none"),
@@ -584,18 +655,30 @@ export default function SafetyScreen() {
         c: isMissed ? FACTOR_BAD : isActive ? FACTOR_GOOD : FACTOR_WARN,
       },
     ];
-  }, [advisory, advisoryLabel, storeContacts.length, phoneCount, locationGranted, isActive, isMissed, t]);
+  }, [advisory, storeContacts.length, phoneCount, locationGranted, isActive, isMissed, t]);
 
-  const heroBody = advisory
-    ? t("safety.advisoryBody", {
-        country: advisory.countryName ?? destinationName,
-        level: advisoryLabel,
-      })
-    : advisoryLoading && advisoryCoords
-      ? t("safety.advisoryLoading")
-      : t("safety.advisoryUnknown");
+  const heroBody = (() => {
+    if (advisory) {
+      return t("safety.advisoryBody", { country: advisory.countryName || destinationName, level: advisoryLabel ?? "" });
+    }
+    if (!advisoryCoords) return t("safety.advisoryUnknown");
+    if (!advisoryLookup || advisoryLookup.kind === "ok") return t("safety.advisoryLoading");
+    if (advisoryLookup.reason === "notCovered") {
+      return t("safety.advisoryNotCovered", { country: advisoryLookup.countryName ?? destinationName });
+    }
+    if (advisoryLookup.reason === "noCountry") return t("safety.advisoryNoCountry");
+    return t("safety.advisoryUnreachable");
+  })();
 
-  const defaultDurationLabel = formatDurationLabel(defaultCheckInDuration, t);
+  const advisoryMeta = advisory
+    ? [
+        advisory.updatedAt ? t("safety.advisoryUpdated", { date: formatDate(new Date(advisory.updatedAt)) }) : null,
+        advisory.stale ? t("safety.advisorySavedCopy") : null,
+      ].filter(Boolean).join(" · ")
+    : null;
+
+  const plannedDuration = selectedDuration ?? defaultCheckInDuration;
+  const plannedDurationLabel = formatDurationLabel(plannedDuration, t);
 
   const eventMessage = (e: SafetyEvent) =>
     e.messageKey ? t(e.messageKey, e.messageParams) : e.message ?? "";
@@ -620,6 +703,14 @@ export default function SafetyScreen() {
       ? t(keys[delivery.outcome], { count: delivery.recipients, time: formatTime(delivery.at) })
       : null;
 
+  const disclosure = (
+    <BackgroundLocationDisclosure
+      visible={disclosureFor !== null}
+      onAccept={handleDisclosureAccept}
+      onDecline={handleDisclosureDecline}
+    />
+  );
+
   if (status === "emergency") {
     const sosStatus = sosBusy
       ? t("sos.statusPreparing")
@@ -629,16 +720,23 @@ export default function SafetyScreen() {
           cancelled: "sos.statusCancelled",
           failed: "sos.statusFailed",
         });
-    const broadcastText = broadcastBusy
+    const sharingLive = sosBroadcast === "started" && broadcastRunning;
+    const broadcastText = broadcastBusy || sosBroadcast === "starting"
       ? t("sos.broadcastStarting")
-      : sosBroadcast === "started"
+      : sharingLive
         ? t("sos.broadcastOn")
         : sosBroadcast === "denied"
           ? t("sos.broadcastDenied")
-          : sosBroadcast === "failed" || !sosBusy
-            ? t("sos.broadcastOff")
-            : null;
-    const broadcastDown = !broadcastBusy && !sosBusy && sosBroadcast !== "started";
+          : sosBroadcast === "needsSetup"
+            ? t("sos.broadcastNeedsSetup")
+            : sosBroadcast === "failed" || sosBroadcast === "started"
+              ? t("sos.broadcastOff")
+              : null;
+    const broadcastDown =
+      !broadcastBusy && sosBroadcast !== null && sosBroadcast !== "starting" && !sharingLive;
+    // Permanently denied: the OS won't prompt again, so only system settings can fix it.
+    const needsSystemSettings = sosBroadcast === "denied" && readiness.background === "blocked";
+    const fixAge = location?.timestamp ? formatAge(now - location.timestamp, t) : null;
 
     return (
       <View style={{ flex: 1, backgroundColor: theme.stamp }}>
@@ -663,6 +761,12 @@ export default function SafetyScreen() {
                 {broadcastText && <Text style={styles.emergencySubMuted}>{broadcastText}</Text>}
                 <Text style={styles.emergencySubMuted}>{t("sos.callHint", { number: emergencyNumber })}</Text>
               </View>
+              {isOffline && (
+                <View style={styles.offlineBanner} accessibilityRole="alert">
+                  <Icon name="wifi" size={16} color="#fff" />
+                  <Text style={styles.offlineBannerText}>{t("sos.offlineNotice")}</Text>
+                </View>
+              )}
             </View>
 
             <View style={{ paddingHorizontal: 16, marginTop: 14 }}>
@@ -686,7 +790,7 @@ export default function SafetyScreen() {
                   >
                     <Marker
                       coordinate={{ latitude: location.latitude, longitude: location.longitude }}
-                      title={t("sos.broadcasting")}
+                      title={sharingLive ? t("sos.broadcasting") : t("sos.yourLocation")}
                       pinColor={theme.stamp}
                     />
                   </MapView>
@@ -696,7 +800,18 @@ export default function SafetyScreen() {
                     <Text style={styles.emergencyMapFallbackText}>{t("sos.locating")}</Text>
                   </View>
                 )}
+                {location && sharingLive && (
+                  <View style={styles.liveChip}>
+                    <View style={[styles.liveDot, { backgroundColor: theme.stamp }]} />
+                    <Text style={[styles.liveChipText, { color: theme.stamp }]}>{t("sos.broadcasting")}</Text>
+                  </View>
+                )}
               </View>
+              {fixAge && (
+                <Text style={styles.fixAge} accessibilityLiveRegion="polite">
+                  {t("sos.locationFixedAgo", { age: fixAge })}
+                </Text>
+              )}
             </View>
 
             <View style={styles.emergencyActions}>
@@ -722,13 +837,17 @@ export default function SafetyScreen() {
               </Pressable>
               {broadcastDown && (
                 <Pressable
-                  onPress={sosBroadcast === "denied" ? () => Linking.openSettings() : handleRetryBroadcast}
+                  onPress={needsSystemSettings ? () => Linking.openSettings() : handleEnableSosSharing}
                   style={styles.emergencySecondary}
                   accessibilityRole="button"
                 >
                   <Icon name="mapPin" size={18} color="#fff" />
                   <Text style={styles.emergencySecondaryText}>
-                    {sosBroadcast === "denied" ? t("sos.openSettings") : t("sos.retryBroadcast")}
+                    {needsSystemSettings
+                      ? t("sos.openSettings")
+                      : sosBroadcast === "failed"
+                        ? t("sos.retryBroadcast")
+                        : t("sos.enableSharing")}
                   </Text>
                 </Pressable>
               )}
@@ -739,6 +858,7 @@ export default function SafetyScreen() {
             </View>
           </ScrollView>
         </SafeAreaView>
+        {disclosure}
       </View>
     );
   }
@@ -778,6 +898,31 @@ export default function SafetyScreen() {
             </View>
           </View>
 
+          {safeFollowUp && status === "idle" && (
+            <NomadCard theme={theme} style={[styles.warningCard, { backgroundColor: theme.tealSoft, borderColor: theme.teal }]}>
+              <View style={styles.missedHeader}>
+                <Icon name="check" size={18} color={theme.teal} strokeWidth={2.2} />
+                <Text style={[styles.warningTitle, { color: theme.inkDeep }]}>{t("safety.safeFollowUpTitle")}</Text>
+              </View>
+              <Text style={[styles.missedBody, { color: theme.inkSoft }]}>{t("safety.safeFollowUpBody")}</Text>
+              <View style={styles.missedActions}>
+                <NomadButton
+                  theme={theme}
+                  variant="teal"
+                  full
+                  disabled={safeBusy}
+                  icon={<Icon name="messageCircle" size={18} color="#fff" />}
+                  onPress={handleSendSafeMessage}
+                >
+                  {t("safety.safeFollowUpSend")}
+                </NomadButton>
+                <NomadButton theme={theme} variant="ghost" full onPress={() => setSafeFollowUp(false)}>
+                  {t("safety.safeFollowUpDismiss")}
+                </NomadButton>
+              </View>
+            </NomadCard>
+          )}
+
           <NomadCard theme={theme} style={styles.heroCard}>
             <View style={StyleSheet.absoluteFill}>
               <View style={{ position: "absolute", right: -20, top: -20, opacity: 0.15 }}>
@@ -795,6 +940,19 @@ export default function SafetyScreen() {
                 {heroBody}
               </Text>
             </View>
+            {advisory && (
+              <View style={styles.heroSourceRow}>
+                {!!advisoryMeta && <Text style={styles.heroSourceText}>{advisoryMeta}</Text>}
+                <Pressable
+                  onPress={() => Linking.openURL(advisory.webUrl).catch(() => {})}
+                  accessibilityRole="link"
+                  accessibilityHint={t("safety.advisorySourceA11y")}
+                  hitSlop={8}
+                >
+                  <Text style={[styles.heroSourceText, styles.heroSourceLink]}>{t("safety.advisorySource")}</Text>
+                </Pressable>
+              </View>
+            )}
             <View style={[styles.heroFooter, { borderTopColor: "rgba(255,255,255,0.18)" }]}>
               {heroStats.map((s, i) => (
                 <View key={i} style={styles.heroStat}>
@@ -848,14 +1006,16 @@ export default function SafetyScreen() {
               <View style={styles.missedHeader}>
                 <Icon name="bell" size={18} color={theme.mustard} strokeWidth={2} />
                 <Text style={[styles.warningTitle, { color: theme.inkDeep }]}>
-                  {scheduleFailed && notifPermission !== "denied" ? t("safety.notificationsScheduleFailed") : t("safety.notificationsOffTitle")}
+                  {scheduleFailed && !notificationsOff ? t("safety.notificationsScheduleFailed") : t("safety.notificationsOffTitle")}
                 </Text>
               </View>
-              {notifPermission === "denied" && (
+              {notificationsOff && (
                 <>
                   <Text style={[styles.missedBody, { color: theme.inkSoft }]}>{t("safety.notificationsOffBody")}</Text>
-                  <Pressable onPress={() => Linking.openSettings()} accessibilityRole="button" hitSlop={8}>
-                    <Text style={[styles.warningLink, { color: theme.inkDeep }]}>{t("safety.openSettings")}</Text>
+                  <Pressable onPress={() => void fixNotifications()} accessibilityRole="button" hitSlop={8}>
+                    <Text style={[styles.warningLink, { color: theme.inkDeep }]}>
+                      {readiness.notifications === "blocked" ? t("safety.openSettings") : t("safety.actionTurnOn")}
+                    </Text>
                   </Pressable>
                 </>
               )}
@@ -872,7 +1032,9 @@ export default function SafetyScreen() {
                   {isMissed ? t("safety.overdueBy") : isActive ? t("safety.checkInWithin") : t("safety.startCheckIn")}
                 </Text>
                 <Text style={[styles.countdownValue, { color: isMissed ? theme.stamp : theme.inkDeep }]}>
-                  {isMissed ? `+${formatCountdown(overdueSeconds)}` : isActive ? formatCountdown(secondsLeft) : "00:00"}
+                  {isMissed
+                    ? `+${formatCountdown(overdueSeconds)}`
+                    : formatCountdown(isActive ? secondsLeft : plannedDuration)}
                 </Text>
                 <Text style={[styles.countdownSub, { color: isMissed ? theme.stamp : theme.inkSoft }]}>
                   {isMissed ? t("safety.checkInMissed") : isActive ? t("safety.autoAlert") : t("safety.setTarget")}
@@ -883,28 +1045,39 @@ export default function SafetyScreen() {
 
           {status === "idle" && (
             <View style={styles.presets}>
-              {PRESETS.map((p) => (
-                <Pressable
-                  key={p.duration}
-                  onPress={() => handleStart(p.duration)}
-                  accessibilityRole="button"
-                  style={({ pressed }) => [
-                    styles.preset,
-                    { backgroundColor: theme.paperSoft, borderColor: theme.hairline },
-                    pressed && { transform: [{ scale: 0.98 }] },
-                  ]}
-                >
-                  <Text style={[styles.presetLabel, { color: theme.inkDeep }]}>{formatDurationLabel(p.duration, t)}</Text>
-                  <Text style={[styles.presetSub, { color: theme.inkMuted }]}>{t(p.sub)}</Text>
-                </Pressable>
-              ))}
+              {PRESETS.map((p) => {
+                const selected = p.duration === plannedDuration;
+                return (
+                  <Pressable
+                    key={p.duration}
+                    onPress={() => {
+                      lightImpact();
+                      setSelectedDuration(p.duration);
+                    }}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected, checked: selected }}
+                    style={({ pressed }) => [
+                      styles.preset,
+                      selected
+                        ? { backgroundColor: theme.tealSoft, borderColor: theme.teal, borderWidth: 1.5 }
+                        : { backgroundColor: theme.paperSoft, borderColor: theme.hairline },
+                      pressed && { transform: [{ scale: 0.98 }] },
+                    ]}
+                  >
+                    <Text style={[styles.presetLabel, { color: selected ? theme.teal : theme.inkDeep }]}>
+                      {formatDurationLabel(p.duration, t)}
+                    </Text>
+                    <Text style={[styles.presetSub, { color: selected ? theme.teal : theme.inkMuted }]}>{t(p.sub)}</Text>
+                  </Pressable>
+                );
+              })}
             </View>
           )}
 
           <View style={styles.actions}>
             {status === "idle" ? (
-              <NomadButton theme={theme} variant="teal" full icon={<Icon name="clock" size={18} color="#fff" />} onPress={() => handleStart(defaultCheckInDuration)}>
-                {t("safety.startDefault", { duration: defaultDurationLabel })}
+              <NomadButton theme={theme} variant="teal" full icon={<Icon name="clock" size={18} color="#fff" />} onPress={() => handleStart(plannedDuration)}>
+                {t("safety.startDefault", { duration: plannedDurationLabel })}
               </NomadButton>
             ) : isActive ? (
               <>
@@ -937,7 +1110,7 @@ export default function SafetyScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={[styles.sosTitle, { color: theme.stamp }]}>{t("safety.holdForEmergency")}</Text>
                 <Text style={[styles.sosBody, { color: theme.inkSoft }]}>
-                  {t("safety.sosBody", { count: phoneCount })}
+                  {phoneCount > 0 ? t("safety.sosBody", { count: phoneCount }) : t("safety.sosBodyNoContacts")}
                 </Text>
               </View>
             </View>
@@ -976,26 +1149,17 @@ export default function SafetyScreen() {
             )}
           </NomadCard>
 
-          <View style={styles.sectionRow}>
-            <Text style={[styles.sectionLabel, { color: theme.inkMuted }]}>{t("safety.sensors")}</Text>
-            <View style={[styles.sectionLine, { backgroundColor: theme.hairline }]} />
-          </View>
-          <View style={styles.sensorList}>
-            {sensors.map((s, i) => (
-              <NomadCard key={i} theme={theme} style={styles.sensorCard}>
-                <View style={[styles.sensorIcon, { backgroundColor: s.tint }]}>
-                  <Icon name={s.icon} size={18} color={s.color} strokeWidth={1.8} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.sensorTitle, { color: theme.inkDeep }]}>{s.title}</Text>
-                  <Text style={[styles.sensorSub, { color: theme.inkSoft }]}>{s.sub}</Text>
-                </View>
-                <View style={[styles.toggleTrack, { backgroundColor: s.on ? theme.teal : theme.hairline }]}>
-                  <View style={[styles.toggleThumb, { left: s.on ? 20 : 2 }]} />
-                </View>
-              </NomadCard>
-            ))}
-          </View>
+          <SafetyReadinessChecklist
+            theme={theme}
+            readiness={readiness}
+            emergency={emergency}
+            onFixForeground={() => void fixForeground()}
+            onFixBackground={handleFixBackground}
+            onFixNotifications={() => void fixNotifications()}
+            onFixContacts={() => router.push("/emergency-contacts")}
+            onFixBattery={openBatterySettings}
+            onCallEmergency={callEmergency}
+          />
 
           <View style={{ height: 140 }} />
         </ScrollView>
@@ -1030,6 +1194,7 @@ export default function SafetyScreen() {
           </View>
         </View>
       </Modal>
+      {disclosure}
     </View>
   );
 }
@@ -1115,6 +1280,20 @@ const styles = StyleSheet.create({
     paddingTop: 14,
     borderTopWidth: 1,
   },
+  heroSourceRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+    marginTop: 10,
+  },
+  heroSourceText: {
+    fontFamily: NOMAD_FONTS.ui,
+    fontSize: 11,
+    color: "rgba(255,255,255,0.75)",
+  },
+  heroSourceLink: { textDecorationLine: "underline", color: "rgba(255,255,255,0.9)" },
   heroStat: { flex: 1 },
   heroStatLabel: {
     fontFamily: NOMAD_FONTS.uiBold,
@@ -1278,39 +1457,6 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     marginTop: 2,
   },
-  sensorList: { gap: 8, marginBottom: 14 },
-  sensorCard: { flexDirection: "row", alignItems: "center", gap: 12 },
-  sensorIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  sensorTitle: {
-    fontFamily: NOMAD_FONTS.uiSemi,
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  sensorSub: {
-    fontFamily: NOMAD_FONTS.ui,
-    fontSize: 11.5,
-    marginTop: 1,
-  },
-  toggleTrack: {
-    width: 42,
-    height: 24,
-    borderRadius: 999,
-    position: "relative",
-  },
-  toggleThumb: {
-    position: "absolute",
-    top: 2,
-    width: 20,
-    height: 20,
-    borderRadius: 999,
-    backgroundColor: "#fff",
-  },
   emptyText: {
     fontFamily: NOMAD_FONTS.ui,
     fontSize: 13,
@@ -1368,6 +1514,50 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   emergencyMap: { width: "100%", height: 160 },
+  liveChip: {
+    position: "absolute",
+    top: 10,
+    left: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    backgroundColor: "#fff",
+  },
+  liveDot: { width: 7, height: 7, borderRadius: 999 },
+  liveChipText: {
+    fontFamily: NOMAD_FONTS.uiBold,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.4,
+  },
+  fixAge: {
+    fontFamily: NOMAD_FONTS.ui,
+    fontSize: 12,
+    color: "rgba(255,255,255,0.8)",
+    textAlign: "center",
+    marginTop: 8,
+  },
+  offlineBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: "rgba(0,0,0,0.18)",
+  },
+  offlineBannerText: {
+    flex: 1,
+    fontFamily: NOMAD_FONTS.uiSemi,
+    fontSize: 13,
+    lineHeight: 18,
+    color: "#fff",
+    fontWeight: "600",
+  },
   emergencyMapFallback: {
     alignItems: "center",
     justifyContent: "center",

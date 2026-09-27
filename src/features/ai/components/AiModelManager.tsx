@@ -53,6 +53,7 @@ function ModelRow({
   formatSize,
   isStarting,
   isModelBusy,
+  deviceRamGb,
 }: {
   item: ModelListItem;
   theme: NomadTheme;
@@ -64,12 +65,16 @@ function ModelRow({
   isStarting: boolean;
   /** A chat reply is generating; swapping or deleting models is blocked. */
   isModelBusy: boolean;
+  deviceRamGb: number;
 }) {
-  const { model, isDownloaded, isLoaded, isActive, isAvailable, isRecommended } = item;
+  const { model, isDownloaded, isLoaded, isActive, isAvailable, isRecommended, needsMoreRam } = item;
+  const ramReason = t("aiTab.needsMoreRam", { required: model.minRamGb, device: deviceRamGb });
 
   const statusText = isLoaded
     ? t("aiTab.modelLoaded")
-    : isActive
+    : needsMoreRam
+      ? t("aiTab.modelUnsupported")
+      : isActive
       ? t("aiTab.modelActive")
       : isDownloaded
         ? t("aiTab.modelDownloaded")
@@ -104,6 +109,9 @@ function ModelRow({
               {t("aiTab.recommendedForDevice")}
             </Text>
           )}
+          {needsMoreRam && isDownloaded && (
+            <Text style={[styles.recommended, { color: theme.stamp }]}>{ramReason}</Text>
+          )}
         </View>
       </View>
 
@@ -129,7 +137,7 @@ function ModelRow({
       <View style={styles.actions}>
         {isDownloaded ? (
           <>
-            {!isActive && (
+            {!isActive && !needsMoreRam && (
               <NomadButton
                 variant="teal"
                 theme={theme}
@@ -172,7 +180,7 @@ function ModelRow({
           </NomadButton>
         ) : isAvailable ? null : (
           <NomadButton variant="ghost" theme={theme} disabled>
-            {t("aiTab.notAvailable")}
+            {needsMoreRam ? ramReason : t("aiTab.notAvailable")}
           </NomadButton>
         )}
       </View>
@@ -201,7 +209,7 @@ export function AiModelManager({ theme, onEnableAi }: Props) {
   const anyDownloaded = models.some((m) => m.isDownloaded);
 
   const handleDownload = (item: ModelListItem) => {
-    if (startingId) return;
+    if (startingId || item.needsMoreRam) return;
     setStartingId(item.model.id);
     const wasDownloaded = item.isDownloaded;
     // Don't await the whole download; progress is shown via download state.
@@ -214,7 +222,7 @@ export function AiModelManager({ theme, onEnableAi }: Props) {
   };
 
   const handleSetDefault = (item: ModelListItem) => {
-    if (isModelBusy) return;
+    if (isModelBusy || item.needsMoreRam) return;
     setDefaultModel(item.model);
   };
 
@@ -260,7 +268,7 @@ export function AiModelManager({ theme, onEnableAi }: Props) {
     );
   }
 
-  const activeModel = models.find((m) => m.isActive) ?? null;
+  const activeModel = models.find((m) => m.isActive && !m.needsMoreRam) ?? null;
   const downloading = models.find((m) => m.isDownloading || m.isPaused) ?? null;
 
   return (
@@ -300,6 +308,7 @@ export function AiModelManager({ theme, onEnableAi }: Props) {
           formatSize={formatSize}
           isStarting={startingId !== null}
           isModelBusy={isModelBusy}
+          deviceRamGb={capability.totalMemoryGb}
         />
       ))}
 

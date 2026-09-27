@@ -13,7 +13,7 @@ NomadSafe is a travel safety and planning app built with Expo (SDK 57), React Na
 - **Run on Android / iOS**: `pnpm android` / `pnpm ios`. These need a dev-client build; the app doesn't run in Expo Go.
 - **Lint**: `pnpm lint`
 - **Type-check**: `pnpm exec tsc --noEmit`
-- **Tests**: `pnpm test:expense-import` (node:test + esbuild, parser/import pipeline only)
+- **Tests**: `pnpm test` (node:test + esbuild: expense import/parser, trip utils, AI money facts)
 - **i18n check**: `node scripts/check-i18n-keys.mjs`
 - **Regenerate locales**: `pnpm localize` (needs `LOCALIZE_*` in `.env.local`)
 - **Backend**: `npx convex dev`

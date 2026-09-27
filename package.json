@@ -10,7 +10,8 @@
     "lint": "expo lint",
     "test:expense-import": "node --test tests/expense-import.test.mjs",
     "localize": "node scripts/generate-locales.mjs",
-    "build": "expo prebuild --clean"
+    "build": "expo prebuild --clean",
+    "test": "node --test tests/expense-import.test.mjs tests/trip-utils.test.mjs tests/ai-money-facts.test.mjs"
   },
   "dependencies": {
     "@better-auth/expo": "1.6.33",

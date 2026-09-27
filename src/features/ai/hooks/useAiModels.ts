@@ -28,6 +28,8 @@ export interface ModelListItem {
   isActive: boolean;
   /** Model can be downloaded on this device. */
   isAvailable: boolean;
+  /** Device RAM is below the model's minimum; download and activation are blocked. */
+  needsMoreRam: boolean;
   /** This is the tier assigned by device capability. */
   isRecommended: boolean;
   /** Download is currently running for this model. */
@@ -173,6 +175,8 @@ export function useAiModels(): UseAiModelsResult {
         isLoaded: loadedId === model.id && isDownloaded && localAiEnabled,
         isActive,
         isAvailable: availableIds.has(model.id),
+        needsMoreRam:
+          capability !== null && capability.totalMemoryGb > 0 && capability.totalMemoryGb < model.minRamGb,
         isRecommended: recommendedId === model.id,
         isDownloading,
         isPaused,
@@ -192,11 +196,13 @@ export function useAiModels(): UseAiModelsResult {
   ]);
 
   const setDefaultModel = (model: AiModel) => {
+    if (!aiModelService.fitsDeviceMemory(model)) return;
     localModelService.setDefaultModel(model);
     setActiveModelId(model.id);
   };
 
   const startDownload = async (model: AiModel) => {
+    if (!aiModelService.fitsDeviceMemory(model)) return;
     // If already on disk, just promote to default.
     if (await aiModelService.isModelDownloaded(model)) {
       setDefaultModel(model);

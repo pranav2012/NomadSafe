@@ -18,6 +18,7 @@ import { Icon } from "@/components/nomad/Icon";
 import { GENERAL_CHAT_KEY, useChatStore, useChatStreamStore, type ChatMessage } from "../store/chatStore";
 import { localModelService } from "../services/localModelService";
 import { modelNotifications } from "../services/modelNotifications";
+import type { MoneyIntent } from "../services/moneyFacts";
 import { useTripsStore } from "@/features/trips/store/tripsStore";
 
 interface Props {
@@ -192,6 +193,7 @@ export function AiChat({ theme, activeModelName }: Props) {
   const [keyboardOffset, setKeyboardOffset] = useState(0);
   const [now] = useState(() => Date.now());
   const scrollRef = useRef<ScrollView>(null);
+  const inputRef = useRef<TextInput>(null);
   const containerRef = useRef<View>(null);
   const nearBottomRef = useRef(true);
 
@@ -226,16 +228,29 @@ export function AiChat({ theme, activeModelName }: Props) {
     { icon: "sparkle" as const, label: t("aiTab.promptSave"), color: theme.sky },
   ];
 
-  const send = (text?: string) => {
+  const quickQuestions: { label: string; question: string; intent: MoneyIntent }[] = [
+    { label: t("aiTab.quickDaily"), question: t("aiTab.quickDailyQuestion"), intent: "dailyBudget" },
+    { label: t("aiTab.quickLeft"), question: t("aiTab.quickLeftQuestion"), intent: "remaining" },
+    { label: t("aiTab.quickTop"), question: t("aiTab.quickTopQuestion"), intent: "topCategory" },
+  ];
+
+  const send = (text?: string, intent?: MoneyIntent) => {
     const q = (text ?? input).trim();
     if (!q) return;
-    const accepted = sendMessage(conversationKey, q, {
-      noModel: t("aiTab.chatNoModel"),
-      error: t("aiTab.chatModelLoadError"),
-    });
+    const accepted = sendMessage(
+      conversationKey,
+      q,
+      { noModel: t("aiTab.chatNoModel"), error: t("aiTab.chatModelLoadError") },
+      { intent },
+    );
     if (!accepted) return;
     if (text === undefined) setInput("");
     nearBottomRef.current = true;
+  };
+
+  const startAffordQuestion = () => {
+    setInput(`${t("aiTab.quickAffordPrefix")} `);
+    inputRef.current?.focus();
   };
 
   const enableNotifications = async () => {
@@ -349,6 +364,44 @@ export function AiChat({ theme, activeModelName }: Props) {
               },
             ]}
           >
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              accessibilityLabel={t("aiTab.quickQuestions")}
+              style={styles.chipScroll}
+              contentContainerStyle={styles.chipRow}
+            >
+              {quickQuestions.map((chip) => (
+                <Pressable
+                  key={chip.intent}
+                  onPress={() => send(chip.question, chip.intent)}
+                  disabled={generatingKey !== null}
+                  accessibilityRole="button"
+                  accessibilityHint={chip.question}
+                  style={({ pressed }) => [
+                    styles.chip,
+                    {
+                      backgroundColor: theme.paperSoft,
+                      borderColor: theme.hairline,
+                      opacity: generatingKey !== null ? 0.5 : pressed ? 0.8 : 1,
+                    },
+                  ]}
+                >
+                  <Text style={[styles.chipText, { color: theme.inkDeep }]}>{chip.label}</Text>
+                </Pressable>
+              ))}
+              <Pressable
+                onPress={startAffordQuestion}
+                accessibilityRole="button"
+                style={({ pressed }) => [
+                  styles.chip,
+                  { backgroundColor: theme.paperSoft, borderColor: theme.hairline, opacity: pressed ? 0.8 : 1 },
+                ]}
+              >
+                <Text style={[styles.chipText, { color: theme.inkDeep }]}>{t("aiTab.quickAfford")}</Text>
+              </Pressable>
+            </ScrollView>
             {busyElsewhere ? (
               <Text style={[styles.busyText, { color: theme.inkMuted }]}>{t("aiTab.chatBusyElsewhere")}</Text>
             ) : activeModelName ? (
@@ -367,6 +420,7 @@ export function AiChat({ theme, activeModelName }: Props) {
             >
               <View style={[styles.inputOrb, { backgroundColor: theme.teal }]} />
               <TextInput
+                ref={inputRef}
                 value={input}
                 onChangeText={setInput}
                 placeholder={t("aiTab.chatPlaceholder")}
@@ -487,6 +541,10 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     borderTopWidth: 1,
   },
+  chipScroll: { flexGrow: 0, marginHorizontal: -14, marginBottom: 8 },
+  chipRow: { gap: 6, paddingHorizontal: 14 },
+  chip: { borderRadius: 999, borderWidth: 1, paddingVertical: 6, paddingHorizontal: 12 },
+  chipText: { fontFamily: NOMAD_FONTS.uiSemi, fontSize: 12 },
   modelPill: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8, alignSelf: "center" },
   modelOrb: { width: 8, height: 8, borderRadius: 999 },
   modelPillText: { fontFamily: NOMAD_FONTS.mono, fontSize: 10, letterSpacing: 0.3 },

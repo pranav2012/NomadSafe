@@ -82,7 +82,7 @@ export const AI_MODELS: AiModel[] = [
     id: "balanced",
     name: "NomadPro",
     sizeMb: 2620,
-    minRamGb: 4,
+    minRamGb: 6,
     recommendedRamGb: 6,
     descriptionKey: "onboarding.modelSizeBalanced",
     hfRepoId: "bartowski/Qwen_Qwen3.5-4B-GGUF",
@@ -234,6 +234,12 @@ export const aiModelService = {
     const category = assignCategory(totalMemoryGb);
     const limited = totalMemoryGb < AI_MODELS[1].recommendedRamGb;
     return { totalMemoryGb, supported: true, limited, reason: "ok", assignedCategory: category };
+  },
+
+  /** False when the device reports less RAM than the model needs; unknown RAM is allowed. */
+  fitsDeviceMemory(model: AiModel): boolean {
+    const totalMemoryGb = getTotalMemoryGb();
+    return totalMemoryGb === 0 || totalMemoryGb >= model.minRamGb;
   },
 
   getAvailableModels(capability: DeviceCapability): AiModel[] {

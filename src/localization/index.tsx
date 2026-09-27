@@ -7,7 +7,7 @@ import { storage } from "@/stores/storage";
 import { getEffectiveCurrency } from "@/utils/currency";
 import { LANGUAGE_OPTIONS, normalizeLocale, type SupportedLocale } from "./languages";
 import { translations } from "./translations.generated";
-import { fallbackResource, interpolate, readPath, type TranslateParams as Params } from "./translate";
+import { fallbackResource, interpolate, lookup, readPath, type TranslateParams as Params } from "./translate";
 
 interface LocalizationContextValue {
   locale: SupportedLocale;
@@ -122,7 +122,7 @@ export function LocalizationProvider({ children }: { children: React.ReactNode }
       deviceCurrency,
       isRTL,
       t: (key, params) => {
-        const valueAtKey = getValue(key);
+        const valueAtKey = lookup(resource, locale, key, params);
         return typeof valueAtKey === "string" ? interpolate(valueAtKey, params) : key;
       },
       tArray: (key) => {

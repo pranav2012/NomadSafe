@@ -4,7 +4,15 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { mmkvStateStorage } from "@/stores/storage";
 import { localModelService, type ChatTurn } from "../services/localModelService";
 import { modelNotifications } from "../services/modelNotifications";
-import { buildTripMoneyContext } from "../services/chatContext";
+import { loadTripMoneySnapshot } from "../services/chatContext";
+import {
+  answerMoneyIntent,
+  matchMoneyIntent,
+  parseAmount,
+  type MoneyIntent,
+  type MoneyIntentMatch,
+} from "../services/moneyFacts";
+import { translate } from "@/localization/translate";
 
 export interface ChatMessage {
   from: "ai" | "you";
@@ -18,6 +26,11 @@ export interface ChatMessage {
 export interface ChatErrorLabels {
   noModel: string;
   error: string;
+}
+
+export interface SendOptions {
+  /** Forces a deterministic money answer (quick question chips). */
+  intent?: MoneyIntent;
 }
 
 export const GENERAL_CHAT_KEY = "general";
@@ -34,7 +47,7 @@ interface ChatState {
   conversations: Record<string, ChatConversation>;
   generatingConversationKey: string | null;
   /** Returns false when the message was not accepted (e.g. another reply is generating). */
-  send: (conversationKey: string, text: string, labels: ChatErrorLabels) => boolean;
+  send: (conversationKey: string, text: string, labels: ChatErrorLabels, options?: SendOptions) => boolean;
   /** Stops the reply being generated, keeping any partial text. */
   stop: () => void;
   clear: (conversationKey: string) => void;
@@ -93,7 +106,7 @@ export const useChatStore = create<ChatState>()(
         conversations: {},
         generatingConversationKey: null,
 
-        send: (conversationKey, text, labels) => {
+        send: (conversationKey, text, labels, options) => {
           if (get().generatingConversationKey) return false;
           const question = text.trim();
           if (!question) return false;
@@ -119,11 +132,13 @@ export const useChatStore = create<ChatState>()(
           });
 
           const conversation = get().conversations[conversationKey] ?? emptyConversation();
-          const systemContext = buildTripMoneyContext() ?? undefined;
           const history: ChatTurn[] = [
             ...conversation.contextMessages,
             { role: "user", content: question },
           ];
+          const moneyMatch: MoneyIntentMatch | null = options?.intent
+            ? { intent: options.intent, amount: parseAmount(question) }
+            : matchMoneyIntent(question, translate("aiTab.quickAffordPrefix"));
 
           let streamed = "";
           let lastFlush = 0;
@@ -139,12 +154,23 @@ export const useChatStore = create<ChatState>()(
             useChatStreamStore.setState({ conversationKey: null, text: "" });
           };
 
-          localModelService
-            .prepareChatMemory(history, {
-              systemContext,
-              conversationSummary: conversation.summary ?? undefined,
+          // Money intents are answered from computed facts without the model;
+          // everything else goes to the model with those facts in the prompt.
+          loadTripMoneySnapshot()
+            .catch((error: unknown) => {
+              console.warn("[chatStore] money facts unavailable", error);
+              return null;
             })
-            .then((memory) => {
+            .then(async (snapshot) => {
+              if (moneyMatch) {
+                const reply = answerMoneyIntent(moneyMatch, snapshot?.facts ?? null, translate, snapshot?.locale ?? "en");
+                return { reply, deterministic: true };
+              }
+              const systemContext = snapshot?.context;
+              const memory = await localModelService.prepareChatMemory(history, {
+                systemContext,
+                conversationSummary: conversation.summary ?? undefined,
+              });
               set((state) => {
                 const current = state.conversations[conversationKey] ?? emptyConversation();
                 return {
@@ -158,8 +184,8 @@ export const useChatStore = create<ChatState>()(
                   },
                 };
               });
-              if (stopRequested) return "";
-              return localModelService.chat(memory.history, {
+              if (stopRequested) return { reply: "", deterministic: false };
+              const reply = await localModelService.chat(memory.history, {
                 systemContext,
                 conversationSummary: memory.summary ?? undefined,
                 contextTokens: memory.contextTokens,
@@ -170,8 +196,9 @@ export const useChatStore = create<ChatState>()(
                   flushTimer = setTimeout(flushStream, wait);
                 },
               });
+              return { reply, deterministic: false };
             })
-            .then((reply) => {
+            .then(({ reply, deterministic }) => {
               clearStream();
               const text = reply.trim();
               set((state) => {
@@ -191,9 +218,15 @@ export const useChatStore = create<ChatState>()(
                     [conversationKey]: {
                       ...current,
                       messages,
-                      contextMessages: text
-                        ? [...current.contextMessages, { role: "assistant", content: text }]
-                        : current.contextMessages,
+                      contextMessages: !text
+                        ? current.contextMessages
+                        : deterministic
+                          ? [
+                              ...current.contextMessages,
+                              { role: "user", content: question },
+                              { role: "assistant", content: text },
+                            ]
+                          : [...current.contextMessages, { role: "assistant", content: text }],
                     },
                   },
                 };

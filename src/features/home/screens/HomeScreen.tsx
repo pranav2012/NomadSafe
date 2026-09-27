@@ -16,6 +16,7 @@ import { NOMAD_FONTS } from "@/constants/nomadTokens";
 import { useAuthStore } from "@/features/auth";
 import {
   getDestinationCoordinates,
+  hasTripBudget,
   type LatLng,
   selectActiveTrip,
   type Trip,
@@ -29,12 +30,18 @@ import {
   getTripStatus,
   startOfLocalDay,
 } from "@/features/trips/utils/dates";
+import {
+  isCompactFrame,
+  regionForPoints,
+  tripFramePoints,
+} from "@/features/trips/utils/mapFraming";
 import { TripItinerary, useItineraryAutoSync } from "@/features/itinerary";
 import { NearbyPlaces } from "@/features/places/components/NearbyPlaces";
 import { useSharingStore } from "@/features/location-sharing";
 import { useTheme } from "@/hooks/useTheme";
 import { useLocalization } from "@/localization";
 import { useTripExpenseSummary } from "@/features/expenses/hooks/useTripExpenseSummary";
+import { formatMoney } from "@/features/expenses/utils/money";
 
 interface UserLocation {
   city?: string;
@@ -204,7 +211,7 @@ function TripDashboard({
   user: ReturnType<typeof useAuthStore.getState>["user"];
   userLocation: UserLocation | null;
   locale: string;
-  formatCurrency: (amount: number, currency?: string) => string;
+  formatCurrency: ReturnType<typeof useLocalization>["formatCurrency"];
   formatDate: (value: Date | number, options?: Intl.DateTimeFormatOptions) => string;
 }) {
   const { nomad } = useTheme();
@@ -233,6 +240,7 @@ function TripDashboard({
     day: "numeric",
   });
 
+  const hasBudget = hasTripBudget(trip);
   const budgetRemaining = Math.max(0, trip.budget - expenseSummary.total);
 
   // Trips have no per-destination dates, so GPS is the only honest "where am I".
@@ -388,18 +396,20 @@ function TripDashboard({
                 ? t("trip.inDays", { count: Math.max(1, countInclusiveDays(today, startDate) - 1) })
                 : progress.status === "complete"
                   ? t("trip.daysAgo", { count: Math.max(1, countInclusiveDays(endDate, today) - 1) })
-                  : t("trip.daysLeft", { count: Math.max(0, duration - progress.day) })}
+                  : t("trip.daysLeft", { count: Math.max(0, duration - progress.day + 1) })}
             </Text>
           </View>
           <View style={[styles.homeTripMetric, { backgroundColor: theme.paper }]}>
             <Text style={[styles.homeTripMetricLabel, { color: theme.inkMuted }]}>
-              {t("trip.remaining")}
+              {hasBudget ? t("trip.remaining") : t("trip.spent")}
             </Text>
             <Text style={[styles.homeTripMetricValue, { color: theme.inkDeep }]}>
-              {formatCurrency(budgetRemaining, trip.currency)}
+              {formatMoney(formatCurrency, hasBudget ? budgetRemaining : expenseSummary.total, trip.currency)}
             </Text>
             <Text style={[styles.homeTripMetricSub, { color: theme.inkSoft }]}>
-              {t("trip.ofBudget", { total: formatCurrency(trip.budget, trip.currency) })}
+              {hasBudget
+                ? t("trip.ofBudget", { total: formatMoney(formatCurrency, trip.budget, trip.currency) })
+                : t("trip.noBudgetSet")}
             </Text>
           </View>
         </View>
@@ -413,6 +423,9 @@ function TripDashboard({
     </View>
   );
 }
+
+// Pins hang above their coordinate, so the top needs the most room.
+const MAP_EDGE_PADDING = { top: 52, right: 36, bottom: 24, left: 36 };
 
 function TripMap({
   trip,
@@ -443,13 +456,15 @@ function TripMap({
     }
     return null;
   }, [userLocation?.latitude, userLocation?.longitude]);
-  const allPoints = useMemo((): LatLng[] => {
-    return userCoords ? [userCoords, ...destinations] : destinations;
-  }, [destinations, userCoords]);
-  const hasAnyCoords = allPoints.length > 0;
+  // The user only joins the frame when near a destination, so a far-away home doesn't zoom out to an ocean.
+  const framePoints = useMemo(
+    () => tripFramePoints(destinations, userCoords),
+    [destinations, userCoords],
+  );
+  const hasAnyCoords = framePoints.length > 0;
 
   const destinationRoutePath = useMemo((): LatLng[] => {
-    const points = userCoords ? [userCoords, ...destinations] : destinations;
+    const points = framePoints;
     if (points.length < 2) return points;
 
     const result: LatLng[] = [];
@@ -473,66 +488,25 @@ function TripMap({
     }
     result.push(points[points.length - 1]);
     return result;
-  }, [destinations, userCoords]);
+  }, [framePoints]);
 
-  const initialRegion = useMemo((): Region => {
-    if (allPoints.length === 0) {
-      return {
-        latitude: 20,
-        longitude: 0,
-        latitudeDelta: 120,
-        longitudeDelta: 120,
-      };
-    }
-
-    const minLat = Math.min(...allPoints.map((p) => p.latitude));
-    const maxLat = Math.max(...allPoints.map((p) => p.latitude));
-    const minLon = Math.min(...allPoints.map((p) => p.longitude));
-    const maxLon = Math.max(...allPoints.map((p) => p.longitude));
-
-    const latDelta = Math.max(10, (maxLat - minLat) * 1.8 + 4);
-    const lonDelta = Math.max(10, (maxLon - minLon) * 1.8 + 4);
-
-    return {
-      latitude: (minLat + maxLat) / 2,
-      longitude: (minLon + maxLon) / 2,
-      latitudeDelta: latDelta,
-      longitudeDelta: lonDelta,
-    };
-  }, [allPoints]);
+  const initialRegion = useMemo((): Region => regionForPoints(framePoints), [framePoints]);
 
   const fitMap = useCallback(() => {
-    if (!mapRef.current || allPoints.length === 0) return;
+    if (!mapRef.current || framePoints.length === 0) return;
 
-    const edgePadding = { top: 80, right: 80, bottom: 80, left: 80 };
-
-    if (allPoints.length === 1) {
-      mapRef.current.animateToRegion(
-        {
-          ...allPoints[0],
-          latitudeDelta: 2,
-          longitudeDelta: 2,
-        },
-        500,
-      );
+    // A lone pin or a tight cluster would max-zoom with fitToCoordinates; hold city level instead.
+    if (framePoints.length === 1 || isCompactFrame(framePoints)) {
+      mapRef.current.animateToRegion(regionForPoints(framePoints), 400);
       return;
     }
 
-    // Use raw markers (not the curved route polyline) for fitting so Android
-    // Google Maps reliably includes every destination pin in the viewport.
-    const fitPoints =
-      destinations.length > 0
-        ? userCoords
-          ? [userCoords, ...destinations]
-          : destinations
-        : allPoints;
-
-    mapRef.current.fitToCoordinates(fitPoints, {
-      edgePadding,
+    // Fit raw markers (not the curved polyline) so Android includes every pin.
+    mapRef.current.fitToCoordinates(framePoints, {
+      edgePadding: MAP_EDGE_PADDING,
       animated: true,
     });
-  }, [allPoints, destinations, userCoords]);
-
+  }, [framePoints]);
 
   useEffect(() => {
     const timer = setTimeout(fitMap, Platform.OS === "android" ? 600 : 300);
@@ -540,22 +514,11 @@ function TripMap({
   }, [fitMap]);
 
   useEffect(() => {
-    // Android sometimes ignores the first fitToCoordinates call while the map
-    // is still laying out; retry once after a short delay when points change.
-    if (Platform.OS !== "android" || allPoints.length === 0) return;
-
-    const timer = setTimeout(() => {
-      mapRef.current?.fitToCoordinates(
-        destinations.length > 0
-          ? userCoords
-            ? [userCoords, ...destinations]
-            : destinations
-          : allPoints,
-        { edgePadding: { top: 80, right: 80, bottom: 80, left: 80 }, animated: true },
-      );
-    }, 900);
+    // Android sometimes ignores the first fit while the map is still laying out; retry once.
+    if (Platform.OS !== "android") return;
+    const timer = setTimeout(fitMap, 900);
     return () => clearTimeout(timer);
-  }, [allPoints, destinations, userCoords]);
+  }, [fitMap]);
 
   if (!hasAnyCoords) {
     return (

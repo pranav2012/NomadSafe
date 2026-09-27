@@ -8,10 +8,11 @@ import { Icon } from "@/components/nomad/Icon";
 import { NomadCard } from "@/components/nomad/Card";
 import { NomadButton } from "@/components/nomad/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { useTripsStore, type Trip } from "@/features/trips/store/tripsStore";
+import { hasTripBudget, useTripsStore, type Trip } from "@/features/trips/store/tripsStore";
 import { getCategoryMeta } from "@/features/expenses/constants/categories";
 import { useTripExpenseSummary } from "@/features/expenses/hooks/useTripExpenseSummary";
 import { toLocalDayKey } from "@/features/expenses/utils/dateKey";
+import { formatMoney } from "@/features/expenses/utils/money";
 import { resolveContextTrip } from "../services/chatContext";
 
 interface Props {
@@ -99,18 +100,18 @@ function SpendChart({
 }: {
   theme: NomadColors;
   data: number[];
-  budget: number;
+  /** Daily budget line; null hides it. */
+  budget: number | null;
   height?: number;
 }) {
   const w = 320;
   const h = height;
   const pad = 8;
-  const max = Math.max(...data, budget) * 1.15;
+  const max = Math.max(...data, budget ?? 0, 1) * 1.15;
   const x = (i: number) => pad + (i / (data.length - 1)) * (w - pad * 2);
   const y = (v: number) => h - pad - ((v - 0) / (max - 0)) * (h - pad * 2);
   const linePath = data.map((v, i) => `${i ? "L" : "M"}${x(i)},${y(v)}`).join(" ");
   const areaPath = `${linePath} L${x(data.length - 1)},${h - pad} L${x(0)},${h - pad} Z`;
-  const budgetY = y(budget);
 
   return (
     <Svg width="100%" height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
@@ -131,7 +132,9 @@ function SpendChart({
           strokeDasharray="2 4"
         />
       ))}
-      <Line x1={pad} x2={w - pad} y1={budgetY} y2={budgetY} stroke={theme.stamp} strokeWidth={1} strokeDasharray="4 3" opacity={0.8} />
+      {budget !== null && (
+        <Line x1={pad} x2={w - pad} y1={y(budget)} y2={y(budget)} stroke={theme.stamp} strokeWidth={1} strokeDasharray="4 3" opacity={0.8} />
+      )}
       <Path d={areaPath} fill="url(#spendArea)" />
       <Path d={linePath} fill="none" stroke={theme.teal} strokeWidth={2} strokeLinejoin="round" />
       {data.map((v, i) => {
@@ -236,6 +239,7 @@ export function AiDashboard({ theme }: Props) {
     return { progress: prog, dailyBudget: db, totalDays: prog.totalDays, duration: dur };
   }, [activeTrip]);
 
+  const hasBudget = activeTrip ? hasTripBudget(activeTrip) : false;
   const actualSpent = expenseSummary.total;
   const remaining = Math.max(0, (activeTrip?.budget ?? 0) - actualSpent);
   const hasExpenseData = expenseSummary.convertedExpenses.length > 0;
@@ -277,6 +281,7 @@ export function AiDashboard({ theme }: Props) {
     );
   }
 
+  const money = (amount: number) => formatMoney(formatCurrency, amount, activeTrip.currency);
   const companionCount = activeTrip.mode === "group" ? activeTrip.companions.length + 1 : 1;
   const daysLeft =
     progress?.status === "complete"
@@ -297,26 +302,33 @@ export function AiDashboard({ theme }: Props) {
           {activeTrip.mode === "solo" ? t("aiTab.solo") : t("aiTab.groupWithCount", { count: companionCount })} ·{" "}
           {activeTrip.destinations.join(", ")}
         </Text>
-        <View style={styles.briefStats}>
-          <View style={styles.briefStat}>
-            <Text style={[styles.briefStatLabel, { color: theme.whiteTextMuted }]}>{t("aiTab.budget")}</Text>
-            <Text style={[styles.briefStatValue, { color: theme.inverse }]}>
-              {formatCurrency(activeTrip.budget, activeTrip.currency)}
-            </Text>
+        {hasBudget ? (
+          <View style={styles.briefStats}>
+            <View style={styles.briefStat}>
+              <Text style={[styles.briefStatLabel, { color: theme.whiteTextMuted }]}>{t("aiTab.budget")}</Text>
+              <Text style={[styles.briefStatValue, { color: theme.inverse }]}>{money(activeTrip.budget)}</Text>
+            </View>
+            <View style={styles.briefStat}>
+              <Text style={[styles.briefStatLabel, { color: theme.whiteTextMuted }]}>{t("aiTab.remaining")}</Text>
+              <Text style={[styles.briefStatValue, { color: theme.inverse }]}>{money(remaining)}</Text>
+            </View>
+            <View style={styles.briefStat}>
+              <Text style={[styles.briefStatLabel, { color: theme.whiteTextMuted }]}>{t("aiTab.dailyBudget")}</Text>
+              <Text style={[styles.briefStatValue, { color: theme.inverse }]}>{money(dailyBudget)}</Text>
+            </View>
           </View>
-          <View style={styles.briefStat}>
-            <Text style={[styles.briefStatLabel, { color: theme.whiteTextMuted }]}>{t("aiTab.remaining")}</Text>
-            <Text style={[styles.briefStatValue, { color: theme.inverse }]}>
-              {formatCurrency(remaining, activeTrip.currency)}
-            </Text>
+        ) : (
+          <View style={styles.briefStats}>
+            <View style={styles.briefStat}>
+              <Text style={[styles.briefStatLabel, { color: theme.whiteTextMuted }]}>{t("aiTab.spent")}</Text>
+              <Text style={[styles.briefStatValue, { color: theme.inverse }]}>{money(actualSpent)}</Text>
+            </View>
+            <View style={styles.briefStat}>
+              <Text style={[styles.briefStatLabel, { color: theme.whiteTextMuted }]}>{t("aiTab.budget")}</Text>
+              <Text style={[styles.briefStatValue, { color: theme.inverse }]}>{t("aiTab.noBudgetSet")}</Text>
+            </View>
           </View>
-          <View style={styles.briefStat}>
-            <Text style={[styles.briefStatLabel, { color: theme.whiteTextMuted }]}>{t("aiTab.dailyBudget")}</Text>
-            <Text style={[styles.briefStatValue, { color: theme.inverse }]}>
-              {formatCurrency(dailyBudget, activeTrip.currency)}
-            </Text>
-          </View>
-        </View>
+        )}
       </View>
 
       {/* Insight mini cards */}
@@ -333,8 +345,8 @@ export function AiDashboard({ theme }: Props) {
           theme={theme}
           icon={<Icon name="wallet" size={18} color={theme.mustard} strokeWidth={2} />}
           label={t("aiTab.actual")}
-          value={formatCurrency(actualSpent, activeTrip.currency)}
-          sub={t("aiTab.ofBudget", { total: formatCurrency(activeTrip.budget, activeTrip.currency) })}
+          value={money(actualSpent)}
+          sub={hasBudget ? t("aiTab.ofBudget", { total: money(activeTrip.budget) }) : t("aiTab.noBudgetSet")}
           color="mustard"
         />
       </View>
@@ -346,18 +358,22 @@ export function AiDashboard({ theme }: Props) {
               <View>
                 <Text style={[styles.sectionLabel, { color: theme.inkMuted }]}>{t("aiTab.dailySpend")}</Text>
                 <Text style={[styles.chartValue, { color: theme.inkDeep }]}>
-                  {formatCurrency(todaySpent, activeTrip.currency)}{" "}
+                  {money(todaySpent)}{" "}
                   <Text style={[styles.chartValueSub, { color: theme.inkMuted }]}>{t("aiTab.today")}</Text>
                 </Text>
               </View>
               <View style={styles.legend}>
                 <View style={[styles.legendDot, { backgroundColor: theme.teal }]} />
                 <Text style={[styles.legendText, { color: theme.inkSoft }]}>{t("aiTab.actual")}</Text>
-                <View style={[styles.legendDot, { backgroundColor: theme.stamp }]} />
-                <Text style={[styles.legendText, { color: theme.inkSoft }]}>{t("aiTab.budget")}</Text>
+                {hasBudget && (
+                  <>
+                    <View style={[styles.legendDot, { backgroundColor: theme.stamp }]} />
+                    <Text style={[styles.legendText, { color: theme.inkSoft }]}>{t("aiTab.budget")}</Text>
+                  </>
+                )}
               </View>
             </View>
-            <SpendChart theme={theme} data={dailyData.map((entry) => entry.v)} budget={dailyBudget} />
+            <SpendChart theme={theme} data={dailyData.map((entry) => entry.v)} budget={hasBudget ? dailyBudget : null} />
           </NomadCard>
 
           <NomadCard theme={theme}>
@@ -381,7 +397,7 @@ export function AiDashboard({ theme }: Props) {
                       <View style={{ flex: 1 }}>
                         <View style={styles.categoryTop}>
                           <Text style={[styles.categoryName, { color: theme.inkDeep }]}>{t(`expenses.category.${entry.category}`)}</Text>
-                          <Text style={[styles.categoryValue, { color: theme.inkDeep }]}>{formatCurrency(entry.amount, activeTrip.currency)}</Text>
+                          <Text style={[styles.categoryValue, { color: theme.inkDeep }]}>{money(entry.amount)}</Text>
                         </View>
                         <Text style={[styles.categoryPct, { color: theme.inkMuted }]}>{percent}% {t("aiTab.ofTotal")}</Text>
                       </View>
@@ -425,24 +441,26 @@ export function AiDashboard({ theme }: Props) {
         </NomadCard>
       )}
 
-      <NomadCard theme={theme} style={{ backgroundColor: theme.tealSoft, borderColor: `${theme.teal}66` }}>
-        <View style={styles.forecastHeader}>
-          <View style={[styles.forecastIcon, { backgroundColor: theme.teal }]}>
-            <Icon name="wallet" size={16} color={theme.inverse} strokeWidth={2} />
+      {hasBudget && (
+        <NomadCard theme={theme} style={{ backgroundColor: theme.tealSoft, borderColor: `${theme.teal}66` }}>
+          <View style={styles.forecastHeader}>
+            <View style={[styles.forecastIcon, { backgroundColor: theme.teal }]}>
+              <Icon name="wallet" size={16} color={theme.inverse} strokeWidth={2} />
+            </View>
+            <Text style={[styles.sectionLabel, { color: theme.teal }]}>{t("aiTab.remainingPerDay")}</Text>
           </View>
-          <Text style={[styles.sectionLabel, { color: theme.teal }]}>{t("aiTab.remainingPerDay")}</Text>
-        </View>
-        <Text style={[styles.forecastHeadline, { color: theme.inkDeep }]}>
-          {daysLeft > 0
-            ? t("aiTab.remainingPerDayBody", {
-                perDay: formatCurrency(remaining / daysLeft, activeTrip.currency),
-                daysLeft,
-                remaining: formatCurrency(remaining, activeTrip.currency),
-              })
-            : t("aiTab.remainingTripEnded", { remaining: formatCurrency(remaining, activeTrip.currency) })}
-        </Text>
-        <Text style={[styles.forecastSub, { color: theme.inkSoft }]}>{t("aiTab.remainingPerDayHint")}</Text>
-      </NomadCard>
+          <Text style={[styles.forecastHeadline, { color: theme.inkDeep }]}>
+            {daysLeft > 0
+              ? t("aiTab.remainingPerDayBody", {
+                  perDay: money(Math.round((remaining / daysLeft) * 100) / 100),
+                  daysLeft,
+                  remaining: money(remaining),
+                })
+              : t("aiTab.remainingTripEnded", { remaining: money(remaining) })}
+          </Text>
+          <Text style={[styles.forecastSub, { color: theme.inkSoft }]}>{t("aiTab.remainingPerDayHint")}</Text>
+        </NomadCard>
+      )}
 
       <View style={styles.footer}>
         <Icon name="lock" size={12} color={theme.inkMuted} strokeWidth={2} />

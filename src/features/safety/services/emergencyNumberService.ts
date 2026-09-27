@@ -1,4 +1,5 @@
-import * as Location from "expo-location";
+import { storage } from "@/stores/storage";
+import { resolveCountry } from "./countryResolver";
 
 export interface EmergencyNumbers {
   countryCode: string;
@@ -9,6 +10,7 @@ export interface EmergencyNumbers {
 }
 
 const FALLBACK_GENERAL = "112";
+const LAST_NUMBERS_KEY = "safety.last-emergency-numbers";
 
 /**
  * Per-country emergency numbers keyed by ISO alpha-2 code.
@@ -129,20 +131,36 @@ function lookup(code: string, name?: string): EmergencyNumbers {
   };
 }
 
+/** Numbers for the last country we resolved, so the call button works offline. */
+export function readLastEmergencyNumbers(): EmergencyNumbers | null {
+  const raw = storage.getString(LAST_NUMBERS_KEY);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as Partial<EmergencyNumbers>;
+    return typeof parsed.general === "string" && typeof parsed.countryCode === "string"
+      ? lookup(parsed.countryCode, parsed.countryName)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Resolves the emergency numbers for the country at the given coordinates.
- * Returns the pan-international 112 fallback when the country can't be resolved.
+ * Resolves the emergency numbers for the country at the given coordinates
+ * (cached country when offline). Falls back to the last resolved country,
+ * then to the international 112.
  */
 export async function fetchEmergencyNumbers(
   coords: { latitude: number; longitude: number },
 ): Promise<EmergencyNumbers> {
-  try {
-    const [place] = await Location.reverseGeocodeAsync(coords);
-    if (place?.isoCountryCode) {
-      return lookup(place.isoCountryCode.toUpperCase(), place.country ?? undefined);
-    }
-  } catch {
-    // Offline / geocoding failure — fall through to the international default.
+  const country = await resolveCountry(coords);
+  if (country) {
+    const numbers = lookup(country.code, country.name);
+    storage.set(LAST_NUMBERS_KEY, JSON.stringify(numbers));
+    return numbers;
   }
-  return { countryCode: "", general: FALLBACK_GENERAL, police: FALLBACK_GENERAL, ambulance: FALLBACK_GENERAL };
+  return (
+    readLastEmergencyNumbers() ??
+    { countryCode: "", general: FALLBACK_GENERAL, police: FALLBACK_GENERAL, ambulance: FALLBACK_GENERAL }
+  );
 }

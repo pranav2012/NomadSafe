@@ -8,14 +8,17 @@ import {
   useSharingStore,
   type BroadcastMode,
 } from "@/features/location-sharing";
+import { hasAcceptedBackgroundDisclosure } from "@/features/location-sharing/components/BackgroundLocationDisclosure";
 import { emergencyContactsStorage } from "@/features/onboarding/services/emergencyContactsStorage";
 import { normalizePhone, isValidPhone } from "../utils/phone";
+import { readLastKnownFix, saveLastKnownFix } from "./lastKnownLocation";
 
 export type SmsOutcome = "sent" | "cancelled" | "opened" | "failed";
 
 export interface AlertPosition {
   latitude: number;
   longitude: number;
+  accuracy: number | null;
   timestamp: number | null;
   source: "fresh" | "lastKnown" | "cached";
 }
@@ -43,13 +46,21 @@ export function getContactPhones(): string[] {
   return Array.from(new Set(phones));
 }
 
+type CachedPosition = { latitude: number; longitude: number; accuracy?: number | null; timestamp?: number | null };
+
+function newest(a: CachedPosition | null, b: CachedPosition | null): CachedPosition | null {
+  if (!a) return b;
+  if (!b) return a;
+  return (b.timestamp ?? 0) > (a.timestamp ?? 0) ? b : a;
+}
+
 /**
- * Best-effort position for an alert: fresh GPS fix (10 s cap), then the OS
- * last-known fix, then the screen's cached coordinates. Never throws.
+ * Best-effort position for an alert: fresh GPS fix (10 s cap), else the newest
+ * of the OS last-known fix, our persisted fix and the screen's coordinates.
+ * Every real fix is persisted for offline use. Never throws.
  */
-export async function getBestPosition(
-  cached: { latitude: number; longitude: number; timestamp?: number | null } | null,
-): Promise<AlertPosition | null> {
+export async function getBestPosition(cached: CachedPosition | null): Promise<AlertPosition | null> {
+  let osLastAt: number | null = null;
   try {
     const perm = await Location.getForegroundPermissionsAsync();
     if (perm.granted) {
@@ -58,29 +69,38 @@ export async function getBestPosition(
         FRESH_FIX_TIMEOUT_MS,
       );
       if (fresh) {
-        return {
+        const fix = {
           latitude: fresh.coords.latitude,
           longitude: fresh.coords.longitude,
+          accuracy: fresh.coords.accuracy ?? null,
           timestamp: fresh.timestamp,
-          source: "fresh",
         };
+        saveLastKnownFix(fix);
+        return { ...fix, source: "fresh" };
       }
       const last = await Location.getLastKnownPositionAsync().catch(() => null);
       if (last) {
-        return {
+        osLastAt = last.timestamp;
+        saveLastKnownFix({
           latitude: last.coords.latitude,
           longitude: last.coords.longitude,
+          accuracy: last.coords.accuracy ?? null,
           timestamp: last.timestamp,
-          source: "lastKnown",
-        };
+        });
       }
     }
   } catch {
     // Location services off or permission API failure; fall through.
   }
-  return cached
-    ? { latitude: cached.latitude, longitude: cached.longitude, timestamp: cached.timestamp ?? null, source: "cached" }
-    : null;
+  const best = newest(readLastKnownFix(), cached);
+  if (!best) return null;
+  return {
+    latitude: best.latitude,
+    longitude: best.longitude,
+    accuracy: best.accuracy ?? null,
+    timestamp: best.timestamp ?? null,
+    source: osLastAt != null && best.timestamp === osLastAt ? "lastKnown" : "cached",
+  };
 }
 
 export function buildMapsUrl(position: { latitude: number; longitude: number }) {
@@ -129,6 +149,14 @@ export async function hasBackgroundLocationPermission(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/**
+ * True only when emergency sharing can start without any permission prompt:
+ * "Allow all the time" is already granted and the disclosure was accepted.
+ */
+export async function canAutoStartEmergencyBroadcast(): Promise<boolean> {
+  return hasAcceptedBackgroundDisclosure() && (await hasBackgroundLocationPermission());
 }
 
 /**

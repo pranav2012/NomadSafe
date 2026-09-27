@@ -30,7 +30,7 @@ import { NomadCard } from "@/components/nomad/Card";
 import { Icon, type IconName } from "@/components/nomad/Icon";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
-import { localAuth, useAuthStore } from "@/features/auth";
+import { localAuth, useAuthStore, useBiometricPresentation } from "@/features/auth";
 import { useAiModels } from "@/features/ai";
 import { useTripsStore } from "@/features/trips/store/tripsStore";
 import { useExpensesStore } from "@/features/expenses/store/expensesStore";
@@ -186,6 +186,7 @@ export default function SettingsScreen() {
   const autoLockTimeout = useAuthStore((s) => s.autoLockTimeout);
   const setAutoLockTimeout = useAuthStore((s) => s.setAutoLockTimeout);
   const deleteAccount = useMutation(api.account.deleteAccount);
+  const biometric = useBiometricPresentation();
 
   const themeMode = useSettingsStore((s) => s.themeMode);
   const setThemeMode = useSettingsStore((s) => s.setThemeMode);
@@ -438,8 +439,8 @@ export default function SettingsScreen() {
           icon="faceId"
           tint={theme.tealSoft}
           iconColor={theme.teal}
-          title={t("settings.faceIdVault")}
-          sub={t("settings.faceIdVaultSub")}
+          title={t("settings.biometricUnlock", { name: biometric.name })}
+          sub={t("settings.biometricUnlockSub", { name: biometric.name })}
           theme={theme}
           right={
             <Toggle
@@ -632,7 +633,7 @@ export default function SettingsScreen() {
       </View>
 
       <View style={styles.section}>
-        <SectionLabel label={t("settings.appearanceSection")} theme={theme} />
+        <SectionLabel label={t("settings.tripsSection")} theme={theme} />
         <SettingRow
           icon="flag"
           tint={theme.mustardSoft}
@@ -647,7 +648,7 @@ export default function SettingsScreen() {
       </View>
 
       <View style={styles.section}>
-        <SectionLabel label={t("settings.premiumSection")} theme={theme} />
+        <SectionLabel label={t("settings.aiSection")} theme={theme} />
         <SettingRow
           icon="sparkle"
           tint={theme.tealSoft}
@@ -693,7 +694,7 @@ export default function SettingsScreen() {
       <View style={styles.section}>
         <SectionLabel label={t("settings.accountSection")} theme={theme} />
         <SettingRow
-          icon="phone"
+          icon="logout"
           tint={theme.stampSoft}
           iconColor={theme.stamp}
           title={t("settings.signOut")}

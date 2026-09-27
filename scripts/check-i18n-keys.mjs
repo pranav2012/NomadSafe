@@ -6,8 +6,12 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const en = JSON.parse(readFileSync(path.join(root, "src/localization/translations/en.json"), "utf8"));
 
+function get(key) {
+  return key.split(".").reduce((node, part) => (node && typeof node === "object" ? node[part] : undefined), en);
+}
+
 function has(key) {
-  return key.split(".").reduce((node, part) => (node && typeof node === "object" ? node[part] : undefined), en) !== undefined;
+  return get(key) !== undefined || get(`${key}_other`) !== undefined;
 }
 
 function walk(dir, out = []) {

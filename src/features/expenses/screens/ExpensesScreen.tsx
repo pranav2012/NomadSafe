@@ -21,7 +21,7 @@ import { Icon } from "@/components/nomad/Icon";
 import { NOMAD_FONTS } from "@/constants/nomadTokens";
 import { useTheme } from "@/hooks/useTheme";
 import { useLocalization } from "@/localization";
-import { useTripsStore } from "@/features/trips/store/tripsStore";
+import { hasTripBudget, useTripsStore } from "@/features/trips/store/tripsStore";
 import { useExpensesStore, type Expense } from "@/features/expenses/store/expensesStore";
 import { getCategoryMeta } from "@/features/expenses/constants/categories";
 import {
@@ -37,6 +37,7 @@ import { useConvertedExpenses } from "@/features/expenses/hooks/useTripExpenseSu
 import { ExpenseForm } from "@/features/expenses/components/ExpenseForm";
 import { ImportSheet } from "@/features/expenses/components/ImportSheet";
 import { useGmailAutoSync } from "@/features/expenses/hooks/useGmailAutoSync";
+import { formatMoney } from "@/features/expenses/utils/money";
 
 const CHART_DAYS = 14;
 const LEDGER_PREVIEW = 10;
@@ -46,11 +47,12 @@ function countTripDays(startDate: string, endDate: string): number {
   return Math.max(1, Math.round(ms / (24 * 60 * 60 * 1000)) + 1);
 }
 
+/** Days left including today, matching the AI assistant's per-day figures. */
 function daysLeft(endDate: string): number {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const end = fromLocalDayKey(endDate);
-  return Math.max(0, Math.round((end.getTime() - today.getTime()) / (24 * 60 * 60 * 1000)));
+  return Math.max(0, Math.round((end.getTime() - today.getTime()) / (24 * 60 * 60 * 1000)) + 1);
 }
 
 export default function ExpensesScreen() {
@@ -103,10 +105,10 @@ export default function ExpensesScreen() {
     merchants: topMerchants(converted, 4),
   };
   const unconvertedLabel = conversion.unconvertedTotals
-    .map((entry) => formatCurrency(entry.amount, entry.currency, { maximumFractionDigits: 0 }))
+    .map((entry) => formatMoney(formatCurrency, entry.amount, entry.currency))
     .join(" + ");
 
-  const budget = activeTrip?.budget ?? 0;
+  const budget = activeTrip && hasTripBudget(activeTrip) ? activeTrip.budget : 0;
   const tripDays = activeTrip ? countTripDays(activeTrip.startDate, activeTrip.endDate) : 0;
   const hasBudgetLine = budget > 0 && tripDays > 0;
   const budgetDaily = hasBudgetLine ? budget / tripDays : data.avgDay;
@@ -164,17 +166,17 @@ export default function ExpensesScreen() {
                 {activeTrip ? activeTrip.name : t("expenses.allTime")}
               </Text>
               <Text style={[styles.heroAmount, { color: heroText }]}>
-                {formatCurrency(data.total, currency, { maximumFractionDigits: 0 })}
+                {formatMoney(formatCurrency, data.total, currency)}
               </Text>
               <Text style={[styles.heroSub, { color: theme.whiteTextMuted }]}>
                 {budget > 0
                   ? activeTrip
                     ? t("expenses.ofBudget", {
-                        budget: formatCurrency(budget, currency, { maximumFractionDigits: 0 }),
+                        budget: formatMoney(formatCurrency, budget, currency),
                         days: daysLeft(activeTrip.endDate),
                       })
                     : t("expenses.ofBudgetNoDays", {
-                        budget: formatCurrency(budget, currency, { maximumFractionDigits: 0 }),
+                        budget: formatMoney(formatCurrency, budget, currency),
                       })
                   : t("expenses.noBudget")}
               </Text>
@@ -197,10 +199,10 @@ export default function ExpensesScreen() {
                 <Text style={[styles.heroPillText, { color: theme.cream }]}>
                   {remaining >= 0
                     ? t("expenses.remaining", {
-                        amount: formatCurrency(remaining, currency, { maximumFractionDigits: 0 }),
+                        amount: formatMoney(formatCurrency, remaining, currency),
                       })
                     : t("expenses.overBudget", {
-                        amount: formatCurrency(Math.abs(remaining), currency, { maximumFractionDigits: 0 }),
+                        amount: formatMoney(formatCurrency, Math.abs(remaining), currency),
                       })}
                 </Text>
               </View>
@@ -241,7 +243,7 @@ export default function ExpensesScreen() {
                       </Text>
                     </View>
                     <Text style={[styles.legendAmount, { color: heroText }]}>
-                      {formatCurrency(entry.amount, currency, { maximumFractionDigits: 0 })}
+                      {formatMoney(formatCurrency, entry.amount, currency)}
                     </Text>
                   </View>
                 ))}
@@ -259,7 +261,7 @@ export default function ExpensesScreen() {
                   {t("expenses.spendLastDays", { count: CHART_DAYS })}
                 </Text>
                 <Text style={[styles.chartAvg, { color: theme.inkDeep }]}>
-                  {formatCurrency(data.avgDay, currency, { maximumFractionDigits: 0 })}{" "}
+                  {formatMoney(formatCurrency, data.avgDay, currency)}{" "}
                   <Text style={[styles.chartAvgUnit, { color: theme.inkMuted }]}>
                     {t("expenses.avgPerDay")}
                   </Text>
@@ -381,7 +383,7 @@ export default function ExpensesScreen() {
                         {merchant.merchant}
                       </Text>
                       <Text style={[styles.merchantAmount, { color: theme.inkDeep }]}>
-                        {formatCurrency(merchant.amount, currency, { maximumFractionDigits: 0 })}{" "}
+                        {formatMoney(formatCurrency, merchant.amount, currency)}{" "}
                         <Text style={{ color: theme.inkMuted }}>
                           · {t("expenses.times", { count: merchant.count })}
                         </Text>

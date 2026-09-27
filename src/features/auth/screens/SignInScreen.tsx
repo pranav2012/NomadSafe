@@ -15,10 +15,10 @@ import Svg, { Path } from "react-native-svg";
 import { NOMAD_FONTS, type NomadTheme } from "@/constants/nomadTokens";
 import { useTheme } from "@/hooks/useTheme";
 import { authClient, useAuthStore } from "@/features/auth";
-import { Icon } from "@/components/nomad/Icon";
 import { Stamp } from "@/components/nomad/Stamp";
 import { useLocalization } from "@/localization";
 import { LEGAL_URLS } from "@/constants/legal";
+import { BRAND_NAVY, NomadLogo } from "@/components/brand/NomadLogo";
 
 function GoogleGlyph() {
   return (
@@ -150,10 +150,10 @@ export default function SignInScreen() {
           <View
             style={[
               styles.shieldMark,
-              { backgroundColor: theme.inkDeep, shadowColor: theme.shadow },
+              { backgroundColor: BRAND_NAVY, shadowColor: theme.shadow },
             ]}
           >
-            <Icon name="shield" size={30} color={theme.mustard} strokeWidth={2} />
+            <NomadLogo size={60} tile={false} />
           </View>
         </View>
 
