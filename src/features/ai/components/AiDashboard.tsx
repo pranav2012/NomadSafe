@@ -11,6 +11,8 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { useTripsStore, type Trip } from "@/features/trips/store/tripsStore";
 import { getCategoryMeta } from "@/features/expenses/constants/categories";
 import { useTripExpenseSummary } from "@/features/expenses/hooks/useTripExpenseSummary";
+import { toLocalDayKey } from "@/features/expenses/utils/dateKey";
+import { resolveContextTrip } from "../services/chatContext";
 
 interface Props {
   theme: NomadColors;
@@ -219,7 +221,7 @@ export function AiDashboard({ theme }: Props) {
 
   const trips = useTripsStore((state) => state.trips);
   const activeTripId = useTripsStore((state) => state.activeTripId);
-  const activeTrip = trips.find((trip) => trip.id === activeTripId) ?? trips[0] ?? null;
+  const activeTrip = useMemo(() => resolveContextTrip(trips, activeTripId), [trips, activeTripId]);
   const expenseSummary = useTripExpenseSummary(activeTrip);
 
   const { progress, dailyBudget, totalDays, duration } = useMemo(() => {
@@ -242,16 +244,24 @@ export function AiDashboard({ theme }: Props) {
     return Array.from({ length: 7 }, (_, index) => {
       const date = new Date();
       date.setDate(date.getDate() - (6 - index));
-      const key = date.toISOString().slice(0, 10);
       return {
         d: new Intl.DateTimeFormat(locale, { weekday: "narrow" }).format(date),
-        v: values.get(key) ?? 0,
+        dayName: new Intl.DateTimeFormat(locale, { weekday: "long" }).format(date),
+        v: values.get(toLocalDayKey(date)) ?? 0,
         highlight: index === 6,
       };
     });
   }, [expenseSummary.dailyTotals, locale]);
+  const weekInsight = useMemo(() => {
+    const total = dailyData.reduce((sum, entry) => sum + entry.v, 0);
+    if (total <= 0) return { kind: "none" as const };
+    const average = total / dailyData.length;
+    const peak = dailyData.reduce((best, entry) => (entry.v > best.v ? entry : best), dailyData[0]);
+    const percent = Math.round(((peak.v - average) / average) * 100);
+    if (percent < 10) return { kind: "even" as const };
+    return { kind: "peak" as const, day: peak.dayName, percent };
+  }, [dailyData]);
   const todaySpent = dailyData.at(-1)?.v ?? 0;
-  const spendPercent = activeTrip?.budget ? Math.round((actualSpent / activeTrip.budget) * 100) : 0;
 
   if (!activeTrip) {
     return (
@@ -268,6 +278,10 @@ export function AiDashboard({ theme }: Props) {
   }
 
   const companionCount = activeTrip.mode === "group" ? activeTrip.companions.length + 1 : 1;
+  const daysLeft =
+    progress?.status === "complete"
+      ? 0
+      : Math.max(0, duration - (progress?.status === "active" ? progress.day - 1 : 0));
 
   return (
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
@@ -382,7 +396,13 @@ export function AiDashboard({ theme }: Props) {
             <View style={styles.chartHeader}>
               <View>
                 <Text style={[styles.sectionLabel, { color: theme.inkMuted }]}>{t("aiTab.byDay")}</Text>
-                <Text style={[styles.chartCaption, { color: theme.inkSoft }]}>{t("aiTab.byDayCaption", { percent: spendPercent })}</Text>
+                <Text style={[styles.chartCaption, { color: theme.inkSoft }]}>
+                  {weekInsight.kind === "peak"
+                    ? t("aiTab.byDayPeak", { day: weekInsight.day, percent: weekInsight.percent })
+                    : weekInsight.kind === "even"
+                      ? t("aiTab.byDayEven")
+                      : t("aiTab.byDayNone")}
+                </Text>
               </View>
             </View>
             <DayBars
@@ -405,26 +425,28 @@ export function AiDashboard({ theme }: Props) {
         </NomadCard>
       )}
 
-      {/* Forecast — derived from trip budget, no hardcoded numbers */}
       <NomadCard theme={theme} style={{ backgroundColor: theme.tealSoft, borderColor: `${theme.teal}66` }}>
         <View style={styles.forecastHeader}>
           <View style={[styles.forecastIcon, { backgroundColor: theme.teal }]}>
-            <Icon name="trendUp" size={16} color={theme.inverse} strokeWidth={2} />
+            <Icon name="wallet" size={16} color={theme.inverse} strokeWidth={2} />
           </View>
-          <Text style={[styles.sectionLabel, { color: theme.teal }]}>{t("aiTab.onDeviceForecast")}</Text>
+          <Text style={[styles.sectionLabel, { color: theme.teal }]}>{t("aiTab.remainingPerDay")}</Text>
         </View>
         <Text style={[styles.forecastHeadline, { color: theme.inkDeep }]}>
-          {t("aiTab.forecastBody", {
-            remaining: formatCurrency(remaining, activeTrip.currency),
-            daysLeft: Math.max(0, duration - (progress?.day ?? 0)),
-          })}
+          {daysLeft > 0
+            ? t("aiTab.remainingPerDayBody", {
+                perDay: formatCurrency(remaining / daysLeft, activeTrip.currency),
+                daysLeft,
+                remaining: formatCurrency(remaining, activeTrip.currency),
+              })
+            : t("aiTab.remainingTripEnded", { remaining: formatCurrency(remaining, activeTrip.currency) })}
         </Text>
-        <Text style={[styles.forecastSub, { color: theme.inkSoft }]}>{t("aiTab.forecastHint")}</Text>
+        <Text style={[styles.forecastSub, { color: theme.inkSoft }]}>{t("aiTab.remainingPerDayHint")}</Text>
       </NomadCard>
 
       <View style={styles.footer}>
         <Icon name="lock" size={12} color={theme.inkMuted} strokeWidth={2} />
-        <Text style={[styles.footerText, { color: theme.inkMuted }]}>{t("aiTab.analysisFooter")}</Text>
+        <Text style={[styles.footerText, { color: theme.inkMuted }]}>{t("aiTab.dashboardFooter")}</Text>
       </View>
     </ScrollView>
   );

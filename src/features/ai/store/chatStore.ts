@@ -11,6 +11,8 @@ export interface ChatMessage {
   text: string;
   generating?: boolean;
   error?: boolean;
+  /** Epoch ms; absent on messages saved before timestamps were added. */
+  createdAt?: number;
 }
 
 export interface ChatErrorLabels {
@@ -31,11 +33,32 @@ export interface ChatConversation {
 interface ChatState {
   conversations: Record<string, ChatConversation>;
   generatingConversationKey: string | null;
-  send: (conversationKey: string, text: string, labels: ChatErrorLabels) => void;
+  /** Returns false when the message was not accepted (e.g. another reply is generating). */
+  send: (conversationKey: string, text: string, labels: ChatErrorLabels) => boolean;
+  /** Stops the reply being generated, keeping any partial text. */
+  stop: () => void;
   clear: (conversationKey: string) => void;
   removeConversation: (conversationKey: string) => void;
   reset: () => void;
 }
+
+interface ChatStreamState {
+  conversationKey: string | null;
+  text: string;
+}
+
+/**
+ * Live streaming text, kept out of the persisted store so tokens don't trigger
+ * an MMKV write per token. The final reply is persisted once on completion.
+ */
+export const useChatStreamStore = create<ChatStreamState>()(() => ({
+  conversationKey: null,
+  text: "",
+}));
+
+const STREAM_UPDATE_INTERVAL_MS = 50;
+
+let stopRequested = false;
 
 function emptyConversation(): ChatConversation {
   return { messages: [], summary: null, contextMessages: [] };
@@ -71,9 +94,11 @@ export const useChatStore = create<ChatState>()(
         generatingConversationKey: null,
 
         send: (conversationKey, text, labels) => {
-          if (get().generatingConversationKey) return;
+          if (get().generatingConversationKey) return false;
           const question = text.trim();
-          if (!question) return;
+          if (!question) return false;
+          stopRequested = false;
+          const now = Date.now();
 
           set((state) => {
             const conversation = state.conversations[conversationKey] ?? emptyConversation();
@@ -84,8 +109,8 @@ export const useChatStore = create<ChatState>()(
                   ...conversation,
                   messages: [
                     ...conversation.messages,
-                    { from: "you", text: question },
-                    { from: "ai", text: "", generating: true },
+                    { from: "you", text: question, createdAt: now },
+                    { from: "ai", text: "", generating: true, createdAt: now },
                   ],
                 },
               },
@@ -99,6 +124,20 @@ export const useChatStore = create<ChatState>()(
             ...conversation.contextMessages,
             { role: "user", content: question },
           ];
+
+          let streamed = "";
+          let lastFlush = 0;
+          let flushTimer: ReturnType<typeof setTimeout> | null = null;
+          const flushStream = () => {
+            flushTimer = null;
+            lastFlush = Date.now();
+            useChatStreamStore.setState({ conversationKey, text: streamed });
+          };
+          const clearStream = () => {
+            if (flushTimer) clearTimeout(flushTimer);
+            flushTimer = null;
+            useChatStreamStore.setState({ conversationKey: null, text: "" });
+          };
 
           localModelService
             .prepareChatMemory(history, {
@@ -119,38 +158,49 @@ export const useChatStore = create<ChatState>()(
                   },
                 };
               });
+              if (stopRequested) return "";
               return localModelService.chat(memory.history, {
                 systemContext,
                 conversationSummary: memory.summary ?? undefined,
                 contextTokens: memory.contextTokens,
                 onToken: (_delta, accumulated) => {
-                  updateLast(conversationKey, (message) => ({
-                    ...message,
-                    text: accumulated,
-                    generating: false,
-                  }));
+                  streamed = accumulated;
+                  if (flushTimer) return;
+                  const wait = Math.max(0, STREAM_UPDATE_INTERVAL_MS - (Date.now() - lastFlush));
+                  flushTimer = setTimeout(flushStream, wait);
                 },
               });
             })
             .then((reply) => {
-              updateLast(conversationKey, (message) => ({ ...message, text: reply, generating: false }));
+              clearStream();
+              const text = reply.trim();
               set((state) => {
                 const current = state.conversations[conversationKey] ?? emptyConversation();
+                const messages = [...current.messages];
+                const last = messages[messages.length - 1];
+                if (last?.from === "ai") {
+                  if (text) {
+                    messages[messages.length - 1] = { ...last, text, generating: false };
+                  } else {
+                    messages.pop();
+                  }
+                }
                 return {
                   conversations: {
                     ...state.conversations,
                     [conversationKey]: {
                       ...current,
-                      contextMessages: [
-                        ...current.contextMessages,
-                        { role: "assistant", content: reply },
-                      ],
+                      messages,
+                      contextMessages: text
+                        ? [...current.contextMessages, { role: "assistant", content: text }]
+                        : current.contextMessages,
                     },
                   },
                 };
               });
             })
             .catch((error: unknown) => {
+              clearStream();
               console.warn("[chatStore] reply generation failed", error);
               const noModel = error instanceof Error && error.message.includes("not downloaded");
               updateLast(conversationKey, (message) => ({
@@ -161,12 +211,20 @@ export const useChatStore = create<ChatState>()(
               }));
             })
             .finally(() => {
+              stopRequested = false;
               set({ generatingConversationKey: null });
               if (AppState.currentState !== "active") {
                 modelNotifications.notifyAssistantReply();
                 localModelService.release();
               }
             });
+          return true;
+        },
+
+        stop: () => {
+          if (!get().generatingConversationKey) return;
+          stopRequested = true;
+          localModelService.stopChat();
         },
 
         clear: (conversationKey) =>

@@ -1,6 +1,7 @@
 import { useTripsStore, type Trip } from "@/features/trips/store/tripsStore";
 import { useExpensesStore } from "@/features/expenses/store/expensesStore";
 import { getCachedExchangeRate } from "@/features/expenses/services/currencyConversion";
+import { toLocalDayKey } from "@/features/expenses/utils/dateKey";
 
 function startOfLocalDay(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -38,6 +39,16 @@ function money(amount: number, currency: string): string {
 }
 
 /**
+ * Trip the AI features talk about: the explicitly active trip, else the trip
+ * whose dates include today, else none. Shared by chat and the dashboard.
+ */
+export function resolveContextTrip(trips: Trip[], activeTripId: string | null): Trip | null {
+  const active = trips.find((t) => t.id === activeTripId);
+  if (active) return active;
+  return trips.find((t) => tripProgress(t).status === "active") ?? null;
+}
+
+/**
  * Builds a factual context block about the user's active trip and its budget
  * for the chat model. Returns null when there is no trip to talk about.
  *
@@ -45,7 +56,7 @@ function money(amount: number, currency: string): string {
  */
 export function buildTripMoneyContext(): string | null {
   const { trips, activeTripId } = useTripsStore.getState();
-  const trip = trips.find((t) => t.id === activeTripId) ?? null;
+  const trip = resolveContextTrip(trips, activeTripId);
   if (!trip) return null;
 
   const { status, day, totalDays } = tripProgress(trip);
@@ -65,7 +76,7 @@ export function buildTripMoneyContext(): string | null {
 
   const lines = [
     "USER TRIP & MONEY CONTEXT (use this to answer; do not invent other numbers):",
-    `Today's date: ${new Date().toISOString().slice(0, 10)}`,
+    `Today's date: ${toLocalDayKey(new Date())}`,
     `Trip: ${trip.name}`,
     `Destinations: ${trip.destinations.join(", ") || "not set"}`,
     `Dates: ${trip.startDate} to ${trip.endDate} (${totalDays} days, status: ${status}${

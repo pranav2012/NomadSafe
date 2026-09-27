@@ -27,7 +27,7 @@ export default function AiScreen() {
   const router = useRouter();
   const theme = nomad.colors;
   const localAiEnabled = useSettingsStore((s) => s.localAiEnabled);
-  const { activeModelId, models } = useAiModels();
+  const { models } = useAiModels();
   const [tab, setTab] = useState<Tab>("dashboard");
 
   const activeModel = models.find((m) => m.isActive) ?? null;

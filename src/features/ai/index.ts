@@ -18,6 +18,7 @@ export {
 export {
   modelDownloadManager,
   deleteDownloadedModel,
+  type DownloadErrorCode,
   type DownloadState,
   type DownloadStatus,
 } from "./services/modelDownloadManager";

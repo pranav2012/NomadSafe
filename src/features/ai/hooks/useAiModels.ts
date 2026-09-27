@@ -1,15 +1,22 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { AppState } from "react-native";
+import { useFocusEffect } from "expo-router";
 import { useSettingsStore } from "@/features/settings";
+import { useLocalization } from "@/localization";
 import {
   aiModelService,
   AI_MODELS,
   formatModelSize,
-  localModelService,
-  modelDownloadManager,
   type AiModel,
   type DeviceCapability,
+} from "../services/aiModelService";
+import { localModelService } from "../services/localModelService";
+import {
+  deleteDownloadedModel,
+  modelDownloadManager,
+  type DownloadErrorCode,
   type DownloadState,
-} from "@/features/ai";
+} from "../services/modelDownloadManager";
 
 export interface ModelListItem {
   model: AiModel;
@@ -42,8 +49,8 @@ export interface UseAiModelsResult {
   isChecking: boolean;
   /** Id of the model currently set as default in storage. */
   activeModelId: string | null;
-  /** Any active download error message. */
-  downloadError: string | null;
+  /** Error code of the last failed download, for localized copy. */
+  downloadErrorCode: DownloadErrorCode | null;
   /** Format helper used by the UI. */
   formatSize: (sizeMb: number) => string;
   /** Whether local AI is globally disabled in Settings. */
@@ -62,74 +69,98 @@ export interface UseAiModelsResult {
   deleteModel: (model: AiModel) => Promise<void>;
 }
 
+// Device RAM/OS don't change at runtime, so capability is computed once.
+let capabilityPromise: Promise<DeviceCapability> | null = null;
+let cachedCapability: DeviceCapability | null = null;
+
+function loadCapability(): Promise<DeviceCapability> {
+  capabilityPromise ??= aiModelService.checkDeviceCapability().then((cap) => {
+    cachedCapability = cap;
+    return cap;
+  });
+  return capabilityPromise;
+}
+
+async function readDownloadedIds(): Promise<string> {
+  const ids: string[] = [];
+  for (const model of AI_MODELS) {
+    if (await aiModelService.isModelDownloaded(model)) ids.push(model.id);
+  }
+  return ids.join(",");
+}
+
 /**
  * Reactive hook that surfaces the full local model inventory:
  * downloaded state, in-memory loaded state, active/default model,
- * download progress, and device capability.
+ * download progress, and device capability. File state is refreshed on
+ * download status changes, screen focus, and app foreground (no polling).
  */
 export function useAiModels(): UseAiModelsResult {
+  const { locale } = useLocalization();
   const [download, setDownload] = useState<DownloadState>(() =>
     modelDownloadManager.getState(),
   );
-  const [capability, setCapability] = useState<DeviceCapability | null>(null);
-  const [isChecking, setIsChecking] = useState(true);
+  const [capability, setCapability] = useState<DeviceCapability | null>(cachedCapability);
   const [activeModelId, setActiveModelId] = useState<string | null>(() =>
     aiModelService.getActiveModelId(),
   );
-  const [downloadedIds, setDownloadedIds] = useState<Set<string>>(new Set());
+  // Comma-joined ids so unchanged refreshes keep the same state value.
+  const [downloadedKey, setDownloadedKey] = useState("");
   const [loadedId, setLoadedId] = useState<string | null>(() =>
     localModelService.getActiveModelId(),
   );
-  const [tick, setTick] = useState(0);
   const localAiEnabled = useSettingsStore((s) => s.localAiEnabled);
 
-  // Subscribe to download manager updates and periodically recheck loaded model.
-  useEffect(() => {
-    const unsubscribe = modelDownloadManager.subscribe(setDownload);
-    const interval = setInterval(() => {
-      setLoadedId(localModelService.getActiveModelId());
-      setTick((t) => t + 1);
-    }, 500);
-    return () => {
-      unsubscribe();
-      clearInterval(interval);
-    };
-  }, []);
+  useEffect(() => modelDownloadManager.subscribe(setDownload), []);
+  useEffect(() => localModelService.subscribeLoadedModel(setLoadedId), []);
 
-  // Check device capability and which models are on disk.
   useEffect(() => {
     let mounted = true;
-    const run = async () => {
-      const cap = await aiModelService.checkDeviceCapability();
-      if (!mounted) return;
-      setCapability(cap);
-      setIsChecking(false);
-
-      const active = aiModelService.getActiveModelId();
-      setActiveModelId(active);
-
-      const nextDownloaded = new Set<string>();
-      for (const model of AI_MODELS) {
-        if (await aiModelService.isModelDownloaded(model)) {
-          nextDownloaded.add(model.id);
-        }
-      }
-      if (mounted) setDownloadedIds(nextDownloaded);
-    };
-    run();
+    loadCapability().then((cap) => {
+      if (mounted) setCapability(cap);
+    });
     return () => {
       mounted = false;
     };
-  }, [tick, download.status]);
+  }, []);
 
-  const availableIds = useMemo(() => {
-    if (!capability?.supported) return new Set<string>();
-    return new Set(
-      aiModelService.getAvailableModels(capability).map((m) => m.id),
-    );
-  }, [capability]);
+  const refreshFiles = useCallback(async () => {
+    const key = await readDownloadedIds();
+    setDownloadedKey(key);
+    setActiveModelId(aiModelService.getActiveModelId());
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    readDownloadedIds().then((key) => {
+      if (!mounted) return;
+      setDownloadedKey(key);
+      setActiveModelId(aiModelService.getActiveModelId());
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [download.status]);
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshFiles();
+      setLoadedId(localModelService.getActiveModelId());
+    }, [refreshFiles]),
+  );
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (next) => {
+      if (next === "active") refreshFiles();
+    });
+    return () => subscription.remove();
+  }, [refreshFiles]);
 
   const models = useMemo((): ModelListItem[] => {
+    const downloadedIds = new Set(downloadedKey ? downloadedKey.split(",") : []);
+    const availableIds = new Set(
+      capability?.supported ? aiModelService.getAvailableModels(capability).map((m) => m.id) : [],
+    );
     const recommendedId = capability?.assignedCategory ?? null;
     return AI_MODELS.map((model) => {
       const isDownloaded = downloadedIds.has(model.id);
@@ -151,10 +182,9 @@ export function useAiModels(): UseAiModelsResult {
     });
   }, [
     capability,
-    downloadedIds,
+    downloadedKey,
     loadedId,
     activeModelId,
-    availableIds,
     download.modelId,
     download.status,
     download.progress,
@@ -176,21 +206,17 @@ export function useAiModels(): UseAiModelsResult {
   };
 
   const deleteModel = async (model: AiModel) => {
-    const { deleteDownloadedModel } = await import(
-      "../services/modelDownloadManager"
-    );
     await deleteDownloadedModel(model);
-    setTick((t) => t + 1);
-    setActiveModelId(aiModelService.getActiveModelId());
+    await refreshFiles();
   };
 
   return {
     models,
     capability,
-    isChecking,
+    isChecking: capability === null,
     activeModelId,
-    downloadError: download.status === "error" ? download.error : null,
-    formatSize: formatModelSize,
+    downloadErrorCode: download.status === "error" ? download.errorCode ?? "unknown" : null,
+    formatSize: (sizeMb: number) => formatModelSize(sizeMb, locale),
     localAiEnabled,
     setDefaultModel,
     startDownload,

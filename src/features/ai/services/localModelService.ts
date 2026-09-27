@@ -160,18 +160,27 @@ const EXPENSE_CATEGORY_VALUES: ExpenseCategoryId[] = [
 let activeContext: LlamaContext | null = null;
 let activeModelId: string | null = null;
 let activeContextTokens: number | null = null;
-// Shared in-flight load so a warm-up preload and the first send don't kick off
-// two concurrent initLlama calls for the same model (which fails natively).
-let loadInFlight: { id: string; contextTokens: number; promise: Promise<LlamaContext> } | null = null;
 // Some chat templates reject the enable_thinking flag; once we see that, we stop
 // passing it for the rest of the session.
 let disableThinkingSupported = true;
+
+// All model work (load, completion, release) runs through one serial queue so a
+// context is never loaded twice or freed while a completion is still running.
+let queueTail: Promise<unknown> = Promise.resolve();
+let pendingJobs = 0;
+let releaseRequested = false;
+let chatPending = 0;
+const loadedListeners = new Set<(modelId: string | null) => void>();
+let chatRunning = false;
+let chatStopRequested = false;
+
 const MIN_CONTEXT_TOKENS = 4096;
 const COMPACTION_THRESHOLD = 0.6;
 const COMPACTED_HISTORY_TARGET = 0.15;
 const RECENT_HISTORY_TARGET = 0.05;
 const SUMMARY_TARGET = COMPACTED_HISTORY_TARGET - RECENT_HISTORY_TARGET;
 const CHAT_REPLY_TOKENS = 512;
+const PROMPT_SAFETY_TOKENS = 256;
 
 function estimateTokens(text: string): number {
   return Math.ceil(text.length / 4);
@@ -204,10 +213,28 @@ function isActiveModelId(id: string): boolean {
   return activeModelId === id;
 }
 
+/** Removes reasoning blocks, including an unterminated one still streaming. */
+export function stripThinking(value: string): string {
+  return value
+    .replace(/<think>[\s\S]*?<\/think>/g, "")
+    .replace(/<think>[\s\S]*$/, "")
+    .trim();
+}
+
 function extractJsonObject(value: string) {
-  const start = value.indexOf("{");
-  const end = value.lastIndexOf("}");
-  return start >= 0 && end > start ? value.slice(start, end + 1) : value;
+  const cleaned = stripThinking(value);
+  const start = cleaned.indexOf("{");
+  const end = cleaned.lastIndexOf("}");
+  return start >= 0 && end > start ? cleaned.slice(start, end + 1) : cleaned;
+}
+
+function isThinkingFlagError(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : String(err ?? "");
+  return /enable_thinking|chat[_\s-]?template|jinja/i.test(message);
+}
+
+function requiredContextTokens(promptText: string, nPredict: number): number {
+  return Math.max(MIN_CONTEXT_TOKENS, estimateTokens(promptText) + nPredict + PROMPT_SAFETY_TOKENS);
 }
 
 function normalizeEstimate(value: unknown): TripBudgetEstimate {
@@ -261,6 +288,116 @@ async function getReadyModel(): Promise<AiModel | null> {
   return null;
 }
 
+function enqueue<T>(task: () => Promise<T>): Promise<T> {
+  const run = queueTail.then(task);
+  queueTail = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  return run;
+}
+
+/**
+ * Runs a model job exclusively. A release() requested while jobs are pending
+ * is deferred until the queue drains.
+ */
+function runExclusive<T>(task: () => Promise<T>): Promise<T> {
+  pendingJobs += 1;
+  return enqueue(task).finally(() => {
+    pendingJobs -= 1;
+    if (pendingJobs === 0 && releaseRequested) {
+      releaseRequested = false;
+      void enqueue(releaseContext);
+    }
+  });
+}
+
+function setActive(context: LlamaContext | null, modelId: string | null, tokens: number | null) {
+  const changed = activeModelId !== modelId;
+  activeContext = context;
+  activeModelId = modelId;
+  activeContextTokens = tokens;
+  if (changed) loadedListeners.forEach((listener) => listener(modelId));
+}
+
+async function releaseContext(): Promise<void> {
+  const context = activeContext;
+  setActive(null, null, null);
+  if (!context) return;
+  try {
+    await context.release();
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Loads the model (must be called inside runExclusive). An already loaded
+ * context is reused as long as it can fit `minContextTokens`; the context size
+ * for a fresh load is computed once from free memory at load time.
+ */
+async function loadModelUnlocked(model: AiModel, minContextTokens = MIN_CONTEXT_TOKENS): Promise<LlamaContext> {
+  if (!isLocalAiEnabled()) {
+    throw new Error("Local AI is disabled in Settings.");
+  }
+
+  if (
+    activeContext &&
+    activeModelId === model.id &&
+    (activeContextTokens ?? 0) >= minContextTokens
+  ) {
+    return activeContext;
+  }
+
+  await releaseContext();
+
+  const contextTokens = Math.max(
+    MIN_CONTEXT_TOKENS,
+    minContextTokens,
+    aiModelService.getContextWindowPlan(model).tokens,
+  );
+  const path = aiModelService.getLocalModelPath(model);
+  /**
+   * Try a fast config first, then fall back to plain CPU if it fails.
+   * - n_gpu_layers: on iOS we offload all layers to the Metal GPU for a large
+   *   generation speedup, but some device/model combos can't allocate it.
+   * - flash_attn_type "auto": speeds up attention when the backend supports
+   *   it, but is not available everywhere.
+   * - use_mlock: false avoids pinning pages in RAM while backgrounded.
+   */
+  const baseParams = { model: path, use_mlock: false, n_ctx: contextTokens } as const;
+  let context: LlamaContext;
+  try {
+    context = await initLlama({
+      ...baseParams,
+      n_gpu_layers: Platform.OS === "ios" ? 99 : 0,
+      flash_attn_type: "auto",
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "";
+    const isMissingFile = /(?:no such file|couldn't open|failed to open|not found|does not exist)/i.test(message);
+    if (isMissingFile) {
+      // The model file referenced in storage is gone; clear selection so the
+      // UI prompts a re-download instead of crashing on every chat message.
+      aiModelService.setDownloadedModelId(null);
+      aiModelService.setActiveModelId(null);
+      throw new Error("Local AI model is not downloaded.");
+    }
+    console.warn("[localModelService] fast load failed, retrying on CPU", err);
+    context = await initLlama({ ...baseParams, n_gpu_layers: 0 });
+  }
+  setActive(context, model.id, contextTokens);
+  return context;
+}
+
+async function requireReadyModel(): Promise<AiModel> {
+  const model = await getReadyModel();
+  if (!model) {
+    throw new Error("Local AI model is not downloaded.");
+  }
+  return model;
+}
+
 export const localModelService = {
   /**
    * Checks whether a model file is present locally.
@@ -284,6 +421,19 @@ export const localModelService = {
     return isLocalAiEnabled() && isActiveModelId(model.id) && activeContext !== null;
   },
 
+  /** Notifies when the model loaded in RAM changes. Returns an unsubscribe fn. */
+  subscribeLoadedModel(listener: (modelId: string | null) => void): () => void {
+    loadedListeners.add(listener);
+    return () => {
+      loadedListeners.delete(listener);
+    };
+  },
+
+  /** Whether any model job (load or completion) is queued or running. */
+  isBusy(): boolean {
+    return pendingJobs > 0;
+  },
+
   /**
    * Sets the active/default model in storage without loading it. Inference will
    * lazily load it when needed.
@@ -295,93 +445,24 @@ export const localModelService = {
   },
 
   /**
-   * Loads the model into memory only when needed. Keeps at most one context
-   * alive at a time to avoid running out of RAM. Throws when local AI is disabled.
+   * Loads the model into memory (serialized with other model work). Keeps at
+   * most one context alive at a time. Throws when local AI is disabled.
    */
-  async loadModel(model: AiModel, contextTokens?: number): Promise<LlamaContext> {
-    if (!isLocalAiEnabled()) {
-      throw new Error("Local AI is disabled in Settings.");
-    }
-
-    const requestedContextTokens = Math.max(
-      MIN_CONTEXT_TOKENS,
-      contextTokens ?? aiModelService.getContextWindowPlan(model).tokens,
-    );
-    if (
-      activeContext &&
-      activeModelId === model.id &&
-      activeContextTokens === requestedContextTokens
-    ) {
-      return activeContext;
-    }
-    // Reuse an in-flight load for the same model instead of starting another.
-    if (loadInFlight && loadInFlight.id === model.id && loadInFlight.contextTokens === requestedContextTokens) {
-      return loadInFlight.promise;
-    }
-
-    const path = aiModelService.getLocalModelPath(model);
-    const promise = (async () => {
-      await localModelService.release();
-      /**
-       * Try a fast config first, then fall back to plain CPU if it fails.
-       * - n_gpu_layers: on iOS we offload all layers to the Metal GPU for a large
-       *   generation speedup, but some device/model combos can't allocate it.
-       * - flash_attn_type "auto": speeds up attention when the backend supports
-       *   it, but is not available everywhere.
-       * If either makes initLlama throw, we retry on CPU so chat still works.
-       * - n_ctx: 4096 leaves room for the system prompt, the trip/money context,
-       *   a few recent chat turns, and up to n_predict generated tokens.
-       * - use_mlock: false avoids pinning pages in RAM while backgrounded.
-       */
-      const baseParams = { model: path, use_mlock: false, n_ctx: requestedContextTokens } as const;
-      let context: LlamaContext;
-      try {
-        context = await initLlama({
-          ...baseParams,
-          n_gpu_layers: Platform.OS === "ios" ? 99 : 0,
-          flash_attn_type: "auto",
-        });
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "";
-        const isMissingFile = /(?:no such file|couldn't open|failed to open|not found|does not exist)/i.test(message);
-        if (isMissingFile) {
-          // The model file referenced in storage is gone; clear selection so the
-          // UI prompts a re-download instead of crashing on every chat message.
-          aiModelService.setDownloadedModelId(null);
-          aiModelService.setActiveModelId(null);
-          throw new Error("Local AI model is not downloaded.");
-        }
-        console.warn("[localModelService] fast load failed, retrying on CPU", err);
-        context = await initLlama({ ...baseParams, n_gpu_layers: 0 });
-      }
-      activeContext = context;
-      activeModelId = model.id;
-      activeContextTokens = requestedContextTokens;
-      return context;
-    })();
-
-    loadInFlight = { id: model.id, contextTokens: requestedContextTokens, promise };
-    try {
-      return await promise;
-    } finally {
-      loadInFlight = null;
-    }
+  async loadModel(model: AiModel, minContextTokens?: number): Promise<LlamaContext> {
+    return runExclusive(() => loadModelUnlocked(model, minContextTokens));
   },
 
   /**
-   * Releases the currently loaded model context to free memory.
+   * Releases the loaded context to free memory. If model work is queued or
+   * running, the release is deferred until it finishes, so callers can call
+   * this freely without crashing an in-flight completion.
    */
   async release(): Promise<void> {
-    if (activeContext) {
-      try {
-        await activeContext.release();
-      } catch {
-        // ignore
-      }
-      activeContext = null;
-      activeModelId = null;
-      activeContextTokens = null;
+    if (pendingJobs > 0) {
+      releaseRequested = true;
+      return;
     }
+    await enqueue(releaseContext);
   },
 
   /**
@@ -418,28 +499,27 @@ export const localModelService = {
     const model = await getReadyModel();
     if (!model) return;
     try {
-      await localModelService.loadModel(model, aiModelService.getContextWindowPlan(model).tokens);
+      await localModelService.loadModel(model);
     } catch {
       // best-effort warm-up; the next send will surface any real error
     }
   },
 
   /**
-   * Streams a free-form chat reply from the local model. `history` is the prior
-   * conversation (excluding the system prompt, which is prepended here). The
-   * optional onToken callback fires for each generated token with the latest
-   * delta and the full accumulated text so far.
+   * Compacts older chat history into a summary when the prompt would exceed
+   * the context budget. Uses the loaded context size when the model is already
+   * in memory so compaction matches what chat() will actually run with.
    */
   async prepareChatMemory(
     history: ChatTurn[],
     opts?: Pick<ChatOptions, "systemContext" | "conversationSummary">,
   ): Promise<ChatMemory> {
-    const model = await localModelService.getReadyModel();
-    if (!model) {
-      throw new Error("Local AI model is not downloaded.");
-    }
+    const model = await requireReadyModel();
 
-    const contextTokens = aiModelService.getContextWindowPlan(model).tokens;
+    const contextTokens =
+      activeContext && activeModelId === model.id && activeContextTokens
+        ? activeContextTokens
+        : aiModelService.getContextWindowPlan(model).tokens;
     const existingSummary = opts?.conversationSummary ?? "";
     const promptTokens =
       estimateTokens(systemContent(opts?.systemContext, existingSummary)) +
@@ -472,74 +552,101 @@ export const localModelService = {
       sourceBudget - estimateTokens(summarySource),
     );
     const source = [summarySource, historySource].filter(Boolean).join("\n\n");
-    const context = await localModelService.loadModel(model, contextTokens);
-    const result = await context.completion({
-      messages: [
-        {
-          role: "system",
-          content:
-            "Summarize conversation memory for a future assistant turn. Preserve durable trip facts, user preferences, decisions, unresolved questions, and commitments. Exclude greetings, repetition, and instructions. Use concise plain text.",
-        },
-        { role: "user", content: source },
-      ],
-      jinja: true,
-      n_predict: Math.min(CHAT_REPLY_TOKENS, summaryTarget),
-      temperature: 0.1,
+    const nPredict = Math.min(CHAT_REPLY_TOKENS, summaryTarget);
+    const text = await runExclusive(async () => {
+      const context = await loadModelUnlocked(model, requiredContextTokens(source, nPredict));
+      const result = await context.completion({
+        messages: [
+          {
+            role: "system",
+            content:
+              "Summarize conversation memory for a future assistant turn. Preserve durable trip facts, user preferences, decisions, unresolved questions, and commitments. Exclude greetings, repetition, and instructions. Use concise plain text.",
+          },
+          { role: "user", content: source },
+        ],
+        jinja: true,
+        n_predict: nPredict,
+        temperature: 0.1,
+      });
+      return stripThinking(result.text);
     });
 
     return {
-      summary: trimToTokenBudget(result.text, summaryTarget) || null,
+      summary: trimToTokenBudget(text, summaryTarget) || null,
       history: recentHistory,
       contextTokens,
     };
   },
 
+  /**
+   * Streams a free-form chat reply from the local model. `history` is the prior
+   * conversation (excluding the system prompt, which is prepended here). The
+   * optional onToken callback fires for each generated token with the latest
+   * delta and the accumulated visible text so far (reasoning stripped).
+   * If stopChat() is called, resolves with the partial text generated so far.
+   */
   async chat(history: ChatTurn[], opts?: ChatOptions): Promise<string> {
-    const model = await localModelService.getReadyModel();
-    if (!model) {
-      throw new Error("Local AI model is not downloaded.");
-    }
-
-    const contextTokens = opts?.contextTokens ?? aiModelService.getContextWindowPlan(model).tokens;
-    const context = await localModelService.loadModel(model, contextTokens);
+    const model = await requireReadyModel();
     const messages: ChatTurn[] = [
       { role: "system", content: systemContent(opts?.systemContext, opts?.conversationSummary) },
       ...history,
     ];
+    const minTokens = requiredContextTokens(formatHistory(messages), CHAT_REPLY_TOKENS);
 
-    const onToken = (data: { token: string; accumulated_text?: string }) =>
-      opts?.onToken?.(data.token, data.accumulated_text ?? "");
-    const params = {
-      messages,
-      jinja: true,
-      n_predict: CHAT_REPLY_TOKENS,
-      temperature: 0.6,
-      top_p: 0.9,
-    } as const;
+    chatPending += 1;
+    return runExclusive(async () => {
+      if (chatStopRequested) return "";
+      const context = await loadModelUnlocked(model, minTokens);
+      let partial = "";
+      const onToken = (data: { token: string; accumulated_text?: string }) => {
+        partial = stripThinking(data.accumulated_text ?? "");
+        opts?.onToken?.(data.token, partial);
+      };
+      const params = {
+        messages,
+        jinja: true,
+        n_predict: CHAT_REPLY_TOKENS,
+        temperature: 0.6,
+        top_p: 0.9,
+      } as const;
 
-    // Prefer skipping Qwen's reasoning chain (faster replies), but some chat
-    // templates reject the enable_thinking flag and throw before generating.
-    // If that happens once, disable the flag for the rest of the session and
-    // retry with a plain completion so chat keeps working.
-    if (disableThinkingSupported) {
+      chatRunning = true;
       try {
-        const result = await context.completion({ ...params, enable_thinking: false }, onToken);
-        return result.text.trim();
-      } catch (err) {
-        console.warn("[localModelService] enable_thinking rejected, retrying without it", err);
-        disableThinkingSupported = false;
-      }
-    }
+        if (chatStopRequested) return partial;
+        // Prefer skipping Qwen's reasoning chain (faster replies). Some chat
+        // templates reject the enable_thinking flag before generating; only in
+        // that case disable it for the session and retry without it.
+        if (disableThinkingSupported) {
+          try {
+            const result = await context.completion({ ...params, enable_thinking: false }, onToken);
+            return stripThinking(result.text) || partial;
+          } catch (err) {
+            if (!isThinkingFlagError(err) || partial) throw err;
+            console.warn("[localModelService] enable_thinking rejected, retrying without it", err);
+            disableThinkingSupported = false;
+          }
+        }
 
-    const result = await context.completion(params, onToken);
-    return result.text.trim();
+        const result = await context.completion(params, onToken);
+        return stripThinking(result.text) || partial;
+      } finally {
+        chatRunning = false;
+      }
+    }).finally(() => {
+      chatPending -= 1;
+      if (chatPending === 0) chatStopRequested = false;
+    });
   },
 
   /**
-   * Stops an in-flight chat completion (e.g. on screen unmount).
+   * Stops the in-flight (or queued) chat completion. Non-chat jobs such as
+   * budget estimates are left running. The chat() promise resolves with the
+   * partial reply.
    */
   async stopChat(): Promise<void> {
-    if (activeContext) {
+    if (chatPending === 0) return;
+    chatStopRequested = true;
+    if (chatRunning && activeContext) {
       try {
         await activeContext.stopCompletion();
       } catch {
@@ -549,34 +656,28 @@ export const localModelService = {
   },
 
   async estimateTripBudget(input: TripBudgetEstimateInput): Promise<TripBudgetEstimate> {
-    const model = await localModelService.getReadyModel();
-    if (!model) {
-      throw new Error("Local AI model is not downloaded.");
-    }
-
-    const context = await localModelService.loadModel(model);
+    const model = await requireReadyModel();
     const prompt =
       LOCAL_AI_PROMPTS.systemBudgetEstimator + "\n\n" + LOCAL_AI_PROMPTS.budgetRequest(input);
 
-    const result = await context.completion({
-      prompt,
-      n_predict: 220,
-      temperature: 0.25,
-      response_format: { type: "json_object" },
+    const text = await runExclusive(async () => {
+      const context = await loadModelUnlocked(model, requiredContextTokens(prompt, 220));
+      const result = await context.completion({
+        prompt,
+        n_predict: 220,
+        temperature: 0.25,
+        response_format: { type: "json_object" },
+      });
+      return result.text;
     });
 
-    return normalizeEstimate(JSON.parse(extractJsonObject(result.text)));
+    return normalizeEstimate(JSON.parse(extractJsonObject(text)));
   },
 
   async refineItinerary(
     events: ItineraryEventRefinementInput[],
   ): Promise<ItineraryEventRefinement> {
-    const model = await localModelService.getReadyModel();
-    if (!model) {
-      throw new Error("Local AI model is not downloaded.");
-    }
-
-    const context = await localModelService.loadModel(model);
+    const model = await requireReadyModel();
     const refinementEvents = events.map(({ id, type, title, detail, startAt, createdAt }) => ({
       id,
       type,
@@ -585,16 +686,22 @@ export const localModelService = {
       startAt,
       createdAt,
     }));
-    const result = await context.completion({
-      prompt:
-        LOCAL_AI_PROMPTS.systemItineraryRefiner +
-        "\n\n" +
-        LOCAL_AI_PROMPTS.itineraryRefinementRequest(refinementEvents),
-      n_predict: 300,
-      temperature: 0.1,
-      response_format: { type: "json_object" },
+    const prompt =
+      LOCAL_AI_PROMPTS.systemItineraryRefiner +
+      "\n\n" +
+      LOCAL_AI_PROMPTS.itineraryRefinementRequest(refinementEvents);
+
+    const text = await runExclusive(async () => {
+      const context = await loadModelUnlocked(model, requiredContextTokens(prompt, 300));
+      const result = await context.completion({
+        prompt,
+        n_predict: 300,
+        temperature: 0.1,
+        response_format: { type: "json_object" },
+      });
+      return result.text;
     });
-    const parsed = JSON.parse(extractJsonObject(result.text)) as Partial<ItineraryEventRefinement>;
+    const parsed = JSON.parse(extractJsonObject(text)) as Partial<ItineraryEventRefinement>;
     const knownIds = new Set(events.map((event) => event.id));
     const keepIds = Array.from(
       new Set(
@@ -617,23 +724,26 @@ export const localModelService = {
    * category, letting callers fall back to a heuristic.
    */
   async categorizeExpense(input: ExpenseCategoryInput): Promise<ExpenseCategoryId | null> {
-    const model = await localModelService.getReadyModel();
+    const model = await getReadyModel();
     if (!model) return null;
 
-    const context = await localModelService.loadModel(model);
     const prompt =
       LOCAL_AI_PROMPTS.systemExpenseCategorizer +
       "\n\n" +
       LOCAL_AI_PROMPTS.expenseCategoryRequest(input);
 
     try {
-      const result = await context.completion({
-        prompt,
-        n_predict: 30,
-        temperature: 0.1,
-        response_format: { type: "json_object" },
+      const text = await runExclusive(async () => {
+        const context = await loadModelUnlocked(model, requiredContextTokens(prompt, 30));
+        const result = await context.completion({
+          prompt,
+          n_predict: 30,
+          temperature: 0.1,
+          response_format: { type: "json_object" },
+        });
+        return result.text;
       });
-      const parsed = JSON.parse(extractJsonObject(result.text)) as {
+      const parsed = JSON.parse(extractJsonObject(text)) as {
         category?: string;
       };
       const category = parsed.category?.trim().toLowerCase() as ExpenseCategoryId;
@@ -645,23 +755,22 @@ export const localModelService = {
   },
 
   async suggestTripName(input: TripNameInput): Promise<TripNameSuggestion> {
-    const model = await localModelService.getReadyModel();
-    if (!model) {
-      throw new Error("Local AI model is not downloaded.");
-    }
-
-    const context = await localModelService.loadModel(model);
+    const model = await requireReadyModel();
     const prompt =
       LOCAL_AI_PROMPTS.systemTripNameGenerator + "\n\n" + LOCAL_AI_PROMPTS.tripNameRequest(input);
 
-    const result = await context.completion({
-      prompt,
-      n_predict: 90,
-      temperature: 0.65,
-      response_format: { type: "json_object" },
+    const text = await runExclusive(async () => {
+      const context = await loadModelUnlocked(model, requiredContextTokens(prompt, 90));
+      const result = await context.completion({
+        prompt,
+        n_predict: 90,
+        temperature: 0.65,
+        response_format: { type: "json_object" },
+      });
+      return result.text;
     });
 
-    const parsed = JSON.parse(extractJsonObject(result.text)) as Partial<TripNameSuggestion>;
+    const parsed = JSON.parse(extractJsonObject(text)) as Partial<TripNameSuggestion>;
     const name = typeof parsed.name === "string" ? parsed.name.trim() : "";
     if (!name) {
       throw new Error("Local model returned an empty trip name.");

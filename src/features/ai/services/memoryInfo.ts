@@ -9,7 +9,11 @@ const nativeModule = requireOptionalNativeModule<ExpoMemoryInfoModule>("ExpoMemo
 export const memoryInfo = {
   getAvailableMemoryBytes(): number | null {
     if (!nativeModule) return null;
-    const available = nativeModule.getAvailableMemoryBytes();
-    return Number.isFinite(available) && available > 0 ? available : null;
+    try {
+      const available = nativeModule.getAvailableMemoryBytes();
+      return Number.isFinite(available) && available > 0 ? available : null;
+    } catch {
+      return null;
+    }
   },
 };

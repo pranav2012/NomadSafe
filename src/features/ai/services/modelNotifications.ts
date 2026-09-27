@@ -1,11 +1,27 @@
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import { storage } from "@/stores/storage";
+import { translate } from "@/localization/translate";
 
 const NOTIFY_PREF_KEY = "ai-notify-on-download";
 
 let handlerConfigured = false;
 let permissionGranted: boolean | null = null;
+
+function setupAndroidChannels() {
+  Notifications.setNotificationChannelAsync("downloads", {
+    name: translate("aiTab.notifyChannelDownloads"),
+    importance: Notifications.AndroidImportance.DEFAULT,
+  }).catch(() => {
+    // channel setup is best-effort
+  });
+  Notifications.setNotificationChannelAsync("assistant", {
+    name: translate("aiTab.notifyChannelAssistant"),
+    importance: Notifications.AndroidImportance.DEFAULT,
+  }).catch(() => {
+    // channel setup is best-effort
+  });
+}
 
 /**
  * Local notifications for background model downloads. We only ever post a
@@ -15,28 +31,8 @@ export const modelNotifications = {
   configure() {
     if (handlerConfigured) return;
     handlerConfigured = true;
-    Notifications.setNotificationHandler({
-      handleNotification: async () => ({
-        shouldShowBanner: true,
-        shouldShowList: true,
-        shouldPlaySound: false,
-        shouldSetBadge: false,
-      }),
-    });
-    if (Platform.OS === "android") {
-      Notifications.setNotificationChannelAsync("downloads", {
-        name: "Downloads",
-        importance: Notifications.AndroidImportance.DEFAULT,
-      }).catch(() => {
-        // channel setup is best-effort
-      });
-      Notifications.setNotificationChannelAsync("assistant", {
-        name: "Assistant replies",
-        importance: Notifications.AndroidImportance.DEFAULT,
-      }).catch(() => {
-        // channel setup is best-effort
-      });
-    }
+    // The global foreground handler is owned by useSafetyNotificationRouting.
+    if (Platform.OS === "android") setupAndroidChannels();
   },
 
   async ensurePermission(): Promise<boolean> {
@@ -78,8 +74,8 @@ export const modelNotifications = {
     if (!granted) return;
     await Notifications.scheduleNotificationAsync({
       content: {
-        title: "Assistant ready",
-        body: `${modelName} finished downloading and is ready to use offline.`,
+        title: translate("aiTab.notifyModelReadyTitle"),
+        body: translate("aiTab.notifyModelReadyBody", { model: modelName }),
         ...(Platform.OS === "android" ? { channelId: "downloads" } : {}),
       },
       trigger: null,
@@ -97,8 +93,8 @@ export const modelNotifications = {
     if (!granted) return;
     await Notifications.scheduleNotificationAsync({
       content: {
-        title: "Nomad replied",
-        body: "Your assistant finished a reply. Tap to read it.",
+        title: translate("aiTab.notifyReplyTitle"),
+        body: translate("aiTab.notifyReplyBody"),
         ...(Platform.OS === "android" ? { channelId: "assistant" } : {}),
       },
       trigger: null,

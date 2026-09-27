@@ -1,18 +1,23 @@
 import * as Device from "expo-device";
-import {
-  Paths,
-  Directory,
-  File,
-  type DownloadOptions,
-  type DownloadProgress,
-} from "expo-file-system";
+import { Paths, Directory, File } from "expo-file-system";
+import * as LegacyFileSystem from "expo-file-system/legacy";
 import { Platform } from "react-native";
 import { storage } from "@/stores/storage";
 import { memoryInfo } from "./memoryInfo";
 
-export function formatModelSize(sizeMb: number): string {
-  if (sizeMb >= 1024) return `${(sizeMb / 1024).toFixed(1)} GB`;
-  return `${sizeMb} MB`;
+export function formatModelSize(sizeMb: number, locale?: string): string {
+  const useGb = sizeMb >= 1024;
+  const value = useGb ? sizeMb / 1024 : sizeMb;
+  try {
+    return new Intl.NumberFormat(locale, {
+      style: "unit",
+      unit: useGb ? "gigabyte" : "megabyte",
+      unitDisplay: "short",
+      maximumFractionDigits: useGb ? 1 : 0,
+    }).format(value);
+  } catch {
+    return useGb ? `${value.toFixed(1)} GB` : `${Math.round(value)} MB`;
+  }
 }
 
 export interface DeviceCapability {
@@ -38,6 +43,8 @@ export interface AiModel {
   hfFilename: string;
   /** Quantization label shown to the user. */
   quantLabel: string;
+  /** Exact file size in bytes, when known; otherwise the HTTP size is used. */
+  sizeBytes?: number;
 }
 
 export interface ContextWindowPlan {
@@ -87,6 +94,65 @@ export const AI_MODELS: AiModel[] = [
 const AI_MODEL_ID_KEY = "ai-selected-model-id";
 const AI_MODEL_DOWNLOADED_KEY = "ai-downloaded-model-id";
 const AI_ACTIVE_MODEL_ID_KEY = "ai-active-model-id";
+export const AI_DOWNLOAD_STATE_KEY = "ai-download-state";
+const MB = 1024 * 1024;
+// Coarse floor against truncated files / HTML error pages; sizeMb is approximate.
+const MIN_COMPLETE_FRACTION = 0.8;
+
+let legacyMigration: Promise<void> | null = null;
+
+function legacyAndroidModelPath(model: AiModel): string {
+  return `${Paths.cache.uri}models/${model.id}/${model.hfFilename}`;
+}
+
+function minimumCompleteBytes(model: AiModel): number {
+  return model.sizeBytes ?? Math.floor(model.sizeMb * MB * MIN_COMPLETE_FRACTION);
+}
+
+async function fileSize(uri: string): Promise<number | null> {
+  try {
+    const info = await LegacyFileSystem.getInfoAsync(uri);
+    return info.exists && !info.isDirectory ? info.size : null;
+  } catch {
+    return null;
+  }
+}
+
+function hasUnfinishedDownload(model: AiModel): boolean {
+  const raw = storage.getString(AI_DOWNLOAD_STATE_KEY);
+  if (!raw) return false;
+  try {
+    const persisted = JSON.parse(raw) as { modelId?: string; status?: string };
+    return persisted.modelId === model.id && persisted.status !== "completed";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Android builds used to store models in the purgeable cache dir, written in
+ * place. Move complete files to the documents dir; drop partial ones.
+ */
+async function migrateLegacyAndroidModels(): Promise<void> {
+  if (Platform.OS !== "android") return;
+  for (const model of AI_MODELS) {
+    const legacyPath = legacyAndroidModelPath(model);
+    try {
+      const size = await fileSize(legacyPath);
+      if (size === null) continue;
+      const target = aiModelService.getLocalModelPath(model);
+      const complete = !hasUnfinishedDownload(model) && size >= minimumCompleteBytes(model);
+      if (complete && (await fileSize(target)) === null) {
+        await aiModelService.ensureModelDir(model);
+        await LegacyFileSystem.moveAsync({ from: legacyPath, to: target });
+      } else {
+        await LegacyFileSystem.deleteAsync(legacyPath, { idempotent: true });
+      }
+    } catch (err) {
+      console.warn("[aiModelService] legacy model migration failed", err);
+    }
+  }
+}
 
 function getOsVersion(): number {
   if (Platform.OS === "android") {
@@ -203,10 +269,13 @@ export const aiModelService = {
     return `https://huggingface.co/${model.hfRepoId}/resolve/main/${model.hfFilename}`;
   },
 
+  /**
+   * Models live in the documents dir on both platforms: Android may purge the
+   * cache dir under storage pressure. On iOS the documents dir is included in
+   * iCloud backups and expo-file-system has no exclude-from-backup API.
+   */
   getLocalModelDir(model: AiModel): string {
-    return Platform.OS === "ios"
-      ? `${Paths.document.uri}models/${model.id}/`
-      : `${Paths.cache.uri}models/${model.id}/`;
+    return `${Paths.document.uri}models/${model.id}/`;
   },
 
   async ensureModelDir(model: AiModel): Promise<void> {
@@ -217,39 +286,29 @@ export const aiModelService = {
   },
 
   getLocalModelPath(model: AiModel): string {
-    // Models live in the app's documents directory so they are not backed up to iCloud
-    // and can be loaded on demand by llama.rn.
     return `${aiModelService.getLocalModelDir(model)}${model.hfFilename}`;
   },
 
-  async downloadModel(
-    model: AiModel,
-    onProgress?: (progress: number) => void,
-  ): Promise<void> {
-    const dir = new Directory(aiModelService.getLocalModelDir(model));
-    await dir.create({ intermediates: true });
-
-    const options: DownloadOptions = {
-      idempotent: true,
-      onProgress: (downloadProgress: DownloadProgress) => {
-        const total = downloadProgress.totalBytes > 0 ? downloadProgress.totalBytes : model.sizeMb * 1024 * 1024;
-        const percent = total > 0
-          ? Math.round((downloadProgress.bytesWritten / total) * 100)
-          : 0;
-        onProgress?.(Math.min(Math.max(percent, 0), 100));
-      },
-    };
-
-    await File.downloadFileAsync(
-      aiModelService.getModelDownloadUrl(model),
-      dir,
-      options,
-    );
+  /** In-progress downloads are written here and renamed once verified. */
+  getPartialModelPath(model: AiModel): string {
+    return `${aiModelService.getLocalModelPath(model)}.part`;
   },
 
+  getMinimumCompleteBytes(model: AiModel): number {
+    return minimumCompleteBytes(model);
+  },
+
+  /** Moves models from older storage locations. Runs once per launch. */
+  migrateLegacyStorage(): Promise<void> {
+    legacyMigration ??= migrateLegacyAndroidModels();
+    return legacyMigration;
+  },
+
+  /** True only for a fully downloaded file at the final (non-.part) path. */
   async isModelDownloaded(model: AiModel): Promise<boolean> {
-    const file = new File(aiModelService.getLocalModelPath(model));
-    return file.exists;
+    await aiModelService.migrateLegacyStorage();
+    const size = await fileSize(aiModelService.getLocalModelPath(model));
+    return size !== null && size >= minimumCompleteBytes(model);
   },
 
   /**
@@ -257,9 +316,11 @@ export const aiModelService = {
    * does not exist. Returns true if the file was present and removed.
    */
   async deleteModel(model: AiModel): Promise<boolean> {
+    const partial = new File(aiModelService.getPartialModelPath(model));
+    if (partial.exists) partial.delete();
     const file = new File(aiModelService.getLocalModelPath(model));
     if (!file.exists) return false;
-    await file.delete();
+    file.delete();
     return true;
   },
 };

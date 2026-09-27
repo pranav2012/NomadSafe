@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -14,6 +14,10 @@ import { Icon } from "@/components/nomad/Icon";
 import { NomadCard } from "@/components/nomad/Card";
 import { NomadButton } from "@/components/nomad/Button";
 import { useAiModels, type ModelListItem } from "../hooks/useAiModels";
+import { useChatStore } from "../store/chatStore";
+import { AI_MODELS } from "../services/aiModelService";
+
+const AI_MIN_RAM_GB = AI_MODELS[0].minRamGb;
 
 interface Props {
   theme: NomadTheme;
@@ -47,6 +51,8 @@ function ModelRow({
   onDelete,
   t,
   formatSize,
+  isStarting,
+  isModelBusy,
 }: {
   item: ModelListItem;
   theme: NomadTheme;
@@ -55,6 +61,9 @@ function ModelRow({
   onDelete: (item: ModelListItem) => void;
   t: (key: string, params?: Record<string, string | number>) => string;
   formatSize: (sizeMb: number) => string;
+  isStarting: boolean;
+  /** A chat reply is generating; swapping or deleting models is blocked. */
+  isModelBusy: boolean;
 }) {
   const { model, isDownloaded, isLoaded, isActive, isAvailable, isRecommended } = item;
 
@@ -124,6 +133,7 @@ function ModelRow({
               <NomadButton
                 variant="teal"
                 theme={theme}
+                disabled={isModelBusy}
                 onPress={() => onSetDefault(item)}
                 icon={<Icon name="check" size={15} color="#fff" strokeWidth={2} />}
               >
@@ -143,22 +153,24 @@ function ModelRow({
             <NomadButton
               variant="stamp"
               theme={theme}
+              disabled={isModelBusy}
               onPress={() => onDelete(item)}
               icon={<Icon name="trash" size={15} color="#fff" strokeWidth={2} />}
             >
               {t("aiTab.deleteModel")}
             </NomadButton>
           </>
-        ) : isAvailable ? (
+        ) : isAvailable && !item.isDownloading && !item.isPaused ? (
           <NomadButton
             variant="primary"
             theme={theme}
+            disabled={isStarting}
             onPress={() => onDownload(item)}
             icon={<Icon name="download" size={15} color={theme.paperSoft} strokeWidth={2} />}
           >
             {t("aiTab.downloadModel", { size: formatSize(model.sizeMb) })}
           </NomadButton>
-        ) : (
+        ) : isAvailable ? null : (
           <NomadButton variant="ghost" theme={theme} disabled>
             {t("aiTab.notAvailable")}
           </NomadButton>
@@ -174,8 +186,7 @@ export function AiModelManager({ theme, onEnableAi }: Props) {
     models,
     capability,
     isChecking,
-    activeModelId,
-    downloadError,
+    downloadErrorCode,
     formatSize,
     setDefaultModel,
     startDownload,
@@ -184,15 +195,26 @@ export function AiModelManager({ theme, onEnableAi }: Props) {
     cancelDownload,
     deleteModel,
   } = useAiModels();
+  const isModelBusy = useChatStore((state) => state.generatingConversationKey !== null);
+  const [startingId, setStartingId] = useState<string | null>(null);
 
   const anyDownloaded = models.some((m) => m.isDownloaded);
 
-  const handleDownload = async (item: ModelListItem) => {
-    await startDownload(item.model);
-    onEnableAi?.();
+  const handleDownload = (item: ModelListItem) => {
+    if (startingId) return;
+    setStartingId(item.model.id);
+    const wasDownloaded = item.isDownloaded;
+    // Don't await the whole download; progress is shown via download state.
+    startDownload(item.model)
+      .then(() => {
+        if (wasDownloaded) onEnableAi?.();
+      })
+      .catch((err) => console.warn("[AiModelManager] download failed to start", err))
+      .finally(() => setStartingId(null));
   };
 
   const handleSetDefault = (item: ModelListItem) => {
+    if (isModelBusy) return;
     setDefaultModel(item.model);
   };
 
@@ -231,7 +253,9 @@ export function AiModelManager({ theme, onEnableAi }: Props) {
         <Text style={[styles.unsupportedTitle, { color: theme.inkDeep }]}>
           {t("aiTab.unsupportedTitle")}
         </Text>
-        <Text style={[styles.unsupportedBody, { color: theme.inkSoft }]}>{t("aiTab.unsupportedBody")}</Text>
+        <Text style={[styles.unsupportedBody, { color: theme.inkSoft }]}>
+          {t("aiTab.unsupportedDeviceBody", { ram: AI_MIN_RAM_GB })}
+        </Text>
       </NomadCard>
     );
   }
@@ -274,6 +298,8 @@ export function AiModelManager({ theme, onEnableAi }: Props) {
           onDelete={handleDelete}
           t={t}
           formatSize={formatSize}
+          isStarting={startingId !== null}
+          isModelBusy={isModelBusy}
         />
       ))}
 
@@ -295,10 +321,12 @@ export function AiModelManager({ theme, onEnableAi }: Props) {
         </View>
       )}
 
-      {downloadError ? (
+      {downloadErrorCode ? (
         <View style={[styles.errorRow, { backgroundColor: theme.stampSoft, borderColor: theme.stamp }]}>
           <Icon name="alertTriangle" size={16} color={theme.stamp} strokeWidth={2} />
-          <Text style={[styles.errorText, { color: theme.stamp }]}>{downloadError}</Text>
+          <Text style={[styles.errorText, { color: theme.stamp }]}>
+            {t(`aiTab.downloadError.${downloadErrorCode}`)}
+          </Text>
         </View>
       ) : null}
 
