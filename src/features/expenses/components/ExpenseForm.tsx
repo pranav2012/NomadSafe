@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
   Modal,
   Pressable,
   ScrollView,
@@ -29,12 +30,12 @@ import {
 } from "@/features/expenses/store/expensesStore";
 import { categorizeHeuristic } from "@/features/expenses/services/categorizer";
 import { getCurrentExpenseLocation } from "@/features/expenses/services/locationTagging";
+import { localeDecimalSeparator, parseAmountInput } from "@/features/expenses/utils/amountInput";
 
 export interface ExpenseFormProps {
   editingExpense?: Expense | null;
   tripId: string | null;
   tripCurrency: string;
-  companions: string[];
   onSave: () => void;
   onCancel: () => void;
 }
@@ -64,7 +65,6 @@ export function ExpenseForm({
   editingExpense,
   tripId,
   tripCurrency,
-  companions,
   onSave,
   onCancel,
 }: ExpenseFormProps) {
@@ -75,7 +75,10 @@ export function ExpenseForm({
   const updateExpense = useExpensesStore((state) => state.updateExpense);
   const deleteExpense = useExpensesStore((state) => state.deleteExpense);
 
-  const [amount, setAmount] = useState(editingExpense ? String(editingExpense.amount) : "");
+  const decimalSeparator = useMemo(() => localeDecimalSeparator(locale), [locale]);
+  const [amount, setAmount] = useState(
+    editingExpense ? String(editingExpense.amount).replace(".", decimalSeparator) : "",
+  );
   const [merchant, setMerchant] = useState(editingExpense?.merchant ?? "");
   const [category, setCategory] = useState<ExpenseCategory>(
     editingExpense?.category ?? "other",
@@ -86,7 +89,6 @@ export function ExpenseForm({
   const [date, setDate] = useState<Date>(
     editingExpense ? new Date(editingExpense.date) : new Date(),
   );
-  const [splitWith, setSplitWith] = useState<string[]>(editingExpense?.splitWith ?? []);
   const [location, setLocation] = useState<ExpenseLocation | null>(
     editingExpense?.location ?? null,
   );
@@ -110,14 +112,6 @@ export function ExpenseForm({
     setCategoryTouched(true);
   };
 
-  const toggleSplit = (name: string) => {
-    setSplitWith((current) =>
-      current.includes(name)
-        ? current.filter((item) => item !== name)
-        : [...current, name],
-    );
-  };
-
   const handleToggleLocation = async () => {
     if (location) {
       setLocation(null);
@@ -129,12 +123,12 @@ export function ExpenseForm({
     if (result) {
       setLocation(result);
     } else {
-      Alert.alert(t("expenses.tagLocation"), t("expenses.smsPermissionDenied"));
+      Alert.alert(t("expenses.tagLocation"), t("expenses.locationUnavailable"));
     }
   };
 
   const handleSave = () => {
-    const numericAmount = Number(amount);
+    const numericAmount = parseAmountInput(amount, decimalSeparator);
     const trimmedMerchant = merchant.trim();
     if (!Number.isFinite(numericAmount) || numericAmount <= 0 || !trimmedMerchant) {
       Alert.alert(t("expenses.validationTitle"), t("expenses.validationBody"));
@@ -150,7 +144,6 @@ export function ExpenseForm({
       note: note.trim() || undefined,
       date: date.toISOString(),
       location,
-      splitWith: splitWith.length > 0 ? splitWith : undefined,
     };
 
     if (editingExpense) {
@@ -189,288 +182,263 @@ export function ExpenseForm({
   const isAndroid = process.env.EXPO_OS === "android";
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.scroll}
-      keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.headerRow}>
-        <View>
-          <Text style={[styles.eyebrow, { color: theme.inkMuted }]}>
-            {editingExpense ? t("expenses.editEyebrow") : t("expenses.addEyebrow")}
-          </Text>
-          <Text style={[styles.title, { color: theme.inkDeep }]}>
-            {editingExpense ? t("expenses.editTitle") : t("expenses.addTitle")}
-          </Text>
-        </View>
-        <Pressable
-          onPress={onCancel}
-          hitSlop={10}
-          style={[styles.closeButton, { backgroundColor: theme.paper, borderColor: theme.hairline }]}
-        >
-          <Icon name="x" size={18} color={theme.inkSoft} />
-        </Pressable>
-      </View>
-
-      <View style={[styles.card, { backgroundColor: theme.paperSoft, borderColor: theme.hairline }]}>
-        <View style={styles.group}>
-          <View style={styles.labelRow}>
-            <Text style={[styles.label, { color: theme.inkMuted }]}>{t("expenses.amount")}</Text>
-            <Pressable onPress={() => setIsCurrencyOpen((open) => !open)} hitSlop={8}>
-              <Text style={[styles.meta, { color: theme.teal }]}>{currency}</Text>
-            </Pressable>
+    <KeyboardAvoidingView style={styles.flex} behavior="padding">
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={[styles.eyebrow, { color: theme.inkMuted }]}>
+              {editingExpense ? t("expenses.editEyebrow") : t("expenses.addEyebrow")}
+            </Text>
+            <Text style={[styles.title, { color: theme.inkDeep }]}>
+              {editingExpense ? t("expenses.editTitle") : t("expenses.addTitle")}
+            </Text>
           </View>
-          <View style={[styles.inputShell, { backgroundColor: theme.paper, borderColor: theme.hairline }]}>
-            {affix.prefix ? (
-              <Text style={[styles.affix, { color: theme.inkDeep }]}>{affix.prefix}</Text>
-            ) : null}
-            <TextInput
-              value={amount}
-              onChangeText={(value) => setAmount(value.replace(/[^0-9.]/g, ""))}
-              placeholder="0.00"
-              placeholderTextColor={theme.inkMuted}
-              keyboardType="decimal-pad"
-              style={[styles.amountInput, { color: theme.inkDeep }]}
-            />
-            {affix.suffix ? (
-              <Text style={[styles.affix, { color: theme.inkDeep }]}>{affix.suffix}</Text>
-            ) : null}
-          </View>
-          {isCurrencyOpen ? (
-            <View style={styles.currencyGrid}>
-              {CURRENCY_OPTIONS.map((option) => {
-                const active = option.code === currency;
-                return (
-                  <Pressable
-                    key={option.code}
-                    onPress={() => {
-                      setCurrency(option.code);
-                      setIsCurrencyOpen(false);
-                    }}
-                    style={[
-                      styles.currencyOption,
-                      {
-                        backgroundColor: active ? theme.tealSoft : theme.paper,
-                        borderColor: active ? theme.teal : theme.hairline,
-                      },
-                    ]}
-                  >
-                    <Text style={[styles.currencyCode, { color: theme.inkDeep }]}>{option.code}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          ) : null}
-        </View>
-
-        <View style={styles.group}>
-          <Text style={[styles.label, { color: theme.inkMuted }]}>{t("expenses.merchant")}</Text>
-          <View style={[styles.inputShell, { backgroundColor: theme.paper, borderColor: theme.hairline }]}>
-            <TextInput
-              value={merchant}
-              onChangeText={handleMerchantChange}
-              placeholder={t("expenses.merchantPlaceholder")}
-              placeholderTextColor={theme.inkMuted}
-              autoCapitalize="words"
-              style={[styles.input, { color: theme.inkDeep }]}
-            />
-          </View>
-        </View>
-
-        <View style={styles.group}>
-          <Text style={[styles.label, { color: theme.inkMuted }]}>{t("expenses.categoryLabel")}</Text>
-          <View style={styles.categoryRow}>
-            {EXPENSE_CATEGORIES.map((meta) => {
-              const active = meta.id === category;
-              const color = theme[meta.color];
-              return (
-                <Pressable
-                  key={meta.id}
-                  onPress={() => handleSelectCategory(meta.id)}
-                  style={[
-                    styles.categoryChip,
-                    {
-                      backgroundColor: active ? theme[meta.soft] : theme.paper,
-                      borderColor: active ? color : theme.hairline,
-                    },
-                  ]}
-                >
-                  <Icon name={meta.icon} size={15} color={active ? color : theme.inkSoft} />
-                  <Text
-                    style={[
-                      styles.categoryText,
-                      { color: active ? theme.inkDeep : theme.inkSoft },
-                    ]}
-                  >
-                    {t(`expenses.category.${meta.id}`)}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-
-        <View style={styles.group}>
-          <Text style={[styles.label, { color: theme.inkMuted }]}>{t("expenses.dateLabel")}</Text>
           <Pressable
-            onPress={() => setIsPickerOpen(true)}
-            style={[styles.inputShell, { backgroundColor: theme.paper, borderColor: theme.hairline }]}
+            onPress={onCancel}
+            hitSlop={10}
+            style={[styles.closeButton, { backgroundColor: theme.paper, borderColor: theme.hairline }]}
           >
-            <Icon name="calendar" size={16} color={theme.inkSoft} />
-            <Text style={[styles.dateText, { color: theme.inkDeep }]}>{dateLabel}</Text>
+            <Icon name="x" size={18} color={theme.inkSoft} />
           </Pressable>
-          {isAndroid && isPickerOpen ? (
-            <DateTimePicker
-              value={date}
-              mode="date"
-              display="default"
-              presentation="dialog"
-              accentColor={theme.teal}
-              positiveButton={{ label: t("common.ok") }}
-              negativeButton={{ label: t("common.cancel") }}
-              onDismiss={() => setIsPickerOpen(false)}
-              onValueChange={(_, selected) => {
-                setDate(selected);
-                setIsPickerOpen(false);
-              }}
-            />
-          ) : null}
         </View>
 
-        <View style={styles.group}>
-          <Text style={[styles.label, { color: theme.inkMuted }]}>{t("expenses.noteLabel")}</Text>
-          <View style={[styles.inputShell, { backgroundColor: theme.paper, borderColor: theme.hairline }]}>
-            <TextInput
-              value={note}
-              onChangeText={setNote}
-              placeholder={t("expenses.notePlaceholder")}
-              placeholderTextColor={theme.inkMuted}
-              style={[styles.input, { color: theme.inkDeep }]}
-            />
-          </View>
-        </View>
-
-        <Pressable
-          onPress={handleToggleLocation}
-          style={[
-            styles.locationRow,
-            {
-              backgroundColor: location ? theme.tealSoft : theme.paper,
-              borderColor: location ? theme.teal : theme.hairline,
-            },
-          ]}
-        >
-          <Icon name="mapPin" size={16} color={location ? theme.teal : theme.inkSoft} />
-          <Text style={[styles.locationText, { color: theme.inkDeep }]}>
-            {isLocating
-              ? t("expenses.locating")
-              : location
-                ? location.label ?? t("expenses.locationTagged")
-                : t("expenses.tagLocation")}
-          </Text>
-          {isLocating ? (
-            <ActivityIndicator size="small" color={theme.teal} />
-          ) : (
-            <View
-              style={[
-                styles.toggle,
-                {
-                  backgroundColor: location ? theme.teal : "transparent",
-                  borderColor: location ? theme.teal : theme.hairline,
-                },
-              ]}
-            >
-              {location ? <Icon name="check" size={12} color={theme.inverse} strokeWidth={3} /> : null}
-            </View>
-          )}
-        </Pressable>
-
-        {companions.length > 0 ? (
+        <View style={[styles.card, { backgroundColor: theme.paperSoft, borderColor: theme.hairline }]}>
           <View style={styles.group}>
-            <Text style={[styles.label, { color: theme.inkMuted }]}>{t("expenses.splitWith")}</Text>
+            <View style={styles.labelRow}>
+              <Text style={[styles.label, { color: theme.inkMuted }]}>{t("expenses.amount")}</Text>
+              <Pressable onPress={() => setIsCurrencyOpen((open) => !open)} hitSlop={8}>
+                <Text style={[styles.meta, { color: theme.teal }]}>{currency}</Text>
+              </Pressable>
+            </View>
+            <View style={[styles.inputShell, { backgroundColor: theme.paper, borderColor: theme.hairline }]}>
+              {affix.prefix ? (
+                <Text style={[styles.affix, { color: theme.inkDeep }]}>{affix.prefix}</Text>
+              ) : null}
+              <TextInput
+                value={amount}
+                onChangeText={(value) => setAmount(value.replace(/[^0-9.,]/g, ""))}
+                placeholder={`0${decimalSeparator}00`}
+                placeholderTextColor={theme.inkMuted}
+                keyboardType="decimal-pad"
+                style={[styles.amountInput, { color: theme.inkDeep }]}
+              />
+              {affix.suffix ? (
+                <Text style={[styles.affix, { color: theme.inkDeep }]}>{affix.suffix}</Text>
+              ) : null}
+            </View>
+            {isCurrencyOpen ? (
+              <View style={styles.currencyGrid}>
+                {CURRENCY_OPTIONS.map((option) => {
+                  const active = option.code === currency;
+                  return (
+                    <Pressable
+                      key={option.code}
+                      onPress={() => {
+                        setCurrency(option.code);
+                        setIsCurrencyOpen(false);
+                      }}
+                      style={[
+                        styles.currencyOption,
+                        {
+                          backgroundColor: active ? theme.tealSoft : theme.paper,
+                          borderColor: active ? theme.teal : theme.hairline,
+                        },
+                      ]}
+                    >
+                      <Text style={[styles.currencyCode, { color: theme.inkDeep }]}>{option.code}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            ) : null}
+          </View>
+
+          <View style={styles.group}>
+            <Text style={[styles.label, { color: theme.inkMuted }]}>{t("expenses.merchant")}</Text>
+            <View style={[styles.inputShell, { backgroundColor: theme.paper, borderColor: theme.hairline }]}>
+              <TextInput
+                value={merchant}
+                onChangeText={handleMerchantChange}
+                placeholder={t("expenses.merchantPlaceholder")}
+                placeholderTextColor={theme.inkMuted}
+                autoCapitalize="words"
+                style={[styles.input, { color: theme.inkDeep }]}
+              />
+            </View>
+          </View>
+
+          <View style={styles.group}>
+            <Text style={[styles.label, { color: theme.inkMuted }]}>{t("expenses.categoryLabel")}</Text>
             <View style={styles.categoryRow}>
-              {companions.map((name) => {
-                const active = splitWith.includes(name);
+              {EXPENSE_CATEGORIES.map((meta) => {
+                const active = meta.id === category;
+                const color = theme[meta.color];
                 return (
                   <Pressable
-                    key={name}
-                    onPress={() => toggleSplit(name)}
+                    key={meta.id}
+                    onPress={() => handleSelectCategory(meta.id)}
                     style={[
                       styles.categoryChip,
                       {
-                        backgroundColor: active ? theme.mustardSoft : theme.paper,
-                        borderColor: active ? theme.mustard : theme.hairline,
+                        backgroundColor: active ? theme[meta.soft] : theme.paper,
+                        borderColor: active ? color : theme.hairline,
                       },
                     ]}
                   >
-                    <Icon name="users" size={14} color={active ? theme.mustard : theme.inkSoft} />
-                    <Text style={[styles.categoryText, { color: active ? theme.inkDeep : theme.inkSoft }]}>
-                      {name}
+                    <Icon name={meta.icon} size={15} color={active ? color : theme.inkSoft} />
+                    <Text
+                      style={[
+                        styles.categoryText,
+                        { color: active ? theme.inkDeep : theme.inkSoft },
+                      ]}
+                    >
+                      {t(`expenses.category.${meta.id}`)}
                     </Text>
                   </Pressable>
                 );
               })}
             </View>
           </View>
-        ) : null}
-      </View>
 
-      <Pressable
-        onPress={handleSave}
-        style={({ pressed }) => [styles.saveButton, { backgroundColor: theme.teal, opacity: pressed ? 0.9 : 1 }]}
-      >
-        <Icon name="check" size={18} color={theme.inverse} />
-        <Text style={[styles.saveText, { color: theme.inverse }]}>
-          {editingExpense ? t("expenses.saveAction") : t("expenses.addAction")}
-        </Text>
-      </Pressable>
-
-      {editingExpense ? (
-        <Pressable onPress={handleDelete} style={styles.deleteButton}>
-          <Icon name="trash" size={15} color={theme.stamp} />
-          <Text style={[styles.deleteText, { color: theme.stamp }]}>{t("common.delete")}</Text>
-        </Pressable>
-      ) : null}
-
-      {isIOS ? (
-        <Modal visible={isPickerOpen} transparent animationType="slide" onRequestClose={() => setIsPickerOpen(false)}>
-          <Pressable style={styles.sheetBackdrop} onPress={() => setIsPickerOpen(false)} />
-          <View style={[styles.sheet, { backgroundColor: theme.paperSoft, borderColor: theme.hairline }]}>
-            <View style={[styles.grabber, { backgroundColor: theme.hairline }]} />
-            <View style={styles.sheetHeader}>
-              <Text style={[styles.sheetTitle, { color: theme.inkDeep }]}>{dateLabel}</Text>
-              <Pressable
-                onPress={() => setIsPickerOpen(false)}
-                style={[styles.doneButton, { backgroundColor: theme.tealSoft }]}
-              >
-                <Text style={[styles.doneText, { color: theme.teal }]}>{t("common.ok")}</Text>
-              </Pressable>
-            </View>
-            <Host
-              matchContents={{ vertical: true }}
-              colorScheme={isDark ? "dark" : "light"}
-              ignoreSafeArea="all"
-              style={styles.host}
+          <View style={styles.group}>
+            <Text style={[styles.label, { color: theme.inkMuted }]}>{t("expenses.dateLabel")}</Text>
+            <Pressable
+              onPress={() => setIsPickerOpen(true)}
+              style={[styles.inputShell, { backgroundColor: theme.paper, borderColor: theme.hairline }]}
             >
-              <SwiftDatePicker
-                selection={date}
-                displayedComponents={["date"]}
-                onDateChange={setDate}
-                modifiers={[
-                  datePickerStyle("graphical"),
-                  tint(theme.teal),
-                  environment("colorScheme", isDark ? "dark" : "light"),
-                ]}
+              <Icon name="calendar" size={16} color={theme.inkSoft} />
+              <Text style={[styles.dateText, { color: theme.inkDeep }]}>{dateLabel}</Text>
+            </Pressable>
+            {isAndroid && isPickerOpen ? (
+              <DateTimePicker
+                value={date}
+                mode="date"
+                display="default"
+                presentation="dialog"
+                accentColor={theme.teal}
+                positiveButton={{ label: t("common.ok") }}
+                negativeButton={{ label: t("common.cancel") }}
+                onDismiss={() => setIsPickerOpen(false)}
+                onValueChange={(_, selected) => {
+                  setDate(selected);
+                  setIsPickerOpen(false);
+                }}
               />
-            </Host>
+            ) : null}
           </View>
-        </Modal>
-      ) : null}
-    </ScrollView>
+
+          <View style={styles.group}>
+            <Text style={[styles.label, { color: theme.inkMuted }]}>{t("expenses.noteLabel")}</Text>
+            <View style={[styles.inputShell, { backgroundColor: theme.paper, borderColor: theme.hairline }]}>
+              <TextInput
+                value={note}
+                onChangeText={setNote}
+                placeholder={t("expenses.notePlaceholder")}
+                placeholderTextColor={theme.inkMuted}
+                style={[styles.input, { color: theme.inkDeep }]}
+              />
+            </View>
+          </View>
+
+          <Pressable
+            onPress={handleToggleLocation}
+            style={[
+              styles.locationRow,
+              {
+                backgroundColor: location ? theme.tealSoft : theme.paper,
+                borderColor: location ? theme.teal : theme.hairline,
+              },
+            ]}
+          >
+            <Icon name="mapPin" size={16} color={location ? theme.teal : theme.inkSoft} />
+            <Text style={[styles.locationText, { color: theme.inkDeep }]}>
+              {isLocating
+                ? t("expenses.locating")
+                : location
+                  ? location.label ?? t("expenses.locationTagged")
+                  : t("expenses.tagLocation")}
+            </Text>
+            {isLocating ? (
+              <ActivityIndicator size="small" color={theme.teal} />
+            ) : (
+              <View
+                style={[
+                  styles.toggle,
+                  {
+                    backgroundColor: location ? theme.teal : "transparent",
+                    borderColor: location ? theme.teal : theme.hairline,
+                  },
+                ]}
+              >
+                {location ? <Icon name="check" size={12} color={theme.inverse} strokeWidth={3} /> : null}
+              </View>
+            )}
+          </Pressable>
+
+        </View>
+
+        <Pressable
+          onPress={handleSave}
+          style={({ pressed }) => [styles.saveButton, { backgroundColor: theme.teal, opacity: pressed ? 0.9 : 1 }]}
+        >
+          <Icon name="check" size={18} color={theme.inverse} />
+          <Text style={[styles.saveText, { color: theme.inverse }]}>
+            {editingExpense ? t("expenses.saveAction") : t("expenses.addAction")}
+          </Text>
+        </Pressable>
+
+        {editingExpense ? (
+          <Pressable onPress={handleDelete} style={styles.deleteButton}>
+            <Icon name="trash" size={15} color={theme.stamp} />
+            <Text style={[styles.deleteText, { color: theme.stamp }]}>{t("common.delete")}</Text>
+          </Pressable>
+        ) : null}
+
+        {isIOS ? (
+          <Modal visible={isPickerOpen} transparent animationType="slide" onRequestClose={() => setIsPickerOpen(false)}>
+            <Pressable style={styles.sheetBackdrop} onPress={() => setIsPickerOpen(false)} />
+            <View style={[styles.sheet, { backgroundColor: theme.paperSoft, borderColor: theme.hairline }]}>
+              <View style={[styles.grabber, { backgroundColor: theme.hairline }]} />
+              <View style={styles.sheetHeader}>
+                <Text style={[styles.sheetTitle, { color: theme.inkDeep }]}>{dateLabel}</Text>
+                <Pressable
+                  onPress={() => setIsPickerOpen(false)}
+                  style={[styles.doneButton, { backgroundColor: theme.tealSoft }]}
+                >
+                  <Text style={[styles.doneText, { color: theme.teal }]}>{t("common.ok")}</Text>
+                </Pressable>
+              </View>
+              <Host
+                matchContents={{ vertical: true }}
+                colorScheme={isDark ? "dark" : "light"}
+                ignoreSafeArea="all"
+                style={styles.host}
+              >
+                <SwiftDatePicker
+                  selection={date}
+                  displayedComponents={["date"]}
+                  onDateChange={setDate}
+                  modifiers={[
+                    datePickerStyle("graphical"),
+                    tint(theme.teal),
+                    environment("colorScheme", isDark ? "dark" : "light"),
+                  ]}
+                />
+              </Host>
+            </View>
+          </Modal>
+        ) : null}
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
   scroll: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 120, gap: 16 },
   headerRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" },
   eyebrow: {

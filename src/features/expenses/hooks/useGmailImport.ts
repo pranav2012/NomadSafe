@@ -19,6 +19,7 @@ import {
   saveGmailLastSyncAt,
 } from "@/features/expenses/services/gmailSyncStore";
 import type { RawMessage } from "@/features/expenses/services/transactionParser";
+import { ImportError } from "@/features/expenses/services/importErrors";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -58,7 +59,9 @@ export interface GmailImport {
   /** Fetches emails after `since` without touching the expense sync checkpoint,
    *  so other consumers (e.g. itinerary) can keep an independent checkpoint. */
   fetchEmailsSince: (since: number | null) => Promise<RawMessage[]>;
-  completeSync: () => Promise<void>;
+  /** Saves the expense checkpoint; pass the fetch start time so mail that
+   *  arrived during review is picked up next time. */
+  completeSync: (at?: number) => Promise<void>;
 }
 
 export function useGmailImport(): GmailImport {
@@ -140,7 +143,7 @@ export function useGmailImport(): GmailImport {
     async (since: number | null) => {
       const token = await getValidAccessToken();
       if (!token) {
-        throw new Error("Gmail is not connected.");
+        throw new ImportError("gmail-not-connected");
       }
       return fetchTransactionEmails(token, since);
     },
@@ -152,8 +155,8 @@ export function useGmailImport(): GmailImport {
     [fetchEmailsSince],
   );
 
-  const completeSync = useCallback(async () => {
-    await saveGmailLastSyncAt(Date.now());
+  const completeSync = useCallback(async (at?: number) => {
+    await saveGmailLastSyncAt(at ?? Date.now());
   }, []);
 
   // A refresh token lets us mint access tokens indefinitely; a bare access token

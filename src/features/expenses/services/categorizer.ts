@@ -66,18 +66,25 @@ export function categorizeHeuristic(input: CategorizerInput): {
 /**
  * Categorizes an expense, preferring the fast keyword heuristic and falling
  * back to the local model only for merchants the heuristic can't place. The
- * model is optional, so this always resolves to a category.
+ * model is optional: a load or inference failure resolves to the heuristic
+ * result with `modelFailed` set so callers can stop consulting it.
  */
-export async function categorizeExpense(input: CategorizerInput): Promise<CategorizeResult> {
+export async function categorizeExpense(
+  input: CategorizerInput,
+): Promise<CategorizeResult & { modelFailed?: boolean }> {
   const heuristic = categorizeHeuristic(input);
   if (heuristic.matched) {
     return { category: heuristic.category, viaModel: false };
   }
 
-  const modelCategory = await localModelService.categorizeExpense(input);
-  if (modelCategory) {
-    return { category: modelCategory, viaModel: true };
+  try {
+    const modelCategory = await localModelService.categorizeExpense(input);
+    if (modelCategory) {
+      return { category: modelCategory, viaModel: true };
+    }
+  } catch {
+    return { category: heuristic.category, viaModel: false, modelFailed: true };
   }
 
-  return { category: "other", viaModel: false };
+  return { category: heuristic.category, viaModel: false };
 }

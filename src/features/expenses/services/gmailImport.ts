@@ -1,4 +1,6 @@
 import type { RawMessage } from "@/features/expenses/services/transactionParser";
+import { ImportError } from "@/features/expenses/services/importErrors";
+import { translate } from "@/localization/translate";
 
 export const GMAIL_SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"];
 
@@ -129,7 +131,10 @@ async function gmailFetch<T>(path: string, accessToken: string): Promise<T> {
     } catch {
       // non-JSON body; keep the status only
     }
-    throw new Error(`Gmail API error ${response.status}${detail}`);
+    throw new ImportError(
+      response.status === 401 || response.status === 403 ? "gmail-auth" : "gmail-api",
+      `Gmail API error ${response.status}${detail}`,
+    );
   }
   return (await response.json()) as T;
 }
@@ -190,7 +195,13 @@ export async function fetchTransactionEmails(
         body,
         date,
         sender,
-        note: `From: ${sender || "Unknown"}\nSubject: ${subject || "(no subject)"}\nReceived: ${date}\n\n${bodyText}`,
+        note: [
+          `${translate("expenses.emailNote.from")}: ${sender || translate("expenses.emailNote.unknownSender")}`,
+          `${translate("expenses.emailNote.subject")}: ${subject || translate("expenses.emailNote.noSubject")}`,
+          `${translate("expenses.emailNote.received")}: ${date}`,
+          "",
+          bodyText,
+        ].join("\n"),
         externalId: message.id ? `gmail:${message.id}` : undefined,
       };
     })

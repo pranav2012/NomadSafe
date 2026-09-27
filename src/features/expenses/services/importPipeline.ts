@@ -1,4 +1,5 @@
 import {
+  buildDedupeIndex,
   expenseFingerprint,
   useExpensesStore,
   type CreateExpenseInput,
@@ -20,6 +21,11 @@ import {
   conversionNote,
   fetchExchangeRate,
 } from "@/features/expenses/services/currencyConversion";
+import { translate } from "@/localization/translate";
+import { toLocalDayKey } from "@/features/expenses/utils/dateKey";
+
+// Local model calls are slow; only unmatched candidates use it, capped per import.
+const MAX_MODEL_CALLS = 20;
 
 export interface BuildCandidatesOptions {
   /** When false, skip the local LLM and categorize with the keyword heuristic
@@ -41,6 +47,8 @@ export interface ImportCandidate {
   note?: string;
   preview: string;
   externalId?: string;
+  /** Confirmed booking whose payment may still be pending (noted on import). */
+  committedBooking: boolean;
   autoCategorized: boolean;
   viaModel: boolean;
   duplicate: boolean;
@@ -72,7 +80,7 @@ function messageMentionsDestination(message: RawMessage, trip: Trip): boolean {
 
 function messageDateKey(message: RawMessage): string | null {
   if (!message.date || Number.isNaN(new Date(message.date).getTime())) return null;
-  return new Date(message.date).toISOString().slice(0, 10);
+  return toLocalDayKey(message.date);
 }
 
 function isPreTripBooking(message: RawMessage): boolean {
@@ -95,7 +103,7 @@ function tripMatchReason(message: RawMessage, trip: Trip): string | null {
 }
 
 /**
- * Turns raw bank/UPI/card messages into reviewable expense candidates: parses
+ * Turns raw bank/card alerts and emails into reviewable expense candidates: parses
  * each debit, categorizes it (heuristic + local model), and flags ones that
  * already exist so the user can deselect duplicates before importing.
  */
@@ -105,7 +113,8 @@ export async function buildImportCandidates(
   options: BuildCandidatesOptions = {},
 ): Promise<ImportCandidate[]> {
   const { allowModel = true } = options;
-  const { hasFingerprint, hasExternalId } = useExpensesStore.getState();
+  const dedupe = buildDedupeIndex(useExpensesStore.getState().expenses);
+  const model = { calls: 0, disabled: !allowModel };
   const candidates: ImportCandidate[] = [];
   const seen = new Set<string>();
   const diagnostics = { tripMatched: 0, parsedDebits: 0, rejected: {} as Record<string, number> };
@@ -143,7 +152,9 @@ export async function buildImportCandidates(
       }
       diagnostics.tripMatched += 1;
     }
-    const parsed = parseTransaction(message.body, message.date);
+    const parsed = parseTransaction(message.body, message.date, {
+      currencyHint: options.trip?.currency,
+    });
     if (!parsed || parsed.kind !== "debit") {
       if (source === "email") {
         diagnostics.rejected["not-a-debit"] = (diagnostics.rejected["not-a-debit"] ?? 0) + 1;
@@ -159,21 +170,19 @@ export async function buildImportCandidates(
 
     const date = parsed.occurredAt;
     const fingerprint = expenseFingerprint({ merchant, amount: parsed.amount, date });
-    // A stable source id (Gmail message id) dedupes far more reliably than a
-    // merchant+amount+day fingerprint; use it when present.
+    // A stable source id (Gmail message id / pasted body hash) keeps two genuine
+    // same-day, same-amount purchases apart; the fingerprint is the fallback.
     const dedupeKey = message.externalId ?? fingerprint;
 
     // Skip exact repeats inside this same batch.
     if (seen.has(dedupeKey)) continue;
     seen.add(dedupeKey);
 
-    const duplicate = hasFingerprint(fingerprint) || Boolean(message.externalId && hasExternalId(message.externalId));
+    const duplicate =
+      dedupe.fingerprints.has(fingerprint) ||
+      Boolean(message.externalId && dedupe.externalIds.has(message.externalId));
 
-    const { category, viaModel } = provider?.category
-      ? { category: provider.category, viaModel: false }
-      : allowModel
-      ? await categorizeExpense({ merchant, rawText: parsed.raw })
-      : { category: categorizeHeuristic({ merchant, rawText: parsed.raw }).category, viaModel: false };
+    const { category, viaModel } = await categorizeCandidate(merchant, parsed.raw, provider?.category, model);
 
     candidates.push({
       id: message.externalId ?? `${date}-${index}`,
@@ -184,13 +193,10 @@ export async function buildImportCandidates(
       date,
       source,
       rawText: parsed.raw,
-      note: provider?.committedBooking
-        ? ["Confirmed booking total; payment may still be pending.", message.note]
-            .filter(Boolean)
-            .join("\n\n")
-        : message.note,
+      note: message.note,
       preview: parsed.raw.slice(0, 120),
       externalId: message.externalId,
+      committedBooking: Boolean(provider?.committedBooking),
       autoCategorized: true,
       viaModel,
       duplicate,
@@ -208,13 +214,43 @@ export async function buildImportCandidates(
   return candidates;
 }
 
+async function categorizeCandidate(
+  merchant: string,
+  rawText: string,
+  providerCategory: ExpenseCategory | undefined,
+  model: { calls: number; disabled: boolean },
+): Promise<{ category: ExpenseCategory; viaModel: boolean }> {
+  if (providerCategory) return { category: providerCategory, viaModel: false };
+
+  const heuristic = categorizeHeuristic({ merchant, rawText });
+  if (heuristic.matched || model.disabled || model.calls >= MAX_MODEL_CALLS) {
+    return { category: heuristic.category, viaModel: false };
+  }
+
+  model.calls += 1;
+  const result = await categorizeExpense({ merchant, rawText });
+  // One failed load means the model is unavailable; don't retry per candidate.
+  if (result.modelFailed) model.disabled = true;
+  return { category: result.category, viaModel: result.viaModel };
+}
+
+// FNV-1a; a short stable id for a pasted alert body.
+function hashText(text: string): string {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(16);
+}
+
 /** Splits free-text (multiple pasted alerts) into individual messages. */
 export function splitPastedMessages(text: string): RawMessage[] {
   return text
     .split(/\n{2,}/)
     .map((block) => block.replace(/\s+/g, " ").trim())
     .filter((block) => block.length > 0)
-    .map((body) => ({ body }));
+    .map((body) => ({ body, externalId: `paste:${hashText(body.toLowerCase())}` }));
 }
 
 export async function candidateToInput(
@@ -222,7 +258,9 @@ export async function candidateToInput(
   tripId: string | null,
   tripCurrency?: string,
 ): Promise<CreateExpenseInput> {
-  let note = candidate.note;
+  let note = candidate.committedBooking
+    ? [translate("expenses.committedBookingNote"), candidate.note].filter(Boolean).join("\n\n")
+    : candidate.note;
   if (candidate.source === "email" && tripCurrency && candidate.currency !== tripCurrency) {
     try {
       const rate = await fetchExchangeRate(candidate.currency, tripCurrency, candidate.date);
@@ -236,7 +274,7 @@ export async function candidateToInput(
 
   return {
     tripId,
-    merchant: candidate.merchant || "Unknown",
+    merchant: candidate.merchant || translate("expenses.unknownMerchant"),
     amount: candidate.amount,
     currency: candidate.currency,
     category: candidate.category,

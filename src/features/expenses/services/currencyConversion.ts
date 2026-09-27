@@ -1,3 +1,6 @@
+import { translate } from "@/localization/translate";
+import { toLocalDayKey } from "@/features/expenses/utils/dateKey";
+
 export interface ExchangeRate {
   base: string;
   quote: string;
@@ -12,11 +15,13 @@ interface FrankfurterRateResponse {
   rate?: number;
 }
 
+const FETCH_TIMEOUT_MS = 8_000;
+
 const rateCache = new Map<string, ExchangeRate>();
 const inFlightRates = new Map<string, Promise<ExchangeRate>>();
 
 function dateKey(value: string): string {
-  return value.slice(0, 10);
+  return toLocalDayKey(value);
 }
 
 function cacheKey(base: string, quote: string, date: string): string {
@@ -39,12 +44,20 @@ export async function fetchExchangeRate(base: string, quote: string, date: strin
   if (current) return current;
 
   const request = (async () => {
-    const response = await fetch(
-      `https://api.frankfurter.dev/v2/rate/${encodeURIComponent(base)}/${encodeURIComponent(quote)}?date=${encodeURIComponent(dateKey(date))}`,
-    );
-    if (!response.ok) throw new Error(`Exchange-rate request failed (${response.status}).`);
-
-    const payload = (await response.json()) as FrankfurterRateResponse;
+    // Abort slow requests so imports and totals fall back instead of hanging.
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    let payload: FrankfurterRateResponse;
+    try {
+      const response = await fetch(
+        `https://api.frankfurter.dev/v2/rate/${encodeURIComponent(base)}/${encodeURIComponent(quote)}?date=${encodeURIComponent(dateKey(date))}`,
+        { signal: controller.signal },
+      );
+      if (!response.ok) throw new Error(`Exchange-rate request failed (${response.status}).`);
+      payload = (await response.json()) as FrankfurterRateResponse;
+    } finally {
+      clearTimeout(timeout);
+    }
     const numericRate = payload.rate;
     if (numericRate === undefined || !payload.date || !Number.isFinite(numericRate) || numericRate <= 0) {
       throw new Error("Exchange-rate response was invalid.");
@@ -69,6 +82,12 @@ export async function fetchExchangeRate(base: string, quote: string, date: strin
 }
 
 export function conversionNote(amount: number, from: string, to: string, rate: ExchangeRate): string {
-  const converted = amount * rate.rate;
-  return `Trip total conversion: ${from} ${amount.toFixed(2)} → ${to} ${converted.toFixed(2)} at 1 ${from} = ${rate.rate.toFixed(6)} ${to} (${rate.date} reference rate).`;
+  return translate("expenses.conversionNote", {
+    from,
+    to,
+    amount: amount.toFixed(2),
+    converted: (amount * rate.rate).toFixed(2),
+    rate: rate.rate.toFixed(6),
+    date: rate.date,
+  });
 }

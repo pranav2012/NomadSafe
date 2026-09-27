@@ -2,8 +2,10 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { mmkvStateStorage } from "@/stores/storage";
 import type { ExpenseCategory } from "@/features/expenses/constants/categories";
+import { toLocalDayKey } from "@/features/expenses/utils/dateKey";
 
-export type ExpenseSource = "manual" | "sms" | "email";
+/** "sms" is legacy (device SMS import, removed); kept so stored expenses stay valid. */
+export type ExpenseSource = "manual" | "paste" | "sms" | "email";
 
 export interface ExpenseLocation {
   latitude: number;
@@ -54,9 +56,26 @@ export function expenseFingerprint(input: {
   amount: number;
   date: string;
 }): string {
-  const day = input.date.slice(0, 10);
+  const day = toLocalDayKey(input.date);
   const merchant = input.merchant.trim().toLowerCase();
   return `${merchant}|${input.amount.toFixed(2)}|${day}`;
+}
+
+export interface DedupeIndex {
+  /** Fingerprints of expenses without a source id (manual or legacy imports). */
+  fingerprints: Set<string>;
+  externalIds: Set<string>;
+}
+
+/** Builds lookup sets once per import instead of scanning the ledger per candidate. */
+export function buildDedupeIndex(expenses: Expense[]): DedupeIndex {
+  const fingerprints = new Set<string>();
+  const externalIds = new Set<string>();
+  for (const expense of expenses) {
+    if (expense.externalId) externalIds.add(expense.externalId);
+    else fingerprints.add(expenseFingerprint(expense));
+  }
+  return { fingerprints, externalIds };
 }
 
 interface ExpensesState {
@@ -65,8 +84,7 @@ interface ExpensesState {
   addExpenses: (inputs: CreateExpenseInput[]) => Expense[];
   updateExpense: (id: string, input: UpdateExpenseInput) => Expense | null;
   deleteExpense: (id: string) => void;
-  hasFingerprint: (fingerprint: string) => boolean;
-  hasExternalId: (externalId: string) => boolean;
+  removeByTripId: (tripId: string) => void;
   reset: () => void;
 }
 
@@ -94,7 +112,17 @@ export const useExpensesStore = create<ExpensesState>()(
         return expense;
       },
       addExpenses: (inputs) => {
-        const created = inputs.map(buildExpense);
+        // Guards against concurrent imports (sheet + background sync) adding the same message twice.
+        const externalIds = new Set(get().expenses.map((expense) => expense.externalId));
+        const created = inputs
+          .filter((input) => {
+            if (!input.externalId) return true;
+            if (externalIds.has(input.externalId)) return false;
+            externalIds.add(input.externalId);
+            return true;
+          })
+          .map(buildExpense);
+        if (created.length === 0) return created;
         set((state) => ({ expenses: [...created, ...state.expenses] }));
         return created;
       },
@@ -113,17 +141,10 @@ export const useExpensesStore = create<ExpensesState>()(
         set((state) => ({
           expenses: state.expenses.filter((expense) => expense.id !== id),
         })),
-      hasFingerprint: (fingerprint) =>
-        get().expenses.some(
-          (expense) =>
-            expenseFingerprint({
-              merchant: expense.merchant,
-              amount: expense.amount,
-              date: expense.date,
-            }) === fingerprint,
-        ),
-      hasExternalId: (externalId) =>
-        get().expenses.some((expense) => expense.externalId === externalId),
+      removeByTripId: (tripId) =>
+        set((state) => ({
+          expenses: state.expenses.filter((expense) => expense.tripId !== tripId),
+        })),
       reset: () => set({ expenses: [] }),
     }),
     {

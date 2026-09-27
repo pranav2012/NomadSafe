@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Modal,
   Pressable,
@@ -32,22 +32,24 @@ import {
   sumAmount,
   topMerchants,
 } from "@/features/expenses/utils/aggregate";
+import { fromLocalDayKey } from "@/features/expenses/utils/dateKey";
+import { useConvertedExpenses } from "@/features/expenses/hooks/useTripExpenseSummary";
 import { ExpenseForm } from "@/features/expenses/components/ExpenseForm";
 import { ImportSheet } from "@/features/expenses/components/ImportSheet";
 import { useGmailAutoSync } from "@/features/expenses/hooks/useGmailAutoSync";
 
 const CHART_DAYS = 14;
+const LEDGER_PREVIEW = 10;
 
 function countTripDays(startDate: string, endDate: string): number {
-  const ms = new Date(endDate).getTime() - new Date(startDate).getTime();
+  const ms = fromLocalDayKey(endDate).getTime() - fromLocalDayKey(startDate).getTime();
   return Math.max(1, Math.round(ms / (24 * 60 * 60 * 1000)) + 1);
 }
 
 function daysLeft(endDate: string): number {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const end = new Date(endDate);
-  end.setHours(0, 0, 0, 0);
+  const end = fromLocalDayKey(endDate);
   return Math.max(0, Math.round((end.getTime() - today.getTime()) / (24 * 60 * 60 * 1000)));
 }
 
@@ -69,28 +71,45 @@ export default function ExpensesScreen() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Expense | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [ledgerExpanded, setLedgerExpanded] = useState(false);
 
   const autoSync = useGmailAutoSync(activeTrip);
 
   const currency = activeTrip?.currency ?? deviceCurrency;
 
-  const scoped = filterByTrip(expenses, activeTrip?.id ?? null);
-  const series = dailySeries(scoped, CHART_DAYS);
+  const scoped = useMemo(
+    () => filterByTrip(expenses, activeTrip?.id ?? null),
+    [expenses, activeTrip?.id],
+  );
+  const conversion = useConvertedExpenses(scoped, currency);
+  // Aggregates run on amounts converted to the display currency so they match Home.
+  const converted: Expense[] = conversion.convertedExpenses.map(({ expense, amount }) => ({
+    ...expense,
+    amount,
+    currency,
+  }));
+  const series = dailySeries(converted, CHART_DAYS);
+  const sorted = [...scoped].sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+  );
   const data = {
     scoped,
-    sorted: [...scoped].sort(
-      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-    ),
-    total: sumAmount(scoped),
-    breakdown: categoryBreakdown(scoped),
+    sorted,
+    visible: ledgerExpanded ? sorted : sorted.slice(0, LEDGER_PREVIEW),
+    total: sumAmount(converted),
+    breakdown: categoryBreakdown(converted),
     series,
     avgDay: averagePerDay(series),
-    merchants: topMerchants(scoped, 4),
+    merchants: topMerchants(converted, 4),
   };
+  const unconvertedLabel = conversion.unconvertedTotals
+    .map((entry) => formatCurrency(entry.amount, entry.currency, { maximumFractionDigits: 0 }))
+    .join(" + ");
 
   const budget = activeTrip?.budget ?? 0;
   const tripDays = activeTrip ? countTripDays(activeTrip.startDate, activeTrip.endDate) : 0;
-  const budgetDaily = budget > 0 && tripDays > 0 ? budget / tripDays : data.avgDay;
+  const hasBudgetLine = budget > 0 && tripDays > 0;
+  const budgetDaily = hasBudgetLine ? budget / tripDays : data.avgDay;
   const remaining = budget - data.total;
 
   const openAdd = () => {
@@ -159,6 +178,13 @@ export default function ExpensesScreen() {
                       })
                   : t("expenses.noBudget")}
               </Text>
+              {unconvertedLabel ? (
+                <Text style={[styles.heroSub, { color: theme.whiteTextMuted }]}>
+                  {conversion.isConverting
+                    ? t("expenses.convertingAmounts", { amount: unconvertedLabel })
+                    : t("expenses.notConverted", { amount: unconvertedLabel })}
+                </Text>
+              ) : null}
             </View>
             {budget > 0 ? (
               <View style={[styles.heroPill, { backgroundColor: theme.whiteOverlayStrong }]}>
@@ -243,7 +269,9 @@ export default function ExpensesScreen() {
                 <View style={[styles.legendLine, { backgroundColor: theme.teal }]} />
                 <Text style={[styles.legendTiny, { color: theme.inkSoft }]}>{t("expenses.actual")}</Text>
                 <View style={[styles.legendLine, { backgroundColor: theme.stamp, marginLeft: 8 }]} />
-                <Text style={[styles.legendTiny, { color: theme.inkSoft }]}>{t("expenses.budgetLabel")}</Text>
+                <Text style={[styles.legendTiny, { color: theme.inkSoft }]}>
+                  {hasBudgetLine ? t("expenses.budgetLabel") : t("expenses.avgLabel")}
+                </Text>
               </View>
             </View>
             <SpendChart
@@ -298,12 +326,15 @@ export default function ExpensesScreen() {
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionLabel, { color: theme.inkMuted }]}>{t("expenses.recent")}</Text>
               <Text style={[styles.sectionMeta, { color: theme.inkSoft }]}>
-                {t("expenses.recentCount", { count: Math.min(data.sorted.length, 10) })}
+                {t("expenses.recentCount", { count: data.visible.length, total: data.sorted.length })}
               </Text>
             </View>
             <View style={styles.list}>
-              {data.sorted.slice(0, 10).map((expense, index) => (
-                <Animated.View key={expense.id} entering={FadeInDown.duration(200).delay(index * 30)}>
+              {data.visible.map((expense, index) => (
+                <Animated.View
+                  key={expense.id}
+                  entering={index < LEDGER_PREVIEW ? FadeInDown.duration(200).delay(index * 30) : undefined}
+                >
                   <ExpenseRow
                     expense={expense}
                     locale={locale}
@@ -315,6 +346,22 @@ export default function ExpensesScreen() {
                 </Animated.View>
               ))}
             </View>
+            {data.sorted.length > LEDGER_PREVIEW ? (
+              <Pressable
+                onPress={() => setLedgerExpanded((expanded) => !expanded)}
+                hitSlop={6}
+                style={({ pressed }) => [
+                  styles.seeAllButton,
+                  { borderColor: theme.hairline, opacity: pressed ? 0.8 : 1 },
+                ]}
+              >
+                <Text style={[styles.seeAllText, { color: theme.teal }]}>
+                  {ledgerExpanded
+                    ? t("expenses.showLess")
+                    : t("expenses.seeAll", { count: data.sorted.length })}
+                </Text>
+              </Pressable>
+            ) : null}
           </>
         )}
 
@@ -362,7 +409,6 @@ export default function ExpensesScreen() {
             editingExpense={editing}
             tripId={activeTrip?.id ?? null}
             tripCurrency={currency}
-            companions={activeTrip?.mode === "group" ? activeTrip.companions : []}
             onSave={() => setFormOpen(false)}
             onCancel={() => setFormOpen(false)}
           />
@@ -466,9 +512,11 @@ function ExpenseRow({
   const sourceLabel =
     expense.source === "sms"
       ? t("expenses.sourceSms")
-      : expense.source === "email"
-        ? t("expenses.sourceEmail")
-        : null;
+      : expense.source === "paste"
+        ? t("expenses.sourcePasted")
+        : expense.source === "email"
+          ? t("expenses.sourceEmail")
+          : null;
   const dateLabel = new Intl.DateTimeFormat(locale, {
     month: "short",
     day: "numeric",
@@ -507,7 +555,7 @@ function ExpenseRow({
         </View>
       </View>
       <Text style={[styles.rowAmount, { color: theme.inkDeep }]}>
-        {formatCurrency(expense.amount, expense.currency)}
+        {formatCurrency(expense.amount, expense.currency, {})}
       </Text>
     </Pressable>
   );
@@ -617,6 +665,13 @@ const styles = StyleSheet.create({
   },
   sectionMeta: { fontFamily: NOMAD_FONTS.mono, fontSize: 11 },
   list: { gap: 6 },
+  seeAllButton: {
+    alignItems: "center",
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingVertical: 11,
+  },
+  seeAllText: { fontFamily: NOMAD_FONTS.uiSemi, fontSize: 13 },
   row: {
     flexDirection: "row",
     alignItems: "center",

@@ -7,8 +7,9 @@ import {
 import { useGmailImport } from "@/features/expenses/hooks/useGmailImport";
 import type { Trip } from "@/features/trips/store/tripsStore";
 
-// Runs once per app session for the trip that is active when Gmail becomes available.
+// Succeeds once per app session; a failed attempt retries on the next trigger.
 let sessionSynced = false;
+let syncInFlight = false;
 
 export interface GmailAutoSync {
   importedCount: number | null;
@@ -27,28 +28,33 @@ export function useGmailAutoSync(trip: Trip | null): GmailAutoSync {
   const [importedCount, setImportedCount] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!trip || sessionSynced || !gmail.connected) return;
-    sessionSynced = true;
+    if (!trip || sessionSynced || syncInFlight || !gmail.connected) return;
+    syncInFlight = true;
 
     let mounted = true;
     (async () => {
       try {
+        const startedAt = Date.now();
         const messages = await gmail.fetchEmails();
         const candidates = await buildImportCandidates(messages, "email", {
           allowModel: false,
           trip,
         });
-        await gmail.completeSync();
         const fresh = candidates.filter((candidate) => !candidate.duplicate);
-        if (mounted && fresh.length > 0) {
+        if (fresh.length > 0) {
           const inputs = await Promise.all(
             fresh.map((candidate) => candidateToInput(candidate, trip.id, trip.currency)),
           );
-          addExpenses(inputs);
-          setImportedCount(fresh.length);
+          const added = addExpenses(inputs);
+          if (mounted && added.length > 0) setImportedCount(added.length);
         }
+        // Checkpoint only after the spends are saved so a failure rescans them.
+        await gmail.completeSync(startedAt);
+        sessionSynced = true;
       } catch {
         // Background sync is best-effort; failures stay silent.
+      } finally {
+        syncInFlight = false;
       }
     })();
 

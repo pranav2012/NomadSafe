@@ -3,6 +3,7 @@ import {
   EXPENSE_CATEGORIES,
   type ExpenseCategory,
 } from "@/features/expenses/constants/categories";
+import { toLocalDayKey } from "@/features/expenses/utils/dateKey";
 
 export interface CategoryTotal {
   category: ExpenseCategory;
@@ -23,13 +24,6 @@ export interface MerchantTotal {
 
 function startOfDay(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-}
-
-function toDayKey(date: Date): string {
-  const year = date.getFullYear();
-  const month = `${date.getMonth() + 1}`.padStart(2, "0");
-  const day = `${date.getDate()}`.padStart(2, "0");
-  return `${year}-${month}-${day}`;
 }
 
 export function filterByTrip(expenses: Expense[], tripId: string | null): Expense[] {
@@ -75,7 +69,7 @@ export function dailySeries(expenses: Expense[], days: number): DayTotal[] {
   const today = startOfDay(new Date());
   const byDay = new Map<string, number>();
   for (const expense of expenses) {
-    const key = toDayKey(startOfDay(new Date(expense.date)));
+    const key = toLocalDayKey(startOfDay(new Date(expense.date)));
     byDay.set(key, (byDay.get(key) ?? 0) + expense.amount);
   }
 
@@ -83,7 +77,7 @@ export function dailySeries(expenses: Expense[], days: number): DayTotal[] {
   for (let offset = days - 1; offset >= 0; offset -= 1) {
     const date = new Date(today);
     date.setDate(date.getDate() - offset);
-    const key = toDayKey(date);
+    const key = toLocalDayKey(date);
     series.push({ date: key, amount: byDay.get(key) ?? 0 });
   }
   return series;
