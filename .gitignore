@@ -47,3 +47,7 @@ app-example
 # local native module build outputs
 modules/*/android/build/
 modules/*/android/.cxx/
+
+# Play Console service account key (eas submit)
+play-service-account.json
+*service-account*.json
