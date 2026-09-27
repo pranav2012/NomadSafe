@@ -1,7 +1,7 @@
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 
-export const SAFETY_CHANNEL_ID = "safety-checkin";
+export const SAFETY_CHANNEL_ID = "safety-checkin-v2";
 export const SAFETY_NOTIFICATION_SOURCE = "nomadsafe-safety";
 export const SOS_ROUTE = "/(tabs)/sos";
 
@@ -32,7 +32,6 @@ async function ensureChannel(name: string) {
     importance: Notifications.AndroidImportance.MAX,
     vibrationPattern: [0, 400, 250, 400],
     lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
-    sound: "default",
   });
 }
 
@@ -83,7 +82,7 @@ export async function scheduleCheckInNotifications(
           title: copy.warningTitle,
           body: copy.warningBody,
           data: { ...data, kind: "checkInWarning" },
-          sound: "default",
+          sound: true,
           ...android,
         },
         trigger: {
@@ -104,7 +103,7 @@ export async function scheduleCheckInNotifications(
         title: copy.dueTitle,
         body: copy.dueBody,
         data,
-        sound: "default",
+        sound: true,
         ...android,
       },
       trigger: {

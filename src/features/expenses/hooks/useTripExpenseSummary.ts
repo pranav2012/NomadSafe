@@ -32,7 +32,9 @@ function rateKey(expense: Expense, targetCurrency: string): string {
  */
 export function useConvertedExpenses(expenses: Expense[], targetCurrency: string) {
   const [failedRates, setFailedRates] = useState<Set<string>>(new Set());
-  const [, setRateVersion] = useState(0);
+  // Rates live in state (not just the module cache) so memoized renders — the
+  // React Compiler is on — recompute when a rate arrives.
+  const [rates, setRates] = useState<Record<string, number>>({});
   const [retryToken, setRetryToken] = useState(0);
 
   const retry = useCallback(() => setRetryToken((token) => token + 1), []);
@@ -45,35 +47,31 @@ export function useConvertedExpenses(expenses: Expense[], targetCurrency: string
   }, [retry]);
 
   useEffect(() => {
-    const pending = expenses.filter(
-      (expense) =>
-        expense.currency !== targetCurrency &&
-        !getCachedExchangeRate(expense.currency, targetCurrency, expense.date),
-    );
-    if (pending.length === 0) return;
+    const needed = expenses.filter((expense) => expense.currency !== targetCurrency);
+    if (needed.length === 0) return;
 
     let mounted = true;
-    const unique = [...new Map(pending.map((expense) => [rateKey(expense, targetCurrency), expense])).values()];
+    const unique = [...new Map(needed.map((expense) => [rateKey(expense, targetCurrency), expense])).values()];
     void Promise.all(
       unique.map(async (expense) => {
         const key = rateKey(expense, targetCurrency);
         try {
-          await fetchExchangeRate(expense.currency, targetCurrency, expense.date);
-          if (mounted) {
-            setFailedRates((current) => {
-              if (!current.has(key)) return current;
-              const next = new Set(current);
-              next.delete(key);
-              return next;
-            });
-          }
+          const rate =
+            getCachedExchangeRate(expense.currency, targetCurrency, expense.date) ??
+            (await fetchExchangeRate(expense.currency, targetCurrency, expense.date));
+          if (!mounted) return;
+          setRates((current) => (current[key] === rate.rate ? current : { ...current, [key]: rate.rate }));
+          setFailedRates((current) => {
+            if (!current.has(key)) return current;
+            const next = new Set(current);
+            next.delete(key);
+            return next;
+          });
         } catch {
-          if (mounted) setFailedRates((current) => new Set([...current, key]));
+          if (mounted) setFailedRates((current) => (current.has(key) ? current : new Set([...current, key])));
         }
       }),
-    ).then(() => {
-      if (mounted) setRateVersion((version) => version + 1);
-    });
+    );
 
     return () => {
       mounted = false;
@@ -83,12 +81,12 @@ export function useConvertedExpenses(expenses: Expense[], targetCurrency: string
   const convertedExpenses: ConvertedExpense[] = [];
   const unavailableExpenses: Expense[] = [];
   for (const expense of expenses) {
-    const rate = getCachedExchangeRate(expense.currency, targetCurrency, expense.date);
-    if (!rate) {
+    const rate = expense.currency === targetCurrency ? 1 : rates[rateKey(expense, targetCurrency)];
+    if (rate === undefined) {
       unavailableExpenses.push(expense);
       continue;
     }
-    convertedExpenses.push({ expense, amount: expense.amount * rate.rate });
+    convertedExpenses.push({ expense, amount: expense.amount * rate });
   }
 
   const unconverted = new Map<string, UnconvertedTotal>();

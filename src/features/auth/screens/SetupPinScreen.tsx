@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -43,8 +43,15 @@ export default function SetupPinScreen() {
   const [error, setError] = useState("");
   const shakeX = useSharedValue(0);
 
+  // Refs hold the live value so rapid taps between renders never drop a digit.
+  const pinRef = useRef("");
+  const confirmRef = useRef("");
   const currentPin = step === "create" ? pin : confirmPin;
-  const setCurrentPin = step === "create" ? setPin : setConfirmPin;
+  const currentRef = step === "create" ? pinRef : confirmRef;
+  const setCurrentPin = (value: string) => {
+    currentRef.current = value;
+    (step === "create" ? setPin : setConfirmPin)(value);
+  };
 
   const shakeStyle = useAnimatedStyle(() => ({ transform: [{ translateX: shakeX.value }] }));
 
@@ -82,28 +89,29 @@ export default function SetupPinScreen() {
 
   const handleKeyPress = (key: string) => {
     if (key === "delete") {
-      setCurrentPin((p) => p.slice(0, -1));
+      setCurrentPin(currentRef.current.slice(0, -1));
       setError("");
       return;
     }
     if (key === "") return;
 
     lightImpact();
-    if (currentPin.length >= PIN_LENGTH) return;
+    if (currentRef.current.length >= PIN_LENGTH) return;
 
-    const next = currentPin + key;
+    const next = currentRef.current + key;
     setCurrentPin(next);
 
     if (next.length === PIN_LENGTH) {
       if (step === "create") {
         setTimeout(() => setStep("confirm"), 280);
-      } else if (next === pin) {
+      } else if (next === pinRef.current) {
         handleComplete(next);
       } else {
         errorNotification();
         shake();
         setError(t("auth.pinMismatch"));
         setTimeout(() => {
+          confirmRef.current = "";
           setConfirmPin("");
           setError("");
         }, 1000);
@@ -195,6 +203,8 @@ export default function SetupPinScreen() {
             <Pressable
               onPress={() => {
                 setStep("create");
+                pinRef.current = "";
+                confirmRef.current = "";
                 setPin("");
                 setConfirmPin("");
                 setError("");

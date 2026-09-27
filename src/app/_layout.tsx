@@ -171,6 +171,33 @@ function SessionEffects() {
   return null;
 }
 
+/**
+ * Protected groups drop onboarding/sign-in from history once they no longer
+ * apply (so Back can't return to them) and keep signed-in screens unreachable
+ * after sign-out.
+ */
+function AppStack() {
+  const onboardingCompleted = useSettingsStore((s) => s.onboardingCompleted);
+  const isSignedIn = useAuthStore((s) => s.isSignedIn);
+  const inApp = onboardingCompleted && isSignedIn;
+
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="index" />
+      <Stack.Protected guard={!onboardingCompleted}>
+        <Stack.Screen name="(onboarding)" />
+      </Stack.Protected>
+      <Stack.Screen name="(auth)" />
+      <Stack.Protected guard={inApp}>
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="settings" options={{ presentation: "modal" }} />
+        <Stack.Screen name="trips" options={{ presentation: "modal" }} />
+        <Stack.Screen name="emergency-contacts" />
+      </Stack.Protected>
+    </Stack>
+  );
+}
+
 function RootLayout() {
   const [fontsLoaded] = useFraunces({
     Fraunces_500Medium,
@@ -203,14 +230,7 @@ function RootLayout() {
           <ThemeProvider>
             <AppStateLock />
             <SessionEffects />
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="index" />
-              <Stack.Screen name="(onboarding)" />
-              <Stack.Screen name="(auth)" />
-              <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="settings" options={{ presentation: "modal" }} />
-              <Stack.Screen name="trips" options={{ presentation: "modal" }} />
-            </Stack>
+            <AppStack />
             <LockGate />
           </ThemeProvider>
         </LocalizationProvider>

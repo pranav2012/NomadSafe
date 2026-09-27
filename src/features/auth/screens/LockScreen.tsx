@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { View, Text, Pressable, StyleSheet, BackHandler, Alert } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -48,7 +48,13 @@ export default function LockScreen() {
   );
   const [phase, setPhase] = useState<Phase>("idle");
 
-  const [pin, setPin] = useState("");
+  const [pin, setPinState] = useState("");
+  // Live value so rapid taps between renders never drop a digit.
+  const pinRef = useRef("");
+  const setPin = useCallback((value: string) => {
+    pinRef.current = value;
+    setPinState(value);
+  }, []);
   const [error, setError] = useState("");
   const [isLocked, setIsLocked] = useState(false);
   const [verifying, setVerifying] = useState(false);
@@ -153,14 +159,14 @@ export default function LockScreen() {
   const handleKeyPress = async (key: string) => {
     if (isLocked || verifying || key === "") return;
     if (key === "delete") {
-      setPin((p) => p.slice(0, -1));
+      setPin(pinRef.current.slice(0, -1));
       setError("");
       return;
     }
     lightImpact();
-    if (pin.length >= PIN_LENGTH) return;
+    if (pinRef.current.length >= PIN_LENGTH) return;
 
-    const next = pin + key;
+    const next = pinRef.current + key;
     setPin(next);
 
     if (next.length === PIN_LENGTH) {
