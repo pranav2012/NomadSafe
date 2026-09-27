@@ -23,7 +23,7 @@ This app uses native modules (llama.rn, MMKV, Maps), so it **won't run in Expo G
 | `pnpm android` / `pnpm ios` | Build and run the dev client |
 | `pnpm lint` | ESLint |
 | `pnpm exec tsc --noEmit` | Type-check |
-| `pnpm test:expense-import` | Transaction parser / import tests |
+| `pnpm test` | Unit tests (expense parser, trip utils, AI money facts) |
 | `node scripts/check-i18n-keys.mjs` | Lists `t("…")` keys missing from `en.json` |
 | `pnpm localize` | Generates the other 14 locales from `en.json` |
 

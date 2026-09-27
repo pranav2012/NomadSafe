@@ -34,7 +34,8 @@ NomadSafe is a travel safety and planning app built with Expo (SDK 57), React Na
   - `convex/legalPages.ts`: `/privacy` and `/delete-account` pages.
 - **Background location**: `features/location-sharing/services/locationBroadcastTask.ts` exchanges the Better Auth session cookie for a Convex JWT and calls `sharing.publishLocation` with `ConvexHttpClient`. Its state is kept under its own MMKV key, not the UI store.
 - **Local AI**: llama.rn, managed by `features/ai/services/localModelService.ts`. All completions go through its internal queue, and `release()` is safe to call at any time.
-- **i18n**: `useLocalization().t` in components and `translate()` from `@/localization/translate` elsewhere. Add English strings to `en.json` only, then run `pnpm localize`.
+- **i18n**: `useLocalization().t` in components and `translate()` from `@/localization/translate` elsewhere. Add English strings to `en.json` only, then run `pnpm localize`. Counts use plural variants: `t("ns.key", { count })` picks `ns.key_one` / `ns.key_other`.
+- **React Compiler caveat**: don't render values read from mutable module caches (e.g. the exchange-rate Map); the compiler memoizes them and they never update. Keep rendered values in state or stores.
 
 ## Play Store constraints (don't regress)
 
