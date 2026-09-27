@@ -10,3 +10,8 @@ export {
   getEventTypeMeta,
   type EventType,
 } from "./constants/eventTypes";
+export {
+  ITINERARY_SYNC_KEY_PREFIX,
+  clearItinerarySyncCheckpoint,
+  clearItinerarySyncCheckpoints,
+} from "./services/itinerarySyncStore";

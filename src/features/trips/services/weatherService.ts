@@ -5,9 +5,9 @@ export interface DailyForecast {
   date: string; // YYYY-MM-DD (local to the destination)
   weatherCode: number;
   tempMax: number;
-  tempMin: number;
-  feelsLike: number; // apparent temperature (max), rounded
-  uvIndex: number; // UV index (max), rounded
+  tempMin: number | null;
+  feelsLike: number | null; // apparent temperature (max), rounded
+  uvIndex: number | null; // UV index (max), rounded
   precipProbability: number | null;
 }
 
@@ -81,8 +81,29 @@ interface CachedForecast {
 // map dedupes concurrent in-flight requests within a session.
 const inflight = new Map<string, Promise<DailyForecast[] | null>>();
 
+const CACHE_PREFIX = "weather:";
+const CACHE_VERSION_PREFIX = `${CACHE_PREFIX}v3:`;
+
 function cacheKey(coords: LatLng, start: string, end: string) {
-  return `weather:v2:${coords.latitude.toFixed(3)},${coords.longitude.toFixed(3)}|${start}|${end}`;
+  return `${CACHE_VERSION_PREFIX}${coords.latitude.toFixed(3)},${coords.longitude.toFixed(3)}|${start}|${end}`;
+}
+
+/** Drops forecast entries from older cache versions or previous days. */
+function evictStaleCache(today: string) {
+  try {
+    for (const key of storage.getAllKeys()) {
+      if (!key.startsWith(CACHE_PREFIX)) continue;
+      if (!key.startsWith(CACHE_VERSION_PREFIX)) {
+        storage.remove(key);
+        continue;
+      }
+      const raw = storage.getString(key);
+      const day = raw ? (JSON.parse(raw) as Partial<CachedForecast>).day : undefined;
+      if (day !== today) storage.remove(key);
+    }
+  } catch {
+    // Eviction is housekeeping; a failure must not block the forecast.
+  }
 }
 
 function readCache(key: string): DailyForecast[] | null {
@@ -118,7 +139,9 @@ export function getDailyForecast(
   const request = fetchDailyForecast(coords, start, end)
     .then((result) => {
       if (result) {
-        storage.set(key, JSON.stringify({ day: toDateKey(new Date()), data: result }));
+        const today = toDateKey(new Date());
+        evictStaleCache(today);
+        storage.set(key, JSON.stringify({ day: today, data: result }));
       }
       return result;
     })
@@ -132,11 +155,11 @@ export function getDailyForecast(
 interface ForecastResponse {
   daily?: {
     time?: string[];
-    weather_code?: number[];
-    temperature_2m_max?: number[];
-    temperature_2m_min?: number[];
-    apparent_temperature_max?: number[];
-    uv_index_max?: number[];
+    weather_code?: (number | null)[];
+    temperature_2m_max?: (number | null)[];
+    temperature_2m_min?: (number | null)[];
+    apparent_temperature_max?: (number | null)[];
+    uv_index_max?: (number | null)[];
     precipitation_probability_max?: (number | null)[];
   };
 }
@@ -161,22 +184,38 @@ export async function fetchDailyForecast(
       start_date: start,
       end_date: end,
     });
-    const response = await fetch(`${FORECAST_URL}?${params.toString()}`);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10_000);
+    const response = await fetch(`${FORECAST_URL}?${params.toString()}`, {
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timer));
     if (!response.ok) return null;
 
     const json = (await response.json()) as ForecastResponse;
     const daily = json.daily;
     if (!daily?.time?.length) return null;
 
-    return daily.time.map((date, i) => ({
-      date,
-      weatherCode: daily.weather_code?.[i] ?? 0,
-      tempMax: Math.round(daily.temperature_2m_max?.[i] ?? 0),
-      tempMin: Math.round(daily.temperature_2m_min?.[i] ?? 0),
-      feelsLike: Math.round(daily.apparent_temperature_max?.[i] ?? daily.temperature_2m_max?.[i] ?? 0),
-      uvIndex: Math.round(daily.uv_index_max?.[i] ?? 0),
-      precipProbability: daily.precipitation_probability_max?.[i] ?? null,
-    }));
+    const round = (value: number | null | undefined) =>
+      typeof value === "number" && Number.isFinite(value) ? Math.round(value) : null;
+
+    // Days without a weather code or max temperature are dropped rather than
+    // rendered as a fake "Clear 0°".
+    const days: DailyForecast[] = [];
+    daily.time.forEach((date, i) => {
+      const weatherCode = daily.weather_code?.[i];
+      const tempMax = round(daily.temperature_2m_max?.[i]);
+      if (typeof weatherCode !== "number" || tempMax == null) return;
+      days.push({
+        date,
+        weatherCode,
+        tempMax,
+        tempMin: round(daily.temperature_2m_min?.[i]),
+        feelsLike: round(daily.apparent_temperature_max?.[i]),
+        uvIndex: round(daily.uv_index_max?.[i]),
+        precipProbability: daily.precipitation_probability_max?.[i] ?? null,
+      });
+    });
+    return days.length ? days : null;
   } catch {
     return null;
   }

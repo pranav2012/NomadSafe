@@ -13,6 +13,7 @@ import {
   type EventSource,
 } from "@/features/itinerary/store/eventsStore";
 import type { EventType } from "@/features/itinerary/constants/eventTypes";
+import { fromDateKey } from "@/features/trips/utils/dates";
 
 export interface BuildEventsOptions {
   /** Events are scoped to the selected trip's date window. */
@@ -93,28 +94,59 @@ interface DatedHit {
   index: number;
 }
 
-/** Finds all calendar dates in the text along with their position, so a nearby
- *  time can be attached. Handles ISO, "26 Jun 2026", "Jun 26, 2026", and d/m/y. */
+/** Builds a local date, rejecting overflow such as 31/02 rolling into March. */
+function safeDate(year: number, month: number, day: number): Date | null {
+  const date = new Date(year, month, day);
+  return date.getFullYear() === year && date.getMonth() === month && date.getDate() === day
+    ? date
+    : null;
+}
+
+/**
+ * Finds all calendar dates in the text along with their position, so a nearby
+ * time can be attached. Handles ISO, "26 Jun 2026", "Jun 26, 2026", and numeric
+ * d/m/y or m/d/y. Numeric order is inferred from an unambiguous date in the same
+ * email (a part > 12); ambiguous ones are skipped when the order is unknown or a
+ * month-name/ISO date is already present.
+ */
 function extractDatedHits(text: string): DatedHit[] {
   const hits: DatedHit[] = [];
-  const push = (date: Date, index: number) => {
-    if (!Number.isNaN(date.getTime())) hits.push({ date, index });
+  const push = (date: Date | null, index: number) => {
+    if (date) hits.push({ date, index });
   };
 
   for (const m of text.matchAll(/\b(\d{4})-(\d{2})-(\d{2})\b/g)) {
-    push(new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])), m.index ?? 0);
+    push(safeDate(Number(m[1]), Number(m[2]) - 1, Number(m[3])), m.index ?? 0);
   }
   for (const m of text.matchAll(/\b(\d{1,2})\s+([A-Za-z]{3,9})\.?\s+(\d{4})\b/g)) {
     const month = monthIndex(m[2]);
-    if (month != null) push(new Date(Number(m[3]), month, Number(m[1])), m.index ?? 0);
+    if (month != null) push(safeDate(Number(m[3]), month, Number(m[1])), m.index ?? 0);
   }
   for (const m of text.matchAll(/\b([A-Za-z]{3,9})\.?\s+(\d{1,2}),?\s+(\d{4})\b/g)) {
     const month = monthIndex(m[1]);
-    if (month != null) push(new Date(Number(m[3]), month, Number(m[2])), m.index ?? 0);
+    if (month != null) push(safeDate(Number(m[3]), month, Number(m[2])), m.index ?? 0);
   }
-  for (const m of text.matchAll(/\b(\d{1,2})[/.](\d{1,2})[/.](\d{2,4})\b/g)) {
-    const year = Number(m[3]) < 100 ? 2000 + Number(m[3]) : Number(m[3]);
-    push(new Date(year, Number(m[2]) - 1, Number(m[1])), m.index ?? 0);
+
+  const numeric = [...text.matchAll(/\b(\d{1,2})[/.](\d{1,2})[/.](\d{2,4})\b/g)].map((m) => ({
+    first: Number(m[1]),
+    second: Number(m[2]),
+    year: Number(m[3]) < 100 ? 2000 + Number(m[3]) : Number(m[3]),
+    index: m.index ?? 0,
+  }));
+  const dayFirst = numeric.some((n) => n.first > 12 && n.second <= 12);
+  const monthFirst = numeric.some((n) => n.second > 12 && n.first <= 12);
+  const order = dayFirst === monthFirst ? null : dayFirst ? "dmy" : "mdy";
+  const hasNamedDates = hits.length > 0;
+  for (const n of numeric) {
+    const ambiguous = n.first <= 12 && n.second <= 12 && n.first !== n.second;
+    if (ambiguous && (!order || hasNamedDates)) continue;
+    const useDayFirst = order ? order === "dmy" : n.first > 12;
+    push(
+      useDayFirst
+        ? safeDate(n.year, n.second - 1, n.first)
+        : safeDate(n.year, n.first - 1, n.second),
+      n.index,
+    );
   }
 
   return hits;
@@ -144,8 +176,8 @@ function timeNear(text: string, index: number): { hour: number; minute: number }
 }
 
 function withinWindow(date: Date, trip: Trip): boolean {
-  const start = new Date(`${trip.startDate.slice(0, 10)}T00:00:00`).getTime() - DAY_MS;
-  const end = new Date(`${trip.endDate.slice(0, 10)}T00:00:00`).getTime() + DAY_MS;
+  const start = fromDateKey(trip.startDate).getTime() - DAY_MS;
+  const end = fromDateKey(trip.endDate).getTime() + DAY_MS;
   const day = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
   return day >= start && day <= end;
 }
@@ -313,11 +345,13 @@ export async function buildEventCandidates(
   });
   diagnostics.relevant = relevant.length;
 
-  console.info("[itinerary-import] scan", {
-    messages: messages.length,
-    relevant: relevant.length,
-    trip: trip ? { id: trip.id, startDate: trip.startDate, endDate: trip.endDate } : null,
-  });
+  if (__DEV__) {
+    console.info("[itinerary-import] scan", {
+      messages: messages.length,
+      relevant: relevant.length,
+      trip: trip ? { id: trip.id, startDate: trip.startDate, endDate: trip.endDate } : null,
+    });
+  }
 
   for (const message of relevant) {
     const extracted = extractEvents(message, trip ?? null);
@@ -343,7 +377,8 @@ export async function buildEventCandidates(
       seen.add(fingerprint);
 
       const duplicate =
-        hasFingerprint(fingerprint) || Boolean(externalId && hasExternalId(externalId));
+        hasFingerprint(fingerprint, trip?.id) ||
+        Boolean(externalId && hasExternalId(externalId, trip?.id));
       if (duplicate) diagnostics.duplicates += 1;
 
       candidates.push({
@@ -361,11 +396,13 @@ export async function buildEventCandidates(
     }
   }
 
-  console.info("[itinerary-import] result", {
-    ...diagnostics,
-    candidates: candidates.length,
-    fresh: candidates.filter((candidate) => !candidate.duplicate).length,
-  });
+  if (__DEV__) {
+    console.info("[itinerary-import] result", {
+      ...diagnostics,
+      candidates: candidates.length,
+      fresh: candidates.filter((candidate) => !candidate.duplicate).length,
+    });
+  }
 
   return candidates;
 }

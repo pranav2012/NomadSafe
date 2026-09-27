@@ -11,18 +11,14 @@ import {
   useEventsStore,
   type TripEvent,
 } from "@/features/itinerary/store/eventsStore";
-import { getEventTypeMeta, type EventType } from "@/features/itinerary/constants/eventTypes";
+import { getEventTypeMeta } from "@/features/itinerary/constants/eventTypes";
 import { EventForm, type EventFormValues } from "@/features/itinerary/components/EventForm";
+import { localizeEventDetail, localizeEventTitle } from "@/features/itinerary/utils/eventText";
 
 type ThemeColors = ReturnType<typeof useTheme>["nomad"]["colors"];
+type Translate = ReturnType<typeof useLocalization>["t"];
 
 const PREVIEW_COUNT = 3;
-
-const TYPE_LABELS: Record<EventType, string> = {
-  activity: "Activity",
-  transit: "Transit",
-  stay: "Stay",
-};
 
 function startOfDay(date: Date): number {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
@@ -36,10 +32,18 @@ function pickPreview(ordered: TripEvent[]): TripEvent[] {
   return ordered.slice(-PREVIEW_COUNT);
 }
 
+/** Keeps an edited event's duration by moving `endAt` along with `startAt`. */
+function shiftEndAt(event: TripEvent, startAt: string): string | undefined {
+  if (!event.endAt) return undefined;
+  const delta = new Date(startAt).getTime() - new Date(event.startAt).getTime();
+  const end = new Date(new Date(event.endAt).getTime() + delta);
+  return Number.isNaN(end.getTime()) ? event.endAt : end.toISOString();
+}
+
 export function TripItinerary({ trip }: { trip: Trip }) {
   const { nomad } = useTheme();
   const theme = nomad.colors;
-  const { locale } = useLocalization();
+  const { t, locale } = useLocalization();
   const events = useEventsStore((state) => state.events);
   const addEvent = useEventsStore((state) => state.addEvent);
   const updateEvent = useEventsStore((state) => state.updateEvent);
@@ -90,6 +94,7 @@ export function TripItinerary({ trip }: { trip: Trip }) {
         title: values.title,
         detail: values.detail || undefined,
         startAt: values.startAt,
+        endAt: shiftEndAt(editing, values.startAt),
       });
     } else {
       addEvent({
@@ -120,39 +125,38 @@ export function TripItinerary({ trip }: { trip: Trip }) {
         .map((event) => event.id);
 
       if (idsToDelete.length === 0) {
-        Alert.alert("Events already refined", "No duplicate or extra trip events were found.");
+        Alert.alert(t("itinerary.refineNoneTitle"), t("itinerary.refineNoneBody"));
         return;
       }
 
       Alert.alert(
-        "Review refinement",
-        `Keep ${refinement.keepIds.length} events and remove ${idsToDelete.length} extra events?`,
+        t("itinerary.refineReviewTitle"),
+        t("itinerary.refineReviewBody", {
+          keep: refinement.keepIds.length,
+          remove: idsToDelete.length,
+        }),
         [
-          { text: "Cancel", style: "cancel" },
+          { text: t("common.cancel"), style: "cancel" },
           {
-            text: "Apply",
+            text: t("itinerary.refineApply"),
             style: "destructive",
             onPress: () => deleteEvents(idsToDelete),
           },
         ],
       );
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown local AI error.";
       console.warn("[itinerary-refinement] failed", error);
-      Alert.alert(
-        "Couldn't refine events",
-        message,
-      );
+      Alert.alert(t("itinerary.refineErrorTitle"), t("itinerary.refineErrorBody"));
     } finally {
       await localModelService.release();
       setIsRefining(false);
     }
-  }, [deleteEvents, isRefining, ordered]);
+  }, [deleteEvents, isRefining, ordered, t]);
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={[styles.eyebrow, { color: theme.inkMuted }]}>Trip Events</Text>
+        <Text style={[styles.eyebrow, { color: theme.inkMuted }]}>{t("itinerary.title")}</Text>
         <View style={styles.headerActions}>
           <Pressable
             onPress={() => setEditing("new")}
@@ -163,7 +167,7 @@ export function TripItinerary({ trip }: { trip: Trip }) {
             ]}
           >
             <Icon name="plus" size={12} color={theme.teal} />
-            <Text style={[styles.addPillText, { color: theme.teal }]}>Add</Text>
+            <Text style={[styles.addPillText, { color: theme.teal }]}>{t("itinerary.add")}</Text>
           </Pressable>
           {isAiAvailable ? (
             <Pressable
@@ -180,7 +184,7 @@ export function TripItinerary({ trip }: { trip: Trip }) {
             >
               <Icon name="sparkle" size={12} color={theme.mustard} />
               <Text style={[styles.addPillText, { color: theme.mustard }]}>
-                {isRefining ? "Refining…" : "Refine with AI"}
+                {isRefining ? t("itinerary.refining") : t("itinerary.refine")}
               </Text>
             </Pressable>
           ) : null}
@@ -194,7 +198,7 @@ export function TripItinerary({ trip }: { trip: Trip }) {
         >
           <Icon name="calendar" size={18} color={theme.inkMuted} />
           <Text style={[styles.emptyText, { color: theme.inkSoft }]}>
-            No events yet. Booking emails sync here automatically, or add one.
+            {t("itinerary.empty")}
           </Text>
         </Pressable>
       ) : (
@@ -205,6 +209,7 @@ export function TripItinerary({ trip }: { trip: Trip }) {
               event={event}
               theme={theme}
               locale={locale}
+              t={t}
               onPress={() => setEditing(event)}
             />
           ))}
@@ -217,7 +222,7 @@ export function TripItinerary({ trip }: { trip: Trip }) {
           style={({ pressed }) => [styles.expandRow, { opacity: pressed ? 0.6 : 1 }]}
         >
           <Text style={[styles.expandText, { color: theme.teal }]}>
-            {expanded ? "Show less" : `View all ${ordered.length}`}
+            {expanded ? t("itinerary.showLess") : t("itinerary.viewAll", { count: ordered.length })}
           </Text>
           <View style={{ transform: [{ rotate: expanded ? "180deg" : "0deg" }] }}>
             <Icon name="chevronDown" size={14} color={theme.teal} />
@@ -241,21 +246,23 @@ function EventRow({
   event,
   theme,
   locale,
+  t,
   onPress,
 }: {
   event: TripEvent;
   theme: ThemeColors;
   locale: string;
+  t: Translate;
   onPress: () => void;
 }) {
   const meta = getEventTypeMeta(event.type);
   const date = new Date(event.startAt);
   const isToday = startOfDay(date) === startOfDay(new Date());
   const weekday = isToday
-    ? "Today"
+    ? t("itinerary.today")
     : new Intl.DateTimeFormat(locale, { weekday: "short" }).format(date);
   const time = new Intl.DateTimeFormat(locale, { hour: "numeric", minute: "2-digit" }).format(date);
-  const subtitle = [time, event.detail].filter(Boolean).join("  ·  ");
+  const subtitle = [time, localizeEventDetail(event.detail, t)].filter(Boolean).join("  ·  ");
 
   return (
     <Pressable
@@ -267,7 +274,7 @@ function EventRow({
     >
       <View style={styles.dateBadge}>
         <Text style={[styles.dateWeekday, { color: theme[meta.color] }]} numberOfLines={1}>
-          {weekday.toUpperCase()}
+          {weekday.toLocaleUpperCase(locale)}
         </Text>
         <Text style={[styles.dateDay, { color: theme.inkDeep }]}>{date.getDate()}</Text>
       </View>
@@ -275,11 +282,11 @@ function EventRow({
       <View style={styles.rowBody}>
         <View style={[styles.typePill, { backgroundColor: theme[meta.soft] }]}>
           <Text style={[styles.typePillText, { color: theme[meta.color] }]}>
-            {TYPE_LABELS[event.type].toUpperCase()}
+            {t(`itinerary.types.${event.type}`).toLocaleUpperCase(locale)}
           </Text>
         </View>
         <Text style={[styles.rowTitle, { color: theme.inkDeep }]} numberOfLines={1}>
-          {event.title}
+          {localizeEventTitle(event.title, t)}
         </Text>
         {subtitle ? (
           <Text style={[styles.rowSub, { color: theme.inkSoft }]} numberOfLines={1}>

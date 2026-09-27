@@ -1,11 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import * as Localization from "expo-localization";
 import { Icon } from "@/components/nomad/Icon";
 import { NOMAD_FONTS } from "@/constants/nomadTokens";
 import { useTheme } from "@/hooks/useTheme";
 import { useLocalization } from "@/localization";
 import { geocodeDestination } from "@/features/trips/services/geocoding";
-import type { LatLng, Trip } from "@/features/trips/store/tripsStore";
+import {
+  getDestinationCoordinates,
+  type LatLng,
+  type Trip,
+} from "@/features/trips/store/tripsStore";
 import {
   clampToForecastWindow,
   describeWeather,
@@ -36,6 +41,21 @@ interface UserLocation {
 
 const MAX_STRIP_DAYS = 6;
 
+type TemperatureUnit = "C" | "F";
+
+/** Device temperature preference; Open-Meteo data is always Celsius. */
+function useTemperatureUnit(): TemperatureUnit {
+  const deviceLocale = Localization.useLocales()[0];
+  if (deviceLocale?.temperatureUnit) {
+    return deviceLocale.temperatureUnit === "fahrenheit" ? "F" : "C";
+  }
+  return deviceLocale?.measurementSystem === "us" ? "F" : "C";
+}
+
+function toUnit(celsius: number, unit: TemperatureUnit) {
+  return unit === "F" ? Math.round((celsius * 9) / 5 + 32) : celsius;
+}
+
 function todayKey() {
   const now = new Date();
   const month = `${now.getMonth() + 1}`.padStart(2, "0");
@@ -60,12 +80,10 @@ function distanceKm(a: LatLng, b: LatLng) {
   return 2 * 6371 * Math.asin(Math.sqrt(h));
 }
 
-/** Picks the destination nearest the user's GPS position, falling back to the
- * trip's current destination and then the first available one. */
+/** Picks the destination nearest the user's GPS position, else the first one. */
 function defaultDestinationName(
   destinations: DestinationForecast[],
   userLocation: UserLocation | null,
-  currentIndex: number,
 ): string {
   if (userLocation?.latitude != null && userLocation.longitude != null) {
     const here: LatLng = {
@@ -84,7 +102,7 @@ function defaultDestinationName(
     return nearest.name;
   }
 
-  return destinations.find((d) => d.index === currentIndex)?.name ?? destinations[0].name;
+  return destinations[0].name;
 }
 
 interface Outlook {
@@ -127,23 +145,23 @@ function buildOutlook(days: DailyForecast[], locale: string, t: Translate): Outl
 export function TripWeather({
   trip,
   userLocation,
-  currentIndex,
 }: {
   trip: Trip;
   userLocation: UserLocation | null;
-  currentIndex: number;
 }) {
   const { nomad } = useTheme();
   const theme = nomad.colors;
   const { t, locale } = useLocalization();
+  const unit = useTemperatureUnit();
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [selectedName, setSelectedName] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const { startDate, endDate, destinations } = trip;
   const destinationsKey = destinations.join("|");
-  const coordsKey = (trip.destinationCoordinates ?? [])
-    .map((c) => `${c.latitude},${c.longitude}`)
+  const coordinates = getDestinationCoordinates(trip);
+  const coordsKey = coordinates
+    .map((c) => (c ? `${c.latitude},${c.longitude}` : "-"))
     .join("|");
 
   useEffect(() => {
@@ -160,8 +178,7 @@ export function TripWeather({
 
       const results = await Promise.all(
         destinations.map(async (name, index): Promise<DestinationForecast | null> => {
-          const coords =
-            trip.destinationCoordinates?.[index] ?? (await geocodeDestination(name));
+          const coords = coordinates[index] ?? (await geocodeDestination(name));
           if (!coords) return null;
           const days = await getDailyForecast(coords, window.start, window.end);
           if (!days?.length) return null;
@@ -183,7 +200,7 @@ export function TripWeather({
 
   const ready = state.status === "ready" ? state.destinations : [];
   const defaultName = ready.length
-    ? defaultDestinationName(ready, userLocation, currentIndex)
+    ? defaultDestinationName(ready, userLocation)
     : null;
   const activeName =
     selectedName && ready.some((d) => d.name === selectedName) ? selectedName : defaultName;
@@ -256,7 +273,7 @@ export function TripWeather({
               })}
             </View>
           ) : (
-            <WeatherBody days={active.days} theme={theme} locale={locale} t={t} />
+            <WeatherBody days={active.days} theme={theme} locale={locale} t={t} unit={unit} />
           )
         ) : null}
       </View>
@@ -269,17 +286,28 @@ function WeatherBody({
   theme,
   locale,
   t,
+  unit,
 }: {
   days: DailyForecast[];
   theme: ThemeColors;
   locale: string;
   t: Translate;
+  unit: TemperatureUnit;
 }) {
   const lead = days[0];
   const condition = describeWeather(lead.weatherCode);
   const outlook = buildOutlook(days, locale, t);
   const strip = days.slice(0, MAX_STRIP_DAYS);
   const today = todayKey();
+  const meta = [
+    t(`trip.weatherConditions.${condition.labelKey}`),
+    lead.feelsLike != null
+      ? t("trip.weatherFeelsLike", { temp: toUnit(lead.feelsLike, unit) })
+      : null,
+    lead.uvIndex != null ? t("trip.weatherUv", { value: lead.uvIndex }) : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <>
@@ -287,13 +315,11 @@ function WeatherBody({
         <Text style={styles.heroEmoji}>{condition.emoji}</Text>
         <View style={styles.heroMain}>
           <Text style={[styles.heroTemp, { color: theme.inkDeep }]}>
-            {`${lead.tempMax}°`}
-            <Text style={[styles.heroUnit, { color: theme.inkMuted }]}>C</Text>
+            {`${toUnit(lead.tempMax, unit)}°`}
+            <Text style={[styles.heroUnit, { color: theme.inkMuted }]}>{unit}</Text>
           </Text>
           <Text style={[styles.heroMeta, { color: theme.inkSoft }]} numberOfLines={1}>
-            {`${t(`trip.weatherConditions.${condition.labelKey}`)} · ${t("trip.weatherFeelsLike", {
-              temp: lead.feelsLike,
-            })} · ${t("trip.weatherUv", { value: lead.uvIndex })}`}
+            {meta}
           </Text>
         </View>
         {outlook ? (
@@ -319,7 +345,7 @@ function WeatherBody({
                 {day.date === today ? t("trip.weatherToday") : weekday(day.date, locale)}
               </Text>
               <Text style={styles.dayEmoji}>{dayCondition.emoji}</Text>
-              <Text style={[styles.dayTemp, { color: theme.inkDeep }]}>{`${day.tempMax}°`}</Text>
+              <Text style={[styles.dayTemp, { color: theme.inkDeep }]}>{`${toUnit(day.tempMax, unit)}°`}</Text>
             </View>
           );
         })}

@@ -1,48 +1,49 @@
 import React, { useMemo, useState } from "react";
 import {
   Alert,
+  KeyboardAvoidingView,
   Modal,
   Pressable,
-  ScrollView,
+  SectionList,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Animated, { FadeInDown, LinearTransition } from "react-native-reanimated";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import { useRouter } from "expo-router";
 import { Icon } from "@/components/nomad/Icon";
 import { NOMAD_FONTS } from "@/constants/nomadTokens";
 import { useTheme } from "@/hooks/useTheme";
 import { useLocalization } from "@/localization";
 import { TripForm } from "@/features/trips/components/TripForm";
-import { type Trip, useTripsStore } from "@/features/trips/store/tripsStore";
+import { selectActiveTrip, type Trip, useTripsStore } from "@/features/trips/store/tripsStore";
+import {
+  countInclusiveDays,
+  fromDateKey,
+  getTripStatus,
+  startOfLocalDay,
+} from "@/features/trips/utils/dates";
 import { useChatStore } from "@/features/ai/store/chatStore";
+import { useEventsStore } from "@/features/itinerary/store/eventsStore";
+import { clearItinerarySyncCheckpoint } from "@/features/itinerary/services/itinerarySyncStore";
+import { useExpensesStore } from "@/features/expenses/store/expensesStore";
 
-function getTripProgress(trip: Trip) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const start = new Date(trip.startDate);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(trip.endDate);
-  end.setHours(0, 0, 0, 0);
+type SectionKey = "current" | "upcoming" | "past";
 
-  if (today < start) return "upcoming" as const;
-  if (today > end) return "complete" as const;
-  return "active" as const;
+interface TripSection {
+  key: SectionKey;
+  data: Trip[];
 }
 
 function countDays(trip: Trip) {
-  const start = new Date(trip.startDate);
-  const end = new Date(trip.endDate);
-  const msPerDay = 24 * 60 * 60 * 1000;
-  return Math.max(1, Math.round((end.getTime() - start.getTime()) / msPerDay) + 1);
+  return countInclusiveDays(fromDateKey(trip.startDate), fromDateKey(trip.endDate));
 }
 
 function formatTripDates(trip: Trip, locale: string) {
-  const start = new Date(trip.startDate);
-  const end = new Date(trip.endDate);
+  const start = fromDateKey(trip.startDate);
+  const end = fromDateKey(trip.endDate);
   const sameYear = start.getFullYear() === end.getFullYear();
   const startFormatter = new Intl.DateTimeFormat(locale, {
     month: "short",
@@ -56,13 +57,24 @@ function formatTripDates(trip: Trip, locale: string) {
   return `${startFormatter.format(start)} — ${endFormatter.format(end)}`;
 }
 
+function byStartDate(a: Trip, b: Trip) {
+  return fromDateKey(a.startDate).getTime() - fromDateKey(b.startDate).getTime();
+}
+
+/** Accepts the localized confirm word (as the prompt instructs) or English "confirm". */
+function matchesConfirmWord(input: string, localizedWord: string, locale: string) {
+  const typed = input.trim().toLocaleLowerCase(locale);
+  if (!typed) return false;
+  return typed === localizedWord.trim().toLocaleLowerCase(locale) || typed === "confirm";
+}
+
 export default function TripsScreen() {
   const { nomad } = useTheme();
   const theme = nomad.colors;
   const { t, locale } = useLocalization();
   const router = useRouter();
   const trips = useTripsStore((state) => state.trips);
-  const activeTripId = useTripsStore((state) => state.activeTripId);
+  const activeTrip = useTripsStore(selectActiveTrip);
   const setActiveTrip = useTripsStore((state) => state.setActiveTrip);
   const deleteTrip = useTripsStore((state) => state.deleteTrip);
 
@@ -71,17 +83,25 @@ export default function TripsScreen() {
   const [deleteTarget, setDeleteTarget] = useState<Trip | null>(null);
   const [confirmText, setConfirmText] = useState("");
 
-  const activeTrip = trips.find((trip) => trip.id === activeTripId) ?? null;
-
-  const { upcoming, past } = useMemo(() => {
+  const sections = useMemo<TripSection[]>(() => {
     const remaining = trips.filter((trip) => trip.id !== activeTrip?.id);
-    return {
-      upcoming: remaining.filter((trip) => getTripProgress(trip) === "upcoming"),
-      past: remaining.filter((trip) => {
-        const progress = getTripProgress(trip);
-        return progress === "active" || progress === "complete";
-      }),
-    };
+    const grouped: TripSection[] = [
+      {
+        key: "current",
+        data: remaining.filter((trip) => getTripStatus(trip) === "active").sort(byStartDate),
+      },
+      {
+        key: "upcoming",
+        data: remaining.filter((trip) => getTripStatus(trip) === "upcoming").sort(byStartDate),
+      },
+      {
+        key: "past",
+        data: remaining
+          .filter((trip) => getTripStatus(trip) === "complete")
+          .sort((a, b) => byStartDate(b, a)),
+      },
+    ];
+    return grouped.filter((section) => section.data.length > 0);
   }, [trips, activeTrip]);
 
   const handleOpenCreate = () => {
@@ -110,12 +130,16 @@ export default function TripsScreen() {
 
   const handleConfirmDelete = () => {
     if (!deleteTarget) return;
-    if (confirmText.trim().toLowerCase() !== "confirm") {
+    if (!matchesConfirmWord(confirmText, t("trip.deletePlaceholder"), locale)) {
       Alert.alert(t("trip.deleteConfirmErrorTitle"), t("trip.deleteConfirmErrorBody"));
       return;
     }
-    deleteTrip(deleteTarget.id);
-    useChatStore.getState().removeConversation(deleteTarget.id);
+    const tripId = deleteTarget.id;
+    deleteTrip(tripId);
+    useEventsStore.getState().removeByTripId(tripId);
+    useExpensesStore.getState().removeByTripId(tripId);
+    useChatStore.getState().removeConversation(tripId);
+    void clearItinerarySyncCheckpoint(tripId);
     setDeleteTarget(null);
     setConfirmText("");
   };
@@ -126,135 +150,130 @@ export default function TripsScreen() {
   };
 
   const totalTrips = trips.length;
+  const sectionLabels: Record<SectionKey, string> = {
+    current: t("trip.happeningNow"),
+    upcoming: t("trip.upcoming"),
+    past: t("trip.past"),
+  };
+
+  const listHeader = (
+    <>
+      <View style={styles.header}>
+        <View>
+          <Text style={[styles.eyebrow, { color: theme.inkMuted }]}>
+            {t("trip.tripsCount", { count: totalTrips })}
+          </Text>
+          <Text style={[styles.heroTitle, { color: theme.inkDeep }]}>
+            {t("trip.tripsTitle")}
+          </Text>
+        </View>
+        <Pressable
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel={t("trip.close")}
+          style={({ pressed }) => [
+            styles.closeButton,
+            {
+              backgroundColor: theme.paperSoft,
+              borderColor: theme.hairline,
+              opacity: pressed ? 0.8 : 1,
+            },
+          ]}
+        >
+          <Icon name="close" size={18} color={theme.inkSoft} />
+        </Pressable>
+      </View>
+
+      {activeTrip ? (
+        <View style={styles.section}>
+          <Text style={[styles.sectionLabel, { color: theme.teal }]}>
+            {t("trip.activeNow")}
+          </Text>
+          <ActiveTripCard
+            trip={activeTrip}
+            locale={locale}
+            theme={theme}
+            t={t}
+            onPress={() => router.back()}
+            onEdit={() => handleOpenEdit(activeTrip)}
+            onDelete={() => handleInitiateDelete(activeTrip)}
+          />
+        </View>
+      ) : null}
+
+      {!activeTrip && sections.length === 0 ? (
+        <View
+          style={[
+            styles.emptyCard,
+            styles.section,
+            { backgroundColor: theme.paperSoft, borderColor: theme.hairline },
+          ]}
+        >
+          <Icon name="compass" size={28} color={theme.inkMuted} />
+          <Text style={[styles.emptyTitle, { color: theme.inkDeep }]}>
+            {t("trip.noTripsTitle")}
+          </Text>
+          <Text style={[styles.emptyBody, { color: theme.inkSoft }]}>
+            {t("trip.noTripsBody")}
+          </Text>
+        </View>
+      ) : null}
+    </>
+  );
+
+  const listFooter = (
+    <Pressable
+      onPress={handleOpenCreate}
+      style={({ pressed }) => [
+        styles.addTripButton,
+        {
+          borderColor: theme.teal,
+          opacity: pressed ? 0.85 : 1,
+        },
+      ]}
+    >
+      <Icon name="plus" size={18} color={theme.teal} />
+      <Text style={[styles.addTripText, { color: theme.teal }]}>
+        {t("trip.addTrip")}
+      </Text>
+    </Pressable>
+  );
 
   return (
     <SafeAreaView
       edges={["top"]}
       style={[styles.root, { backgroundColor: theme.paper }]}
     >
-      <ScrollView
+      <SectionList
+        sections={sections}
+        keyExtractor={(trip) => trip.id}
         contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.header}>
-          <View>
-            <Text style={[styles.eyebrow, { color: theme.inkMuted }]}>
-              {t("trip.tripsCount", { count: totalTrips })}
-            </Text>
-            <Text style={[styles.heroTitle, { color: theme.inkDeep }]}>
-              {t("trip.tripsTitle")}
-            </Text>
-          </View>
-          <Pressable
-            onPress={() => router.back()}
-            style={({ pressed }) => [
-              styles.closeButton,
-              {
-                backgroundColor: theme.paperSoft,
-                borderColor: theme.hairline,
-                opacity: pressed ? 0.8 : 1,
-              },
-            ]}
-          >
-            <Icon name="close" size={18} color={theme.inkSoft} />
-          </Pressable>
-        </View>
-
-        {activeTrip ? (
-          <View style={styles.section}>
-            <Text style={[styles.sectionLabel, { color: theme.teal }]}>
-              {t("trip.activeNow")}
-            </Text>
-            <ActiveTripCard
-              trip={activeTrip}
+        stickySectionHeadersEnabled={false}
+        ListHeaderComponent={listHeader}
+        ListFooterComponent={listFooter}
+        renderSectionHeader={({ section }) => (
+          <Text style={[styles.sectionLabel, styles.sectionHeader, { color: theme.inkMuted }]}>
+            {sectionLabels[section.key]}
+          </Text>
+        )}
+        renderSectionFooter={() => <View style={styles.sectionFooter} />}
+        ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
+        renderItem={({ item, index }) => (
+          <Animated.View entering={FadeInDown.duration(220).delay(Math.min(index, 8) * 40)}>
+            <TripRow
+              trip={item}
               locale={locale}
               theme={theme}
               t={t}
-              onPress={() => router.back()}
-              onEdit={() => handleOpenEdit(activeTrip)}
-              onDelete={() => handleInitiateDelete(activeTrip)}
+              onPress={() => handleSwitchActive(item.id)}
+              onEdit={() => handleOpenEdit(item)}
+              onDelete={() => handleInitiateDelete(item)}
             />
-          </View>
-        ) : null}
-
-        {upcoming.length > 0 ? (
-          <View style={styles.section}>
-            <Text style={[styles.sectionLabel, { color: theme.inkMuted }]}>
-              {t("trip.upcoming")}
-            </Text>
-            <Animated.View layout={LinearTransition.duration(220)} style={styles.list}>
-              {upcoming.map((trip, index) => (
-                <Animated.View key={trip.id} entering={FadeInDown.duration(220).delay(index * 40)}>
-                  <TripRow
-                    trip={trip}
-                    locale={locale}
-                    theme={theme}
-                    t={t}
-                    onPress={() => handleSwitchActive(trip.id)}
-                    onEdit={() => handleOpenEdit(trip)}
-                    onDelete={() => handleInitiateDelete(trip)}
-                  />
-                </Animated.View>
-              ))}
-            </Animated.View>
-          </View>
-        ) : null}
-
-        <View style={styles.section}>
-          <Text style={[styles.sectionLabel, { color: theme.inkMuted }]}>
-            {past.length > 0 ? t("trip.past") : t("trip.allTrips")}
-          </Text>
-          <Animated.View layout={LinearTransition.duration(220)} style={styles.list}>
-            {past.length === 0 && upcoming.length === 0 && !activeTrip ? (
-              <View
-                style={[
-                  styles.emptyCard,
-                  { backgroundColor: theme.paperSoft, borderColor: theme.hairline },
-                ]}
-              >
-                <Icon name="compass" size={28} color={theme.inkMuted} />
-                <Text style={[styles.emptyTitle, { color: theme.inkDeep }]}>
-                  {t("trip.noTripsTitle")}
-                </Text>
-                <Text style={[styles.emptyBody, { color: theme.inkSoft }]}>
-                  {t("trip.noTripsBody")}
-                </Text>
-              </View>
-            ) : (
-              past.map((trip, index) => (
-                <Animated.View key={trip.id} entering={FadeInDown.duration(220).delay(index * 40)}>
-                  <TripRow
-                    trip={trip}
-                    locale={locale}
-                    theme={theme}
-                    t={t}
-                    onPress={() => handleSwitchActive(trip.id)}
-                    onEdit={() => handleOpenEdit(trip)}
-                    onDelete={() => handleInitiateDelete(trip)}
-                  />
-                </Animated.View>
-              ))
-            )}
           </Animated.View>
-        </View>
-
-        <Pressable
-          onPress={handleOpenCreate}
-          style={({ pressed }) => [
-            styles.addTripButton,
-            {
-              borderColor: theme.teal,
-              opacity: pressed ? 0.85 : 1,
-            },
-          ]}
-        >
-          <Icon name="plus" size={18} color={theme.teal} />
-          <Text style={[styles.addTripText, { color: theme.teal }]}>
-            {t("trip.addTrip")}
-          </Text>
-        </Pressable>
-      </ScrollView>
+        )}
+      />
 
       <Modal
         visible={isFormOpen}
@@ -267,7 +286,12 @@ export default function TripsScreen() {
           style={[styles.formRoot, { backgroundColor: theme.paper }]}
         >
           <View style={styles.formHeader}>
-            <Pressable onPress={handleCloseForm} hitSlop={12}>
+            <Pressable
+              onPress={handleCloseForm}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel={t("trip.close")}
+            >
               <Icon name="x" size={24} color={theme.inkDeep} />
             </Pressable>
           </View>
@@ -283,76 +307,81 @@ export default function TripsScreen() {
         visible={deleteTarget !== null}
         transparent
         animationType="fade"
+        statusBarTranslucent
+        navigationBarTranslucent
         onRequestClose={handleCancelDelete}
       >
-        <Pressable
-          style={[styles.deleteBackdrop, { backgroundColor: "rgba(0,0,0,0.5)" }]}
-          onPress={handleCancelDelete}
-        >
-          <View
-            style={[
-              styles.deleteSheet,
-              { backgroundColor: theme.paperSoft, borderColor: theme.hairline },
-            ]}
-            onStartShouldSetResponder={() => true}
+        <KeyboardAvoidingView behavior="padding" style={styles.keyboardRoot}>
+          <Pressable
+            style={[styles.deleteBackdrop, { backgroundColor: "rgba(0,0,0,0.5)" }]}
+            onPress={handleCancelDelete}
           >
-            <View style={[styles.deleteIcon, { backgroundColor: theme.stampSoft }]}>
-              <Icon name="trash" size={22} color={theme.stamp} />
-            </View>
-            <Text style={[styles.deleteTitle, { color: theme.inkDeep }]}>
-              {t("trip.deleteTitle")}
-            </Text>
-            <Text style={[styles.deleteBody, { color: theme.inkSoft }]}>
-              {t("trip.deleteBody", { name: deleteTarget?.name ?? "" })}
-            </Text>
-
-            <Text style={[styles.deletePrompt, { color: theme.inkMuted }]}>
-              {t("trip.deletePrompt")}
-            </Text>
-            <TextInput
-              value={confirmText}
-              onChangeText={setConfirmText}
-              autoCapitalize="none"
-              autoCorrect={false}
-              placeholder={t("trip.deletePlaceholder")}
-              placeholderTextColor={theme.inkMuted}
+            <View
               style={[
-                styles.confirmInput,
-                {
-                  color: theme.inkDeep,
-                  backgroundColor: theme.paper,
-                  borderColor: theme.hairline,
-                },
+                styles.deleteSheet,
+                { backgroundColor: theme.paperSoft, borderColor: theme.hairline },
               ]}
-            />
+              onStartShouldSetResponder={() => true}
+            >
+              <View style={[styles.deleteIcon, { backgroundColor: theme.stampSoft }]}>
+                <Icon name="trash" size={22} color={theme.stamp} />
+              </View>
+              <Text style={[styles.deleteTitle, { color: theme.inkDeep }]}>
+                {t("trip.deleteTitle")}
+              </Text>
+              <Text style={[styles.deleteBody, { color: theme.inkSoft }]}>
+                {t("trip.deleteBody", { name: deleteTarget?.name ?? "" })}
+              </Text>
 
-            <View style={styles.deleteActions}>
-              <Pressable
-                onPress={handleCancelDelete}
+              <Text style={[styles.deletePrompt, { color: theme.inkMuted }]}>
+                {t("trip.deletePrompt")}
+              </Text>
+              <TextInput
+                value={confirmText}
+                onChangeText={setConfirmText}
+                autoCapitalize="none"
+                autoCorrect={false}
+                placeholder={t("trip.deletePlaceholder")}
+                placeholderTextColor={theme.inkMuted}
+                onSubmitEditing={handleConfirmDelete}
                 style={[
-                  styles.deleteAction,
+                  styles.confirmInput,
                   {
+                    color: theme.inkDeep,
                     backgroundColor: theme.paper,
                     borderColor: theme.hairline,
-                    borderWidth: 1,
                   },
                 ]}
-              >
-                <Text style={[styles.deleteActionText, { color: theme.inkDeep }]}>
-                  {t("common.cancel")}
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={handleConfirmDelete}
-                style={[styles.deleteAction, { backgroundColor: theme.stamp }]}
-              >
-                <Text style={[styles.deleteActionText, { color: theme.inverse }]}>
-                  {t("trip.deleteConfirm")}
-                </Text>
-              </Pressable>
+              />
+
+              <View style={styles.deleteActions}>
+                <Pressable
+                  onPress={handleCancelDelete}
+                  style={[
+                    styles.deleteAction,
+                    {
+                      backgroundColor: theme.paper,
+                      borderColor: theme.hairline,
+                      borderWidth: 1,
+                    },
+                  ]}
+                >
+                  <Text style={[styles.deleteActionText, { color: theme.inkDeep }]}>
+                    {t("common.cancel")}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={handleConfirmDelete}
+                  style={[styles.deleteAction, { backgroundColor: theme.stamp }]}
+                >
+                  <Text style={[styles.deleteActionText, { color: theme.inverse }]}>
+                    {t("trip.deleteConfirm")}
+                  </Text>
+                </Pressable>
+              </View>
             </View>
-          </View>
-        </Pressable>
+          </Pressable>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );
@@ -375,12 +404,10 @@ function ActiveTripCard({
   onEdit: () => void;
   onDelete: () => void;
 }) {
-  const progress = getTripProgress(trip);
+  const progress = getTripStatus(trip);
   const duration = countDays(trip);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const start = new Date(trip.startDate);
-  start.setHours(0, 0, 0, 0);
+  const today = startOfLocalDay(new Date());
+  const start = fromDateKey(trip.startDate);
   const elapsedDays = Math.max(
     1,
     Math.round((today.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) + 1,
@@ -497,7 +524,7 @@ function TripRow({
   onEdit: () => void;
   onDelete: () => void;
 }) {
-  const progress = getTripProgress(trip);
+  const progress = getTripStatus(trip);
   const statusLabel =
     progress === "active"
       ? t("trip.activeNow")
@@ -615,8 +642,18 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     paddingHorizontal: 6,
   },
-  list: {
-    gap: 8,
+  sectionHeader: {
+    marginTop: 6,
+    marginBottom: 8,
+  },
+  sectionFooter: {
+    height: 14,
+  },
+  itemSeparator: {
+    height: 8,
+  },
+  keyboardRoot: {
+    flex: 1,
   },
   activeCard: {
     borderWidth: 1,

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
   Modal,
   Pressable,
   ScrollView,
@@ -26,12 +27,23 @@ import {
 } from "@/features/trips/data/destinations";
 import {
   type CreateTripInput,
+  getDestinationCoordinates,
+  type LatLng,
   type Trip,
   type TripMode,
   type UpdateTripInput,
   useTripsStore,
 } from "@/features/trips/store/tripsStore";
 import { geocodeDestinations } from "@/features/trips/services/geocoding";
+import { useWebDestinationSearch } from "@/features/trips/hooks/useWebDestinationSearch";
+import {
+  addDays,
+  countInclusiveDays,
+  fromDateKey,
+  startOfLocalDay,
+  toDateKey,
+} from "@/features/trips/utils/dates";
+import { parseAmount, sanitizeAmountInput } from "@/features/trips/utils/amount";
 import { useLocalization } from "@/localization";
 import { useTheme } from "@/hooks/useTheme";
 import { CURRENCY_OPTIONS } from "@/utils/currency";
@@ -51,52 +63,12 @@ interface FormState {
   companions: string[];
 }
 
-interface WebDestinationResult {
-  display_name: string;
-  type?: string;
-  address?: {
-    city?: string;
-    town?: string;
-    village?: string;
-    municipality?: string;
-    state?: string;
-    country?: string;
-  };
-}
-
 export interface TripFormProps {
   editingTrip?: Trip | null;
   onSave: () => void;
   onCancel?: () => void;
-}
-
-function addDays(date: Date, days: number) {
-  const next = new Date(date);
-  next.setDate(next.getDate() + days);
-  return next;
-}
-
-function startOfLocalDay(date: Date) {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-}
-
-export function toDateKey(date: Date) {
-  const year = date.getFullYear();
-  const month = `${date.getMonth() + 1}`.padStart(2, "0");
-  const day = `${date.getDate()}`.padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-export function fromDateKey(value: string) {
-  const [year, month, day] = value.split("-").map(Number);
-  return new Date(year, month - 1, day);
-}
-
-function countInclusiveDays(startDate: Date, endDate: Date) {
-  const msPerDay = 24 * 60 * 60 * 1000;
-  const start = startOfLocalDay(startDate).getTime();
-  const end = startOfLocalDay(endDate).getTime();
-  return Math.max(1, Math.round((end - start) / msPerDay) + 1);
+  /** Rendered above the form header (e.g. a link to existing trips). */
+  header?: React.ReactNode;
 }
 
 function formatDatePart(
@@ -166,17 +138,7 @@ function tripToFormState(trip: Trip): FormState {
   };
 }
 
-function formatWebDestination(result: WebDestinationResult) {
-  const city =
-    result.address?.city ??
-    result.address?.town ??
-    result.address?.village ??
-    result.address?.municipality;
-  const parts = [city, result.address?.state, result.address?.country].filter(Boolean);
-  return parts.length > 0 ? parts.join(", ") : result.display_name.split(",").slice(0, 3).join(",");
-}
-
-export function TripForm({ editingTrip, onSave, onCancel }: TripFormProps) {
+export function TripForm({ editingTrip, onSave, onCancel, header }: TripFormProps) {
   const { nomad, isDark } = useTheme();
   const theme = nomad.colors;
   const { t, locale, formatCurrency } = useLocalization();
@@ -198,9 +160,6 @@ export function TripForm({ editingTrip, onSave, onCancel }: TripFormProps) {
   const [form, setForm] = useState<FormState>(initialForm);
   const [pickerField, setPickerField] = useState<DateField | null>(null);
   const [isCurrencyPickerOpen, setIsCurrencyPickerOpen] = useState(false);
-  const [webDestinationResults, setWebDestinationResults] = useState<DestinationOption[]>([]);
-  const [isSearchingWebDestinations, setIsSearchingWebDestinations] = useState(false);
-  const [webDestinationError, setWebDestinationError] = useState<string | null>(null);
   const [isBudgetAiAvailable, setIsBudgetAiAvailable] = useState(false);
   const [isEstimatingBudget, setIsEstimatingBudget] = useState(false);
   const [budgetEstimate, setBudgetEstimate] = useState<TripBudgetEstimate | null>(null);
@@ -209,6 +168,12 @@ export function TripForm({ editingTrip, onSave, onCancel }: TripFormProps) {
   const [nameError, setNameError] = useState<string | null>(null);
   const [hasGeneratedName, setHasGeneratedName] = useState(Boolean(editingTrip));
   const [hasEstimatedBudget, setHasEstimatedBudget] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const isSavingRef = useRef(false);
+  // One on-device AI task at a time: auto budget and auto name are chained through this.
+  const aiTaskRef = useRef<"budget" | "name" | null>(null);
+  const webSearch = useWebDestinationSearch(form.destinations);
+  const parsedBudget = parseAmount(form.budget, locale);
 
   const aiDownload = useModelDownload();
   const scrollRef = useRef<ScrollView>(null);
@@ -268,17 +233,11 @@ export function TripForm({ editingTrip, onSave, onCancel }: TripFormProps) {
     }
   }, [clearBudgetEstimate, clearNameState]);
 
-  const isFormCompleteForAi = useMemo(() => {
-    return (
-      form.destinations.length > 0 &&
-      Number(form.budget) > 0 &&
-      form.endDate >= form.startDate
-    );
-  }, [form.budget, form.destinations.length, form.endDate, form.startDate]);
+  const isFormCompleteForAi =
+    form.destinations.length > 0 && parsedBudget > 0 && form.endDate >= form.startDate;
 
   const handleDestinationQueryChange = (value: string) => {
-    setWebDestinationResults([]);
-    setWebDestinationError(null);
+    webSearch.reset();
     updateForm("destinationQuery", value);
   };
 
@@ -295,8 +254,7 @@ export function TripForm({ editingTrip, onSave, onCancel }: TripFormProps) {
         destinations: exists ? current.destinations : [...current.destinations, destination],
       };
     });
-    setWebDestinationResults([]);
-    setWebDestinationError(null);
+    webSearch.reset();
     clearBudgetEstimate();
   };
 
@@ -306,58 +264,6 @@ export function TripForm({ editingTrip, onSave, onCancel }: TripFormProps) {
       destinations: current.destinations.filter((item) => item !== destination),
     }));
     clearBudgetEstimate();
-  };
-
-  const handleSearchWebDestinations = async () => {
-    const query = form.destinationQuery.trim();
-    if (query.length < 2 || isSearchingWebDestinations) return;
-
-    setIsSearchingWebDestinations(true);
-    setWebDestinationError(null);
-
-    try {
-      const params = new URLSearchParams({
-        q: query,
-        format: "jsonv2",
-        addressdetails: "1",
-        limit: "8",
-        "accept-language": locale,
-      });
-      const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
-        headers: {
-          "User-Agent": "NomadSafe/1.0",
-        },
-      });
-
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-      const results = (await response.json()) as WebDestinationResult[];
-      const selectedSet = new Set(form.destinations.map(normalizeSearchText));
-      const options = results
-        .map((result, index) => {
-          const label = formatWebDestination(result).trim();
-          return label
-            ? {
-                id: `web-${index}-${label}`,
-                label,
-                detail: t("trip.webResult"),
-              }
-            : null;
-        })
-        .filter((option): option is DestinationOption => {
-          if (!option) return false;
-          return !selectedSet.has(normalizeSearchText(option.label));
-        });
-
-      setWebDestinationResults(options);
-      if (options.length === 0) {
-        setWebDestinationError(t("trip.noDestinationResults"));
-      }
-    } catch {
-      setWebDestinationError(t("trip.destinationSearchError"));
-    } finally {
-      setIsSearchingWebDestinations(false);
-    }
   };
 
   const handleAddTraveler = () => {
@@ -394,8 +300,9 @@ export function TripForm({ editingTrip, onSave, onCancel }: TripFormProps) {
   };
 
   const handleEstimateBudget = useCallback(async () => {
-    if (form.destinations.length === 0 || isEstimatingBudget) return;
+    if (form.destinations.length === 0 || aiTaskRef.current) return;
 
+    aiTaskRef.current = "budget";
     budgetEstimateKeyRef.current = budgetEstimateKey;
     setIsEstimatingBudget(true);
     setBudgetEstimateError(null);
@@ -428,6 +335,7 @@ export function TripForm({ editingTrip, onSave, onCancel }: TripFormProps) {
       setBudgetEstimateError(t("trip.aiBudgetError"));
     } finally {
       await localModelService.release();
+      aiTaskRef.current = null;
       setIsEstimatingBudget(false);
     }
   }, [
@@ -438,7 +346,6 @@ export function TripForm({ editingTrip, onSave, onCancel }: TripFormProps) {
     form.endDate,
     form.mode,
     form.startDate,
-    isEstimatingBudget,
     t,
   ]);
 
@@ -447,12 +354,14 @@ export function TripForm({ editingTrip, onSave, onCancel }: TripFormProps) {
     updateForm("budget", `${budgetEstimate.total}`);
   };
 
+  const isAiBusy = isEstimatingBudget || isGeneratingName;
+
   useEffect(() => {
-    if (!shouldShowBudgetEstimate || isEstimatingBudget || hasEstimatedBudget) return;
+    if (!shouldShowBudgetEstimate || isAiBusy || hasEstimatedBudget) return;
     if (budgetEstimateKeyRef.current === budgetEstimateKey) return;
 
     handleEstimateBudget();
-  }, [budgetEstimateKey, handleEstimateBudget, isEstimatingBudget, shouldShowBudgetEstimate, hasEstimatedBudget]);
+  }, [budgetEstimateKey, handleEstimateBudget, isAiBusy, shouldShowBudgetEstimate, hasEstimatedBudget]);
 
   useEffect(() => {
     if (!shouldShowBudgetEstimate) return;
@@ -476,9 +385,11 @@ export function TripForm({ editingTrip, onSave, onCancel }: TripFormProps) {
     [form.companions.length, form.destinations, form.endDate, form.mode, form.startDate],
   );
 
-  const handleGenerateName = useCallback(async () => {
-    if (form.destinations.length === 0 || isGeneratingName) return;
+  /** `auto` runs never replace a name the user typed, even one typed mid-generation. */
+  const handleGenerateName = useCallback(async (auto = false) => {
+    if (form.destinations.length === 0 || aiTaskRef.current) return;
 
+    aiTaskRef.current = "name";
     nameGenerationKeyRef.current = nameGenerationKey;
     setIsGeneratingName(true);
     setNameError(null);
@@ -495,7 +406,9 @@ export function TripForm({ editingTrip, onSave, onCancel }: TripFormProps) {
             mode: form.mode,
             travelerCount: form.mode === "group" ? form.companions.length + 1 : 1,
           });
-          updateForm("name", suggestion.name);
+          setForm((current) =>
+            auto && current.name.trim() ? current : { ...current, name: suggestion.name },
+          );
           setHasGeneratedName(true);
           return;
         } catch (error) {
@@ -510,6 +423,7 @@ export function TripForm({ editingTrip, onSave, onCancel }: TripFormProps) {
       setNameError(t("trip.aiNameError"));
     } finally {
       await localModelService.release();
+      aiTaskRef.current = null;
       setIsGeneratingName(false);
     }
   }, [
@@ -518,19 +432,32 @@ export function TripForm({ editingTrip, onSave, onCancel }: TripFormProps) {
     form.endDate,
     form.mode,
     form.startDate,
-    isGeneratingName,
     nameGenerationKey,
     t,
-    updateForm,
   ]);
 
+  const hasTypedName = form.name.trim().length > 0;
+
+  // Runs after the budget estimate settles (isAiBusy gate), never alongside it.
   useEffect(() => {
-    if (!isAiReady || isGeneratingName || hasGeneratedName) return;
+    if (!isAiReady || isAiBusy || hasGeneratedName || hasTypedName) return;
     if (!isFormCompleteForAi) return;
+    if (shouldShowBudgetEstimate && !hasEstimatedBudget && budgetEstimateKeyRef.current !== budgetEstimateKey) return;
     if (nameGenerationKeyRef.current === nameGenerationKey) return;
 
-    handleGenerateName();
-  }, [isAiReady, isFormCompleteForAi, isGeneratingName, nameGenerationKey, handleGenerateName, hasGeneratedName]);
+    handleGenerateName(true);
+  }, [
+    budgetEstimateKey,
+    handleGenerateName,
+    hasEstimatedBudget,
+    hasGeneratedName,
+    hasTypedName,
+    isAiBusy,
+    isAiReady,
+    isFormCompleteForAi,
+    nameGenerationKey,
+    shouldShowBudgetEstimate,
+  ]);
 
   const handleDateChange = (field: DateField, date: Date) => {
     const selectedDate = startOfLocalDay(date);
@@ -550,8 +477,10 @@ export function TripForm({ editingTrip, onSave, onCancel }: TripFormProps) {
   };
 
   const handleSave = async () => {
+    if (isSavingRef.current) return;
+
     const trimmedName = form.name.trim();
-    const budget = Number(form.budget);
+    const budget = parsedBudget;
 
     if (!trimmedName || form.destinations.length === 0 || !Number.isFinite(budget) || budget <= 0) {
       Alert.alert(t("trip.validationTitle"), t("trip.validationBody"));
@@ -563,10 +492,20 @@ export function TripForm({ editingTrip, onSave, onCancel }: TripFormProps) {
       return;
     }
 
-    const destinationCoordinates = await geocodeDestinations(form.destinations);
+    isSavingRef.current = true;
+    setIsSaving(true);
 
-    if (editingTrip) {
-      const updateInput: UpdateTripInput = {
+    try {
+      const known = new Map<string, LatLng | null>();
+      if (editingTrip) {
+        const previous = getDestinationCoordinates(editingTrip);
+        editingTrip.destinations.forEach((destination, index) => {
+          if (previous[index]) known.set(destination, previous[index]);
+        });
+      }
+      const destinationCoordinates = await geocodeDestinations(form.destinations, known);
+
+      const input = {
         name: trimmedName,
         destinations: form.destinations,
         destinationCoordinates,
@@ -577,264 +516,268 @@ export function TripForm({ editingTrip, onSave, onCancel }: TripFormProps) {
         currency: form.currency,
         companions: form.mode === "group" ? form.companions : [],
       };
-      updateTrip(editingTrip.id, updateInput);
-    } else {
-      const createInput: CreateTripInput = {
-        name: trimmedName,
-        destinations: form.destinations,
-        destinationCoordinates,
-        startDate: toDateKey(form.startDate),
-        endDate: toDateKey(form.endDate),
-        mode: form.mode,
-        budget,
-        currency: form.currency,
-        companions: form.mode === "group" ? form.companions : [],
-      };
-      createTrip(createInput);
+
+      if (editingTrip) {
+        updateTrip(editingTrip.id, input satisfies UpdateTripInput);
+      } else {
+        createTrip(input satisfies CreateTripInput);
+      }
+
+      onSave();
+    } finally {
+      isSavingRef.current = false;
+      setIsSaving(false);
     }
-
-    onSave();
   };
 
   const budgetCurrencyAffix = getCurrencyAffix(locale, form.currency);
 
   return (
-    <ScrollView
-      ref={scrollRef}
-      contentInsetAdjustmentBehavior="automatic"
-      contentContainerStyle={styles.scrollContent}
-      keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.stack}>
-        <View style={styles.heroHeader}>
-          <Text style={[styles.eyebrow, { color: theme.inkMuted }]}>
-            {editingTrip ? t("trip.editEyebrow") : t("trip.createEyebrow")}
-          </Text>
-          <Text style={[styles.heroTitle, { color: theme.inkDeep }]}>
-            {editingTrip ? t("trip.editTitle") : t("trip.createTitle")}
-          </Text>
-          <Text style={[styles.heroBody, { color: theme.inkSoft }]}>
-            {editingTrip ? t("trip.editBody") : t("trip.createBody")}
-          </Text>
-        </View>
-
-        <View
-          style={[
-            styles.formCard,
-            { backgroundColor: theme.paperSoft, borderColor: theme.hairline },
-          ]}
-        >
-          <DestinationSelector
-            label={t("trip.destination")}
-            value={form.destinationQuery}
-            placeholder={t("trip.destinationPlaceholder")}
-            selectedDestinations={form.destinations}
-            offlineOptions={offlineDestinationResults}
-            webOptions={webDestinationResults}
-            isSearchingWeb={isSearchingWebDestinations}
-            webError={webDestinationError}
-            onChangeText={handleDestinationQueryChange}
-            onSelect={handleSelectDestination}
-            onRemove={handleRemoveDestination}
-            onSearchWeb={handleSearchWebDestinations}
-          />
-
-          <View style={styles.dateSection}>
-            <Text style={[styles.dateSectionLabel, { color: theme.inkMuted }]}>
-              {t("trip.travelDates")}
+    <KeyboardAvoidingView behavior="padding" style={styles.keyboardRoot}>
+      <ScrollView
+        ref={scrollRef}
+        contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.stack}>
+          {header}
+          <View style={styles.heroHeader}>
+            <Text style={[styles.eyebrow, { color: theme.inkMuted }]}>
+              {editingTrip ? t("trip.editEyebrow") : t("trip.createEyebrow")}
             </Text>
-            <View style={styles.dateRouteRow}>
-              <DateButton
-                label={t("trip.departDate")}
-                primary={formatDatePart(form.startDate, locale, {
-                  month: "short",
-                  day: "numeric",
-                })}
-                secondary={formatDatePart(form.startDate, locale, {
-                  weekday: "short",
-                  year: "numeric",
-                })}
-                date={form.startDate}
-                isActive={pickerField === "start"}
-                isDark={isDark}
-                minimumDate={undefined}
-                onPress={() => setPickerField("start")}
-                onDateChange={(date) => handleDateChange("start", date)}
-                onDismiss={() => setPickerField(null)}
-              />
-              <View style={styles.dateConnector}>
-                <View style={[styles.dateConnectorLine, { backgroundColor: theme.hairline }]} />
-                <View style={[styles.dateConnectorDot, { backgroundColor: theme.teal }]} />
-                <View style={[styles.dateConnectorLine, { backgroundColor: theme.hairline }]} />
-              </View>
-              <DateButton
-                label={t("trip.returnDate")}
-                primary={formatDatePart(form.endDate, locale, {
-                  month: "short",
-                  day: "numeric",
-                })}
-                secondary={formatDatePart(form.endDate, locale, {
-                  weekday: "short",
-                  year: "numeric",
-                })}
-                date={form.endDate}
-                isActive={pickerField === "end"}
-                isDark={isDark}
-                minimumDate={form.startDate}
-                onPress={() => setPickerField("end")}
-                onDateChange={(date) => handleDateChange("end", date)}
-                onDismiss={() => setPickerField(null)}
-              />
-            </View>
+            <Text style={[styles.heroTitle, { color: theme.inkDeep }]}>
+              {editingTrip ? t("trip.editTitle") : t("trip.createTitle")}
+            </Text>
+            <Text style={[styles.heroBody, { color: theme.inkSoft }]}>
+              {editingTrip ? t("trip.editBody") : t("trip.createBody")}
+            </Text>
           </View>
 
-          <TripTextInput
-            label={t("trip.budget")}
-            labelMeta={form.currency}
-            onLabelMetaPress={() => setIsCurrencyPickerOpen((open) => !open)}
-            prefix={budgetCurrencyAffix.prefix}
-            suffix={budgetCurrencyAffix.suffix}
-            value={form.budget}
-            placeholder={t("trip.budgetPlaceholder")}
-            keyboardType="numeric"
-            onChangeText={(value) => updateForm("budget", value.replace(/[^0-9.]/g, ""))}
-          />
-          {isCurrencyPickerOpen ? (
-            <View style={styles.currencyGrid}>
-              {CURRENCY_OPTIONS.map((option) => {
-                const isActive = option.code === form.currency;
-                return (
-                  <Pressable
-                    key={option.code}
-                    onPress={() => handleSelectCurrency(option.code)}
-                    style={[
-                      styles.currencyOption,
-                      {
-                        backgroundColor: isActive ? theme.tealSoft : theme.paper,
-                        borderColor: isActive ? theme.teal : theme.hairline,
-                      },
-                    ]}
-                  >
-                    <Text style={[styles.currencyCode, { color: theme.inkDeep }]}>
-                      {option.code}
-                    </Text>
-                    <Text style={[styles.currencyName, { color: theme.inkSoft }]}>
-                      {option.name}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          ) : null}
-
-          <NameInput
-            value={form.name}
-            generated={hasGeneratedName}
-            isGenerating={isGeneratingName}
-            error={nameError}
-            canGenerate={isAiReady && form.destinations.length > 0}
-            onChangeText={(value) => updateForm("name", value)}
-            onGenerate={handleGenerateName}
-          />
-
-          {shouldShowBudgetEstimate ? (
-            <BudgetEstimateCard
-              estimate={budgetEstimate}
-              error={budgetEstimateError}
-              isLoading={isEstimatingBudget}
-              canEstimate={form.destinations.length > 0}
-              formattedTotal={
-                budgetEstimate
-                  ? formatCurrency(budgetEstimate.total, form.currency, {
-                      maximumFractionDigits: 0,
-                    })
-                  : null
-              }
-              formattedDaily={
-                budgetEstimate
-                  ? formatCurrency(budgetEstimate.daily, form.currency, {
-                      maximumFractionDigits: 0,
-                    })
-                  : null
-              }
-              onEstimate={handleEstimateBudget}
-              onUseEstimate={handleUseBudgetEstimate}
+          <View
+            style={[
+              styles.formCard,
+              { backgroundColor: theme.paperSoft, borderColor: theme.hairline },
+            ]}
+          >
+            <DestinationSelector
+              label={t("trip.destination")}
+              value={form.destinationQuery}
+              placeholder={t("trip.destinationPlaceholder")}
+              selectedDestinations={form.destinations}
+              offlineOptions={offlineDestinationResults}
+              webOptions={webSearch.results}
+              isSearchingWeb={webSearch.isSearching}
+              webError={webSearch.error}
+              onChangeText={handleDestinationQueryChange}
+              onSelect={handleSelectDestination}
+              onRemove={handleRemoveDestination}
+              onSearchWeb={() => webSearch.search(form.destinationQuery)}
             />
-          ) : null}
 
-          {tripModeEnabled && (
-            <View style={styles.segmentWrap}>
-              <ModeButton
-                active={form.mode === "solo"}
-                icon="compass"
-                title={t("trip.solo")}
-                subtitle={t("trip.soloSub")}
-                onPress={() => updateForm("mode", "solo")}
-              />
-              <ModeButton
-                active={form.mode === "group"}
-                icon="users"
-                title={t("trip.group")}
-                subtitle={t("trip.groupSub")}
-                onPress={() => updateForm("mode", "group")}
-              />
+            <View style={styles.dateSection}>
+              <Text style={[styles.dateSectionLabel, { color: theme.inkMuted }]}>
+                {t("trip.travelDates")}
+              </Text>
+              <View style={styles.dateRouteRow}>
+                <DateButton
+                  label={t("trip.departDate")}
+                  primary={formatDatePart(form.startDate, locale, {
+                    month: "short",
+                    day: "numeric",
+                  })}
+                  secondary={formatDatePart(form.startDate, locale, {
+                    weekday: "short",
+                    year: "numeric",
+                  })}
+                  date={form.startDate}
+                  isActive={pickerField === "start"}
+                  isDark={isDark}
+                  minimumDate={undefined}
+                  onPress={() => setPickerField("start")}
+                  onDateChange={(date) => handleDateChange("start", date)}
+                  onDismiss={() => setPickerField(null)}
+                />
+                <View style={styles.dateConnector}>
+                  <View style={[styles.dateConnectorLine, { backgroundColor: theme.hairline }]} />
+                  <View style={[styles.dateConnectorDot, { backgroundColor: theme.teal }]} />
+                  <View style={[styles.dateConnectorLine, { backgroundColor: theme.hairline }]} />
+                </View>
+                <DateButton
+                  label={t("trip.returnDate")}
+                  primary={formatDatePart(form.endDate, locale, {
+                    month: "short",
+                    day: "numeric",
+                  })}
+                  secondary={formatDatePart(form.endDate, locale, {
+                    weekday: "short",
+                    year: "numeric",
+                  })}
+                  date={form.endDate}
+                  isActive={pickerField === "end"}
+                  isDark={isDark}
+                  minimumDate={form.startDate}
+                  onPress={() => setPickerField("end")}
+                  onDateChange={(date) => handleDateChange("end", date)}
+                  onDismiss={() => setPickerField(null)}
+                />
+              </View>
             </View>
-          )}
 
-          {form.mode === "group" && tripModeEnabled && (
-            <TravelerSelector
-              label={t("trip.travelers")}
-              value={form.travelerName}
-              travelers={form.companions}
-              placeholder={t("trip.travelersPlaceholder")}
-              onChangeText={(value) => updateForm("travelerName", value)}
-              onAdd={handleAddTraveler}
-              onRemove={handleRemoveTraveler}
+            <TripTextInput
+              label={t("trip.budget")}
+              labelMeta={form.currency}
+              onLabelMetaPress={() => setIsCurrencyPickerOpen((open) => !open)}
+              prefix={budgetCurrencyAffix.prefix}
+              suffix={budgetCurrencyAffix.suffix}
+              value={form.budget}
+              placeholder={t("trip.budgetPlaceholder")}
+              keyboardType="decimal-pad"
+              onChangeText={(value) => updateForm("budget", sanitizeAmountInput(value))}
             />
-          )}
-        </View>
+            {isCurrencyPickerOpen ? (
+              <View style={styles.currencyGrid}>
+                {CURRENCY_OPTIONS.map((option) => {
+                  const isActive = option.code === form.currency;
+                  return (
+                    <Pressable
+                      key={option.code}
+                      onPress={() => handleSelectCurrency(option.code)}
+                      style={[
+                        styles.currencyOption,
+                        {
+                          backgroundColor: isActive ? theme.tealSoft : theme.paper,
+                          borderColor: isActive ? theme.teal : theme.hairline,
+                        },
+                      ]}
+                    >
+                      <Text style={[styles.currencyCode, { color: theme.inkDeep }]}>
+                        {option.code}
+                      </Text>
+                      <Text style={[styles.currencyName, { color: theme.inkSoft }]}>
+                        {option.name}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            ) : null}
 
-        <View style={styles.actions}>
-          {onCancel ? (
+            <NameInput
+              value={form.name}
+              generated={hasGeneratedName}
+              isGenerating={isGeneratingName}
+              error={nameError}
+              canGenerate={isAiReady && form.destinations.length > 0 && !isEstimatingBudget}
+              onChangeText={(value) => updateForm("name", value)}
+              onGenerate={() => handleGenerateName()}
+            />
+
+            {shouldShowBudgetEstimate ? (
+              <BudgetEstimateCard
+                estimate={budgetEstimate}
+                error={budgetEstimateError}
+                isLoading={isEstimatingBudget}
+                canEstimate={form.destinations.length > 0 && !isGeneratingName}
+                formattedTotal={
+                  budgetEstimate
+                    ? formatCurrency(budgetEstimate.total, form.currency, {
+                        maximumFractionDigits: 0,
+                      })
+                    : null
+                }
+                formattedDaily={
+                  budgetEstimate
+                    ? formatCurrency(budgetEstimate.daily, form.currency, {
+                        maximumFractionDigits: 0,
+                      })
+                    : null
+                }
+                onEstimate={handleEstimateBudget}
+                onUseEstimate={handleUseBudgetEstimate}
+              />
+            ) : null}
+
+            {tripModeEnabled && (
+              <View style={styles.segmentWrap}>
+                <ModeButton
+                  active={form.mode === "solo"}
+                  icon="compass"
+                  title={t("trip.solo")}
+                  subtitle={t("trip.soloSub")}
+                  onPress={() => updateForm("mode", "solo")}
+                />
+                <ModeButton
+                  active={form.mode === "group"}
+                  icon="users"
+                  title={t("trip.group")}
+                  subtitle={t("trip.groupSub")}
+                  onPress={() => updateForm("mode", "group")}
+                />
+              </View>
+            )}
+
+            {form.mode === "group" && tripModeEnabled && (
+              <TravelerSelector
+                label={t("trip.travelers")}
+                value={form.travelerName}
+                travelers={form.companions}
+                placeholder={t("trip.travelersPlaceholder")}
+                onChangeText={(value) => updateForm("travelerName", value)}
+                onAdd={handleAddTraveler}
+                onRemove={handleRemoveTraveler}
+              />
+            )}
+          </View>
+
+          <View style={styles.actions}>
+            {onCancel ? (
+              <Pressable
+                onPress={onCancel}
+                style={({ pressed }) => [
+                  styles.secondaryButton,
+                  {
+                    backgroundColor: theme.paperSoft,
+                    borderColor: theme.hairline,
+                    opacity: pressed ? 0.8 : 1,
+                  },
+                ]}
+              >
+                <Text style={[styles.secondaryButtonText, { color: theme.inkDeep }]}>
+                  {t("common.cancel")}
+                </Text>
+              </Pressable>
+            ) : null}
             <Pressable
-              onPress={onCancel}
+              onPress={handleSave}
+              disabled={isSaving}
+              accessibilityState={{ busy: isSaving, disabled: isSaving }}
               style={({ pressed }) => [
-                styles.secondaryButton,
+                styles.createButton,
                 {
-                  backgroundColor: theme.paperSoft,
-                  borderColor: theme.hairline,
-                  opacity: pressed ? 0.8 : 1,
+                  backgroundColor: theme.teal,
+                  opacity: isSaving ? 0.7 : pressed ? 0.9 : 1,
                 },
               ]}
             >
-              <Text style={[styles.secondaryButtonText, { color: theme.inkDeep }]}>
-                {t("common.cancel")}
+              {isSaving ? (
+                <ActivityIndicator size="small" color={theme.inverse} />
+              ) : (
+                <Icon name="flag" size={18} color={theme.inverse} />
+              )}
+              <Text style={[styles.createButtonText, { color: theme.inverse }]}>
+                {editingTrip ? t("trip.saveAction") : t("trip.createAction")}
               </Text>
             </Pressable>
-          ) : null}
-          <Pressable
-            onPress={handleSave}
-            style={({ pressed }) => [
-              styles.createButton,
-              {
-                backgroundColor: theme.teal,
-                opacity: pressed ? 0.9 : 1,
-              },
-            ]}
-          >
-            <Icon name="flag" size={18} color={theme.inverse} />
-            <Text style={[styles.createButtonText, { color: theme.inverse }]}>
-              {editingTrip ? t("trip.saveAction") : t("trip.createAction")}
-            </Text>
-          </Pressable>
-        </View>
+          </View>
 
-        <Text style={[styles.encryptedNote, { color: theme.inkMuted }]}>
-          {t("trip.encryptedNote")}
-        </Text>
-      </View>
-    </ScrollView>
+          <Text style={[styles.encryptedNote, { color: theme.inkMuted }]}>
+            {t("trip.encryptedNote")}
+          </Text>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -855,7 +798,7 @@ function TripTextInput({
   suffix?: string;
   value: string;
   placeholder: string;
-  keyboardType?: "default" | "numeric";
+  keyboardType?: "default" | "numeric" | "decimal-pad";
   onLabelMetaPress?: () => void;
   onChangeText: (value: string) => void;
 }) {
@@ -1482,6 +1425,9 @@ function ModeButton({
 }
 
 const styles = StyleSheet.create({
+  keyboardRoot: {
+    flex: 1,
+  },
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 14,

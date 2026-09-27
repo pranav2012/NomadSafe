@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { mmkvStateStorage } from "@/stores/storage";
+import { getOfflineCoordinates } from "@/features/trips/services/geocoding";
+import { fromDateKey, getTripStatus } from "@/features/trips/utils/dates";
 
 export type TripMode = "solo" | "group";
 
@@ -13,7 +15,8 @@ export interface Trip {
   id: string;
   name: string;
   destinations: string[];
-  destinationCoordinates?: LatLng[];
+  /** Index-aligned with `destinations`; `null` where geocoding failed. */
+  destinationCoordinates?: (LatLng | null)[];
   startDate: string;
   endDate: string;
   mode: TripMode;
@@ -26,7 +29,7 @@ export interface Trip {
 export interface CreateTripInput {
   name: string;
   destinations: string[];
-  destinationCoordinates?: LatLng[];
+  destinationCoordinates?: (LatLng | null)[];
   startDate: string;
   endDate: string;
   mode: TripMode;
@@ -46,6 +49,32 @@ interface TripsState {
   setActiveTrip: (tripId: string) => void;
   clearActiveTrip: () => void;
   reset: () => void;
+}
+
+/** The selected trip, or null. No implicit fallback: Home and Trips share this rule. */
+export function selectActiveTrip(state: Pick<TripsState, "trips" | "activeTripId">): Trip | null {
+  return state.trips.find((trip) => trip.id === state.activeTripId) ?? null;
+}
+
+/** Earliest-starting running trip, else the soonest upcoming one, else null. */
+export function pickDefaultActiveTripId(trips: Trip[]): string | null {
+  const byStart = [...trips].sort(
+    (a, b) => fromDateKey(a.startDate).getTime() - fromDateKey(b.startDate).getTime(),
+  );
+  return (
+    byStart.find((trip) => getTripStatus(trip) === "active")?.id ??
+    byStart.find((trip) => getTripStatus(trip) === "upcoming")?.id ??
+    null
+  );
+}
+
+/** Coordinates aligned to `trip.destinations`; legacy misaligned data falls back to the offline table. */
+export function getDestinationCoordinates(trip: Trip): (LatLng | null)[] {
+  const stored = trip.destinationCoordinates;
+  if (stored && stored.length === trip.destinations.length) {
+    return stored.map((coord) => coord ?? null);
+  }
+  return trip.destinations.map((destination) => getOfflineCoordinates(destination));
 }
 
 export const useTripsStore = create<TripsState>()(
@@ -81,11 +110,14 @@ export const useTripsStore = create<TripsState>()(
         return updated;
       },
       deleteTrip: (tripId) =>
-        set((state) => ({
-          trips: state.trips.filter((trip) => trip.id !== tripId),
-          activeTripId:
-            state.activeTripId === tripId ? null : state.activeTripId,
-        })),
+        set((state) => {
+          const trips = state.trips.filter((trip) => trip.id !== tripId);
+          return {
+            trips,
+            activeTripId:
+              state.activeTripId === tripId ? pickDefaultActiveTripId(trips) : state.activeTripId,
+          };
+        }),
       setActiveTrip: (tripId) => set({ activeTripId: tripId }),
       clearActiveTrip: () => set({ activeTripId: null }),
       reset: () => set({ trips: [], activeTripId: null }),
@@ -93,24 +125,29 @@ export const useTripsStore = create<TripsState>()(
     {
       name: "trips-store",
       storage: createJSONStorage(() => mmkvStateStorage),
-      version: 3,
+      version: 4,
       migrate: (persistedState) => {
         const state = persistedState as Partial<TripsState> | undefined;
         if (!state?.trips) return persistedState;
 
-        return {
-          ...state,
-          trips: state.trips.map((trip) => {
-            const legacyTrip = trip as Trip & { destination?: string };
-            const { destination: legacyDestination, ...rest } = legacyTrip;
-            return {
-              ...rest,
-              destinations:
-                legacyTrip.destinations ??
-                (legacyDestination ? [legacyDestination] : []),
-            };
-          }),
-        };
+        const trips = state.trips.map((trip) => {
+          const legacyTrip = trip as Trip & { destination?: string };
+          const { destination: legacyDestination, ...rest } = legacyTrip;
+          const migrated: Trip = {
+            ...rest,
+            destinations:
+              legacyTrip.destinations ??
+              (legacyDestination ? [legacyDestination] : []),
+          };
+          // v3 dropped failed geocodes, so shorter arrays can't be trusted by index.
+          return { ...migrated, destinationCoordinates: getDestinationCoordinates(migrated) };
+        });
+        // v3 screens silently fell back to trips[0]; persist that choice explicitly.
+        const activeTripId = trips.some((trip) => trip.id === state.activeTripId)
+          ? (state.activeTripId ?? null)
+          : (pickDefaultActiveTripId(trips) ?? trips[0]?.id ?? null);
+
+        return { ...state, trips, activeTripId };
       },
     },
   ),

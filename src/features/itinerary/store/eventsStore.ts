@@ -64,8 +64,10 @@ interface EventsState {
   updateEvent: (id: string, input: UpdateEventInput) => TripEvent | null;
   deleteEvent: (id: string) => void;
   deleteEvents: (ids: string[]) => void;
-  hasFingerprint: (fingerprint: string) => boolean;
-  hasExternalId: (externalId: string) => boolean;
+  /** Scoped to `tripId` when given, so the same booking can exist in two trips. */
+  hasFingerprint: (fingerprint: string, tripId?: string | null) => boolean;
+  hasExternalId: (externalId: string, tripId?: string | null) => boolean;
+  removeByTripId: (tripId: string) => void;
   reset: () => void;
 }
 
@@ -118,9 +120,10 @@ export const useEventsStore = create<EventsState>()(
           events: state.events.filter((event) => !idsToDelete.has(event.id)),
         }));
       },
-      hasFingerprint: (fingerprint) =>
+      hasFingerprint: (fingerprint, tripId) =>
         get().events.some(
           (event) =>
+            (tripId === undefined || event.tripId === tripId) &&
             eventFingerprint({
               type: event.type,
               title: event.title,
@@ -128,8 +131,15 @@ export const useEventsStore = create<EventsState>()(
               startAt: event.startAt,
             }) === fingerprint,
         ),
-      hasExternalId: (externalId) =>
-        get().events.some((event) => event.externalId === externalId),
+      hasExternalId: (externalId, tripId) =>
+        get().events.some(
+          (event) =>
+            (tripId === undefined || event.tripId === tripId) && event.externalId === externalId,
+        ),
+      removeByTripId: (tripId) =>
+        set((state) => ({
+          events: state.events.filter((event) => event.tripId !== tripId),
+        })),
       reset: () => set({ events: [] }),
     }),
     {

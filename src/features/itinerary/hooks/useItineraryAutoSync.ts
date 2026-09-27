@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useGmailImport } from "@/features/expenses/hooks/useGmailImport";
 import { useEventsStore } from "@/features/itinerary/store/eventsStore";
 import { buildEventCandidates } from "@/features/itinerary/services/itineraryExtraction";
@@ -8,8 +8,8 @@ import {
 } from "@/features/itinerary/services/itinerarySyncStore";
 import type { Trip } from "@/features/trips/store/tripsStore";
 
-// Runs once per app session for the trip that is active when Gmail becomes available.
-let sessionSynced = false;
+// Each trip syncs at most once per app session.
+const sessionSyncedTripIds = new Set<string>();
 
 export interface ItineraryAutoSync {
   importedCount: number | null;
@@ -23,21 +23,32 @@ export interface ItineraryAutoSync {
  */
 export function useItineraryAutoSync(trip: Trip | null): ItineraryAutoSync {
   const gmail = useGmailImport();
-  const addEvents = useEventsStore((state) => state.addEvents);
   const [importedCount, setImportedCount] = useState<number | null>(null);
+  const tripRef = useRef(trip);
+  const fetchRef = useRef(gmail.fetchEmailsSince);
+  const tripId = trip?.id ?? null;
+
+  // Declared before the sync effect so it sees the latest values when it runs.
+  useEffect(() => {
+    tripRef.current = trip;
+    fetchRef.current = gmail.fetchEmailsSince;
+  });
 
   useEffect(() => {
-    if (!trip || sessionSynced || !gmail.connected) {
-      console.info("[itinerary-sync] skip", {
-        hasTrip: Boolean(trip),
-        sessionSynced,
-        connected: gmail.connected,
-      });
+    const current = tripRef.current;
+    if (!tripId || !current || sessionSyncedTripIds.has(tripId) || !gmail.connected) {
+      if (__DEV__) {
+        console.info("[itinerary-sync] skip", {
+          hasTrip: Boolean(tripId),
+          synced: tripId ? sessionSyncedTripIds.has(tripId) : false,
+          connected: gmail.connected,
+        });
+      }
       return;
     }
-    sessionSynced = true;
+    sessionSyncedTripIds.add(tripId);
 
-    let mounted = true;
+    let active = true;
     (async () => {
       try {
         // While the itinerary is still empty, ignore the checkpoint and scan the
@@ -45,19 +56,20 @@ export function useItineraryAutoSync(trip: Trip | null): ItineraryAutoSync {
         // incrementally so we don't re-download the mailbox each launch.
         const hasEvents = useEventsStore
           .getState()
-          .events.some((event) => event.tripId === trip.id);
-        const since = hasEvents ? await loadItineraryLastSyncAt() : null;
-        const messages = await gmail.fetchEmailsSince(since);
-        console.info("[itinerary-sync] fetched", { since, messages: messages.length });
-        const candidates = await buildEventCandidates(messages, "email", { trip });
-        await saveItineraryLastSyncAt(Date.now());
+          .events.some((event) => event.tripId === tripId);
+        const since = hasEvents ? await loadItineraryLastSyncAt(tripId) : null;
+        const startedAt = Date.now();
+        const messages = await fetchRef.current(since);
+        if (__DEV__) console.info("[itinerary-sync] fetched", { since, messages: messages.length });
+        const candidates = await buildEventCandidates(messages, "email", { trip: current });
 
         const fresh = candidates.filter((candidate) => !candidate.duplicate);
-        console.info("[itinerary-sync] adding", { fresh: fresh.length });
-        if (mounted && fresh.length > 0) {
-          addEvents(
+        if (__DEV__) console.info("[itinerary-sync] adding", { fresh: fresh.length });
+        // Events belong to `tripId`, so they're stored even if the user switched trips meanwhile.
+        if (fresh.length > 0) {
+          useEventsStore.getState().addEvents(
             fresh.map((candidate) => ({
-              tripId: trip.id,
+              tripId,
               type: candidate.type,
               title: candidate.title,
               detail: candidate.detail,
@@ -68,18 +80,19 @@ export function useItineraryAutoSync(trip: Trip | null): ItineraryAutoSync {
               externalId: candidate.externalId,
             })),
           );
-          setImportedCount(fresh.length);
+          if (active) setImportedCount(fresh.length);
         }
+        await saveItineraryLastSyncAt(tripId, startedAt);
       } catch (err) {
+        sessionSyncedTripIds.delete(tripId);
         console.warn("[itinerary-sync] failed", err);
       }
     })();
 
     return () => {
-      mounted = false;
+      active = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gmail.connected, trip]);
+  }, [gmail.connected, tripId]);
 
   return { importedCount, dismiss: () => setImportedCount(null) };
 }

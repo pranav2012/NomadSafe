@@ -58,42 +58,105 @@ export function getOfflineCoordinates(label: string): LatLng | null {
   return CITY_COORDINATES[key] ?? null;
 }
 
+const NOMINATIM_URL = "https://nominatim.openstreetmap.org/search";
+// Nominatim usage policy: identify the app and stay at or under 1 request/second.
+const NOMINATIM_HEADERS = {
+  "User-Agent": "NomadSafe/1.0 (com.pranav.nomadsafe)",
+};
+const NOMINATIM_MIN_INTERVAL_MS = 1100;
+const REQUEST_TIMEOUT_MS = 8000;
+
+let nominatimQueue: Promise<unknown> = Promise.resolve();
+let lastNominatimRequestAt = 0;
+
+/**
+ * Serialized, rate-limited Nominatim GET with an 8s timeout. An aborted
+ * `signal` rejects without sending if the request is still queued.
+ */
+export function nominatimSearch<T>(
+  params: Record<string, string>,
+  signal?: AbortSignal,
+): Promise<T> {
+  const run = async () => {
+    if (signal?.aborted) throw new Error("aborted");
+    const wait = lastNominatimRequestAt + NOMINATIM_MIN_INTERVAL_MS - Date.now();
+    if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+    if (signal?.aborted) throw new Error("aborted");
+
+    const controller = new AbortController();
+    const onAbort = () => controller.abort();
+    signal?.addEventListener("abort", onAbort);
+    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    lastNominatimRequestAt = Date.now();
+
+    try {
+      const query = new URLSearchParams(params).toString();
+      const response = await fetch(`${NOMINATIM_URL}?${query}`, {
+        headers: NOMINATIM_HEADERS,
+        signal: controller.signal,
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return (await response.json()) as T;
+    } finally {
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", onAbort);
+    }
+  };
+
+  const request = nominatimQueue.then(run, run);
+  nominatimQueue = request.catch(() => undefined);
+  return request;
+}
+
 interface NominatimResult {
   lat: string;
   lon: string;
   display_name: string;
 }
 
+const geocodeCache = new Map<string, LatLng>();
+
 export async function geocodeDestination(label: string): Promise<LatLng | null> {
   const offline = getOfflineCoordinates(label);
   if (offline) return offline;
 
+  const cacheKey = label.trim().toLowerCase();
+  const cached = geocodeCache.get(cacheKey);
+  if (cached) return cached;
+
   try {
-    const params = new URLSearchParams({
+    const results = await nominatimSearch<NominatimResult[]>({
       q: label,
       format: "json",
       limit: "1",
       "accept-language": "en",
     });
-    const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
-      headers: { "User-Agent": "NomadSafe/1.0" },
-    });
-
-    if (!response.ok) return null;
-
-    const results = (await response.json()) as NominatimResult[];
     if (!results[0]) return null;
 
-    return {
+    const coords = {
       latitude: Number(results[0].lat),
       longitude: Number(results[0].lon),
     };
+    if (!Number.isFinite(coords.latitude) || !Number.isFinite(coords.longitude)) return null;
+    geocodeCache.set(cacheKey, coords);
+    return coords;
   } catch {
     return null;
   }
 }
 
-export async function geocodeDestinations(destinations: string[]): Promise<LatLng[]> {
-  const coordinates = await Promise.all(destinations.map(geocodeDestination));
-  return coordinates.filter((coord): coord is LatLng => coord !== null);
+/**
+ * Geocodes sequentially (Nominatim allows 1 req/s). The result is index-aligned
+ * with `destinations`; failed lookups are `null` so `result[i]` always belongs
+ * to `destinations[i]`. `known` lets callers reuse coordinates already resolved.
+ */
+export async function geocodeDestinations(
+  destinations: string[],
+  known?: ReadonlyMap<string, LatLng | null>,
+): Promise<(LatLng | null)[]> {
+  const coordinates: (LatLng | null)[] = [];
+  for (const destination of destinations) {
+    coordinates.push(known?.get(destination) ?? (await geocodeDestination(destination)));
+  }
+  return coordinates;
 }
