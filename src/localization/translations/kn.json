@@ -103,7 +103,6 @@
     "lockNow": "ಈಗಲೇ ಲಾಕ್ ಮಾಡಿ",
     "lockNowSub": "ಮತ್ತೆ ಪ್ರವೇಶಿಸಲು ಬಯೋಮೆಟ್ರಿಕ್ ಅಗತ್ಯವಿದೆ",
     "signOutAccountSub": "{{email}}",
-    "footerTagline": "ನಿಮ್ಮ ಅನುಮತಿಯಿಲ್ಲದೆ ಈ ಫೋನ್‌ನಿಂದ ಏನೂ ಹೊರಹೋಗುವುದಿಲ್ಲ.",
     "biometricNotSetUpTitle": "ಬಯೋಮೆಟ್ರಿಕ್ ಹೊಂದಿಸಲಾಗಿಲ್ಲ",
     "biometricNotSetUpBody": "ಮೊದಲು ಡಿವೈಸ್‌ನ ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ Face ID, Touch ID ಅಥವಾ ಫಿಂಗರ್‌ಪ್ರಿಂಟ್ ಅನ್ನು ಹೊಂದಿಸಿ.",
     "biometricUnavailable": "ಯಾವುದೇ ಬಯೋಮೆಟ್ರಿಕ್ ಹಾರ್ಡ್‌ವೇರ್ ನೋಂದಾಯಿಸಲ್ಪಟ್ಟಿಲ್ಲ",

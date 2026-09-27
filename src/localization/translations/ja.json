@@ -103,7 +103,6 @@
     "lockNow": "今すぐロック",
     "lockNowSub": "再入時に生体認証を要求",
     "signOutAccountSub": "{{email}}",
-    "footerTagline": "あなたの許可なくデータがこのスマートフォンから送信されることはありません。",
     "biometricNotSetUpTitle": "生体認証が設定されていません",
     "biometricNotSetUpBody": "まずデバイスの「設定」でFace ID、Touch ID、または指紋認証を設定してください。",
     "biometricUnavailable": "生体認証ハードウェアが登録されていません",

@@ -103,7 +103,6 @@
     "lockNow": "立即锁定",
     "lockNowSub": "重新进入需生物识别验证",
     "signOutAccountSub": "{{email}}",
-    "footerTagline": "未经您的允许，任何数据都不会离开此手机。",
     "biometricNotSetUpTitle": "未设置生物识别",
     "biometricNotSetUpBody": "请先在设备设置中设置面容 ID、触控 ID 或指纹。",
     "biometricUnavailable": "未启用生物识别硬件",

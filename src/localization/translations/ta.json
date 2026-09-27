@@ -103,7 +103,6 @@
     "lockNow": "இப்போது பூட்டு",
     "lockNowSub": "மீண்டும் நுழைய பயோமெட்ரிக் தேவை",
     "signOutAccountSub": "{{email}}",
-    "footerTagline": "உங்கள் அனுமதியின்றி இந்தத் தொலைபேசியிலிருந்து எதுவும் வெளியேறாது.",
     "biometricNotSetUpTitle": "பயோமெட்ரிக் அமைக்கப்படவில்லை",
     "biometricNotSetUpBody": "முதலில் சாதன அமைப்புகளில் Face ID, Touch ID அல்லது கைரேகையை அமைக்கவும்.",
     "biometricUnavailable": "பயோமெட்ரிக் வன்பொருள் எதுவும் பதிவு செய்யப்படவில்லை",

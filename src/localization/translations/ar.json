@@ -103,7 +103,6 @@
     "lockNow": "القفل الآن",
     "lockNowSub": "تطلب المصادقة الحيوية لإعادة الدخول",
     "signOutAccountSub": "{{email}}",
-    "footerTagline": "لا شيء يغادر هذا الهاتف بدون إذنك.",
     "biometricNotSetUpTitle": "المصادقة الحيوية غير مجهزة",
     "biometricNotSetUpBody": "يرجى إعداد Face ID أو Touch ID أو بصمة الإصبع في إعدادات الجهاز أولاً.",
     "biometricUnavailable": "لا توجد أجهزة مصادقة حيوية مسجلة",

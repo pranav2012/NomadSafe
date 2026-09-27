@@ -103,7 +103,6 @@
     "lockNow": "지금 잠그기",
     "lockNowSub": "다시 진입하려면 생체 인증 필요",
     "signOutAccountSub": "{{email}}",
-    "footerTagline": "귀하의 허락 없이 이 휴대전화에서 빠져나가는 데이터는 없습니다.",
     "biometricNotSetUpTitle": "생체 인증이 설정되지 않음",
     "biometricNotSetUpBody": "먼저 기기 설정에서 Face ID, Touch ID 또는 지문을 설정하세요.",
     "biometricUnavailable": "등록된 생체 인증 하드웨어가 없습니다",

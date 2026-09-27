@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Adaptive-icon foreground: art kept inside the central 66% safe zone -->
+  <circle cx="512" cy="512" r="300" fill="none" stroke="#C6432A" stroke-width="14" stroke-dasharray="4 26" stroke-linecap="round"/>
+  <circle cx="512" cy="512" r="262" fill="none" stroke="#C6432A" stroke-width="6" opacity="0.55"/>
+  <g transform="translate(512 520) scale(17.5) translate(-12 -12)">
+    <path d="M12 3l8 3v5c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6l8-3z" fill="#D9A441"/>
+    <path d="M8.6 12.2l2.4 2.4 4.6-4.8" fill="none" stroke="#1A1612" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

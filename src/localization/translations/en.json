@@ -305,7 +305,7 @@
     "lockNow": "Lock now",
     "lockNowSub": "Require biometric to re-enter",
     "signOutAccountSub": "{{email}}",
-    "footerTagline": "Nothing leaves this phone without you.",
+    "footerTagline": "Travel light. Stay reachable.",
     "biometricNotSetUpTitle": "Biometric not set up",
     "biometricNotSetUpBody": "Set up Face ID, Touch ID or fingerprint in device Settings first.",
     "biometricUnavailable": "No biometric hardware enrolled",

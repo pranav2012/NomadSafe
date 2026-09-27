@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="500" viewBox="0 0 1024 500">
+  <defs>
+    <radialGradient id="g" cx="30%" cy="45%" r="80%">
+      <stop offset="0" stop-color="#2A2420"/><stop offset="1" stop-color="#1A1612"/>
+    </radialGradient>
+  </defs>
+  <rect width="1024" height="500" fill="url(#g)"/>
+  <g fill="none" stroke="#F6EEE0" stroke-width="2" opacity="0.07">
+    <path d="M-20 90 Q300 50 560 110 T1060 120"/><path d="M-20 400 Q300 360 560 420 T1060 430" stroke-dasharray="8 12"/>
+  </g>
+  <g transform="translate(250 250) scale(0.42) translate(-512 -512)">
+  <!-- Adaptive-icon foreground: art kept inside the central 66% safe zone -->
+  <circle cx="512" cy="512" r="300" fill="none" stroke="#C6432A" stroke-width="14" stroke-dasharray="4 26" stroke-linecap="round"/>
+  <circle cx="512" cy="512" r="262" fill="none" stroke="#C6432A" stroke-width="6" opacity="0.55"/>
+  <g transform="translate(512 520) scale(17.5) translate(-12 -12)">
+    <path d="M12 3l8 3v5c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6l8-3z" fill="#D9A441"/>
+    <path d="M8.6 12.2l2.4 2.4 4.6-4.8" fill="none" stroke="#1A1612" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</g>
+  <text x="470" y="236" font-family="Fraunces Medium, Fraunces" font-size="92" fill="#F6EEE0">Nomad<tspan font-style="italic" fill="#D9A441">Safe</tspan></text>
+  <text x="474" y="300" font-family="Geist Medium, Geist" font-size="27" fill="#F6EEE0" opacity="0.8">SOS, live location &amp; trip money —</text>
+  <text x="474" y="342" font-family="Geist Medium, Geist" font-size="27" fill="#F6EEE0" opacity="0.8">with an AI guide that runs on your phone.</text>
+</svg>

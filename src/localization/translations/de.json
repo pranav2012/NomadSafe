@@ -103,7 +103,6 @@
     "lockNow": "Jetzt sperren",
     "lockNowSub": "Biometrie zum erneuten Öffnen erforderlich",
     "signOutAccountSub": "{{email}}",
-    "footerTagline": "Nichts verlässt dieses Telefon ohne Sie.",
     "biometricNotSetUpTitle": "Biometrie nicht eingerichtet",
     "biometricNotSetUpBody": "Richten Sie zuerst Face ID, Touch ID oder einen Fingerabdruck in den Geräteeinstellungen ein.",
     "biometricUnavailable": "Keine biometrische Hardware registriert",

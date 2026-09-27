@@ -103,7 +103,6 @@
     "lockNow": "Verrouiller maintenant",
     "lockNowSub": "Nécessite la biométrie pour y accéder à nouveau",
     "signOutAccountSub": "{{email}}",
-    "footerTagline": "Rien ne quitte ce téléphone sans votre accord.",
     "biometricNotSetUpTitle": "Biométrie non configurée",
     "biometricNotSetUpBody": "Configurez d'abord Face ID, Touch ID ou l'empreinte digitale dans les paramètres de l'appareil.",
     "biometricUnavailable": "Aucun matériel biométrique enregistré",

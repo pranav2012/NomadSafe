@@ -103,7 +103,6 @@
     "lockNow": "Blocca ora",
     "lockNowSub": "Richiedi dati biometrici per rientrare",
     "signOutAccountSub": "{{email}}",
-    "footerTagline": "Niente esce da questo telefono senza il tuo consenso.",
     "biometricNotSetUpTitle": "Biometria non configurata",
     "biometricNotSetUpBody": "Configura prima Face ID, Touch ID o l'impronta digitale nelle Impostazioni del dispositivo.",
     "biometricUnavailable": "Nessun hardware biometrico registrato",

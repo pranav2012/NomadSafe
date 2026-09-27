@@ -103,7 +103,6 @@
     "lockNow": "ఇప్పుడే లాక్ చేయి",
     "lockNowSub": "తిరిగి ప్రవేశించడానికి బయోమెట్రిక్ అవసరం",
     "signOutAccountSub": "{{email}}",
-    "footerTagline": "మీ అనుమతి లేకుండా ఈ ఫోన్ నుండి ఏదీ బయటకు వెళ్లదు.",
     "biometricNotSetUpTitle": "బయోమెట్రిక్ సెటప్ చేయబడలేదు",
     "biometricNotSetUpBody": "మొదట పరికర సెట్టింగ్‌లలో Face ID, Touch ID లేదా వేలిముద్రను సెటప్ చేయండి.",
     "biometricUnavailable": "బయోమెట్రిక్ హార్డ్‌వేర్ ఏదీ నమోదు చేయబడలేదు",
