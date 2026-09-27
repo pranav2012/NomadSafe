@@ -1,4 +1,5 @@
 import React from "react";
+import { I18nManager } from "react-native";
 import Svg, { G, Path, Circle, Rect } from "react-native-svg";
 
 export type IconName =
@@ -53,6 +54,8 @@ export type IconName =
   | "download"
   | "minus"
   | "cpu";
+
+const DIRECTIONAL: ReadonlySet<IconName> = new Set(["chevronRight", "chevronLeft", "send"]);
 
 interface IconProps {
   name: IconName;
@@ -468,7 +471,12 @@ export function Icon({
   }
 
   return (
-    <Svg width={size} height={size} viewBox="0 0 24 24">
+    <Svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      style={I18nManager.isRTL && DIRECTIONAL.has(name) ? { transform: [{ scaleX: -1 }] } : undefined}
+    >
       {body}
     </Svg>
   );

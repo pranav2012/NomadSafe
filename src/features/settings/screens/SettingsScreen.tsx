@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -6,8 +6,18 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Linking,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useMutation } from "convex/react";
+import { api } from "@convex/_generated/api";
+import { LEGAL_URLS } from "@/constants/legal";
+import {
+  confirmDeviceOwner,
+  disconnectGmail,
+  isGmailConnected,
+  signOutAndCleanup,
+} from "@/services/session";
 import Constants from "expo-constants";
 import { LinearGradient } from "expo-linear-gradient";
 import { Avatar } from "@/components/ui/Avatar";
@@ -20,7 +30,7 @@ import { NomadCard } from "@/components/nomad/Card";
 import { Icon, type IconName } from "@/components/nomad/Icon";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
-import { authClient, localAuth, useAuthStore } from "@/features/auth";
+import { localAuth, useAuthStore } from "@/features/auth";
 import { useAiModels } from "@/features/ai";
 import { useTripsStore } from "@/features/trips/store/tripsStore";
 import { useExpensesStore } from "@/features/expenses/store/expensesStore";
@@ -30,25 +40,24 @@ import { smsFallbackStorage, type SmsTemplatePurpose } from "@/features/safety/s
 import { exportEverything } from "@/features/settings/services/exportService";
 import { wipeAllDeviceData } from "@/features/settings/services/wipeService";
 
-const CHECK_IN_OPTIONS = [
-  { seconds: 15 * 60, label: "15 min" },
-  { seconds: 30 * 60, label: "30 min" },
-  { seconds: 60 * 60, label: "1 hr" },
-  { seconds: 2 * 60 * 60, label: "2 hr" },
-  { seconds: 4 * 60 * 60, label: "4 hr" },
-  { seconds: 8 * 60 * 60, label: "8 hr" },
-];
+const CHECK_IN_OPTIONS = [15 * 60, 30 * 60, 60 * 60, 2 * 60 * 60, 4 * 60 * 60, 8 * 60 * 60];
+const AUTO_LOCK_OPTIONS = [0, 60_000, 5 * 60_000, 15 * 60_000];
 
-function formatShortDuration(seconds: number): string {
+type Translate = ReturnType<typeof useLocalization>["t"];
+
+function formatShortDuration(seconds: number, t: Translate): string {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
-  if (h > 0 && m === 0) return `${h} hr`;
-  if (h > 0) return `${h} hr ${m} min`;
-  return `${m} min`;
+  if (h > 0 && m === 0) return t("settings.durationHours", { count: h });
+  if (h > 0) return t("settings.durationHoursMinutes", { hours: h, minutes: m });
+  return t("settings.durationMinutes", { count: m });
 }
 
-function formatMemberSince(dateString?: string, locale = "en"): string {
-  if (!dateString) return "recently";
+function formatAutoLock(ms: number, t: Translate): string {
+  return ms === 0 ? t("settings.autoLockImmediately") : formatShortDuration(ms / 1000, t);
+}
+
+function formatMemberSince(dateString: string, locale = "en"): string {
   const date = new Date(dateString);
   try {
     return date.toLocaleDateString(locale, { month: "short", year: "numeric" });
@@ -174,7 +183,9 @@ export default function SettingsScreen() {
   const isPinSet = useAuthStore((s) => s.isPinSet);
   const biometricEnabled = useAuthStore((s) => s.biometricEnabled);
   const setBiometricEnabled = useAuthStore((s) => s.setBiometricEnabled);
-  const signOut = useAuthStore((s) => s.signOut);
+  const autoLockTimeout = useAuthStore((s) => s.autoLockTimeout);
+  const setAutoLockTimeout = useAuthStore((s) => s.setAutoLockTimeout);
+  const deleteAccount = useMutation(api.account.deleteAccount);
 
   const themeMode = useSettingsStore((s) => s.themeMode);
   const setThemeMode = useSettingsStore((s) => s.setThemeMode);
@@ -186,7 +197,6 @@ export default function SettingsScreen() {
   const setLocalAiEnabled = useSettingsStore((s) => s.setLocalAiEnabled);
 
   const trips = useTripsStore((s) => s.trips);
-  const activeTripId = useTripsStore((s) => s.activeTripId);
   const expenses = useExpensesStore((s) => s.expenses);
   const { capability } = useAiModels();
 
@@ -194,16 +204,11 @@ export default function SettingsScreen() {
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [wiping, setWiping] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [gmailConnected, setGmailConnected] = useState(false);
   const [smsModalVisible, setSmsModalVisible] = useState(false);
   const [activeSmsPurpose, setActiveSmsPurpose] = useState<SmsTemplatePurpose>("missedCheckIn");
   const [smsDraft, setSmsDraft] = useState("");
-
-  const activeTrip = useMemo(
-    () => trips.find((t) => t.id === activeTripId) ?? null,
-    [trips, activeTripId],
-  );
-  // activeTrip intentionally kept for future trip-aware settings
-  void activeTrip;
 
   useEffect(() => {
     let mounted = true;
@@ -220,12 +225,12 @@ export default function SettingsScreen() {
     };
   }, []);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
+  useFocusEffect(
+    useCallback(() => {
       setContacts(emergencyContactsStorage.get());
-    }, 500);
-    return () => clearInterval(interval);
-  }, []);
+      isGmailConnected().then(setGmailConnected).catch(() => setGmailConnected(false));
+    }, []),
+  );
 
   const name = user?.name ?? t("common.fallbackUser");
   const initial = name.trim()[0]?.toUpperCase() ?? "N";
@@ -235,10 +240,7 @@ export default function SettingsScreen() {
   const sinceText =
     trips.length > 0
       ? formatMemberSince(
-          trips.reduce((earliest, trip) =>
-            !earliest || trip.createdAt < earliest ? trip.createdAt : earliest,
-            undefined as string | undefined,
-          ),
+          trips.reduce((earliest, trip) => (trip.createdAt < earliest ? trip.createdAt : earliest), trips[0].createdAt),
           locale,
         )
       : t("settings.profileSince", { date: formatMemberSince(new Date().toISOString(), locale) });
@@ -267,7 +269,7 @@ export default function SettingsScreen() {
         { text: t("common.cancel"), style: "cancel" },
         {
           text: t("common.continue"),
-          onPress: () => router.push("/(auth)/setup-pin"),
+          onPress: () => router.push("/(auth)/setup-pin?from=settings"),
         },
       ]);
       return;
@@ -299,8 +301,10 @@ export default function SettingsScreen() {
         onPress: async () => {
           setExporting(true);
           try {
-            await exportEverything();
-            Alert.alert(t("settings.exportSuccessTitle"), t("settings.exportSuccessBody"));
+            const shared = await exportEverything();
+            if (!shared) Alert.alert(t("settings.exportUnavailableTitle"), t("settings.exportUnavailableBody"));
+          } catch {
+            Alert.alert(t("settings.exportFailedTitle"), t("settings.exportFailedBody"));
           } finally {
             setExporting(false);
           }
@@ -316,17 +320,14 @@ export default function SettingsScreen() {
         text: t("common.delete"),
         style: "destructive",
         onPress: async () => {
-          if (biometricAvailable) {
-            const ok = await localAuth.authenticateWithBiometric({
-              promptMessage: t("settings.wipeAuthTitle"),
-              cancelLabel: t("common.cancel"),
-            });
-            if (!ok) return;
-          }
+          const ok = await confirmDeviceOwner(t("settings.wipeAuthTitle"), t("common.cancel"));
+          if (!ok) return;
           setWiping(true);
           try {
             await wipeAllDeviceData();
             router.replace("/(onboarding)/welcome");
+          } catch {
+            Alert.alert(t("settings.wipeFailedTitle"), t("settings.wipeFailedBody"));
           } finally {
             setWiping(false);
           }
@@ -342,13 +343,50 @@ export default function SettingsScreen() {
         text: t("settings.signOut"),
         style: "destructive",
         onPress: async () => {
-          try {
-            await authClient.signOut();
-          } catch {
-            // ignore
-          }
-          signOut();
+          await signOutAndCleanup();
           router.replace("/(auth)/sign-in");
+        },
+      },
+    ]);
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(t("settings.deleteAccountTitle"), t("settings.deleteAccountBody"), [
+      { text: t("common.cancel"), style: "cancel" },
+      {
+        text: t("settings.deleteAccountConfirm"),
+        style: "destructive",
+        onPress: async () => {
+          const ok = await confirmDeviceOwner(t("settings.deleteAccountAuth"), t("common.cancel"));
+          if (!ok) return;
+          setDeleting(true);
+          try {
+            await deleteAccount({});
+          } catch {
+            setDeleting(false);
+            Alert.alert(t("settings.deleteAccountFailedTitle"), t("settings.deleteAccountFailedBody"));
+            return;
+          }
+          try {
+            await wipeAllDeviceData();
+          } catch {}
+          setDeleting(false);
+          Alert.alert(t("settings.deleteAccountDoneTitle"), t("settings.deleteAccountDoneBody"));
+          router.replace("/(onboarding)/welcome");
+        },
+      },
+    ]);
+  };
+
+  const handleDisconnectGmail = () => {
+    Alert.alert(t("settings.gmailDisconnectTitle"), t("settings.gmailDisconnectBody"), [
+      { text: t("common.cancel"), style: "cancel" },
+      {
+        text: t("settings.gmailDisconnect"),
+        style: "destructive",
+        onPress: async () => {
+          await disconnectGmail();
+          setGmailConnected(false);
         },
       },
     ]);
@@ -391,21 +429,6 @@ export default function SettingsScreen() {
               {sinceText}
             </Text>
           </View>
-          <View
-            style={[
-              styles.premiumBadge,
-              { backgroundColor: localAiEnabled ? theme.tealSoft : theme.hairline },
-            ]}
-          >
-            <Text
-              style={[
-                styles.premiumBadgeText,
-                { color: localAiEnabled ? theme.teal : theme.inkMuted },
-              ]}
-            >
-              {localAiEnabled ? t("settings.premiumBadge") : t("settings.freeBadge")}
-            </Text>
-          </View>
         </View>
       </NomadCard>
 
@@ -427,6 +450,74 @@ export default function SettingsScreen() {
             />
           }
         />
+        {isPinSet && (
+          <SettingRow
+            icon="lock"
+            tint={theme.skySoft}
+            iconColor={theme.sky}
+            title={t("settings.autoLock")}
+            sub={t("settings.autoLockSub", { duration: formatAutoLock(autoLockTimeout, t) })}
+            theme={theme}
+            right={
+              <View style={styles.optionRow}>
+                {AUTO_LOCK_OPTIONS.map((ms) => {
+                  const active = autoLockTimeout === ms;
+                  return (
+                    <Pressable
+                      key={ms}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: active }}
+                      onPress={() => setAutoLockTimeout(ms)}
+                      style={[
+                        styles.chip,
+                        {
+                          backgroundColor: active ? theme.sky : theme.paperSoft,
+                          borderColor: active ? theme.sky : theme.hairline,
+                        },
+                      ]}
+                    >
+                      <Text style={[styles.chipText, { color: active ? theme.inverse : theme.inkDeep, fontFamily: NOMAD_FONTS.uiSemi }]}>
+                        {formatAutoLock(ms, t)}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            }
+          />
+        )}
+        {isPinSet && (
+          <SettingRow
+            icon="edit"
+            tint={theme.paperSoft}
+            iconColor={theme.inkSoft}
+            title={t("settings.changePin")}
+            theme={theme}
+            right={<Icon name="chevronRight" size={16} color={theme.inkMuted} strokeWidth={1.8} />}
+            onPress={() => router.push("/(auth)/setup-pin?from=settings")}
+          />
+        )}
+        {gmailConnected && (
+          <SettingRow
+            icon="mail"
+            tint={theme.mustardSoft}
+            iconColor={theme.mustard}
+            title={t("settings.gmailConnected")}
+            sub={t("settings.gmailConnectedSub")}
+            theme={theme}
+            right={<Text style={[styles.rowSub, { color: theme.stamp }]}>{t("settings.gmailDisconnect")}</Text>}
+            onPress={handleDisconnectGmail}
+          />
+        )}
+        <SettingRow
+          icon="info"
+          tint={theme.paperSoft}
+          iconColor={theme.inkSoft}
+          title={t("settings.privacyPolicy")}
+          theme={theme}
+          right={<Icon name="chevronRight" size={16} color={theme.inkMuted} strokeWidth={1.8} />}
+          onPress={() => Linking.openURL(LEGAL_URLS.privacy).catch(() => {})}
+        />
       </View>
 
       <View style={styles.section}>
@@ -447,21 +538,21 @@ export default function SettingsScreen() {
           iconColor={theme.teal}
           title={t("settings.defaultCheckIn")}
           sub={t("settings.defaultCheckInSub", {
-            duration: formatShortDuration(defaultCheckInDuration),
+            duration: formatShortDuration(defaultCheckInDuration, t),
           })}
           theme={theme}
           right={
             <View style={styles.optionRow}>
-              {CHECK_IN_OPTIONS.map((opt) => (
+              {CHECK_IN_OPTIONS.map((seconds) => (
                 <Pressable
-                  key={opt.seconds}
-                  onPress={() => handleDefaultCheckIn(opt.seconds)}
+                  key={seconds}
+                  onPress={() => handleDefaultCheckIn(seconds)}
                   style={[
                     styles.chip,
                     {
                       backgroundColor:
-                        defaultCheckInDuration === opt.seconds ? theme.teal : theme.paperSoft,
-                      borderColor: defaultCheckInDuration === opt.seconds ? theme.teal : theme.hairline,
+                        defaultCheckInDuration === seconds ? theme.teal : theme.paperSoft,
+                      borderColor: defaultCheckInDuration === seconds ? theme.teal : theme.hairline,
                     },
                   ]}
                 >
@@ -469,12 +560,12 @@ export default function SettingsScreen() {
                     style={[
                       styles.chipText,
                       {
-                        color: defaultCheckInDuration === opt.seconds ? theme.inverse : theme.inkDeep,
+                        color: defaultCheckInDuration === seconds ? theme.inverse : theme.inkDeep,
                         fontFamily: NOMAD_FONTS.uiSemi,
                       },
                     ]}
                   >
-                    {opt.label}
+                    {formatShortDuration(seconds, t)}
                   </Text>
                 </Pressable>
               ))}
@@ -611,6 +702,16 @@ export default function SettingsScreen() {
           right={<Icon name="chevronRight" size={16} color={theme.inkMuted} strokeWidth={1.8} />}
           onPress={handleSignOut}
         />
+        <SettingRow
+          icon="trash"
+          tint={theme.stampSoft}
+          iconColor={theme.stamp}
+          title={t("settings.deleteAccount")}
+          sub={t("settings.deleteAccountSub")}
+          theme={theme}
+          right={deleting ? <ActivityIndicator color={theme.stamp} /> : <Icon name="chevronRight" size={16} color={theme.stamp} strokeWidth={1.8} />}
+          onPress={deleting ? undefined : handleDeleteAccount}
+        />
       </View>
 
       {/* Footer */}
@@ -619,7 +720,7 @@ export default function SettingsScreen() {
           {`“${t("settings.footerTagline")}”`}
         </Text>
         <Text style={[styles.footerVersion, { color: theme.inkMuted, fontFamily: NOMAD_FONTS.monoMedium }]}>
-          v{Constants.expoConfig?.version ?? "1.0.0"} · build {Constants.expoConfig?.ios?.buildNumber ?? Constants.expoConfig?.android?.versionCode ?? "2026.04"}
+          v{Constants.expoConfig?.version ?? "1.0.0"}
         </Text>
       </View>
 
@@ -689,10 +790,10 @@ export default function SettingsScreen() {
           />
           <View style={styles.smsMetaRow}>
             <Text style={[styles.smsMeta, { color: theme.inkMuted, fontFamily: NOMAD_FONTS.ui }]}>
-              {smsDraft.length} {smsDraft.length === 1 ? "char" : "chars"}
+              {t("settings.smsChars", { count: smsDraft.length })}
             </Text>
             <Text style={[styles.smsMeta, { color: theme.inkMuted, fontFamily: NOMAD_FONTS.ui }]}>
-              {Math.ceil(smsDraft.length / 160)} SMS
+              {t("settings.smsSegments", { count: Math.max(1, Math.ceil(smsDraft.length / 160)) })}
             </Text>
           </View>
         </NomadCard>

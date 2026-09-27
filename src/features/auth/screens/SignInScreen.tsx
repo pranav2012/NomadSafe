@@ -3,9 +3,9 @@ import {
   View,
   Text,
   Pressable,
-  TextInput,
   ScrollView,
   StyleSheet,
+  Linking,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -15,12 +15,10 @@ import Svg, { Path } from "react-native-svg";
 import { NOMAD_FONTS, type NomadTheme } from "@/constants/nomadTokens";
 import { useTheme } from "@/hooks/useTheme";
 import { authClient, useAuthStore } from "@/features/auth";
-import { NomadButton } from "@/components/nomad/Button";
 import { Icon } from "@/components/nomad/Icon";
 import { Stamp } from "@/components/nomad/Stamp";
 import { useLocalization } from "@/localization";
-
-const DIAL_CODES = ["+44", "+1", "+91", "+61", "+351"];
+import { LEGAL_URLS } from "@/constants/legal";
 
 function GoogleGlyph() {
   return (
@@ -78,13 +76,8 @@ export default function SignInScreen() {
   const theme = nomad.colors;
   const { isSignedIn, isPinSet, setUnlocked } = useAuthStore();
 
-  const [dial, setDial] = useState("+44");
-  const [dialOpen, setDialOpen] = useState(false);
-  const [num, setNum] = useState("");
   const [loading, setLoading] = useState<string | null>(null);
-
-  const digits = num.replace(/\D/g, "");
-  const ready = digits.length >= 7;
+  const [error, setError] = useState<string | null>(null);
 
   // Once the session listener confirms we are signed in, route forward.
   useEffect(() => {
@@ -98,29 +91,18 @@ export default function SignInScreen() {
   }, [isSignedIn, isPinSet, router, setUnlocked]);
 
   const handleGoogleSignIn = async () => {
+    if (loading) return;
+    setError(null);
     try {
       setLoading("google");
-      await authClient.signIn.social({
+      const result = await authClient.signIn.social({
         provider: "google",
         callbackURL: "nomadsafe://",
       });
+      if (result?.error) setError(t("auth.signInFailed"));
       // Navigation is handled by the useEffect above once session syncs.
-    } catch (error) {
-      void error;
-    } finally {
-      setLoading(null);
-    }
-  };
-
-  const handlePhoneSendOTP = async () => {
-    if (!ready) return;
-    const phone = `${dial} ${num.trim()}`;
-    try {
-      setLoading("phone");
-      await authClient.phoneNumber.sendOtp({ phoneNumber: phone });
-      router.push({ pathname: "/(auth)/phone-verify", params: { phone } });
-    } catch (error) {
-      void error;
+    } catch {
+      setError(t("auth.signInFailed"));
     } finally {
       setLoading(null);
     }
@@ -204,92 +186,21 @@ export default function SignInScreen() {
             />
           </View>
 
-          {/* Divider */}
-          <View style={styles.dividerRow}>
-            <View style={[styles.dividerLine, { backgroundColor: theme.hairline }]} />
-            <Text style={[styles.dividerLabel, { color: theme.inkMuted }]}>
-              {t("auth.orUsePhone")}
+          {error ? (
+            <Text accessibilityRole="alert" style={[styles.error, { color: theme.stamp }]}>
+              {error}
             </Text>
-            <View style={[styles.dividerLine, { backgroundColor: theme.hairline }]} />
-          </View>
-
-          {/* Phone input */}
-          <View style={styles.phoneRow}>
-            <View>
-              <Pressable
-                onPress={() => setDialOpen((o) => !o)}
-                style={[
-                  styles.dial,
-                  { backgroundColor: theme.paperSoft, borderColor: theme.hairline },
-                ]}
-              >
-                <Text style={[styles.dialText, { color: theme.inkDeep }]}>{dial}</Text>
-                <Icon name="chevronDown" size={14} color={theme.inkMuted} />
-              </Pressable>
-              {dialOpen && (
-                <View
-                  style={[
-                    styles.dialMenu,
-                    {
-                      backgroundColor: theme.paperSoft,
-                      borderColor: theme.hairline,
-                      shadowColor: theme.shadow,
-                    },
-                  ]}
-                >
-                  {DIAL_CODES.map((d) => (
-                    <Pressable
-                      key={d}
-                      onPress={() => {
-                        setDial(d);
-                        setDialOpen(false);
-                      }}
-                      style={styles.dialMenuItem}
-                    >
-                      <Text
-                        style={[
-                          styles.dialText,
-                          { color: d === dial ? theme.stamp : theme.inkDeep },
-                        ]}
-                      >
-                        {d}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-              )}
-            </View>
-
-            <TextInput
-              value={num}
-              onChangeText={(v) => setNum(v.replace(/[^0-9]/g, "").slice(0, 11))}
-              placeholder={t("auth.phonePlaceholder")}
-              placeholderTextColor={theme.inkMuted}
-              keyboardType="phone-pad"
-              style={[
-                styles.phoneInput,
-                {
-                  backgroundColor: theme.paperSoft,
-                  borderColor: theme.hairline,
-                  color: theme.inkDeep,
-                },
-              ]}
-            />
-          </View>
-
-          <NomadButton
-            theme={theme}
-            variant="teal"
-            full
-            onPress={handlePhoneSendOTP}
-            style={[styles.sendBtn, { opacity: ready && loading !== "phone" ? 1 : 0.45 }]}
-            icon={<Icon name="chevronRight" size={18} color={theme.inverse} strokeWidth={2.4} />}
-          >
-            {loading === "phone" ? t("auth.sending") : t("auth.sendCode")}
-          </NomadButton>
+          ) : null}
 
           <Text style={[styles.footer, { color: theme.inkMuted }]}>
-            {t("auth.smsCodeFooter")}
+            {t("auth.legalPrefix")}{" "}
+            <Text
+              accessibilityRole="link"
+              style={styles.footerLink}
+              onPress={() => Linking.openURL(LEGAL_URLS.privacy)}
+            >
+              {t("auth.privacyPolicy")}
+            </Text>
           </Text>
         </ScrollView>
       </SafeAreaView>
@@ -366,67 +277,13 @@ const styles = StyleSheet.create({
     fontSize: 15,
     letterSpacing: 0,
   },
-  dividerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    marginVertical: 20,
+  error: {
+    fontFamily: NOMAD_FONTS.uiSemi,
+    fontSize: 13,
+    marginTop: 14,
+    textAlign: "center",
   },
-  dividerLine: { flex: 1, height: 1 },
-  dividerLabel: {
-    fontSize: 10.5,
-    letterSpacing: 1.2,
-    fontWeight: "700",
-    textTransform: "uppercase",
-    fontFamily: NOMAD_FONTS.uiBold,
-  },
-  phoneRow: {
-    flexDirection: "row",
-    gap: 8,
-    zIndex: 10,
-  },
-  dial: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 14,
-    height: 52,
-    borderRadius: 14,
-    borderWidth: 1,
-  },
-  dialText: {
-    fontFamily: NOMAD_FONTS.monoMedium,
-    fontSize: 15,
-    fontWeight: "600",
-  },
-  dialMenu: {
-    position: "absolute",
-    top: 56,
-    left: 0,
-    minWidth: 84,
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingVertical: 4,
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 8,
-  },
-  dialMenuItem: {
-    paddingVertical: 9,
-    paddingHorizontal: 14,
-  },
-  phoneInput: {
-    flex: 1,
-    height: 52,
-    borderRadius: 14,
-    borderWidth: 1,
-    paddingHorizontal: 16,
-    fontFamily: NOMAD_FONTS.monoMedium,
-    fontSize: 16,
-    letterSpacing: 0.5,
-  },
-  sendBtn: { marginTop: 12 },
+  footerLink: { textDecorationLine: "underline" },
   footer: {
     textAlign: "center",
     fontSize: 11,

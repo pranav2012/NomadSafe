@@ -1,11 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
   Linking,
+  Modal,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -14,7 +19,8 @@ import MapView, { Marker, PROVIDER_DEFAULT, type Region } from "react-native-map
 import * as Location from "expo-location";
 import * as Battery from "expo-battery";
 import { StatusBar } from "expo-status-bar";
-import { useMutation } from "convex/react";
+import { useFocusEffect } from "expo-router";
+import { useMutation, useQuery } from "convex/react";
 import { Icon } from "@/components/nomad/Icon";
 import { NomadCard } from "@/components/nomad/Card";
 import { NomadButton } from "@/components/nomad/Button";
@@ -25,274 +31,198 @@ import {
   emergencyContactsStorage,
   normalizeEmail,
 } from "@/features/onboarding/services/emergencyContactsStorage";
-import { useTripsStore } from "@/features/trips/store/tripsStore";
-import { storage } from "@/stores/storage";
-import { useAuthStore } from "@/features/auth";
 import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
+import { useSharingStore, getDrainPercentForMode, type BroadcastMode } from "../store/sharingStore";
 import {
-  useSharingStore,
-  getDrainPercentForMode,
-  type ShareRecipient,
-  type RecipientLinkStatus,
-} from "../store/sharingStore";
-import {
+  BackgroundLocationDeniedError,
+  isLocationBroadcastRunning,
+  readBroadcastState,
   startLocationBroadcast,
   stopLocationBroadcast,
 } from "../services/locationBroadcastTask";
 import {
-  useIncomingShares,
-  useContactLinks,
-} from "../hooks/useConvexSharing";
-import {
-  refreshSharingToken,
-} from "@/features/auth/services/authClient";
+  BackgroundLocationDisclosure,
+  hasAcceptedBackgroundDisclosure,
+} from "../components/BackgroundLocationDisclosure";
 import { heavyImpact, successNotification } from "@/utils/haptics";
 import type { LatLng } from "@/features/trips/store/tripsStore";
 
-const MODES = [
-  { id: "normal" as const, label: "Normal", sub: "~60s", icon: "compass" as const },
-  { id: "low" as const, label: "Low-power", sub: "5 min", icon: "battery" as const },
-  { id: "emergency" as const, label: "Max accuracy", sub: "15s", icon: "shield" as const },
+const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.pranav.nomadsafe";
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const STALE_AFTER_MS = 15 * 60_000;
+
+const MODES: { id: BroadcastMode; labelKey: string; subKey: string; icon: "compass" | "battery" | "shield" }[] = [
+  { id: "normal", labelKey: "sharing.modeNormal", subKey: "sharing.modeNormalSub", icon: "compass" },
+  { id: "low", labelKey: "sharing.modeLow", subKey: "sharing.modeLowSub", icon: "battery" },
+  { id: "emergency", labelKey: "sharing.modeEmergency", subKey: "sharing.modeEmergencySub", icon: "shield" },
 ];
 
-const RECIPIENT_COLORS = ["teal", "mustard", "sky", "stamp"];
+type OutgoingLink = { id: Id<"contactLinks">; linkedUserId: string; name: string; email: string; status: "pending" | "accepted" | "declined" };
+type IncomingLink = { id: Id<"contactLinks">; ownerUserId: string; ownerName: string; ownerEmail: string | null; status: "pending" | "accepted" | "declined" };
+type Invite = { id: Id<"pendingInvites">; name: string; email: string | null; phone: string | null };
+type IncomingShare = { ownerUserId: string; ownerName: string; latitude: number; longitude: number; battery: number | null; updatedAt: number };
+
+function initialOf(name: string) {
+  return (name.trim().charAt(0) || "?").toUpperCase();
+}
 
 export default function SharingScreen() {
   const { nomad, isDark } = useTheme();
   const theme = nomad.colors;
   const card = nomad.components.card;
-  const { t, formatTime } = useLocalization();
-
-  const currentUser = useAuthStore((s) => s.user);
+  const { t, formatTime, locale } = useLocalization();
 
   const isBroadcasting = useSharingStore((s) => s.isBroadcasting);
   const mode = useSharingStore((s) => s.mode);
-  const lastPublishedAt = useSharingStore((s) => s.lastPublishedAt);
-  const recipients = useSharingStore((s) => s.recipients);
-  const geofences = useSharingStore((s) => s.geofences);
   const currentBattery = useSharingStore((s) => s.currentBattery);
   const setBroadcasting = useSharingStore((s) => s.setBroadcasting);
   const setMode = useSharingStore((s) => s.setMode);
   const setCurrentBattery = useSharingStore((s) => s.setCurrentBattery);
-  const setLastPublishedAt = useSharingStore((s) => s.setLastPublishedAt);
-  const toggleRecipient = useSharingStore((s) => s.toggleRecipient);
-  const updateRecipient = useSharingStore((s) => s.updateRecipient);
-  const addRecipient = useSharingStore((s) => s.addRecipient);
-  const addGeofence = useSharingStore((s) => s.addGeofence);
-  const updateGeofence = useSharingStore((s) => s.updateGeofence);
+
+  const contactLinks = useQuery(api.sharing.getContactLinks) as
+    | { outgoing: OutgoingLink[]; incoming: IncomingLink[]; invites: Invite[] }
+    | undefined;
+  const incomingShares = useQuery(api.sharing.getIncomingShares) as IncomingShare[] | undefined;
+  const outgoingShares = useQuery(api.sharing.getOutgoingShares);
 
   const requestContactLink = useMutation(api.sharing.requestContactLink);
   const respondToContactLink = useMutation(api.sharing.respondToContactLink);
-  const pauseShare = useMutation(api.sharing.pauseShare);
-
-  const incomingShares = useIncomingShares();
-  const contactLinks = useContactLinks() as
-    | { outgoing: ContactLink[]; incoming: { id: string; ownerUserId: string; email: string; status: RecipientLinkStatus }[] }
-    | undefined;
-
-  type ContactLink = { id: string; linkedUserId: string; email: string; status: RecipientLinkStatus };
-
-  const trips = useTripsStore((s) => s.trips);
-  const activeTripId = useTripsStore((s) => s.activeTripId);
-  const activeTrip = trips.find((trip) => trip.id === activeTripId) ?? trips[0] ?? null;
+  const removeContactLink = useMutation(api.sharing.removeContactLink);
+  const removeInvite = useMutation(api.sharing.removeInvite);
+  const setSharePaused = useMutation(api.sharing.setSharePaused);
 
   const [location, setLocation] = useState<{ latitude: number; longitude: number; city?: string; country?: string } | null>(null);
-  const [nowTick, setNowTick] = useState(0);
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  const [broadcastInfo, setBroadcastInfo] = useState(() => readBroadcastState());
+  const [busy, setBusy] = useState(false);
+  const [disclosureVisible, setDisclosureVisible] = useState(false);
+  const [addVisible, setAddVisible] = useState(false);
 
-  // Keep the background task auth token fresh whenever the screen is visible.
-  useEffect(() => {
-    refreshSharingToken();
-  }, []);
+  // Re-sync the UI with the real OS task; it may have been stopped externally.
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      isLocationBroadcastRunning().then((running) => {
+        if (active && running !== useSharingStore.getState().isBroadcasting) setBroadcasting(running);
+      });
+      setBroadcastInfo(readBroadcastState());
+      return () => {
+        active = false;
+      };
+    }, [setBroadcasting]),
+  );
 
-  // Load real location and sync recipients from emergency contacts + Convex links.
   useEffect(() => {
     let mounted = true;
-    async function init() {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status === Location.PermissionStatus.GRANTED) {
-        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-        const [reverse] = await Location.reverseGeocodeAsync({
-          latitude: loc.coords.latitude,
-          longitude: loc.coords.longitude,
-        });
-        if (mounted) {
+    (async () => {
+      try {
+        const permission = await Location.getForegroundPermissionsAsync();
+        if (!permission.granted) return;
+        const loc =
+          (await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }).catch(() => null)) ??
+          (await Location.getLastKnownPositionAsync().catch(() => null));
+        if (!loc || !mounted) return;
+        setLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
+        const [reverse] = await Location.reverseGeocodeAsync(loc.coords).catch(() => []);
+        if (mounted && reverse) {
           setLocation({
             latitude: loc.coords.latitude,
             longitude: loc.coords.longitude,
-            city: reverse?.city ?? reverse?.subregion ?? undefined,
-            country: reverse?.country ?? undefined,
+            city: reverse.city ?? reverse.subregion ?? undefined,
+            country: reverse.country ?? undefined,
           });
         }
-      }
-
-      const level = await Battery.getBatteryLevelAsync().catch(() => null);
-      if (mounted && level !== null) setCurrentBattery(Math.round(level * 100));
-
-      const storedRecipients = useSharingStore.getState().recipients;
-      if (storedRecipients.length === 0) {
-        const contacts = emergencyContactsStorage.get();
-        contacts.slice(0, 3).forEach((c, index) => {
-          const colorName = RECIPIENT_COLORS[index % RECIPIENT_COLORS.length];
-          addRecipient({
-            name: c.name,
-            initial: c.name.charAt(0).toUpperCase(),
-            color: theme[colorName as keyof typeof theme] as string,
-            phone: c.phone,
-            email: c.email,
-          });
-        });
-      }
-
-      const storedGeofences = useSharingStore.getState().geofences;
-      if (storedGeofences.length === 0 && activeTrip?.destinations[0]) {
-        const dest = activeTrip.destinations[0];
-        const contacts = emergencyContactsStorage.get();
-        addGeofence({
-          name: t("sharing.arriveGeofence", { destination: dest }),
-          radiusM: 2000,
-          notifyIds: contacts.slice(0, 2).map((c) => c.id),
-          active: true,
-          color: "teal",
-        });
-      }
-
-      const last = storage.getString("sharing-last-broadcast");
-      if (last) {
-        try {
-          const parsed = JSON.parse(last) as { timestamp?: number };
-          if (parsed.timestamp) setLastPublishedAt(parsed.timestamp);
-        } catch {}
-      }
-    }
-    init();
-    return () => { mounted = false; };
-  }, [activeTrip?.destinations, addGeofence, addRecipient, setCurrentBattery, setLastPublishedAt, t, theme]);
-
-  // Link emergency contacts to NomadSafe users via email on first load.
-  useEffect(() => {
-    if (!currentUser) return;
-    if (contactLinks === undefined) return;
-
-    const storedRecipients = useSharingStore.getState().recipients;
-    const contacts = emergencyContactsStorage.get();
-    const outgoingLinks = contactLinks.outgoing ?? [];
-
-    contacts.forEach((contact) => {
-      const email = contact.email;
-      if (!email) return;
-      const normalized = normalizeEmail(email);
-      const existing = storedRecipients.find((r) => normalizeEmail(r.email ?? "") === normalized);
-      if (existing && existing.linkStatus !== "none") return;
-
-      const outgoing = (outgoingLinks as ContactLink[]).find(
-        (l) =>
-          normalizeEmail(l.email) === normalized,
-      );
-      if (outgoing) {
-        updateRecipient(existing?.id ?? contact.id, {
-          linkStatus: outgoing.status,
-          linkedUserId: outgoing.linkedUserId,
-          convexLinkId: outgoing.id,
-          sharing: outgoing.status === "accepted" ? existing?.sharing ?? true : false,
-        });
-      } else {
-        requestContactLink({ name: contact.name, email: normalized, phone: contact.phone ?? undefined })
-          .then((res) => {
-            if (res.status !== "invite_pending") {
-              updateRecipient(contact.id, {
-                linkStatus: res.status as RecipientLinkStatus,
-                linkedUserId: null,
-                convexLinkId: res.linkId ?? null,
-                sharing: res.status === "accepted",
-              });
-            }
-          })
-          .catch(() => {});
-      }
-    });
-  }, [currentUser, contactLinks, requestContactLink, updateRecipient]);
-
-  // Apply live incoming location shares from accepted linked contacts.
-  useEffect(() => {
-    if (!incomingShares?.length || !location) return;
-
-    incomingShares.forEach((share: { ownerUserId: string; latitude: number; longitude: number; battery: number | null; updatedAt: number }) => {
-      const recipient = recipients.find((r) => r.linkedUserId === share.ownerUserId);
-      if (!recipient) return;
-
-      const distanceKm = haversineKm(
-        location.latitude,
-        location.longitude,
-        share.latitude,
-        share.longitude,
-      );
-      updateRecipient(recipient.id, {
-        lastSeenAt: share.updatedAt,
-        battery: share.battery ?? null,
-        distanceKm,
-      });
-    });
-  }, [incomingShares, location, recipients, updateRecipient]);
+      } catch {}
+    })();
+    Battery.getBatteryLevelAsync()
+      .then((level) => {
+        if (mounted && level >= 0) setCurrentBattery(Math.round(level * 100));
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, [setCurrentBattery]);
 
   useEffect(() => {
-    const update = () => setNowTick(Date.now());
-    const id = setInterval(update, 1000);
-    update();
+    const id = setInterval(() => {
+      setNowTick(Date.now());
+      setBroadcastInfo(readBroadcastState());
+    }, 15_000);
     return () => clearInterval(id);
   }, []);
 
-  const handleToggleBroadcast = useCallback(async () => {
-    if (isBroadcasting) {
-      try {
-        await stopLocationBroadcast();
-        setBroadcasting(false);
-        successNotification();
-      } catch {
-        Alert.alert(t("sharing.stopErrorTitle"), t("sharing.stopErrorBody"));
-      }
-      return;
-    }
+  const pausedIds = useMemo(
+    () => new Set((outgoingShares ?? []).filter((s) => s.paused).map((s) => s.recipientUserId)),
+    [outgoingShares],
+  );
+  const outgoing = contactLinks?.outgoing ?? [];
+  const invites = contactLinks?.invites ?? [];
+  const incomingRequests = (contactLinks?.incoming ?? []).filter((l) => l.status === "pending");
+  const activeRecipientCount = outgoing.filter((l) => l.status === "accepted" && !pausedIds.has(l.linkedUserId)).length;
 
+  const beginBroadcast = useCallback(async (nextMode: BroadcastMode) => {
+    setBusy(true);
     try {
-      await refreshSharingToken();
-      await startLocationBroadcast(mode);
+      await startLocationBroadcast(nextMode);
       setBroadcasting(true);
-      setLastPublishedAt(Date.now());
+      setBroadcastInfo(readBroadcastState());
       heavyImpact();
-    } catch {
+    } catch (err) {
+      setBroadcasting(await isLocationBroadcastRunning());
+      const background = err instanceof BackgroundLocationDeniedError;
       Alert.alert(
         t("sharing.permissionTitle"),
-        t("sharing.permissionBody"),
+        background ? t("sharing.backgroundPermissionBody") : t("sharing.permissionBody"),
         [
           { text: t("common.cancel"), style: "cancel" },
           { text: t("sharing.openSettings"), onPress: () => Linking.openSettings() },
         ],
       );
+    } finally {
+      setBusy(false);
     }
-  }, [isBroadcasting, mode, setBroadcasting, setLastPublishedAt, t]);
+  }, [setBroadcasting, t]);
 
-  const handleModeChange = useCallback(async (next: "normal" | "low" | "emergency") => {
-    setMode(next);
+  const handleToggleBroadcast = useCallback(async () => {
+    if (busy) return;
     if (isBroadcasting) {
+      setBusy(true);
       try {
         await stopLocationBroadcast();
-        await startLocationBroadcast(next);
+        setBroadcasting(false);
+        successNotification();
       } catch {
-        // restart attempt failed silently; keep new mode selected.
+        setBroadcasting(await isLocationBroadcastRunning());
+        Alert.alert(t("sharing.stopErrorTitle"), t("sharing.stopErrorBody"));
+      } finally {
+        setBusy(false);
       }
+      return;
     }
-  }, [isBroadcasting, setMode]);
-
-  const handleToggleRecipient = useCallback(async (recipient: ShareRecipient) => {
-    const nextSharing = !recipient.sharing;
-    toggleRecipient(recipient.id);
-
-    if (!nextSharing && recipient.linkedUserId) {
-      await pauseShare({ recipientUserId: recipient.linkedUserId });
+    if (!hasAcceptedBackgroundDisclosure()) {
+      setDisclosureVisible(true);
+      return;
     }
-  }, [pauseShare, toggleRecipient]);
+    await beginBroadcast(mode);
+  }, [beginBroadcast, busy, isBroadcasting, mode, setBroadcasting, t]);
 
-  const handleRespondToLink = useCallback(async (linkId: any, accept: boolean) => {
+  const handleModeChange = useCallback(async (next: BroadcastMode) => {
+    if (next === mode || busy) return;
+    setMode(next);
+    if (isBroadcasting) await beginBroadcast(next);
+  }, [beginBroadcast, busy, isBroadcasting, mode, setMode]);
+
+  const handleTogglePause = useCallback(async (link: OutgoingLink) => {
+    try {
+      await setSharePaused({ recipientUserId: link.linkedUserId, paused: !pausedIds.has(link.linkedUserId) });
+    } catch {
+      Alert.alert(t("sharing.linkErrorTitle"), t("sharing.linkErrorBody"));
+    }
+  }, [pausedIds, setSharePaused, t]);
+
+  const handleRespond = useCallback(async (linkId: Id<"contactLinks">, accept: boolean) => {
     try {
       await respondToContactLink({ linkId, accept });
     } catch {
@@ -300,79 +230,109 @@ export default function SharingScreen() {
     }
   }, [respondToContactLink, t]);
 
-  const handleInvite = useCallback((recipient: ShareRecipient) => {
-    const body = recipient.email
-      ? `Join me on NomadSafe so we can share live locations safely: ${baseURL ?? "https://nomadsafe.app"}`
-      : `Join me on NomadSafe so we can share live locations safely.`;
-    if (recipient.phone) {
-      Linking.openURL(`sms:${recipient.phone}?body=${encodeURIComponent(body)}`).catch(() => {});
-    } else if (recipient.email) {
-      Linking.openURL(`mailto:${recipient.email}?subject=${encodeURIComponent("Join me on NomadSafe")}&body=${encodeURIComponent(body)}`).catch(() => {});
+  const confirmRemoveLink = useCallback((linkId: Id<"contactLinks">, name: string) => {
+    Alert.alert(t("sharing.removeTitle", { name }), t("sharing.removeBody"), [
+      { text: t("common.cancel"), style: "cancel" },
+      {
+        text: t("sharing.remove"),
+        style: "destructive",
+        onPress: () => {
+          removeContactLink({ linkId }).catch(() =>
+            Alert.alert(t("sharing.linkErrorTitle"), t("sharing.linkErrorBody")),
+          );
+        },
+      },
+    ]);
+  }, [removeContactLink, t]);
+
+  const sendInvite = useCallback((invite: { name: string; phone?: string | null; email?: string | null }) => {
+    const body = t("sharing.inviteMessage", { url: PLAY_STORE_URL });
+    if (invite.phone) {
+      Linking.openURL(`sms:${invite.phone}?body=${encodeURIComponent(body)}`).catch(() => Share.share({ message: body }));
+    } else if (invite.email) {
+      Linking.openURL(
+        `mailto:${invite.email}?subject=${encodeURIComponent(t("sharing.inviteSubject"))}&body=${encodeURIComponent(body)}`,
+      ).catch(() => Share.share({ message: body }));
     } else {
-      Alert.alert(t("sharing.noContactTitle"), t("sharing.noContactBody"));
+      Share.share({ message: body }).catch(() => {});
     }
   }, [t]);
 
+  const handleAddPerson = useCallback(async (input: { name: string; email: string; phone?: string }) => {
+    const res = await requestContactLink({ name: input.name, email: input.email, phone: input.phone });
+    if (res.status === "invite_pending") {
+      Alert.alert(t("sharing.notOnAppTitle", { name: input.name }), t("sharing.notOnAppBody"), [
+        { text: t("common.later"), style: "cancel" },
+        { text: t("sharing.sendInvite"), onPress: () => sendInvite({ name: input.name, email: input.email, phone: input.phone }) },
+      ]);
+    }
+  }, [requestContactLink, sendInvite, t]);
+
+  const handlePing = useCallback((phone: string | null | undefined) => {
+    if (!phone) {
+      Alert.alert(t("sharing.noPhoneTitle"), t("sharing.noPhoneBody"));
+      return;
+    }
+    const body = location
+      ? t("sharing.pingWithLocation", { url: `https://maps.google.com/?q=${location.latitude},${location.longitude}` })
+      : t("sharing.pingNoLocation");
+    Linking.openURL(`sms:${phone}?body=${encodeURIComponent(body)}`).catch(() => {});
+  }, [location, t]);
+
+  const contactPhoneByEmail = useMemo(() => {
+    const map = new Map<string, string>();
+    emergencyContactsStorage.get().forEach((c) => {
+      if (c.email && c.phone) map.set(normalizeEmail(c.email), c.phone);
+    });
+    return map;
+  }, []);
+
+  const lastPublishedAt = broadcastInfo.lastPublishedAt;
+  const lastUpdateText = lastPublishedAt ? formatAgo(nowTick - lastPublishedAt, t) : t("sharing.neverUpdated");
   const drain = getDrainPercentForMode(mode);
-  const remainingEstimate = currentBattery ? Math.round(currentBattery / drain) : 23;
-  const lastUpdateText = lastPublishedAt
-    ? formatLastUpdate(nowTick - lastPublishedAt, t)
-    : t("sharing.neverUpdated");
+  const remainingHours = currentBattery != null ? Math.max(0, Math.round(currentBattery / drain)) : null;
 
   const locationLabel =
     location?.city && location?.country
       ? `${location.city}, ${location.country}`
-      : activeTrip?.destinations[0] ?? t("sharing.fallbackLocation");
+      : t("sharing.fallbackLocation");
 
   const userPoint: LatLng | null = useMemo(
     () => (location ? { latitude: location.latitude, longitude: location.longitude } : null),
     [location],
   );
 
-  // Only render recipient markers after we have a real incoming share location.
-  const recipientPoints: { point: LatLng; recipient: ShareRecipient }[] = useMemo(() => {
-    if (!userPoint) return [];
-    return recipients
-      .filter((r) => r.sharing && r.linkStatus === "accepted" && r.lastSeenAt != null)
-      .map((r) => {
-        const share = incomingShares?.find(
-          (s: { ownerUserId: string; latitude: number; longitude: number }) => s.ownerUserId === r.linkedUserId,
-        );
-        if (!share) return null;
-        return {
-          point: { latitude: share.latitude, longitude: share.longitude },
-          recipient: r,
-        };
-      })
-      .filter((item): item is { point: LatLng; recipient: ShareRecipient } => item != null);
-  }, [recipients, incomingShares, userPoint]);
+  const liveShares = useMemo(
+    () => (incomingShares ?? []).filter((s) => !(s.latitude === 0 && s.longitude === 0)),
+    [incomingShares],
+  );
 
   const allMapPoints: LatLng[] = useMemo(() => {
     const points: LatLng[] = [];
     if (userPoint) points.push(userPoint);
-    points.push(...recipientPoints.map((p) => p.point));
+    liveShares.forEach((s) => points.push({ latitude: s.latitude, longitude: s.longitude }));
     return points;
-  }, [userPoint, recipientPoints]);
+  }, [userPoint, liveShares]);
 
   const initialRegion: Region | null = useMemo(() => {
     if (allMapPoints.length === 0) return null;
-    const minLat = Math.min(...allMapPoints.map((p) => p.latitude));
-    const maxLat = Math.max(...allMapPoints.map((p) => p.latitude));
-    const minLon = Math.min(...allMapPoints.map((p) => p.longitude));
-    const maxLon = Math.max(...allMapPoints.map((p) => p.longitude));
-    const latDelta = Math.max(0.04, (maxLat - minLat) * 1.6 + 0.02);
-    const lonDelta = Math.max(0.04, (maxLon - minLon) * 1.6 + 0.02);
+    const lats = allMapPoints.map((p) => p.latitude);
+    const lons = allMapPoints.map((p) => p.longitude);
+    const minLat = Math.min(...lats);
+    const maxLat = Math.max(...lats);
+    const minLon = Math.min(...lons);
+    const maxLon = Math.max(...lons);
     return {
       latitude: (minLat + maxLat) / 2,
       longitude: (minLon + maxLon) / 2,
-      latitudeDelta: latDelta,
-      longitudeDelta: lonDelta,
+      latitudeDelta: Math.max(0.04, (maxLat - minLat) * 1.6 + 0.02),
+      longitudeDelta: Math.max(0.04, (maxLon - minLon) * 1.6 + 0.02),
     };
   }, [allMapPoints]);
 
   const mapRef = useRef<MapView>(null);
   useEffect(() => {
-    if (allMapPoints.length === 0 || !mapRef.current) return;
+    if (allMapPoints.length < 2 || !mapRef.current) return;
     const timer = setTimeout(() => {
       mapRef.current?.fitToCoordinates(allMapPoints, {
         edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
@@ -382,25 +342,15 @@ export default function SharingScreen() {
     return () => clearTimeout(timer);
   }, [allMapPoints]);
 
-  const handlePing = useCallback((recipient: ShareRecipient) => {
-    if (!recipient.phone) {
-      Alert.alert(t("sharing.noPhoneTitle"), t("sharing.noPhoneBody"));
-      return;
+  const formatKm = (km: number) => {
+    try {
+      return new Intl.NumberFormat(locale, { style: "unit", unit: "kilometer", maximumFractionDigits: km < 10 ? 1 : 0 }).format(km);
+    } catch {
+      return `${km.toFixed(km < 10 ? 1 : 0)} km`;
     }
-    const body = location
-      ? `Ping from NomadSafe · ${locationLabel}: https://maps.google.com/?q=${location.latitude},${location.longitude}`
-      : `Ping from NomadSafe · I'm at ${locationLabel}`;
-    Linking.openURL(`sms:${recipient.phone}?body=${encodeURIComponent(body)}`).catch(() => {});
-  }, [location, locationLabel, t]);
+  };
 
-  const openCurrentLocationInMaps = useCallback(() => {
-    if (!location) return;
-    const { latitude, longitude } = location;
-    const url = `https://maps.google.com/?q=${latitude},${longitude}`;
-    Linking.openURL(url).catch(() => {});
-  }, [location]);
-
-  const activeRecipients = recipients.filter((r) => r.sharing);
+  const colorFor = (index: number) => [theme.teal, theme.mustard, theme.sky, theme.stamp][index % 4];
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.paper }}>
@@ -410,12 +360,12 @@ export default function SharingScreen() {
           <View style={styles.screenHeader}>
             <View style={{ flex: 1 }}>
               <Text style={[styles.screenSubtitle, { color: theme.inkMuted }]}>{t("sharing.eyebrow")}</Text>
-              <Text style={[styles.screenTitle, { color: theme.inkDeep }]}>{t("sharing.title")}</Text>
+              <Text style={[styles.screenTitle, { color: theme.inkDeep }]} accessibilityRole="header">{t("sharing.title")}</Text>
             </View>
             <View style={[styles.pill, { backgroundColor: isBroadcasting ? theme.tealSoft : theme.hairline }]}>
               <View style={[styles.pillDot, { backgroundColor: isBroadcasting ? theme.teal : theme.inkMuted }]} />
               <Text style={[styles.pillText, { color: isBroadcasting ? theme.teal : theme.inkMuted }]}>
-                {isBroadcasting ? t("sharing.liveStatus", { count: activeRecipients.length }) : t("sharing.offlineStatus")}
+                {isBroadcasting ? t("sharing.liveStatus", { count: activeRecipientCount }) : t("sharing.offlineStatus")}
               </Text>
             </View>
           </View>
@@ -427,63 +377,26 @@ export default function SharingScreen() {
                   <Icon name="users" size={160} color="#fff" strokeWidth={0.8} />
                 </View>
               </View>
-
               <View style={styles.heroRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.heroEyebrow}>{t("sharing.broadcastingLabel")}</Text>
-                  <Text style={styles.heroTitle}>
-                    {location?.city ? (
-                      <>
-                        <Text style={{ fontStyle: "italic" }}>{location.city}</Text>
-                        {location.country ? `, ${location.country}` : ""}
-                      </>
-                    ) : (
-                      locationLabel
-                    )}
+                  <Text style={styles.heroEyebrow}>
+                    {isBroadcasting ? t("sharing.broadcastingLabel") : t("sharing.notBroadcastingLabel")}
                   </Text>
+                  <Text style={styles.heroTitle}>{locationLabel}</Text>
                   <Text style={styles.heroSub}>
                     {location
-                      ? `${Math.abs(location.latitude).toFixed(3)}°${location.latitude >= 0 ? "N" : "S"} · ${Math.abs(location.longitude).toFixed(3)}°${location.longitude >= 0 ? "E" : "W"} · ±8m`
+                      ? `${Math.abs(location.latitude).toFixed(3)}°${location.latitude >= 0 ? "N" : "S"} · ${Math.abs(location.longitude).toFixed(3)}°${location.longitude >= 0 ? "E" : "W"}`
                       : t("sharing.noLocation")}
                   </Text>
                 </View>
-                <View style={styles.avatarStack}>
-                  {recipients.slice(0, 3).map((r, i) => {
-                    const isLive = r.lastSeenAt != null;
-                    return (
-                      <View
-                        key={r.id}
-                        style={[
-                          styles.avatar,
-                          { backgroundColor: r.color, marginLeft: i === 0 ? 0 : -8, borderColor: "#fff" },
-                        ]}
-                      >
-                        <Text style={styles.avatarText}>{r.initial}</Text>
-                        {isLive && (
-                          <View
-                            style={[
-                              styles.avatarLiveDot,
-                              {
-                                backgroundColor: theme.teal,
-                                borderColor: "#fff",
-                              },
-                            ]}
-                          />
-                        )}
-                      </View>
-                    );
-                  })}
-                </View>
               </View>
-
               <View style={[styles.heroFooter, { borderTopColor: "rgba(255,255,255,0.2)" }]}>
                 {[
-                  { l: t("sharing.withCount"), v: String(activeRecipients.length) },
-                  { l: t("sharing.mapVisible"), v: String(recipientPoints.length) },
+                  { l: t("sharing.withCount"), v: String(activeRecipientCount) },
+                  { l: t("sharing.mapVisible"), v: String(liveShares.length) },
                   { l: t("sharing.lastUpdate"), v: lastUpdateText },
-                  { l: t("sharing.encryptedLabel"), v: t("sharing.encryptedShort") },
-                ].map((s, i) => (
-                  <View key={i} style={styles.heroStat}>
+                ].map((s) => (
+                  <View key={s.l} style={styles.heroStat}>
                     <Text style={styles.heroStatLabel}>{s.l}</Text>
                     <Text style={styles.heroStatValue}>{s.v}</Text>
                   </View>
@@ -491,6 +404,15 @@ export default function SharingScreen() {
               </View>
             </LinearGradient>
           </NomadCard>
+
+          {isBroadcasting && broadcastInfo.lastError ? (
+            <NomadCard theme={theme} style={[styles.warningCard, { backgroundColor: theme.stampSoft }]}>
+              <View style={styles.encryptedRow}>
+                <Icon name="alertTriangle" size={18} color={theme.stamp} />
+                <Text style={[styles.encryptedText, { color: theme.stamp }]}>{t("sharing.publishFailed")}</Text>
+              </View>
+            </NomadCard>
+          ) : null}
 
           <View style={styles.mapCard}>
             <NomadCard theme={theme} padding={10}>
@@ -507,55 +429,208 @@ export default function SharingScreen() {
                   toolbarEnabled={false}
                   mapType="standard"
                 >
-                  {userPoint && (
+                  {userPoint && <Marker coordinate={userPoint} title={t("sharing.youLabel")} pinColor={theme.stamp} />}
+                  {liveShares.map((share, index) => (
                     <Marker
-                      coordinate={userPoint}
-                      title={t("sharing.youLabel")}
-                      pinColor={theme.stamp}
-                    />
-                  )}
-                  {recipientPoints.map(({ point, recipient }) => (
-                    <Marker
-                      key={recipient.id}
-                      coordinate={point}
-                      title={recipient.name}
-                      pinColor={recipient.color}
+                      key={share.ownerUserId}
+                      coordinate={{ latitude: share.latitude, longitude: share.longitude }}
+                      title={share.ownerName}
+                      pinColor={colorFor(index)}
                     />
                   ))}
                 </MapView>
               ) : (
                 <View style={[styles.realMap, styles.mapFallback, { backgroundColor: theme.paperSoft }]}>
                   <Icon name="globe" size={34} color={theme.inkMuted} />
-                  <Text style={[styles.mapFallbackText, { color: theme.inkMuted }]}>
-                    {t("trip.mapNoCoordinates")}
-                  </Text>
+                  <Text style={[styles.mapFallbackText, { color: theme.inkMuted }]}>{t("sharing.noLocation")}</Text>
                 </View>
               )}
-              <View style={styles.mapControls}>
-                <Text style={[styles.mapMeta, { color: theme.inkSoft }]}>
-                  {t("sharing.visibleCount", { count: allMapPoints.length })} · {t("sharing.updatedAgo", { time: lastUpdateText })}
-                </Text>
-                <View style={styles.mapButtons}>
-                  <Pressable
-                    onPress={openCurrentLocationInMaps}
-                    disabled={!location}
-                    style={({ pressed }) => [
-                      styles.mapButton,
-                      { backgroundColor: theme.paperSoft, borderColor: theme.hairline },
-                      pressed && { opacity: 0.8 },
-                      !location && { opacity: 0.4 },
-                    ]}
-                  >
-                    <Icon name="mapPin" size={14} color={theme.inkDeep} />
-                  </Pressable>
-                </View>
-              </View>
             </NomadCard>
+          </View>
+
+          {incomingRequests.length > 0 && (
+            <>
+              <View style={styles.sectionHeader}>
+                <Text style={[styles.sectionLabel, { color: theme.inkMuted }]}>{t("sharing.requestsTitle")}</Text>
+              </View>
+              <View style={styles.peopleList}>
+                {incomingRequests.map((req, index) => (
+                  <NomadCard key={req.id} theme={theme} style={styles.personCard}>
+                    <View style={styles.personRow}>
+                      <View style={[styles.personAvatar, { backgroundColor: colorFor(index) }]}>
+                        <Text style={styles.personInitial}>{initialOf(req.ownerName)}</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.personName, { color: theme.inkDeep }]}>{req.ownerName}</Text>
+                        <Text style={[styles.personSub, { color: theme.inkSoft }]}>{t("sharing.requestBody")}</Text>
+                      </View>
+                    </View>
+                    <View style={[styles.personFooter, { borderTopColor: theme.hairline, justifyContent: "flex-start", gap: 8 }]}>
+                      <Pressable
+                        accessibilityRole="button"
+                        onPress={() => handleRespond(req.id, true)}
+                        style={({ pressed }) => [styles.linkAction, { backgroundColor: theme.tealSoft }, pressed && { opacity: 0.8 }]}
+                      >
+                        <Text style={[styles.linkActionText, { color: theme.teal }]}>{t("sharing.accept")}</Text>
+                      </Pressable>
+                      <Pressable
+                        accessibilityRole="button"
+                        onPress={() => handleRespond(req.id, false)}
+                        style={({ pressed }) => [
+                          styles.linkAction,
+                          { backgroundColor: theme.paperSoft, borderColor: theme.hairline, borderWidth: 1 },
+                          pressed && { opacity: 0.8 },
+                        ]}
+                      >
+                        <Text style={[styles.linkActionText, { color: theme.inkSoft }]}>{t("sharing.decline")}</Text>
+                      </Pressable>
+                    </View>
+                  </NomadCard>
+                ))}
+              </View>
+            </>
+          )}
+
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionLabel, { color: theme.inkMuted }]}>{t("sharing.sharingWithYou")}</Text>
+          </View>
+          <View style={styles.peopleList}>
+            {(incomingShares ?? []).length === 0 ? (
+              <NomadCard theme={theme}>
+                <Text style={[styles.emptyText, { color: theme.inkSoft }]}>{t("sharing.noneSharingWithYou")}</Text>
+              </NomadCard>
+            ) : (
+              (incomingShares ?? []).map((share, index) => {
+                const stale = nowTick - share.updatedAt > STALE_AFTER_MS;
+                const distanceKm = userPoint ? haversineKm(userPoint, share) : null;
+                return (
+                  <NomadCard key={share.ownerUserId} theme={theme} style={styles.personCard}>
+                    <View style={styles.personRow}>
+                      <View style={[styles.personAvatar, { backgroundColor: colorFor(index) }]}>
+                        <Text style={styles.personInitial}>{initialOf(share.ownerName)}</Text>
+                        {!stale && <View style={[styles.personBadge, { backgroundColor: theme.teal, borderColor: theme.paperSoft }]} />}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.personName, { color: theme.inkDeep }]}>{share.ownerName}</Text>
+                        <Text style={[styles.personSub, { color: stale ? theme.stamp : theme.inkSoft }]}>
+                          {t("sharing.lastSeenAt", { time: formatTime(new Date(share.updatedAt)) })}
+                          {distanceKm != null ? ` · ${formatKm(distanceKm)}` : ""}
+                        </Text>
+                      </View>
+                      {share.battery != null && (
+                        <Text style={[styles.personBattery, { color: share.battery < 0.3 ? theme.stamp : theme.inkDeep }]}>
+                          {Math.round(share.battery * 100)}%
+                        </Text>
+                      )}
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={t("sharing.openInMaps")}
+                        onPress={() => Linking.openURL(`https://maps.google.com/?q=${share.latitude},${share.longitude}`).catch(() => {})}
+                        style={({ pressed }) => [styles.mapButton, { backgroundColor: theme.paperSoft, borderColor: theme.hairline }, pressed && { opacity: 0.8 }]}
+                      >
+                        <Icon name="mapPin" size={14} color={theme.inkDeep} />
+                      </Pressable>
+                    </View>
+                  </NomadCard>
+                );
+              })
+            )}
+          </View>
+
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionLabel, { color: theme.inkMuted }]}>{t("sharing.sharedWith")}</Text>
+            <Pressable accessibilityRole="button" onPress={() => setAddVisible(true)} hitSlop={8} style={({ pressed }) => [pressed && { opacity: 0.7 }]}>
+              <Text style={[styles.addText, { color: theme.teal }]}>{t("sharing.addPerson")}</Text>
+            </Pressable>
+          </View>
+          <View style={styles.peopleList}>
+            {contactLinks === undefined ? (
+              <ActivityIndicator color={theme.teal} />
+            ) : outgoing.length === 0 && invites.length === 0 ? (
+              <NomadCard theme={theme}>
+                <Text style={[styles.emptyText, { color: theme.inkSoft }]}>{t("sharing.noRecipients")}</Text>
+              </NomadCard>
+            ) : (
+              <>
+                {outgoing.map((link, index) => {
+                  const paused = pausedIds.has(link.linkedUserId);
+                  return (
+                    <NomadCard key={link.id} theme={theme} style={styles.personCard}>
+                      <View style={styles.personRow}>
+                        <View style={[styles.personAvatar, { backgroundColor: colorFor(index) }]}>
+                          <Text style={styles.personInitial}>{initialOf(link.name)}</Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.personName, { color: theme.inkDeep }]}>{link.name}</Text>
+                          <Text style={[styles.personSub, { color: link.status === "declined" ? theme.stamp : theme.inkSoft }]}>
+                            {link.status === "pending"
+                              ? t("sharing.pendingStatus")
+                              : link.status === "declined"
+                                ? t("sharing.declinedStatus")
+                                : paused
+                                  ? t("sharing.sharingPaused")
+                                  : isBroadcasting
+                                    ? t("sharing.canSeeYou")
+                                    : t("sharing.willSeeYou")}
+                          </Text>
+                        </View>
+                        {link.status === "accepted" && (
+                          <Pressable
+                            accessibilityRole="switch"
+                            accessibilityState={{ checked: !paused }}
+                            accessibilityLabel={t("sharing.shareWith", { name: link.name })}
+                            onPress={() => handleTogglePause(link)}
+                            style={[styles.toggleTrack, { backgroundColor: paused ? theme.hairline : theme.teal }]}
+                          >
+                            <View style={[styles.toggleThumb, { left: paused ? 2 : 20, backgroundColor: "#fff" }]} />
+                          </Pressable>
+                        )}
+                      </View>
+                      <View style={[styles.personFooter, { borderTopColor: theme.hairline }]}>
+                        {link.status === "accepted" && (
+                          <Pressable onPress={() => handlePing(contactPhoneByEmail.get(link.email))} style={({ pressed }) => [styles.pingButton, pressed && { opacity: 0.7 }]}>
+                            <Icon name="send" size={12} color={theme.teal} />
+                            <Text style={[styles.pingText, { color: theme.teal }]}>{t("sharing.ping")}</Text>
+                          </Pressable>
+                        )}
+                        <View style={{ flex: 1 }} />
+                        <Pressable onPress={() => confirmRemoveLink(link.id, link.name)} hitSlop={8}>
+                          <Text style={[styles.pingText, { color: theme.inkMuted }]}>{t("sharing.remove")}</Text>
+                        </Pressable>
+                      </View>
+                    </NomadCard>
+                  );
+                })}
+                {invites.map((invite) => (
+                  <NomadCard key={invite.id} theme={theme} style={styles.personCard}>
+                    <View style={styles.personRow}>
+                      <View style={[styles.personAvatar, { backgroundColor: theme.inkMuted }]}>
+                        <Text style={styles.personInitial}>{initialOf(invite.name)}</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.personName, { color: theme.inkDeep }]}>{invite.name}</Text>
+                        <Text style={[styles.personSub, { color: theme.inkSoft }]}>{t("sharing.notInstalled")}</Text>
+                      </View>
+                      <Pressable onPress={() => sendInvite(invite)} style={({ pressed }) => [styles.inviteButton, pressed && { opacity: 0.8 }]}>
+                        <Text style={[styles.inviteText, { color: theme.teal }]}>{t("sharing.invite")}</Text>
+                      </Pressable>
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={t("sharing.remove")}
+                        hitSlop={8}
+                        onPress={() => removeInvite({ inviteId: invite.id }).catch(() => {})}
+                      >
+                        <Icon name="close" size={16} color={theme.inkMuted} />
+                      </Pressable>
+                    </View>
+                  </NomadCard>
+                ))}
+              </>
+            )}
           </View>
 
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionLabel, { color: theme.inkMuted }]}>{t("sharing.updateStrategy")}</Text>
-            <Text style={[styles.sectionMeta, { color: theme.inkMuted }]}>{t("sharing.adaptiveHandoff")}</Text>
           </View>
           <View style={styles.modeGrid}>
             {MODES.map((m) => {
@@ -563,6 +638,8 @@ export default function SharingScreen() {
               return (
                 <Pressable
                   key={m.id}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: active, disabled: busy }}
                   onPress={() => handleModeChange(m.id)}
                   style={({ pressed }) => [
                     styles.modeCard,
@@ -574,219 +651,22 @@ export default function SharingScreen() {
                   ]}
                 >
                   <Icon name={m.icon} size={18} color={active ? theme.paperSoft : theme.inkDeep} />
-                  <Text style={[styles.modeLabel, { color: active ? theme.paperSoft : theme.inkDeep }]}>{m.label}</Text>
-                  <Text style={[styles.modeSub, { color: active ? theme.paperSoft : theme.inkSoft }]}>
-                    {m.sub} · {getDrainPercentForMode(m.id)}%/h
-                  </Text>
+                  <Text style={[styles.modeLabel, { color: active ? theme.paperSoft : theme.inkDeep }]}>{t(m.labelKey)}</Text>
+                  <Text style={[styles.modeSub, { color: active ? theme.paperSoft : theme.inkSoft }]}>{t(m.subKey)}</Text>
                 </Pressable>
               );
             })}
           </View>
-
-          <NomadCard theme={theme} style={styles.batteryCard}>
-            <View style={styles.batteryHeader}>
-              <View>
-                <Text style={[styles.sectionLabel, { color: theme.inkMuted }]}>{t("sharing.projectedDrain")}</Text>
-                <Text style={[styles.batteryValue, { color: theme.inkDeep }]}>
-                  {drain}% <Text style={[styles.batteryUnit, { color: theme.inkSoft }]}>/ hr</Text>
-                </Text>
-                <Text style={[styles.batterySub, { color: theme.inkSoft }]}>
-                  {t("sharing.estRemaining", { hours: remainingEstimate })}
-                </Text>
-              </View>
-              <View style={{ alignItems: "flex-end" }}>
-                <Text style={[styles.batterySensors, { color: theme.inkMuted }]}>{t("sharing.sensorsLabel")}</Text>
-                <View style={styles.sensorPills}>
-                  {["G", "C", "W"].map((c, i) => (
-                    <View key={i} style={[styles.sensorPill, { backgroundColor: theme.tealSoft }]}>
-                      <Text style={[styles.sensorPillText, { color: theme.teal }]}>{c}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.barChart}>
-              {Array.from({ length: 24 }).map((_, i) => {
-                const base = mode === "low" ? 12 : mode === "emergency" ? 28 : 18;
-                const h = base + Math.sin(i * (mode === "emergency" ? 0.9 : 0.7)) * (mode === "emergency" ? 8 : 4);
-                const crit = i > 20;
-                return (
-                  <View
-                    key={i}
-                    style={[
-                      styles.bar,
-                      {
-                        height: Math.max(4, h),
-                        backgroundColor: crit ? theme.stamp : mode === "emergency" ? theme.mustard : theme.teal,
-                        opacity: 0.85,
-                      },
-                    ]}
-                  />
-                );
-              })}
-            </View>
-            <View style={styles.barLabels}>
-              <Text style={[styles.barLabel, { color: theme.inkMuted }]}>{t("sharing.nowLabel", { battery: currentBattery ?? 68 })}</Text>
-              <Text style={[styles.barLabel, { color: theme.inkMuted }]}>6h</Text>
-              <Text style={[styles.barLabel, { color: theme.inkMuted }]}>12h</Text>
-              <Text style={[styles.barLabel, { color: theme.inkMuted }]}>18h</Text>
-              <Text style={[styles.barLabel, { color: theme.inkMuted }]}>
-                {t("sharing.endLabel", { battery: Math.max(10, (currentBattery ?? 68) - Math.round(drain * 24)) })}
-              </Text>
-            </View>
-          </NomadCard>
-
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionLabel, { color: theme.inkMuted }]}>{t("sharing.sharedWith")}</Text>
-            <Pressable style={({ pressed }) => [pressed && { opacity: 0.7 }]}>
-              <Text style={[styles.addText, { color: theme.teal }]}>{t("sharing.addPerson")}</Text>
-            </Pressable>
-          </View>
-          <View style={styles.peopleList}>
-            {recipients.length === 0 ? (
-              <NomadCard theme={theme}>
-                <Text style={[styles.emptyText, { color: theme.inkSoft }]}>{t("sharing.noRecipients")}</Text>
-              </NomadCard>
-            ) : (
-              recipients.map((p) => (
-                <NomadCard key={p.id} theme={theme} style={styles.personCard}>
-                  <View style={styles.personRow}>
-                    <View style={[styles.personAvatar, { backgroundColor: p.color }]}>
-                      <Text style={styles.personInitial}>{p.initial}</Text>
-                      {p.sharing && isRecipientBroadcasting(p, nowTick) && (
-                        <View style={[styles.personBadge, { backgroundColor: theme.teal, borderColor: theme.paperSoft }]} />
-                      )}
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.personName, { color: theme.inkDeep }]}>{p.name}</Text>
-                      <Text style={[styles.personSub, { color: theme.inkSoft }]}>
-                        {formatRecipientStatus(p, nowTick, t)}
-                      </Text>
-                    </View>
-
-                    {p.battery !== null && p.battery !== undefined && p.linkStatus === "accepted" && (
-                      <View style={{ alignItems: "flex-end" }}>
-                        <Text style={[styles.personBattery, { color: p.battery < 30 ? theme.stamp : theme.inkDeep }]}>{p.battery}%</Text>
-                        <View style={[styles.batteryBar, { backgroundColor: theme.hairline }]}>
-                          <View style={[styles.batteryFill, { width: `${p.battery}%`, backgroundColor: p.battery < 30 ? theme.stamp : theme.teal }]} />
-                        </View>
-                      </View>
-                    )}
-
-                    {p.linkStatus === "accepted" ? (
-                      <Pressable onPress={() => handleToggleRecipient(p)} style={styles.toggleTrack}>
-                        <View style={[styles.toggleThumb, { left: p.sharing ? 20 : 2, backgroundColor: "#fff" }]} />
-                      </Pressable>
-                    ) : p.linkStatus === "pending" ? (
-                      <View style={styles.pendingPill}>
-                        <Text style={[styles.pendingText, { color: theme.inkMuted }]}>{t("sharing.pending")}</Text>
-                      </View>
-                    ) : p.linkStatus === "declined" ? (
-                      <View style={styles.pendingPill}>
-                        <Text style={[styles.pendingText, { color: theme.stamp }]}>{t("sharing.declined")}</Text>
-                      </View>
-                    ) : (
-                      <Pressable onPress={() => handleInvite(p)} style={({ pressed }) => [styles.inviteButton, pressed && { opacity: 0.8 }]}>
-                        <Text style={[styles.inviteText, { color: theme.teal }]}>{t("sharing.invite")}</Text>
-                      </Pressable>
-                    )}
-                  </View>
-
-                  {p.linkStatus === "pending" && p.convexLinkId && (
-                    <View style={[styles.personFooter, { borderTopColor: theme.hairline, justifyContent: "flex-start", gap: 8 }]}>
-                      <Pressable
-                        onPress={() => handleRespondToLink(p.convexLinkId!, true)}
-                        style={({ pressed }) => [
-                          styles.linkAction,
-                          { backgroundColor: theme.tealSoft },
-                          pressed && { opacity: 0.8 },
-                        ]}
-                      >
-                        <Text style={[styles.linkActionText, { color: theme.teal }]}>{t("sharing.accept")}</Text>
-                      </Pressable>
-                      <Pressable
-                        onPress={() => handleRespondToLink(p.convexLinkId!, false)}
-                        style={({ pressed }) => [
-                          styles.linkAction,
-                          { backgroundColor: theme.paperSoft, borderColor: theme.hairline, borderWidth: 1 },
-                          pressed && { opacity: 0.8 },
-                        ]}
-                      >
-                        <Text style={[styles.linkActionText, { color: theme.inkSoft }]}>{t("sharing.decline")}</Text>
-                      </Pressable>
-                    </View>
-                  )}
-
-                  {p.sharing && p.linkStatus === "accepted" && (
-                    <View style={[styles.personFooter, { borderTopColor: theme.hairline }]}>
-                      <View>
-                        <Text style={[styles.personFooterLabel, { color: theme.inkMuted }]}>{t("sharing.distance")}</Text>
-                        <Text style={[styles.personFooterValue, { color: theme.inkDeep }]}>{p.distanceKm != null ? `${p.distanceKm.toLocaleString()} km` : "—"}</Text>
-                      </View>
-                      <View>
-                        <Text style={[styles.personFooterLabel, { color: theme.inkMuted }]}>{t("sharing.since")}</Text>
-                        <Text style={[styles.personFooterValue, { color: theme.inkDeep }]}>
-                          {p.lastSeenAt ? formatTime(new Date(p.lastSeenAt)) : t("sharing.justStarted")}
-                        </Text>
-                      </View>
-                      <View style={{ flex: 1 }} />
-                      <Pressable onPress={() => handlePing(p)} style={({ pressed }) => [styles.pingButton, pressed && { opacity: 0.7 }]}>
-                        <Icon name="send" size={12} color={theme.teal} />
-                        <Text style={[styles.pingText, { color: theme.teal }]}>{t("sharing.ping")}</Text>
-                      </Pressable>
-                    </View>
-                  )}
-                </NomadCard>
-              ))
-            )}
-          </View>
-
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionLabel, { color: theme.inkMuted }]}>{t("sharing.geofences")}</Text>
-          </View>
-          <View style={styles.geofenceList}>
-            {geofences.length === 0 ? (
-              <NomadCard theme={theme}>
-                <Text style={[styles.emptyText, { color: theme.inkSoft }]}>{t("sharing.noGeofences")}</Text>
-              </NomadCard>
-            ) : (
-              geofences.map((g) => (
-                <NomadCard key={g.id} theme={theme} style={styles.geofenceCard}>
-                  <View style={[styles.geofenceIcon, { backgroundColor: theme[`${g.color}Soft` as keyof typeof theme] as string }]}>
-                    <Icon name="mapPin" size={16} color={theme[g.color]} strokeWidth={1.8} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.geofenceName, { color: theme.inkDeep }]}>{g.name}</Text>
-                    <Text style={[styles.geofenceSub, { color: theme.inkSoft }]}>
-                      {t("sharing.notifyCount", { count: g.notifyIds.length })} · {t("sharing.radius", { radius: g.radiusM })}
-                    </Text>
-                  </View>
-                  <Pressable
-                    onPress={() => updateGeofence(g.id, { active: !g.active })}
-                    style={({ pressed }) => [
-                      styles.geofenceStatus,
-                      { backgroundColor: g.active ? theme.tealSoft : theme.hairline },
-                      pressed && { opacity: 0.8 },
-                    ]}
-                  >
-                    <Text style={[styles.geofenceStatusText, { color: g.active ? theme.teal : theme.inkMuted }]}>
-                      {g.active ? t("sharing.on") : t("sharing.off")}
-                    </Text>
-                  </Pressable>
-                </NomadCard>
-              ))
-            )}
-          </View>
+          <Text style={[styles.drainNote, { color: theme.inkMuted }]}>
+            {remainingHours != null
+              ? t("sharing.drainEstimate", { percent: drain, hours: remainingHours })
+              : t("sharing.drainEstimateNoBattery", { percent: drain })}
+          </Text>
 
           <NomadCard theme={theme} style={[styles.encryptedCard, { backgroundColor: theme.tealSoft }]}>
             <View style={styles.encryptedRow}>
               <Icon name="lock" size={18} color={theme.teal} />
-              <Text style={[styles.encryptedText, { color: theme.teal }]}>
-                <Text style={{ fontWeight: "700" }}>{t("sharing.encryptedBold")}</Text>
-                {" "}
-                {t("sharing.encryptedBody")}
-              </Text>
+              <Text style={[styles.encryptedText, { color: theme.teal }]}>{t("sharing.privacyNote")}</Text>
             </View>
           </NomadCard>
 
@@ -794,7 +674,8 @@ export default function SharingScreen() {
             theme={theme}
             variant={isBroadcasting ? "stamp" : "teal"}
             full
-            icon={<Icon name={isBroadcasting ? "pause" : "play"} size={18} color="#fff" />}
+            disabled={busy}
+            icon={busy ? <ActivityIndicator color="#fff" /> : <Icon name={isBroadcasting ? "pause" : "play"} size={18} color="#fff" />}
             onPress={handleToggleBroadcast}
             style={{ marginTop: 14, marginBottom: 120 }}
           >
@@ -802,60 +683,135 @@ export default function SharingScreen() {
           </NomadButton>
         </ScrollView>
       </SafeAreaView>
+
+      <BackgroundLocationDisclosure
+        visible={disclosureVisible}
+        onAccept={() => {
+          setDisclosureVisible(false);
+          beginBroadcast(mode);
+        }}
+        onDecline={() => setDisclosureVisible(false)}
+      />
+      <AddPersonSheet
+        visible={addVisible}
+        onClose={() => setAddVisible(false)}
+        onSubmit={handleAddPerson}
+        existingEmails={new Set([...outgoing.map((l) => l.email), ...invites.map((i) => i.email ?? "")])}
+      />
     </View>
   );
 }
 
-function formatLastUpdate(ms: number, t: ReturnType<typeof useLocalization>["t"]) {
-  const seconds = Math.max(0, Math.floor(ms / 1000));
-  if (seconds < 60) return t("sharing.justNow");
-  if (seconds < 120) return "1m";
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
-  return `${Math.floor(seconds / 3600)}h`;
+function AddPersonSheet({
+  visible,
+  onClose,
+  onSubmit,
+  existingEmails,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onSubmit: (input: { name: string; email: string; phone?: string }) => Promise<void>;
+  existingEmails: Set<string>;
+}) {
+  const { nomad } = useTheme();
+  const theme = nomad.colors;
+  const { t } = useLocalization();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const suggestions = useMemo(
+    () =>
+      visible
+        ? emergencyContactsStorage
+            .get()
+            .filter((c) => c.email && !existingEmails.has(normalizeEmail(c.email)))
+        : [],
+    [existingEmails, visible],
+  );
+
+  const close = () => {
+    setName("");
+    setEmail("");
+    setPhone("");
+    setError(null);
+    onClose();
+  };
+
+  const submit = async () => {
+    if (saving) return;
+    const cleanEmail = normalizeEmail(email);
+    if (!name.trim()) return setError(t("sharing.nameRequired"));
+    if (!EMAIL_RE.test(cleanEmail)) return setError(t("sharing.emailInvalid"));
+    setSaving(true);
+    setError(null);
+    try {
+      await onSubmit({ name: name.trim(), email: cleanEmail, phone: phone.trim() || undefined });
+      close();
+    } catch {
+      setError(t("sharing.linkErrorBody"));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const inputStyle = [styles.input, { backgroundColor: theme.paperSoft, borderColor: theme.hairline, color: theme.inkDeep }];
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={close} statusBarTranslucent>
+      <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
+        <Pressable style={[styles.sheetBackdrop, { backgroundColor: theme.scrim }]} onPress={close} accessibilityLabel={t("common.close")} />
+        <SafeAreaView edges={["bottom"]} style={[styles.sheet, { backgroundColor: theme.paper }]}>
+          <Text style={[styles.sheetTitle, { color: theme.inkDeep }]} accessibilityRole="header">{t("sharing.addTitle")}</Text>
+          <Text style={[styles.personSub, { color: theme.inkSoft, marginBottom: 12 }]}>{t("sharing.addBody")}</Text>
+          {suggestions.length > 0 && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 12 }}>
+              {suggestions.map((c) => (
+                <Pressable
+                  key={c.id}
+                  onPress={() => {
+                    setName(c.name);
+                    setEmail(c.email ?? "");
+                    setPhone(c.phone ?? "");
+                  }}
+                  style={({ pressed }) => [styles.linkAction, { backgroundColor: theme.tealSoft }, pressed && { opacity: 0.8 }]}
+                >
+                  <Text style={[styles.linkActionText, { color: theme.teal }]}>{c.name}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          )}
+          <TextInput value={name} onChangeText={setName} placeholder={t("sharing.namePlaceholder")} placeholderTextColor={theme.inkMuted} style={inputStyle} autoCapitalize="words" maxLength={80} />
+          <TextInput value={email} onChangeText={setEmail} placeholder={t("sharing.emailPlaceholder")} placeholderTextColor={theme.inkMuted} style={inputStyle} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} maxLength={254} />
+          <TextInput value={phone} onChangeText={setPhone} placeholder={t("sharing.phonePlaceholder")} placeholderTextColor={theme.inkMuted} style={inputStyle} keyboardType="phone-pad" maxLength={32} />
+          {error ? <Text style={[styles.personSub, { color: theme.stamp }]} accessibilityRole="alert">{error}</Text> : null}
+          <NomadButton theme={theme} variant="teal" full onPress={submit} disabled={saving} style={{ marginTop: 12 }}>
+            {saving ? t("common.saving") : t("sharing.sendRequest")}
+          </NomadButton>
+        </SafeAreaView>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
 }
 
-function isRecipientBroadcasting(recipient: ShareRecipient, nowTick: number) {
-  if (!recipient.sharing || recipient.lastSeenAt == null) return false;
-  return nowTick - recipient.lastSeenAt < 90_000;
+function formatAgo(ms: number, t: ReturnType<typeof useLocalization>["t"]) {
+  const minutes = Math.floor(Math.max(0, ms) / 60_000);
+  if (minutes < 1) return t("sharing.justNow");
+  if (minutes < 60) return t("sharing.minutesShort", { count: minutes });
+  return t("sharing.hoursShort", { count: Math.floor(minutes / 60) });
 }
 
-function formatRecipientStatus(
-  recipient: ShareRecipient,
-  nowTick: number,
-  t: ReturnType<typeof useLocalization>["t"],
-) {
-  if (recipient.linkStatus === "not_user") return t("sharing.notInstalled");
-  if (recipient.linkStatus === "pending") return t("sharing.pendingStatus");
-  if (recipient.linkStatus === "declined") return t("sharing.declinedStatus");
-  if (!recipient.sharing) return t("sharing.sharingPaused");
-  if (recipient.lastSeenAt == null) return t("sharing.awaitingLocation");
-  const seconds = Math.max(0, Math.floor((nowTick - recipient.lastSeenAt) / 1000));
-  if (seconds < 60) return t("sharing.lastSeenNow");
-  if (seconds < 120) return t("sharing.lastSeenMinutes", { count: 1 });
-  if (seconds < 3600) return t("sharing.lastSeenMinutes", { count: Math.floor(seconds / 60) });
-  return t("sharing.lastSeenHours", { count: Math.floor(seconds / 3600) });
-}
-
-function haversineKm(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number,
-) {
+function haversineKm(a: LatLng, b: LatLng) {
   const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return Math.round(R * c);
+  const dLat = ((b.latitude - a.latitude) * Math.PI) / 180;
+  const dLon = ((b.longitude - a.longitude) * Math.PI) / 180;
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((a.latitude * Math.PI) / 180) * Math.cos((b.latitude * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
 }
-
-const baseURL = process.env.EXPO_PUBLIC_CONVEX_SITE_URL;
 
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 140 },
@@ -1307,5 +1263,35 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: "center",
     paddingVertical: 12,
+  },
+  warningCard: { marginTop: 12, padding: 12 },
+  drainNote: {
+    fontFamily: NOMAD_FONTS.ui,
+    fontSize: 11.5,
+    marginTop: 8,
+    paddingHorizontal: 6,
+  },
+  input: {
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    fontFamily: NOMAD_FONTS.ui,
+    fontSize: 15,
+    marginBottom: 10,
+  },
+  sheetBackdrop: { flex: 1 },
+  sheet: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 12,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+  },
+  sheetTitle: {
+    fontFamily: NOMAD_FONTS.display,
+    fontSize: 24,
+    fontWeight: "500",
+    marginBottom: 4,
   },
 });

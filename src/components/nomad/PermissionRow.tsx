@@ -75,6 +75,8 @@ export function PermissionRow({ theme: themeProp, title, sub, on, disabled, onPr
     <Pressable
       onPress={onPress}
       disabled={disabled}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: !!disabled }}
       style={({ pressed }) => [
         styles.root,
         baseStyle,

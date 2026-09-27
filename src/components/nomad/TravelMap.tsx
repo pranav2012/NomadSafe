@@ -1,5 +1,11 @@
-import React, { useEffect } from "react";
-import { View, StyleSheet, type ViewStyle, type StyleProp } from "react-native";
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  StyleSheet,
+  type LayoutChangeEvent,
+  type ViewStyle,
+  type StyleProp,
+} from "react-native";
 import Svg, {
   Path,
   Circle,
@@ -39,6 +45,19 @@ interface TravelMapProps {
   height?: number;
   lowBattery?: boolean;
   style?: StyleProp<ViewStyle>;
+}
+
+const VIEWBOX_WIDTH = 400;
+const VIEWBOX_HEIGHT = 300;
+const BORDER = 1;
+
+/** Maps a viewBox point to layout pixels, matching `preserveAspectRatio="xMidYMid slice"`. */
+function projectSlice(x: number, y: number, width: number, height: number) {
+  const scale = Math.max(width / VIEWBOX_WIDTH, height / VIEWBOX_HEIGHT);
+  return {
+    left: (width - VIEWBOX_WIDTH * scale) / 2 + x * scale,
+    top: (height - VIEWBOX_HEIGHT * scale) / 2 + y * scale,
+  };
 }
 
 function PulseRing({ color }: { color: string }) {
@@ -92,6 +111,15 @@ export function TravelMap({
   lowBattery = false,
   style,
 }: TravelMapProps) {
+  const [size, setSize] = useState<{ width: number; height: number } | null>(null);
+  const handleLayout = (event: LayoutChangeEvent) => {
+    const { width, height: layoutHeight } = event.nativeEvent.layout;
+    setSize((current) =>
+      current?.width === width && current.height === layoutHeight
+        ? current
+        : { width, height: layoutHeight },
+    );
+  };
   const landFill = dark ? "#223034" : "#E8DEC6";
   const landStroke = dark ? "#2C3C42" : "#D6C8AA";
   const water = dark ? "#1A2326" : "#D6E4E0";
@@ -104,6 +132,7 @@ export function TravelMap({
 
   return (
     <View
+      onLayout={handleLayout}
       style={[
         styles.root,
         {
@@ -120,57 +149,39 @@ export function TravelMap({
         width="100%"
         height="100%"
       >
-        {/* Thailand */}
+        {/* Generic illustrative coastline — not a real place or the user's route. */}
         <Path
-          d="M40,80 Q80,50 130,60 Q170,65 190,90 Q200,120 185,150 Q180,190 200,220 Q210,260 195,290 L170,290 Q165,260 155,240 Q140,220 120,225 Q95,230 80,220 Q55,200 45,170 Q35,130 40,80Z"
+          d="M-10,40 Q60,20 120,45 Q165,65 170,110 Q172,150 140,175 Q110,200 70,195 Q30,190 5,160 Q-15,120 -10,40Z"
           fill={landFill}
           stroke={landStroke}
           strokeWidth="1.5"
         />
-        {/* Laos/Cambodia */}
         <Path
-          d="M195,80 Q240,70 280,80 Q310,95 310,130 Q300,155 280,165 Q250,175 225,170 Q205,165 200,145 Q195,120 195,80Z"
+          d="M215,30 Q280,10 350,35 Q410,60 410,120 Q405,175 360,200 Q320,220 290,260 Q270,300 230,310 L200,310 Q215,260 235,225 Q250,195 230,165 Q205,130 205,90 Q205,50 215,30Z"
           fill={landFill}
           stroke={landStroke}
           strokeWidth="1.5"
         />
-        {/* Vietnam */}
         <Path
-          d="M310,90 Q335,100 340,140 Q335,190 315,230 Q305,260 290,290 L270,290 Q285,250 295,210 Q302,170 300,140 Q300,110 310,90Z"
-          fill={landFill}
-          stroke={landStroke}
-          strokeWidth="1.5"
-        />
-        {/* Malaysia */}
-        <Path
-          d="M185,260 Q210,275 230,285 L230,298 L185,298Z"
+          d="M60,245 Q100,230 140,248 Q165,262 150,285 Q130,305 90,300 Q55,292 50,270 Q48,255 60,245Z"
           fill={landFill}
           stroke={landStroke}
           strokeWidth="1.5"
         />
         <Ellipse
-          cx="115"
-          cy="270"
-          rx="10"
+          cx="185"
+          cy="215"
+          rx="9"
           ry="4"
           fill={landFill}
           stroke={landStroke}
           strokeWidth="1"
         />
         <Ellipse
-          cx="85"
-          cy="248"
+          cx="175"
+          cy="235"
           rx="5"
           ry="3"
-          fill={landFill}
-          stroke={landStroke}
-          strokeWidth="1"
-        />
-        <Ellipse
-          cx="340"
-          cy="220"
-          rx="7"
-          ry="4"
           fill={landFill}
           stroke={landStroke}
           strokeWidth="1"
@@ -178,19 +189,19 @@ export function TravelMap({
 
         {/* Roads */}
         <Path
-          d="M100,100 Q150,130 180,180 Q210,220 250,240"
+          d="M30,80 Q80,100 120,90 Q150,120 130,160"
           stroke={roadColor}
           strokeWidth="1"
           fill="none"
         />
         <Path
-          d="M80,150 Q120,170 160,170"
+          d="M240,70 Q300,90 360,80"
           stroke={roadColor}
           strokeWidth="1"
           fill="none"
         />
         <Path
-          d="M260,110 Q290,150 300,200"
+          d="M260,120 Q320,140 340,190"
           stroke={roadColor}
           strokeWidth="1"
           fill="none"
@@ -324,31 +335,22 @@ export function TravelMap({
       </Svg>
 
       {/* Pulse rings overlayed in RN (outside SVG so Reanimated can drive them) */}
-      {pins.map((pin, i) =>
-        pin.pulse ? (
-          <View
-            key={`pulse-${i}`}
-            pointerEvents="none"
-            style={[
-              StyleSheet.absoluteFill,
-              {
-                alignItems: "flex-start",
-                justifyContent: "flex-start",
-              },
-            ]}
-          >
-            <View
-              style={{
-                position: "absolute",
-                left: `${(pin.x / 400) * 100}%`,
-                top: `${(pin.y / 300) * 100}%`,
-              }}
-            >
-              <PulseRing color={pin.color || theme.teal} />
-            </View>
-          </View>
-        ) : null,
-      )}
+      {size
+        ? pins.map((pin, i) =>
+            pin.pulse ? (
+              <View
+                key={`pulse-${i}`}
+                pointerEvents="none"
+                style={[
+                  styles.pulseAnchor,
+                  projectSlice(pin.x, pin.y, size.width - BORDER * 2, size.height - BORDER * 2),
+                ]}
+              >
+                <PulseRing color={pin.color || theme.teal} />
+              </View>
+            ) : null,
+          )
+        : null}
     </View>
   );
 }
@@ -359,6 +361,9 @@ const styles = StyleSheet.create({
     width: "100%",
     borderRadius: 18,
     overflow: "hidden",
-    borderWidth: 1,
+    borderWidth: BORDER,
+  },
+  pulseAnchor: {
+    position: "absolute",
   },
 });

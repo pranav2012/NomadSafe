@@ -85,10 +85,7 @@ export const useSharingStore = create<SharingState>()(
       currentBattery: null,
 
       setBroadcasting: (enabled) => {
-        set({
-          isBroadcasting: enabled,
-          lastPublishedAt: enabled ? Date.now() : get().lastPublishedAt,
-        });
+        set({ isBroadcasting: enabled });
       },
 
       setMode: (mode) => {

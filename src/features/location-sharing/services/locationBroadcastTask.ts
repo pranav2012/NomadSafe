@@ -1,120 +1,177 @@
 import * as Location from "expo-location";
+import * as Battery from "expo-battery";
 import { defineTask } from "expo-task-manager";
+import { ConvexHttpClient } from "convex/browser";
+import { api } from "@convex/_generated/api";
 import { storage } from "@/stores/storage";
-import { getIntervalForMode } from "../store/sharingStore";
-import { getSharingToken } from "@/features/auth/services/authClient";
+import { authClient } from "@/features/auth/services/authClient";
+import { translate } from "@/localization/translate";
+import { getIntervalForMode, type BroadcastMode } from "../store/sharingStore";
 
 export const BROADCAST_TASK_NAME = "nomadsafe-location-broadcast";
 
-interface BroadcastPersistedState {
+const STATE_KEY = "sharing-broadcast-state";
+const LAST_BROADCAST_KEY = "sharing-last-broadcast";
+const convexUrl = process.env.EXPO_PUBLIC_CONVEX_URL;
+const siteUrl = process.env.EXPO_PUBLIC_CONVEX_SITE_URL;
+
+interface BroadcastState {
   isBroadcasting: boolean;
-  mode: "normal" | "low" | "emergency";
+  mode: BroadcastMode;
   lastPublishedAt: number | null;
-  recipients: { id: string; sharing: boolean }[];
+  lastError: string | null;
 }
 
-const baseURL = process.env.EXPO_PUBLIC_CONVEX_SITE_URL;
-const PUBLISH_PATH = "/api/sharing/publish";
+export interface LastBroadcast {
+  latitude: number;
+  longitude: number;
+  timestamp: number;
+  mode: BroadcastMode;
+  ok: boolean;
+}
 
-function readStore(): { state: BroadcastPersistedState } | null {
-  const raw = storage.getString("sharing-store");
+const DEFAULT_STATE: BroadcastState = {
+  isBroadcasting: false,
+  mode: "normal",
+  lastPublishedAt: null,
+  lastError: null,
+};
+
+// Kept under its own key so the background task never overwrites UI store state.
+export function readBroadcastState(): BroadcastState {
+  const raw = storage.getString(STATE_KEY);
+  if (!raw) return DEFAULT_STATE;
+  try {
+    return { ...DEFAULT_STATE, ...(JSON.parse(raw) as Partial<BroadcastState>) };
+  } catch {
+    return DEFAULT_STATE;
+  }
+}
+
+function writeBroadcastState(patch: Partial<BroadcastState>) {
+  storage.set(STATE_KEY, JSON.stringify({ ...readBroadcastState(), ...patch }));
+}
+
+export function readLastBroadcast(): LastBroadcast | null {
+  const raw = storage.getString(LAST_BROADCAST_KEY);
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as { state: BroadcastPersistedState };
+    return JSON.parse(raw) as LastBroadcast;
   } catch {
     return null;
   }
 }
 
-function writeStore(store: { state: BroadcastPersistedState }) {
-  storage.set("sharing-store", JSON.stringify(store));
+let cachedJwt: { token: string; expiresAt: number } | null = null;
+
+/** Exchanges the stored Better Auth session cookie for a short-lived Convex JWT. */
+async function getConvexJwt(): Promise<string | null> {
+  if (cachedJwt && cachedJwt.expiresAt - Date.now() > 60_000) return cachedJwt.token;
+  if (!siteUrl) return null;
+  const cookie = authClient.getCookie();
+  if (!cookie) return null;
+
+  const res = await fetch(`${siteUrl}/api/auth/convex/token`, {
+    headers: { cookie },
+  });
+  if (!res.ok) return null;
+  const body = (await res.json().catch(() => null)) as { token?: string } | null;
+  if (!body?.token) return null;
+
+  let expiresAt = Date.now() + 10 * 60_000;
+  try {
+    const payload = JSON.parse(atob(body.token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))) as { exp?: number };
+    if (payload.exp) expiresAt = payload.exp * 1000;
+  } catch {}
+  cachedJwt = { token: body.token, expiresAt };
+  return body.token;
 }
 
-async function publishToConvex(
+async function readBattery(): Promise<number | undefined> {
+  try {
+    const level = await Battery.getBatteryLevelAsync();
+    return level >= 0 ? level : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export async function publishLocation(
   latitude: number,
   longitude: number,
-  mode: "normal" | "low" | "emergency",
-  battery: number | null,
-) {
-  const token = getSharingToken();
-  if (!token || !baseURL) {
-    return { ok: false, skipped: true };
-  }
+  mode: BroadcastMode,
+): Promise<boolean> {
+  const now = Date.now();
+  let ok = false;
+  let error: string | null = null;
 
   try {
-    const res = await fetch(`${baseURL}${PUBLISH_PATH}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
+    const jwt = convexUrl ? await getConvexJwt() : null;
+    if (!jwt || !convexUrl) {
+      error = "not_authenticated";
+    } else {
+      const client = new ConvexHttpClient(convexUrl);
+      client.setAuth(jwt);
+      await client.mutation(api.sharing.publishLocation, {
         latitude,
         longitude,
         mode,
-        battery,
-      }),
-    });
-
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      return { ok: false, error: `HTTP ${res.status}: ${body}` };
+        battery: await readBattery(),
+      });
+      ok = true;
     }
-
-    return { ok: true };
   } catch (err) {
-    return {
-      ok: false,
-      error: err instanceof Error ? err.message : "Network error",
-    };
+    cachedJwt = null;
+    error = err instanceof Error ? err.message : "network_error";
   }
+
+  storage.set(
+    LAST_BROADCAST_KEY,
+    JSON.stringify({ latitude, longitude, timestamp: now, mode, ok } satisfies LastBroadcast),
+  );
+  writeBroadcastState(ok ? { lastPublishedAt: now, lastError: null } : { lastError: error });
+  return ok;
 }
 
 defineTask(BROADCAST_TASK_NAME, async ({ data, error }) => {
   if (error) return;
-  const locationData = data as { locations?: Location.LocationObject[] } | undefined;
-  const locations = locationData?.locations;
-  if (!locations || locations.length === 0) return;
+  const locations = (data as { locations?: Location.LocationObject[] } | undefined)?.locations;
+  if (!locations?.length) return;
 
-  const store = readStore();
-  if (!store?.state?.isBroadcasting) return;
+  const state = readBroadcastState();
+  if (!state.isBroadcasting) return;
+
+  const intervalMs = getIntervalForMode(state.mode) * 1000;
+  // Small tolerance so OS batching jitter doesn't skip every other update.
+  if (state.lastPublishedAt && Date.now() - state.lastPublishedAt < intervalMs * 0.8) return;
 
   const last = locations[locations.length - 1];
-  const now = Date.now();
-  const intervalMs = getIntervalForMode(store.state.mode) * 1000;
-  if (store.state.lastPublishedAt && now - store.state.lastPublishedAt < intervalMs) return;
-
-  storage.set(
-    "sharing-last-broadcast",
-    JSON.stringify({
-      latitude: last.coords.latitude,
-      longitude: last.coords.longitude,
-      timestamp: now,
-      mode: store.state.mode,
-    }),
-  );
-
-  // Push real location to Convex so accepted linked contacts can see it.
-  await publishToConvex(
-    last.coords.latitude,
-    last.coords.longitude,
-    store.state.mode,
-    null,
-  );
-
-  store.state.lastPublishedAt = now;
-  writeStore(store);
+  await publishLocation(last.coords.latitude, last.coords.longitude, state.mode);
 });
 
-export async function startLocationBroadcast(mode: "normal" | "low" | "emergency") {
+export class BackgroundLocationDeniedError extends Error {
+  constructor() {
+    super("Background location permission denied");
+    this.name = "BackgroundLocationDeniedError";
+  }
+}
+
+/**
+ * Starts the foreground-service location task and publishes an immediate
+ * first update. Callers must show the background-location disclosure first.
+ */
+export async function startLocationBroadcast(mode: BroadcastMode) {
   const foreground = await Location.requestForegroundPermissionsAsync();
   if (!foreground.granted) throw new Error("Location permission denied");
 
   const background = await Location.requestBackgroundPermissionsAsync();
-  if (!background.granted) throw new Error("Background location permission denied");
+  if (!background.granted) throw new BackgroundLocationDeniedError();
 
-  const isRegistered = await Location.hasStartedLocationUpdatesAsync(BROADCAST_TASK_NAME);
-  if (isRegistered) await Location.stopLocationUpdatesAsync(BROADCAST_TASK_NAME);
+  if (await Location.hasStartedLocationUpdatesAsync(BROADCAST_TASK_NAME)) {
+    await Location.stopLocationUpdatesAsync(BROADCAST_TASK_NAME);
+  }
+
+  writeBroadcastState({ isBroadcasting: true, mode, lastPublishedAt: null });
 
   await Location.startLocationUpdatesAsync(BROADCAST_TASK_NAME, {
     accuracy:
@@ -126,17 +183,53 @@ export async function startLocationBroadcast(mode: "normal" | "low" | "emergency
     timeInterval: getIntervalForMode(mode) * 1000,
     distanceInterval: mode === "emergency" ? 10 : mode === "low" ? 200 : 50,
     foregroundService: {
-      notificationTitle: "Nomad Safe · live location sharing",
-      notificationBody: "Your trusted contacts can see your location.",
+      notificationTitle: translate("sharing.serviceTitle"),
+      notificationBody: translate("sharing.serviceBody"),
       killServiceOnDestroy: false,
     },
     pausesUpdatesAutomatically: false,
+    showsBackgroundLocationIndicator: true,
   });
+
+  try {
+    const current = await Location.getCurrentPositionAsync({
+      accuracy: mode === "low" ? Location.Accuracy.Balanced : Location.Accuracy.High,
+    });
+    await publishLocation(current.coords.latitude, current.coords.longitude, mode);
+  } catch {
+    // The task will publish on the next OS location update.
+  }
 }
 
+/** Stops the task and marks shares inactive server-side (best-effort). */
 export async function stopLocationBroadcast() {
-  const isRegistered = await Location.hasStartedLocationUpdatesAsync(BROADCAST_TASK_NAME);
-  if (isRegistered) {
-    await Location.stopLocationUpdatesAsync(BROADCAST_TASK_NAME);
+  writeBroadcastState({ isBroadcasting: false });
+  try {
+    if (await Location.hasStartedLocationUpdatesAsync(BROADCAST_TASK_NAME)) {
+      await Location.stopLocationUpdatesAsync(BROADCAST_TASK_NAME);
+    }
+  } finally {
+    try {
+      const jwt = convexUrl ? await getConvexJwt() : null;
+      if (jwt && convexUrl) {
+        const client = new ConvexHttpClient(convexUrl);
+        client.setAuth(jwt);
+        await client.mutation(api.sharing.stopSharing, {});
+      }
+    } catch {}
   }
+}
+
+export async function isLocationBroadcastRunning() {
+  try {
+    return await Location.hasStartedLocationUpdatesAsync(BROADCAST_TASK_NAME);
+  } catch {
+    return false;
+  }
+}
+
+export function clearBroadcastState() {
+  cachedJwt = null;
+  storage.remove(STATE_KEY);
+  storage.remove(LAST_BROADCAST_KEY);
 }

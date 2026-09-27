@@ -1,9 +1,10 @@
 import React, { useEffect, useRef } from "react";
-import { AppState, type AppStateStatus } from "react-native";
-import { Stack, useRouter } from "expo-router";
+import { AppState, Modal, Pressable, StyleSheet, Text, View, type AppStateStatus } from "react-native";
+import { Stack, useRouter, type ErrorBoundaryProps } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { ConvexReactClient } from "convex/react";
+import { ConvexReactClient, useConvexAuth, useMutation } from "convex/react";
 import { ConvexBetterAuthProvider } from "@convex-dev/better-auth/react";
+import * as Sentry from "@sentry/react-native";
 import {
   useFonts as useFraunces,
   Fraunces_500Medium,
@@ -20,7 +21,9 @@ import {
   GeistMono_400Regular,
   GeistMono_500Medium,
 } from "@expo-google-fonts/geist-mono";
+import { api } from "@convex/_generated/api";
 import { authClient, useAuthStore, useSyncAuthSession } from "@/features/auth";
+import LockScreen from "@/features/auth/screens/LockScreen";
 import {
   localModelService,
   modelDownloadManager,
@@ -28,8 +31,26 @@ import {
   registerModelDownloadTask,
   useChatStore,
 } from "@/features/ai";
+import { isLocationBroadcastRunning, useSharingStore } from "@/features/location-sharing";
+import { useSafetyNotificationRouting } from "@/features/safety";
+import { useSettingsStore } from "@/features/settings";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { LocalizationProvider } from "@/localization";
+import { translate } from "@/localization/translate";
+
+const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN;
+
+Sentry.init({
+  dsn: sentryDsn,
+  enabled: !!sentryDsn && !__DEV__,
+  sendDefaultPii: false,
+  tracesSampleRate: 0.1,
+  // HTTP/console breadcrumbs can carry coordinates or destinations; keep them off.
+  beforeBreadcrumb: (breadcrumb) =>
+    breadcrumb.category === "fetch" || breadcrumb.category === "xhr" || breadcrumb.category === "console"
+      ? null
+      : breadcrumb,
+});
 
 const convexUrl = process.env.EXPO_PUBLIC_CONVEX_URL;
 
@@ -43,58 +64,114 @@ const convex = new ConvexReactClient(convexUrl, {
   unsavedChangesWarning: false,
 });
 
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  useEffect(() => {
+    Sentry.captureException(error);
+  }, [error]);
+
+  return (
+    <View style={styles.errorRoot}>
+      <Text style={styles.errorTitle}>{translate("errors.crashTitle")}</Text>
+      <Text style={styles.errorBody}>{translate("errors.crashBody")}</Text>
+      <Pressable accessibilityRole="button" onPress={retry} style={styles.errorButton}>
+        <Text style={styles.errorButtonText}>{translate("errors.tryAgain")}</Text>
+      </Pressable>
+    </View>
+  );
+}
+
 function AppStateLock() {
   const router = useRouter();
   const appState = useRef(AppState.currentState);
   const backgroundedAt = useRef<number | null>(null);
-  const { isPinSet, isSignedIn, autoLockTimeout, updateLastActive, setUnlocked, lastActiveTimestamp } =
-    useAuthStore();
 
   useEffect(() => {
     const subscription = AppState.addEventListener(
       "change",
       (nextState: AppStateStatus) => {
-        if (appState.current === "active" && nextState === "background") {
+        const prev = appState.current;
+        appState.current = nextState;
+
+        // iOS goes active → inactive → background, so key off "background" alone.
+        if (nextState === "background" && backgroundedAt.current === null) {
           backgroundedAt.current = Date.now();
-          updateLastActive();
+          useAuthStore.getState().updateLastActive();
           // Keep the model loaded if a chat reply is still streaming; the chat
           // store releases it once the reply finishes (and notifies the user).
           if (!useChatStore.getState().generatingConversationKey) {
             localModelService.release();
           }
+          return;
         }
 
-        if (appState.current === "background" && nextState === "active") {
-          // Continue an interrupted model download when coming back to foreground.
-          modelDownloadManager.resumeIfInterrupted();
-        }
+        if (nextState !== "active" || prev === "active") return;
 
-        if (
-          appState.current === "background" &&
-          nextState === "active" &&
-          isSignedIn &&
-          isPinSet
-        ) {
-          const lastActive = backgroundedAt.current ?? lastActiveTimestamp;
-          const elapsed = lastActive ? Date.now() - lastActive : Infinity;
-          backgroundedAt.current = null;
-          if (elapsed > autoLockTimeout) {
-            setUnlocked(false);
-            router.replace("/(auth)/lock-screen");
+        modelDownloadManager.resumeIfInterrupted();
+        isLocationBroadcastRunning().then((running) => {
+          if (running !== useSharingStore.getState().isBroadcasting) {
+            useSharingStore.getState().setBroadcasting(running);
           }
-        }
+        });
 
-        appState.current = nextState;
+        const auth = useAuthStore.getState();
+        const since = backgroundedAt.current;
+        backgroundedAt.current = null;
+        if (!since || !auth.isSignedIn || !auth.isPinSet) return;
+        if (Date.now() - since > auth.autoLockTimeout) {
+          if (router.canDismiss()) router.dismissAll();
+          auth.setUnlocked(false);
+        }
       },
     );
 
     return () => subscription.remove();
-  }, [isPinSet, isSignedIn, autoLockTimeout, lastActiveTimestamp, updateLastActive, setUnlocked, router]);
+  }, [router]);
 
   return null;
 }
 
-export default function RootLayout() {
+/** Renders the lock screen above every route (including native modals). */
+function LockGate() {
+  const onboardingCompleted = useSettingsStore((s) => s.onboardingCompleted);
+  const isSignedIn = useAuthStore((s) => s.isSignedIn);
+  const isPinSet = useAuthStore((s) => s.isPinSet);
+  const isUnlocked = useAuthStore((s) => s.isUnlocked);
+  const locked = onboardingCompleted && isSignedIn && isPinSet && !isUnlocked;
+
+  return (
+    <Modal
+      visible={locked}
+      animationType="none"
+      statusBarTranslucent
+      navigationBarTranslucent
+      onRequestClose={() => {}}
+    >
+      <LockScreen />
+    </Modal>
+  );
+}
+
+function SessionEffects() {
+  const { isAuthenticated } = useConvexAuth();
+  const claimInvites = useMutation(api.sharing.claimInvites);
+  const userId = useAuthStore((s) => s.user?.id);
+
+  useSafetyNotificationRouting();
+
+  useEffect(() => {
+    if (!isAuthenticated || !userId) return;
+    claimInvites({}).catch(() => {});
+    Sentry.setUser({ id: userId });
+  }, [claimInvites, isAuthenticated, userId]);
+
+  useEffect(() => {
+    if (!userId) Sentry.setUser(null);
+  }, [userId]);
+
+  return null;
+}
+
+function RootLayout() {
   const [fontsLoaded] = useFraunces({
     Fraunces_500Medium,
     Fraunces_500Medium_Italic,
@@ -125,6 +202,7 @@ export default function RootLayout() {
         <LocalizationProvider>
           <ThemeProvider>
             <AppStateLock />
+            <SessionEffects />
             <Stack screenOptions={{ headerShown: false }}>
               <Stack.Screen name="index" />
               <Stack.Screen name="(onboarding)" />
@@ -133,9 +211,32 @@ export default function RootLayout() {
               <Stack.Screen name="settings" options={{ presentation: "modal" }} />
               <Stack.Screen name="trips" options={{ presentation: "modal" }} />
             </Stack>
+            <LockGate />
           </ThemeProvider>
         </LocalizationProvider>
       </ConvexBetterAuthProvider>
     </GestureHandlerRootView>
   );
 }
+
+export default Sentry.wrap(RootLayout);
+
+const styles = StyleSheet.create({
+  errorRoot: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 28,
+    backgroundColor: "#FAF7F2",
+  },
+  errorTitle: { fontSize: 22, fontWeight: "600", color: "#1D2327", textAlign: "center" },
+  errorBody: { fontSize: 15, lineHeight: 22, color: "#5F6B72", textAlign: "center", marginTop: 10 },
+  errorButton: {
+    marginTop: 24,
+    paddingVertical: 12,
+    paddingHorizontal: 28,
+    borderRadius: 14,
+    backgroundColor: "#1D4D4F",
+  },
+  errorButtonText: { color: "#fff", fontSize: 15, fontWeight: "600" },
+});

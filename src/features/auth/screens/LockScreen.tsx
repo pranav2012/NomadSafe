@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet, BackHandler, Alert } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -17,20 +17,19 @@ import Animated, {
 import { NOMAD_FONTS } from "@/constants/nomadTokens";
 import { useTheme } from "@/hooks/useTheme";
 import {
-  authClient,
   localAuth,
   secureStorage,
   useAuthStore,
   useBiometricPresentation,
 } from "@/features/auth";
-import { verifyPin } from "@/features/auth/utils/crypto";
+import { hashPin, isLegacyPinHash, verifyPin } from "@/features/auth/utils/crypto";
+import { pinAttempts } from "@/features/auth/services/pinAttempts";
+import { signOutAndCleanup } from "@/services/session";
 import { lightImpact, errorNotification } from "@/utils/haptics";
 import { Icon } from "@/components/nomad/Icon";
 import { useLocalization } from "@/localization";
 
 const PIN_LENGTH = 6;
-const MAX_ATTEMPTS = 5;
-const LOCKOUT_DURATION = 30000;
 const NUMPAD = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "delete"];
 const GLYPH = 168;
 
@@ -41,7 +40,7 @@ export default function LockScreen() {
   const { isDark, nomad } = useTheme();
   const { t, formatDuration } = useLocalization();
   const theme = nomad.colors;
-  const { user, biometricEnabled, setUnlocked, signOut } = useAuthStore();
+  const { user, biometricEnabled, setUnlocked, setPinSet } = useAuthStore();
   const biometric = useBiometricPresentation();
 
   const [mode, setMode] = useState<"biometric" | "passcode">(
@@ -51,8 +50,8 @@ export default function LockScreen() {
 
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
-  const [attempts, setAttempts] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
+  const [verifying, setVerifying] = useState(false);
 
   const scanY = useSharedValue(0);
   const successScale = useSharedValue(0);
@@ -73,9 +72,33 @@ export default function LockScreen() {
   const shakeStyle = useAnimatedStyle(() => ({ transform: [{ translateX: shakeX.value }] }));
 
   const handleUnlock = useCallback(() => {
+    pinAttempts.reset();
     setUnlocked(true);
-    router.replace("/(tabs)");
-  }, [setUnlocked, router]);
+  }, [setUnlocked]);
+
+  // The lock screen is an overlay: hardware back must never reveal the app.
+  useEffect(() => {
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => true);
+    return () => sub.remove();
+  }, []);
+
+  const applyLockout = useCallback((remainingMs: number) => {
+    setIsLocked(true);
+    setError(t("auth.lockedFor", { duration: formatDuration(Math.ceil(remainingMs / 1000)) }));
+    const timer = setTimeout(() => {
+      setIsLocked(false);
+      setError("");
+    }, remainingMs);
+    return () => clearTimeout(timer);
+  }, [formatDuration, t]);
+
+  useEffect(() => {
+    let cleanup: (() => void) | undefined;
+    pinAttempts.status().then(({ remainingMs }) => {
+      if (remainingMs > 0) cleanup = applyLockout(remainingMs);
+    });
+    return () => cleanup?.();
+  }, [applyLockout]);
 
   const runScan = useCallback(async () => {
     if (phase !== "idle") return;
@@ -89,10 +112,16 @@ export default function LockScreen() {
       -1,
     ));
 
-    const success = await localAuth.authenticateWithBiometric({
-      promptMessage: t("auth.nativeUnlockPrompt"),
-      cancelLabel: t("auth.nativeCancelLabel"),
-    });
+    let success = false;
+    try {
+      success = await localAuth.authenticateWithBiometric({
+        promptMessage: t("auth.nativeUnlockPrompt"),
+        cancelLabel: t("auth.nativeCancelLabel"),
+      });
+    } catch {
+      setMode("passcode");
+      setError(t("auth.biometricError"));
+    }
     cancelAnimation(scanY);
 
     if (success) {
@@ -122,7 +151,7 @@ export default function LockScreen() {
   }, [shakeX]);
 
   const handleKeyPress = async (key: string) => {
-    if (isLocked || key === "") return;
+    if (isLocked || verifying || key === "") return;
     if (key === "delete") {
       setPin((p) => p.slice(0, -1));
       setError("");
@@ -135,42 +164,52 @@ export default function LockScreen() {
     setPin(next);
 
     if (next.length === PIN_LENGTH) {
-      const storedHash = await secureStorage.getPin();
-      if (!storedHash) return;
-      const valid = await verifyPin(next, storedHash);
-      if (valid) {
-        setAttempts(0);
-        handleUnlock();
-      } else {
+      setVerifying(true);
+      try {
+        const lock = await pinAttempts.status();
+        if (lock.remainingMs > 0) {
+          applyLockout(lock.remainingMs);
+          setPin("");
+          return;
+        }
+        const storedHash = await secureStorage.getPin();
+        if (!storedHash) {
+          // PIN missing from the keystore (e.g. restored device): force re-auth.
+          setPinSet(false);
+          Alert.alert(t("auth.pinMissingTitle"), t("auth.pinMissingBody"), [
+            { text: t("common.ok"), onPress: handleSignOut },
+          ]);
+          return;
+        }
+        if (await verifyPin(next, storedHash)) {
+          if (isLegacyPinHash(storedHash)) {
+            secureStorage.setPin(await hashPin(next)).catch(() => {});
+          }
+          handleUnlock();
+          return;
+        }
         errorNotification();
         shake();
-        const a = attempts + 1;
-        setAttempts(a);
-        if (a >= MAX_ATTEMPTS) {
-          setIsLocked(true);
-          setError(t("auth.tooManyAttempts", { duration: formatDuration(30) }));
-          setTimeout(() => {
-            setIsLocked(false);
-            setAttempts(0);
-            setError("");
-          }, LOCKOUT_DURATION);
+        const result = await pinAttempts.recordFailure();
+        if (result.lockMs > 0) {
+          applyLockout(result.lockMs);
         } else {
-          setError(t("auth.attemptsRemaining", { count: MAX_ATTEMPTS - a }));
+          setError(t("auth.attemptsRemaining", { count: result.attemptsLeft }));
         }
         setTimeout(() => setPin(""), 300);
+      } catch {
+        setError(t("auth.biometricError"));
+        setPin("");
+      } finally {
+        setVerifying(false);
       }
     }
   };
 
-  const handleSignOut = async () => {
-    try {
-      await authClient.signOut();
-    } catch {
-      // Ignore network errors; local state will still be cleared below.
-    }
-    signOut();
+  async function handleSignOut() {
+    await signOutAndCleanup();
     router.replace("/(auth)/sign-in");
-  };
+  }
 
   return (
     <View style={{ flex: 1 }}>

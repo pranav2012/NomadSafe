@@ -1,49 +1,57 @@
-import { authClient } from "@/features/auth";
 import { secureStorage } from "@/features/auth/services/secureStorage";
+import { pinAttempts } from "@/features/auth/services/pinAttempts";
+import { useAuthStore } from "@/features/auth/store/authStore";
+import { AI_MODELS } from "@/features/ai/services/aiModelService";
 import { localModelService } from "@/features/ai/services/localModelService";
+import { deleteDownloadedModel } from "@/features/ai/services/modelDownloadManager";
 import { useChatStore } from "@/features/ai/store/chatStore";
 import { useExpensesStore } from "@/features/expenses/store/expensesStore";
+import { clearItinerarySyncCheckpoints } from "@/features/itinerary";
+import { useEventsStore } from "@/features/itinerary/store/eventsStore";
+import { resetBackgroundDisclosure } from "@/features/location-sharing/components/BackgroundLocationDisclosure";
 import { emergencyContactsStorage } from "@/features/onboarding/services/emergencyContactsStorage";
 import { useSafetyStore } from "@/features/safety/store/safetyStore";
 import { useSettingsStore } from "@/features/settings/store/settingsStore";
 import { useSharingStore } from "@/features/location-sharing/store/sharingStore";
 import { useTripsStore } from "@/features/trips/store/tripsStore";
-import { useAuthStore } from "@/features/auth/store/authStore";
+import { signOutAndCleanup } from "@/services/session";
 import { storage } from "@/stores/storage";
 
+async function attempt(step: () => unknown) {
+  try {
+    await step();
+  } catch {}
+}
+
 /**
- * Wipes all on-device NomadSafe data after the user has already passed
- * biometric / PIN confirmation in the UI.
- *
- * Steps:
- * 1. Sign out of the Better Auth session (best-effort).
- * 2. Release any loaded local AI model.
- * 3. Reset every Zustand store to its initial state.
- * 4. Clear emergency contacts from raw MMKV.
- * 5. Delete the backup PIN from the keychain/keystore.
- * 6. Clear the MMKV database so persisted stores start fresh.
- *
- * Callers must confirm irreversibility and authenticate first.
+ * Wipes all on-device NomadSafe data after the user has confirmed and
+ * authenticated in the UI. Each step is best-effort so one failure can't
+ * leave the rest of the data behind; MMKV is cleared last.
  */
 export async function wipeAllDeviceData(): Promise<void> {
-  try {
-    await authClient.signOut();
-  } catch {
-    // Ignore network/session errors; local wipe is what matters.
+  await signOutAndCleanup();
+
+  await attempt(() => localModelService.stopChat());
+  await attempt(() => localModelService.release());
+  for (const model of AI_MODELS) {
+    await attempt(() => deleteDownloadedModel(model));
   }
 
-  await localModelService.release();
-
-  useAuthStore.getState().signOut();
+  useAuthStore.getState().setPinSet(false);
+  useAuthStore.getState().setBiometricEnabled(false);
   useSettingsStore.getState().reset();
   useTripsStore.getState().reset();
   useExpensesStore.getState().reset();
+  useEventsStore.getState().reset();
   useSafetyStore.getState().reset();
   useSharingStore.getState().reset();
   useChatStore.getState().reset();
 
   emergencyContactsStorage.clear();
-  await secureStorage.resetPin();
+  resetBackgroundDisclosure();
+  await attempt(clearItinerarySyncCheckpoints);
+  await attempt(() => secureStorage.resetPin());
+  await attempt(() => pinAttempts.reset());
 
   storage.clearAll();
 }

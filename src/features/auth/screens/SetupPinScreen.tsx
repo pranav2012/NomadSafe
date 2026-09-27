@@ -70,12 +70,14 @@ export default function SetupPinScreen() {
       // Return to onboarding and advance to the final (Ready) step. Auth is
       // finalized later, after sign-in.
       setOnboardingStep(5);
-      router.replace("/(onboarding)/welcome");
+      if (router.canGoBack()) router.back();
+      else router.replace("/(onboarding)/welcome");
       return;
     }
 
     setUnlocked(true);
-    router.replace("/(tabs)");
+    if (from === "settings" && router.canGoBack()) router.back();
+    else router.replace("/(tabs)");
   };
 
   const handleKeyPress = (key: string) => {

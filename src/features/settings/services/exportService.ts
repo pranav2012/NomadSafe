@@ -1,8 +1,9 @@
 import * as FileSystem from "expo-file-system/legacy";
-import { Share } from "react-native";
+import * as Sharing from "expo-sharing";
 import { useAuthStore } from "@/features/auth/store/authStore";
 import { useTripsStore } from "@/features/trips/store/tripsStore";
 import { useExpensesStore } from "@/features/expenses/store/expensesStore";
+import { useEventsStore } from "@/features/itinerary/store/eventsStore";
 import { useSafetyStore } from "@/features/safety/store/safetyStore";
 import { useSharingStore } from "@/features/location-sharing/store/sharingStore";
 import { useSettingsStore } from "@/features/settings/store/settingsStore";
@@ -15,6 +16,7 @@ export interface NomadSafeExport {
   user: { name: string | null; email?: string; phone?: string } | null;
   trips: ReturnType<typeof useTripsStore.getState>["trips"];
   expenses: ReturnType<typeof useExpensesStore.getState>["expenses"];
+  itineraryEvents: ReturnType<typeof useEventsStore.getState>["events"];
   safetyEvents: ReturnType<typeof useSafetyStore.getState>["events"];
   trustedContacts: ReturnType<typeof useSafetyStore.getState>["trustedContacts"];
   shareRecipients: ReturnType<typeof useSharingStore.getState>["recipients"];
@@ -35,7 +37,7 @@ function buildExport(): NomadSafeExport {
   const settings = useSettingsStore.getState();
   return {
     exportedAt: new Date().toISOString(),
-    version: "1.0.0",
+    version: "2",
     user: user
       ? {
           name: user.name ?? null,
@@ -45,6 +47,7 @@ function buildExport(): NomadSafeExport {
       : null,
     trips: useTripsStore.getState().trips,
     expenses: useExpensesStore.getState().expenses,
+    itineraryEvents: useEventsStore.getState().events,
     safetyEvents: useSafetyStore.getState().events,
     trustedContacts: useSafetyStore.getState().trustedContacts,
     shareRecipients: useSharingStore.getState().recipients,
@@ -65,26 +68,25 @@ function buildExport(): NomadSafeExport {
 }
 
 /**
- * Exports all on-device NomadSafe data as a JSON file and opens the native
- * share sheet so the user can save it to Files / Notes / messaging apps.
- *
- * Returns the file URI the JSON was written to.
+ * Writes all on-device data to a JSON file and opens the system share sheet
+ * so the user can save it. The plaintext file is deleted afterwards.
+ * Returns false if sharing isn't available on this device.
  */
-export async function exportEverything(): Promise<string> {
-  const payload = buildExport();
-  const fileName = `nomadsafe-export-${Date.now()}.json`;
-  const fileUri = `${FileSystem.cacheDirectory}${fileName}`;
+export async function exportEverything(): Promise<boolean> {
+  if (!(await Sharing.isAvailableAsync())) return false;
 
+  const payload = buildExport();
+  const fileUri = `${FileSystem.cacheDirectory}nomadsafe-export-${Date.now()}.json`;
   await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(payload, null, 2));
 
   try {
-    await Share.share({
-      title: "NomadSafe Export",
-      url: fileUri,
+    await Sharing.shareAsync(fileUri, {
+      mimeType: "application/json",
+      dialogTitle: "NomadSafe export",
+      UTI: "public.json",
     });
-  } catch {
-    // User dismissed the share sheet; that is not an error.
+  } finally {
+    await FileSystem.deleteAsync(fileUri, { idempotent: true }).catch(() => {});
   }
-
-  return fileUri;
+  return true;
 }

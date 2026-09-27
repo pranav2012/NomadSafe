@@ -1,13 +1,13 @@
-import React, { createContext, useContext, useMemo } from "react";
+import React, { createContext, useContext, useEffect, useMemo } from "react";
 import * as Localization from "expo-localization";
 import { I18nManager } from "react-native";
+import { reloadAppAsync } from "expo";
 import { useSettingsStore } from "@/features/settings";
+import { storage } from "@/stores/storage";
 import { getEffectiveCurrency } from "@/utils/currency";
 import { LANGUAGE_OPTIONS, normalizeLocale, type SupportedLocale } from "./languages";
-import { translations, type TranslationResource } from "./translations.generated";
-
-type Primitive = string | number | boolean | null | undefined;
-type Params = Record<string, Primitive>;
+import { translations } from "./translations.generated";
+import { fallbackResource, interpolate, readPath, type TranslateParams as Params } from "./translate";
 
 interface LocalizationContextValue {
   locale: SupportedLocale;
@@ -24,26 +24,13 @@ interface LocalizationContextValue {
   formatDuration: (seconds: number) => string;
 }
 
-const fallbackLocale: SupportedLocale = "en";
-const fallbackResource = translations[fallbackLocale] as TranslationResource;
 const LocalizationContext = createContext<LocalizationContextValue | null>(null);
-
-function readPath(source: unknown, key: string): unknown {
-  return key.split(".").reduce<unknown>((current, part) => {
-    if (current && typeof current === "object" && part in current) {
-      return (current as Record<string, unknown>)[part];
-    }
-    return undefined;
-  }, source);
-}
-
-function interpolate(value: string, params?: Params) {
-  if (!params) return value;
-  return value.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(params[name] ?? ""));
-}
+const RTL_RELOAD_KEY = "nomadsafe.rtl-reload-target";
+const COMPACT_THRESHOLD = 100_000;
 
 function formatCompactCurrency(amount: number, currency: string, locale: string): string | null {
   const absAmount = Math.abs(amount);
+  if (absAmount < COMPACT_THRESHOLD) return null;
   const sign = amount < 0 ? "-" : "";
 
   // Indian numbering system (lakhs & crores)
@@ -68,22 +55,36 @@ function formatCompactCurrency(amount: number, currency: string, locale: string)
   if (absAmount >= 1_000_000) {
     return `${sign}${formatCurrencyNumber(absAmount / 1_000_000, locale, currency)}M`;
   }
-  if (absAmount >= 1_000) {
-    return `${sign}${formatCurrencyNumber(absAmount / 1_000, locale, currency)}K`;
-  }
-
-  return null;
+  return `${sign}${formatCurrencyNumber(absAmount / 1_000, locale, currency)}K`;
 }
 
 function formatCurrencyNumber(value: number, locale: string, currency: string): string {
-  const formatted = new Intl.NumberFormat(locale, {
+  return new Intl.NumberFormat(locale, {
     style: "currency",
     currency,
+    minimumFractionDigits: 0,
     maximumFractionDigits: value < 10 ? 1 : 0,
   }).format(value);
+}
 
-  // Strip the currency symbol/suffix for compact suffix labels
-  return formatted.replace(/[^\d.,\s٬٫'’-]/g, "").trim() || formatted;
+/**
+ * RN only applies a layout-direction change after a restart. Force the new
+ * direction and reload once; the stored target stops a reload loop if the
+ * platform refuses the change.
+ */
+function useApplyLayoutDirection(isRTL: boolean) {
+  useEffect(() => {
+    if (I18nManager.isRTL === isRTL) {
+      storage.remove(RTL_RELOAD_KEY);
+      return;
+    }
+    const target = isRTL ? "rtl" : "ltr";
+    if (storage.getString(RTL_RELOAD_KEY) === target) return;
+    storage.set(RTL_RELOAD_KEY, target);
+    I18nManager.allowRTL(isRTL);
+    I18nManager.forceRTL(isRTL);
+    reloadAppAsync("Layout direction changed").catch(() => {});
+  }, [isRTL]);
 }
 
 export function LocalizationProvider({ children }: { children: React.ReactNode }) {
@@ -97,9 +98,7 @@ export function LocalizationProvider({ children }: { children: React.ReactNode }
   const resource = translations[locale] ?? fallbackResource;
   const isRTL = locale === "ar";
 
-  if (I18nManager.isRTL !== isRTL) {
-    I18nManager.allowRTL(isRTL);
-  }
+  useApplyLayoutDirection(isRTL);
 
   const value = useMemo<LocalizationContextValue>(() => {
     const getValue = (key: string) => readPath(resource, key) ?? readPath(fallbackResource, key);
@@ -120,7 +119,7 @@ export function LocalizationProvider({ children }: { children: React.ReactNode }
         return Array.isArray(valueAtKey) ? valueAtKey.filter((item) => typeof item === "string") : [];
       },
       formatCurrency: (amount, selectedCurrency = currency, options) => {
-        const compact = formatCompactCurrency(amount, selectedCurrency, formatLocale);
+        const compact = options ? null : formatCompactCurrency(amount, selectedCurrency, formatLocale);
         return compact ?? new Intl.NumberFormat(formatLocale, {
           style: "currency",
           currency: selectedCurrency,
