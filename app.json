@@ -7,6 +7,14 @@
     "icon": "./assets/images/icon.png",
     "scheme": "nomadsafe",
     "userInterfaceStyle": "automatic",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/10d0b7a8-3f54-4ae4-9991-cfe3f5d1ef41",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.pranav.NomadSafe",

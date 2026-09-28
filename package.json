@@ -10,7 +10,10 @@
     "lint": "expo lint",
     "test:expense-import": "node --test tests/expense-import.test.mjs",
     "build": "expo prebuild --clean",
-    "test": "node --test tests/expense-import.test.mjs tests/trip-utils.test.mjs tests/ai-money-facts.test.mjs"
+    "test": "node --test tests/expense-import.test.mjs tests/trip-utils.test.mjs tests/ai-money-facts.test.mjs",
+    "update:development": "node scripts/publish-update.mjs development",
+    "update:preview": "node scripts/publish-update.mjs preview",
+    "update:production": "node scripts/publish-update.mjs production"
   },
   "dependencies": {
     "@better-auth/expo": "1.6.33",
@@ -55,6 +58,7 @@
     "expo-symbols": "~57.0.3",
     "expo-system-ui": "~57.0.4",
     "expo-task-manager": "~57.0.20",
+    "expo-updates": "~57.0.23",
     "expo-web-browser": "~57.0.3",
     "llama.rn": "^0.12.9",
     "react": "19.2.3",
