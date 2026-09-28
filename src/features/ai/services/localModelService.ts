@@ -1,11 +1,8 @@
 import { Platform } from "react-native";
-import {
-  loadLlamaModelInfo,
-  initLlama,
-  type LlamaContext,
-} from "llama.rn";
-import { useSettingsStore } from "@/features/settings";
-import { aiModelService, AI_MODELS, type AiModel } from "./aiModelService";
+import { initLlama, type LlamaContext } from "llama.rn";
+import { useSettingsStore } from "@/features/settings/store/settingsStore";
+import { storage } from "@/stores/storage";
+import { aiModelService, findModel, modelFileSize, type AiModel } from "./aiModelService";
 
 export type { AiModel };
 
@@ -180,6 +177,18 @@ const loadedListeners = new Set<(modelId: string | null) => void>();
 let chatRunning = false;
 let chatStopRequested = false;
 
+const GPU_DISABLED_KEY = "ai.gpu.disabled";
+const GPU_ATTEMPT_KEY = "ai.gpu.attempt";
+const GPU_VERIFIED_KEY = "ai.gpu.verified";
+
+// Runs at app launch: an attempt flag left behind means a native crash during the last GPU load.
+if (Platform.OS === "android" && storage.getString(GPU_ATTEMPT_KEY)) {
+  storage.set(GPU_DISABLED_KEY, true);
+  storage.remove(GPU_ATTEMPT_KEY);
+}
+
+let missingModelHandler: (() => void) | null = null;
+
 const MIN_CONTEXT_TOKENS = 4096;
 const COMPACTION_THRESHOLD = 0.6;
 const COMPACTED_HISTORY_TARGET = 0.15;
@@ -266,32 +275,84 @@ function isLocalAiEnabled(): boolean {
   return useSettingsStore.getState().localAiEnabled;
 }
 
+/**
+ * The provisioned model, if its file is on disk. An unverified file kept from
+ * an older build skips the RAM gate: that build already allowed it here.
+ */
 async function getReadyModel(): Promise<AiModel | null> {
   if (!isLocalAiEnabled()) return null;
+  const record = aiModelService.getActiveRecord();
+  const model = findModel(record?.id);
+  if (!record || !model) return null;
+  if (record.verifiedKey && !aiModelService.fitsDeviceMemory(model)) return null;
+  return (await modelFileSize(record.path)) === null ? null : model;
+}
 
-  const activeId = aiModelService.getActiveModelId();
-  const selectedIds = [
-    activeId,
-    aiModelService.getSelectedModelId(),
-    aiModelService.getDownloadedModelId(),
-    (await localModelService.getAssignedModel())?.id,
-  ].filter(Boolean);
+function isMissingFileError(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : "";
+  return /(?:no such file|couldn't open|failed to open|not found|does not exist)/i.test(message);
+}
 
-  for (const id of selectedIds) {
-    const model = AI_MODELS.find((candidate) => candidate.id === id);
-    if (model && aiModelService.fitsDeviceMemory(model) && (await localModelService.isDownloaded(model))) {
-      return model;
+function logBackend(model: AiModel, context: LlamaContext) {
+  if (!__DEV__) return;
+  const devices = context.devices?.join(", ") || "none";
+  console.log(
+    `[localModelService] ${model.id} loaded on ${context.gpu ? "GPU" : "CPU"} (devices: ${devices})${
+      context.gpu ? "" : ` ${context.reasonNoGPU}`
+    }`,
+  );
+}
+
+/**
+ * Android GPU (OpenCL) load behind a crash-loop guard: the attempt flag is set
+ * before init and cleared only after the load plus a 1-token probe succeed
+ * (probe runs once per model). Any failure disables GPU for good.
+ */
+async function initAndroidGpu(model: AiModel, params: { model: string; use_mlock: boolean; n_ctx: number }) {
+  if (storage.getBoolean(GPU_DISABLED_KEY)) return null;
+  storage.set(GPU_ATTEMPT_KEY, model.id);
+  let context: LlamaContext | null = null;
+  try {
+    context = await initLlama({ ...params, n_gpu_layers: 99, flash_attn_type: "auto" });
+    if (storage.getString(GPU_VERIFIED_KEY) !== model.id) {
+      await context.completion({ prompt: "Hi", n_predict: 1, temperature: 0 });
+      storage.set(GPU_VERIFIED_KEY, model.id);
+    }
+    storage.remove(GPU_ATTEMPT_KEY);
+    return context;
+  } catch (err) {
+    storage.remove(GPU_ATTEMPT_KEY);
+    if (isMissingFileError(err)) throw err;
+    console.warn("[localModelService] GPU load failed, falling back to CPU", err);
+    storage.set(GPU_DISABLED_KEY, true);
+    if (context) await context.release().catch(() => undefined);
+    return null;
+  }
+}
+
+async function initContext(model: AiModel, path: string, contextTokens: number): Promise<LlamaContext> {
+  // use_mlock: false avoids pinning pages in RAM while backgrounded.
+  const params = { model: path, use_mlock: false, n_ctx: contextTokens };
+  if (Platform.OS === "android") {
+    const gpuContext = await initAndroidGpu(model, params);
+    if (gpuContext) return gpuContext;
+    // no_gpu_devices keeps OpenCL uninitialized, so a broken driver can't crash the CPU path.
+    try {
+      return await initLlama({ ...params, n_gpu_layers: 0, no_gpu_devices: true, flash_attn_type: "auto" });
+    } catch (err) {
+      if (isMissingFileError(err)) throw err;
+      console.warn("[localModelService] fast CPU load failed, retrying without flash attention", err);
+      return initLlama({ ...params, n_gpu_layers: 0, no_gpu_devices: true });
     }
   }
-
-  for (const model of AI_MODELS) {
-    if (aiModelService.fitsDeviceMemory(model) && (await localModelService.isDownloaded(model))) {
-      aiModelService.setDownloadedModelId(model.id);
-      return model;
-    }
+  // iOS: all layers on Metal, falling back to plain CPU when it can't allocate.
+  try {
+    return await initLlama({ ...params, n_gpu_layers: 99, flash_attn_type: "auto" });
+  } catch (err) {
+    if (isMissingFileError(err)) throw err;
+    console.warn("[localModelService] fast load failed, retrying on CPU", err);
+    return initLlama({ ...params, n_gpu_layers: 0 });
   }
-
-  return null;
 }
 
 function enqueue<T>(task: () => Promise<T>): Promise<T> {
@@ -362,36 +423,19 @@ async function loadModelUnlocked(model: AiModel, minContextTokens = MIN_CONTEXT_
     minContextTokens,
     aiModelService.getContextWindowPlan(model).tokens,
   );
-  const path = aiModelService.getLocalModelPath(model);
-  /**
-   * Try a fast config first, then fall back to plain CPU if it fails.
-   * - n_gpu_layers: on iOS we offload all layers to the Metal GPU for a large
-   *   generation speedup, but some device/model combos can't allocate it.
-   * - flash_attn_type "auto": speeds up attention when the backend supports
-   *   it, but is not available everywhere.
-   * - use_mlock: false avoids pinning pages in RAM while backgrounded.
-   */
-  const baseParams = { model: path, use_mlock: false, n_ctx: contextTokens } as const;
+  const record = aiModelService.getActiveRecord();
+  const path = record?.id === model.id ? record.path : aiModelService.getLocalModelPath(model);
   let context: LlamaContext;
   try {
-    context = await initLlama({
-      ...baseParams,
-      n_gpu_layers: Platform.OS === "ios" ? 99 : 0,
-      flash_attn_type: "auto",
-    });
+    context = await initContext(model, path, contextTokens);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "";
-    const isMissingFile = /(?:no such file|couldn't open|failed to open|not found|does not exist)/i.test(message);
-    if (isMissingFile) {
-      // The model file referenced in storage is gone; clear selection so the
-      // UI prompts a re-download instead of crashing on every chat message.
-      aiModelService.setDownloadedModelId(null);
-      aiModelService.setActiveModelId(null);
-      throw new Error("Local AI model is not downloaded.");
-    }
-    console.warn("[localModelService] fast load failed, retrying on CPU", err);
-    context = await initLlama({ ...baseParams, n_gpu_layers: 0 });
+    if (!isMissingFileError(err)) throw err;
+    // The file is gone; clear it so provisioning downloads it again.
+    aiModelService.setActiveRecord(null);
+    missingModelHandler?.();
+    throw new Error("Local AI model is not downloaded.");
   }
+  logBackend(model, context);
   setActive(context, model.id, contextTokens);
   return context;
 }
@@ -405,13 +449,6 @@ async function requireReadyModel(): Promise<AiModel> {
 }
 
 export const localModelService = {
-  /**
-   * Checks whether a model file is present locally.
-   */
-  async isDownloaded(model: AiModel): Promise<boolean> {
-    return aiModelService.isModelDownloaded(model);
-  },
-
   /**
    * Returns the id of the model currently loaded in RAM, if any.
    */
@@ -440,14 +477,9 @@ export const localModelService = {
     return pendingJobs > 0;
   },
 
-  /**
-   * Sets the active/default model in storage without loading it. Inference will
-   * lazily load it when needed.
-   */
-  setDefaultModel(model: AiModel): void {
-    aiModelService.setActiveModelId(model.id);
-    aiModelService.setSelectedModelId(model.id);
-    aiModelService.setDownloadedModelId(model.id);
+  /** Called when a load finds the model file missing, so provisioning can recover. */
+  setMissingModelHandler(handler: (() => void) | null): void {
+    missingModelHandler = handler;
   },
 
   /**
@@ -469,26 +501,6 @@ export const localModelService = {
       return;
     }
     await enqueue(releaseContext);
-  },
-
-  /**
-   * Returns the best model for this device tier. Returns null if local AI is
-   * not supported at all.
-   */
-  async getAssignedModel(): Promise<AiModel | null> {
-    const capability = await aiModelService.checkDeviceCapability();
-    if (!capability.supported) return null;
-    const model = AI_MODELS.find((m) => m.id === capability.assignedCategory);
-    return model ?? null;
-  },
-
-  /**
-   * Quick sanity check that the GGUF file can be read by llama.cpp.
-   */
-  async validateModel(model: AiModel): Promise<void> {
-    if (!isLocalAiEnabled()) return;
-    const path = aiModelService.getLocalModelPath(model);
-    await loadLlamaModelInfo(path);
   },
 
   async getReadyModel(): Promise<AiModel | null> {

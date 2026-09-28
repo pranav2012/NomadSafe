@@ -17,7 +17,7 @@ import { datePickerStyle, environment, tint } from "@expo/ui/swift-ui/modifiers"
 import Animated, { FadeInDown, LinearTransition } from "react-native-reanimated";
 import { Icon } from "@/components/nomad/Icon";
 import { NOMAD_FONTS } from "@/constants/nomadTokens";
-import { localModelService, useModelDownload } from "@/features/ai";
+import { localModelService, useAiReadyModelId } from "@/features/ai";
 import type { TripBudgetEstimate } from "@/features/ai/services/localModelService";
 import { useSettingsStore } from "@/features/settings";
 import {
@@ -181,7 +181,7 @@ export function TripForm({ editingTrip, onSave, onCancel, header }: TripFormProp
   const webSearch = useWebDestinationSearch(form.destinations);
   const parsedBudget = parseAmount(form.budget, locale);
 
-  const aiDownload = useModelDownload();
+  const aiReadyModelId = useAiReadyModelId();
   const scrollRef = useRef<ScrollView>(null);
   const budgetEstimateKeyRef = useRef<string | null>(null);
   const nameGenerationKeyRef = useRef<string | null>(null);
@@ -217,7 +217,7 @@ export function TripForm({ editingTrip, onSave, onCancel, header }: TripFormProp
     return () => {
       isMounted = false;
     };
-  }, [aiDownload.modelId, aiDownload.status]);
+  }, [aiReadyModelId]);
 
   const clearBudgetEstimate = useCallback(() => {
     setBudgetEstimate(null);

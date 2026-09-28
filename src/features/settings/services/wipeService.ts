@@ -1,9 +1,8 @@
 import { secureStorage } from "@/features/auth/services/secureStorage";
 import { pinAttempts } from "@/features/auth/services/pinAttempts";
 import { useAuthStore } from "@/features/auth/store/authStore";
-import { AI_MODELS } from "@/features/ai/services/aiModelService";
 import { localModelService } from "@/features/ai/services/localModelService";
-import { deleteDownloadedModel } from "@/features/ai/services/modelDownloadManager";
+import { wipeModels } from "@/features/ai/services/modelProvisioner";
 import { useChatStore } from "@/features/ai/store/chatStore";
 import { useExpensesStore } from "@/features/expenses/store/expensesStore";
 import { clearItinerarySyncCheckpoints } from "@/features/itinerary";
@@ -33,9 +32,7 @@ export async function wipeAllDeviceData(): Promise<void> {
 
   await attempt(() => localModelService.stopChat());
   await attempt(() => localModelService.release());
-  for (const model of AI_MODELS) {
-    await attempt(() => deleteDownloadedModel(model));
-  }
+  await attempt(wipeModels);
 
   useAuthStore.getState().setPinSet(false);
   useAuthStore.getState().setBiometricEnabled(false);

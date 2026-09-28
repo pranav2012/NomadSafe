@@ -1,9 +1,22 @@
 import * as Device from "expo-device";
-import { Paths, Directory, File } from "expo-file-system";
+import { Paths, Directory } from "expo-file-system";
 import * as LegacyFileSystem from "expo-file-system/legacy";
 import { Platform } from "react-native";
 import { storage } from "@/stores/storage";
 import { memoryInfo } from "./memoryInfo";
+import { systemDownloader } from "./systemDownloader";
+import {
+  AI_MODELS,
+  findModel,
+  LEGACY_MODEL_IDS,
+  nominalRamGb,
+  type AiModel,
+  type AiModelId,
+} from "./modelCatalog";
+
+export * from "./modelCatalog";
+
+const MB = 1024 * 1024;
 
 export function formatModelSize(sizeMb: number, locale?: string): string {
   const useGb = sizeMb >= 1024;
@@ -20,31 +33,13 @@ export function formatModelSize(sizeMb: number, locale?: string): string {
   }
 }
 
-export interface DeviceCapability {
-  totalMemoryGb: number;
-  supported: boolean;
-  limited: boolean;
-  reason: "ok" | "lowRam" | "oldOs" | "unknown";
-  assignedCategory: AiModelCategory;
+export function formatBytes(bytes: number, locale?: string): string {
+  return formatModelSize(Math.max(0, bytes) / MB, locale);
 }
 
-export type AiModelCategory = "compact" | "balanced";
-
-export interface AiModel {
-  id: AiModelCategory;
-  name: string;
-  sizeMb: number;
-  minRamGb: number;
-  recommendedRamGb: number;
-  descriptionKey: string;
-  /** HuggingFace repo ID for the GGUF source. */
-  hfRepoId: string;
-  /** Exact GGUF filename inside the repo. */
-  hfFilename: string;
-  /** Quantization label shown to the user. */
-  quantLabel: string;
-  /** Exact file size in bytes, when known; otherwise the HTTP size is used. */
-  sizeBytes?: number;
+export interface DeviceProfile {
+  totalRamGb: number;
+  osSupported: boolean;
 }
 
 export interface ContextWindowPlan {
@@ -52,107 +47,28 @@ export interface ContextWindowPlan {
   availableMemoryBytes: number | null;
 }
 
-/**
- * Two device tiers mapped to real, openly licensed Qwen 3.5 GGUF models.
- *
- * We chose Qwen 3.5 because the app is a text-first travel assistant that must
- * work across 14 locales. Qwen 3.5 is explicitly optimized for multilingual text,
- * supports 201 languages/dialects, and its vision encoder can be skipped entirely
- * for a text-only deployment, keeping disk/RAM/battery usage lower.
- *
- * Base -> Qwen3.5-0.8B-Instruct Q4_K_M (~520 MB)
- * Pro  -> Qwen3.5-4B-Instruct  Q4_K_M (~2.6 GB)
- *
- * All GGUFs are from the bartowski community mirror, which is the de facto
- * standard for llama.cpp / llama.rn users.
- */
-export const AI_MODELS: AiModel[] = [
-  {
-    id: "compact",
-    name: "NomadBase",
-    sizeMb: 520,
-    minRamGb: 3,
-    recommendedRamGb: 4,
-    descriptionKey: "onboarding.modelSizeCompact",
-    hfRepoId: "bartowski/Qwen_Qwen3.5-0.8B-GGUF",
-    hfFilename: "Qwen_Qwen3.5-0.8B-Q4_K_M.gguf",
-    quantLabel: "Q4_K_M",
-  },
-  {
-    id: "balanced",
-    name: "NomadPro",
-    sizeMb: 2620,
-    minRamGb: 6,
-    recommendedRamGb: 6,
-    descriptionKey: "onboarding.modelSizeBalanced",
-    hfRepoId: "bartowski/Qwen_Qwen3.5-4B-GGUF",
-    hfFilename: "Qwen_Qwen3.5-4B-Q4_K_M.gguf",
-    quantLabel: "Q4_K_M",
-  },
-];
+/** The model file used for inference. `verifiedKey` is null for an unverified file kept from an older build. */
+export interface ActiveModelRecord {
+  id: AiModelId;
+  path: string;
+  size: number;
+  verifiedKey: string | null;
+}
 
-const AI_MODEL_ID_KEY = "ai-selected-model-id";
-const AI_MODEL_DOWNLOADED_KEY = "ai-downloaded-model-id";
-const AI_ACTIVE_MODEL_ID_KEY = "ai-active-model-id";
+export interface LegacyModelFile {
+  model: AiModel;
+  uri: string;
+}
+
+const ACTIVE_MODEL_KEY = "ai-active-model";
+const LEGACY_ACTIVE_ID_KEY = "ai-active-model-id";
+const LEGACY_DOWNLOADED_ID_KEY = "ai-downloaded-model-id";
+const LEGACY_SELECTED_ID_KEY = "ai-selected-model-id";
 export const AI_DOWNLOAD_STATE_KEY = "ai-download-state";
-const MB = 1024 * 1024;
-// Coarse floor against truncated files / HTML error pages; sizeMb is approximate.
-const MIN_COMPLETE_FRACTION = 0.8;
+// Old cache-dir files were written in place, so a partial one could be left behind.
+const LEGACY_CACHE_MIN_FRACTION = 0.8;
 
 let legacyMigration: Promise<void> | null = null;
-
-function legacyAndroidModelPath(model: AiModel): string {
-  return `${Paths.cache.uri}models/${model.id}/${model.hfFilename}`;
-}
-
-function minimumCompleteBytes(model: AiModel): number {
-  return model.sizeBytes ?? Math.floor(model.sizeMb * MB * MIN_COMPLETE_FRACTION);
-}
-
-async function fileSize(uri: string): Promise<number | null> {
-  try {
-    const info = await LegacyFileSystem.getInfoAsync(uri);
-    return info.exists && !info.isDirectory ? info.size : null;
-  } catch {
-    return null;
-  }
-}
-
-function hasUnfinishedDownload(model: AiModel): boolean {
-  const raw = storage.getString(AI_DOWNLOAD_STATE_KEY);
-  if (!raw) return false;
-  try {
-    const persisted = JSON.parse(raw) as { modelId?: string; status?: string };
-    return persisted.modelId === model.id && persisted.status !== "completed";
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Android builds used to store models in the purgeable cache dir, written in
- * place. Move complete files to the documents dir; drop partial ones.
- */
-async function migrateLegacyAndroidModels(): Promise<void> {
-  if (Platform.OS !== "android") return;
-  for (const model of AI_MODELS) {
-    const legacyPath = legacyAndroidModelPath(model);
-    try {
-      const size = await fileSize(legacyPath);
-      if (size === null) continue;
-      const target = aiModelService.getLocalModelPath(model);
-      const complete = !hasUnfinishedDownload(model) && size >= minimumCompleteBytes(model);
-      if (complete && (await fileSize(target)) === null) {
-        await aiModelService.ensureModelDir(model);
-        await LegacyFileSystem.moveAsync({ from: legacyPath, to: target });
-      } else {
-        await LegacyFileSystem.deleteAsync(legacyPath, { idempotent: true });
-      }
-    } catch (err) {
-      console.warn("[aiModelService] legacy model migration failed", err);
-    }
-  }
-}
 
 function getOsVersion(): number {
   if (Platform.OS === "android") {
@@ -163,24 +79,135 @@ function getOsVersion(): number {
 }
 
 function getTotalMemoryGb(): number {
-  if (typeof Device.totalMemory === "number" && Device.totalMemory > 0) {
-    return Math.round(Device.totalMemory / 1024 / 1024 / 1024);
-  }
-  return 0;
-}
-
-function assignCategory(totalMemoryGb: number): AiModelCategory {
-  if (totalMemoryGb >= AI_MODELS[1].recommendedRamGb) return "balanced";
-  return "compact";
+  return nominalRamGb(Device.totalMemory);
 }
 
 function contextWindowFor(model: AiModel, availableMemoryBytes: number | null): number {
   if (availableMemoryBytes === null) return 4096;
-
-  const availableMb = availableMemoryBytes / 1024 / 1024;
+  const small = model.id === "lite";
+  const availableMb = availableMemoryBytes / MB;
   if (availableMb < 1200) return 4096;
-  if (availableMb < 2800) return Math.min(model.id === "compact" ? 8192 : 6144, 8192);
-  return model.id === "compact" ? 8192 : 12288;
+  if (availableMb < 2800) return small ? 8192 : 6144;
+  return small ? 8192 : 12288;
+}
+
+let cachedNativeDir: string | null = null;
+
+// Throws natively while shared storage is unmounted; callers then see a missing file.
+function nativeModelsDir(): string | null {
+  if (!systemDownloader) return null;
+  if (cachedNativeDir) return cachedNativeDir;
+  try {
+    cachedNativeDir = systemDownloader.getModelsDirectory();
+    return cachedNativeDir;
+  } catch (err) {
+    console.warn("[aiModelService] models directory unavailable", err);
+    return null;
+  }
+}
+
+export function toNativePath(uri: string): string {
+  return uri.startsWith("file://") ? decodeURI(uri.slice("file://".length)) : uri;
+}
+
+/** File size in bytes, or null when missing. Uses the native module on Android so external paths work. */
+export async function modelFileSize(uri: string): Promise<number | null> {
+  try {
+    if (systemDownloader) {
+      const size = await systemDownloader.fileSize(toNativePath(uri));
+      return size >= 0 ? size : null;
+    }
+    const info = await LegacyFileSystem.getInfoAsync(uri);
+    return info.exists && !info.isDirectory ? info.size : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function deleteModelFile(uri: string): Promise<void> {
+  try {
+    if (systemDownloader) {
+      await systemDownloader.deleteFile(toNativePath(uri));
+      return;
+    }
+    await LegacyFileSystem.deleteAsync(uri, { idempotent: true });
+  } catch {}
+}
+
+function legacyDocumentUri(legacyId: string, model: AiModel): string {
+  return `${Paths.document.uri}models/${legacyId}/${model.hfFilename}`;
+}
+
+function legacyCacheUri(legacyId: string, model: AiModel): string {
+  return `${Paths.cache.uri}models/${legacyId}/${model.hfFilename}`;
+}
+
+function legacyEntries(): { legacyId: string; model: AiModel }[] {
+  return Object.entries(LEGACY_MODEL_IDS).flatMap(([legacyId, id]) => {
+    const model = AI_MODELS.find((m) => m.id === id);
+    return model ? [{ legacyId, model }] : [];
+  });
+}
+
+/**
+ * One-time move of old Android cache-dir models into the documents dir (same
+ * volume, so it's a rename). Partial or unfinished files are dropped.
+ */
+async function migrateLegacyCacheFiles(): Promise<void> {
+  if (Platform.OS !== "android") return;
+  for (const { legacyId, model } of legacyEntries()) {
+    const cacheUri = legacyCacheUri(legacyId, model);
+    try {
+      const info = await LegacyFileSystem.getInfoAsync(cacheUri);
+      if (!info.exists || info.isDirectory) continue;
+      const target = legacyDocumentUri(legacyId, model);
+      const complete = info.size >= model.sizeBytes * LEGACY_CACHE_MIN_FRACTION;
+      const targetInfo = await LegacyFileSystem.getInfoAsync(target);
+      if (complete && !targetInfo.exists) {
+        const dir = new Directory(`${Paths.document.uri}models/${legacyId}/`);
+        if (!dir.exists) dir.create({ intermediates: true });
+        await LegacyFileSystem.moveAsync({ from: cacheUri, to: target });
+      } else {
+        await LegacyFileSystem.deleteAsync(cacheUri, { idempotent: true });
+      }
+    } catch (err) {
+      console.warn("[aiModelService] legacy cache migration failed", err);
+    }
+  }
+}
+
+async function migrateLegacyState(): Promise<void> {
+  await migrateLegacyCacheFiles();
+
+  // Old partial downloads came from an unpinned revision; drop them and their resume data.
+  const rawDownload = storage.getString(AI_DOWNLOAD_STATE_KEY);
+  if (rawDownload) {
+    try {
+      const persisted = JSON.parse(rawDownload) as { modelId?: string };
+      if (persisted.modelId && persisted.modelId in LEGACY_MODEL_IDS) storage.remove(AI_DOWNLOAD_STATE_KEY);
+    } catch {
+      storage.remove(AI_DOWNLOAD_STATE_KEY);
+    }
+  }
+  for (const { legacyId, model } of legacyEntries()) {
+    await deleteModelFile(`${legacyDocumentUri(legacyId, model)}.part`);
+  }
+
+  if (!storage.getString(ACTIVE_MODEL_KEY)) {
+    const preferred = [LEGACY_ACTIVE_ID_KEY, LEGACY_DOWNLOADED_ID_KEY, LEGACY_SELECTED_ID_KEY]
+      .map((key) => storage.getString(key))
+      .filter((id): id is string => !!id && id in LEGACY_MODEL_IDS);
+    const files = await aiModelService.findLegacyModelFiles();
+    const chosen =
+      preferred.map((id) => files.find((f) => f.model.id === LEGACY_MODEL_IDS[id])).find(Boolean) ?? files[0];
+    if (chosen) {
+      const size = (await modelFileSize(chosen.uri)) ?? 0;
+      aiModelService.setActiveRecord({ id: chosen.model.id, path: chosen.uri, size, verifiedKey: null });
+    }
+  }
+  storage.remove(LEGACY_ACTIVE_ID_KEY);
+  storage.remove(LEGACY_DOWNLOADED_ID_KEY);
+  storage.remove(LEGACY_SELECTED_ID_KEY);
 }
 
 export const aiModelService = {
@@ -192,48 +219,12 @@ export const aiModelService = {
     };
   },
 
-  async checkDeviceCapability(): Promise<DeviceCapability> {
-    const totalMemoryGb = getTotalMemoryGb();
+  getDeviceProfile(): DeviceProfile {
+    const totalRamGb = getTotalMemoryGb();
     const osVersion = getOsVersion();
-
-    if (totalMemoryGb === 0) {
-      return {
-        totalMemoryGb: 0,
-        supported: false,
-        limited: true,
-        reason: "unknown",
-        assignedCategory: "compact",
-      };
-    }
-
-    const minRam = AI_MODELS[0].minRamGb;
-    if (totalMemoryGb < minRam) {
-      return {
-        totalMemoryGb,
-        supported: false,
-        limited: false,
-        reason: "lowRam",
-        assignedCategory: "compact",
-      };
-    }
-
-    const isOldOs =
-      (Platform.OS === "ios" && osVersion < 15) ||
-      (Platform.OS === "android" && osVersion < 26);
-
-    if (isOldOs) {
-      return {
-        totalMemoryGb,
-        supported: false,
-        limited: true,
-        reason: "oldOs",
-        assignedCategory: "compact",
-      };
-    }
-
-    const category = assignCategory(totalMemoryGb);
-    const limited = totalMemoryGb < AI_MODELS[1].recommendedRamGb;
-    return { totalMemoryGb, supported: true, limited, reason: "ok", assignedCategory: category };
+    const osSupported =
+      (Platform.OS === "ios" && osVersion >= 15) || (Platform.OS === "android" && osVersion >= 26);
+    return { totalRamGb, osSupported };
   },
 
   /** False when the device reports less RAM than the model needs; unknown RAM is allowed. */
@@ -242,44 +233,28 @@ export const aiModelService = {
     return totalMemoryGb === 0 || totalMemoryGb >= model.minRamGb;
   },
 
-  getAvailableModels(capability: DeviceCapability): AiModel[] {
-    if (!capability.supported) return [];
-    return AI_MODELS.filter((m) => capability.totalMemoryGb >= m.minRamGb);
-  },
-
-  getSelectedModelId(): string | null {
-    return storage.getString(AI_MODEL_ID_KEY) ?? null;
-  },
-
-  setSelectedModelId(id: string) {
-    storage.set(AI_MODEL_ID_KEY, id);
-  },
-
-  getDownloadedModelId(): string | null {
-    return storage.getString(AI_MODEL_DOWNLOADED_KEY) ?? null;
-  },
-
-  setDownloadedModelId(id: string | null) {
-    storage.set(AI_MODEL_DOWNLOADED_KEY, id ?? "");
-  },
-
-  getActiveModelId(): string | null {
-    return storage.getString(AI_ACTIVE_MODEL_ID_KEY) ?? null;
-  },
-
-  setActiveModelId(id: string | null) {
-    storage.set(AI_ACTIVE_MODEL_ID_KEY, id ?? "");
+  usesSystemDownloader(): boolean {
+    return systemDownloader !== null;
   },
 
   getModelDownloadUrl(model: AiModel): string {
-    return `https://huggingface.co/${model.hfRepoId}/resolve/main/${model.hfFilename}`;
+    return model.url;
+  },
+
+  verifiedKey(model: AiModel): string {
+    return `${model.hfFilename}:${model.sha256}`;
   },
 
   /**
-   * Models live in the documents dir on both platforms: Android may purge the
-   * cache dir under storage pressure. On iOS the documents dir is included in
-   * iCloud backups and expo-file-system has no exclude-from-backup API.
+   * Where the model file lives. Android: DownloadManager's app-specific
+   * external dir. Otherwise the documents dir (the cache dir is purgeable).
    */
+  getLocalModelPath(model: AiModel): string {
+    const nativeDir = nativeModelsDir();
+    if (nativeDir) return `file://${nativeDir}/${model.hfFilename}`;
+    return `${aiModelService.getLocalModelDir(model)}${model.hfFilename}`;
+  },
+
   getLocalModelDir(model: AiModel): string {
     return `${Paths.document.uri}models/${model.id}/`;
   },
@@ -291,42 +266,69 @@ export const aiModelService = {
     }
   },
 
-  getLocalModelPath(model: AiModel): string {
-    return `${aiModelService.getLocalModelDir(model)}${model.hfFilename}`;
-  },
-
-  /** In-progress downloads are written here and renamed once verified. */
   getPartialModelPath(model: AiModel): string {
-    return `${aiModelService.getLocalModelPath(model)}.part`;
+    return `${aiModelService.getLocalModelDir(model)}${model.hfFilename}.part`;
   },
 
-  getMinimumCompleteBytes(model: AiModel): number {
-    return minimumCompleteBytes(model);
+  /** Complete model files left by older builds (documents dir, legacy ids). */
+  async findLegacyModelFiles(): Promise<LegacyModelFile[]> {
+    const found: LegacyModelFile[] = [];
+    for (const { legacyId, model } of legacyEntries()) {
+      const uri = legacyDocumentUri(legacyId, model);
+      if ((await modelFileSize(uri)) !== null) found.push({ model, uri });
+    }
+    return found;
   },
 
-  /** Moves models from older storage locations. Runs once per launch. */
+  allModelFileUris(): string[] {
+    const uris = AI_MODELS.flatMap((model) => [
+      aiModelService.getLocalModelPath(model),
+      `${aiModelService.getLocalModelDir(model)}${model.hfFilename}`,
+      aiModelService.getPartialModelPath(model),
+    ]);
+    for (const { legacyId, model } of legacyEntries()) {
+      uris.push(legacyDocumentUri(legacyId, model), `${legacyDocumentUri(legacyId, model)}.part`);
+    }
+    return [...new Set(uris)];
+  },
+
+  /** Maps ids/files persisted by older builds. Runs once per launch. */
   migrateLegacyStorage(): Promise<void> {
-    legacyMigration ??= migrateLegacyAndroidModels();
+    legacyMigration ??= migrateLegacyState().catch((err) => {
+      console.warn("[aiModelService] legacy migration failed", err);
+    });
     return legacyMigration;
   },
 
-  /** True only for a fully downloaded file at the final (non-.part) path. */
-  async isModelDownloaded(model: AiModel): Promise<boolean> {
-    await aiModelService.migrateLegacyStorage();
-    const size = await fileSize(aiModelService.getLocalModelPath(model));
-    return size !== null && size >= minimumCompleteBytes(model);
+  getActiveRecord(): ActiveModelRecord | null {
+    const raw = storage.getString(ACTIVE_MODEL_KEY);
+    if (!raw) return null;
+    try {
+      const record = JSON.parse(raw) as ActiveModelRecord;
+      const model = findModel(record.id);
+      return model ? { ...record, id: model.id } : null;
+    } catch {
+      return null;
+    }
   },
 
-  /**
-   * Removes a downloaded model file from disk. Safe to call even if the file
-   * does not exist. Returns true if the file was present and removed.
-   */
-  async deleteModel(model: AiModel): Promise<boolean> {
-    const partial = new File(aiModelService.getPartialModelPath(model));
-    if (partial.exists) partial.delete();
-    const file = new File(aiModelService.getLocalModelPath(model));
-    if (!file.exists) return false;
-    file.delete();
-    return true;
+  setActiveRecord(record: ActiveModelRecord | null) {
+    if (!record) {
+      storage.remove(ACTIVE_MODEL_KEY);
+      return;
+    }
+    storage.set(ACTIVE_MODEL_KEY, JSON.stringify(record));
+  },
+
+  getActiveModelId(): AiModelId | null {
+    return aiModelService.getActiveRecord()?.id ?? null;
+  },
+
+  getActiveModel(): AiModel | null {
+    return findModel(aiModelService.getActiveModelId());
+  },
+
+  getActiveModelPath(): string | null {
+    return aiModelService.getActiveRecord()?.path ?? null;
   },
 };

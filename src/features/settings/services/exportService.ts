@@ -29,7 +29,7 @@ export interface NomadSafeExport {
     defaultCheckInDuration: number;
   };
   emergencyContacts: ReturnType<typeof emergencyContactsStorage.get>;
-  aiModel: { activeId: string | null; downloadedId: string | null } | null;
+  aiModel: { activeId: string | null } | null;
 }
 
 function buildExport(): NomadSafeExport {
@@ -62,7 +62,6 @@ function buildExport(): NomadSafeExport {
     emergencyContacts: emergencyContactsStorage.get(),
     aiModel: {
       activeId: aiModelService.getActiveModelId(),
-      downloadedId: aiModelService.getDownloadedModelId(),
     },
   };
 }

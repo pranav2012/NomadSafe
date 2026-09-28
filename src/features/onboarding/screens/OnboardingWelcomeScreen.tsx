@@ -27,7 +27,8 @@ import { Icon } from "@/components/nomad/Icon";
 import { WelcomeStep } from "@/features/onboarding/components/WelcomeStep";
 import { SafetyStep, type ContactsSummary } from "@/features/onboarding/components/SafetyStep";
 import { LedgerStep } from "@/features/onboarding/components/LedgerStep";
-import { AIStep, type AiSetupStatus } from "@/features/onboarding/components/AIStep";
+import { AIStep } from "@/features/onboarding/components/AIStep";
+import { ensureProvisioned, useProvisioningStore } from "@/features/ai";
 import { SecureStep } from "@/features/onboarding/components/SecureStep";
 import { ReadyStep } from "@/features/onboarding/components/ReadyStep";
 import { emergencyContactsStorage } from "@/features/onboarding/services/emergencyContactsStorage";
@@ -65,10 +66,15 @@ export default function OnboardingWelcomeScreen() {
   const [step, setStep] = useState(() => clampStep(persistedStep));
   const [direction, setDirection] = useState<1 | -1>(1);
   const [contacts, setContacts] = useState<ContactsSummary>(readContactsSummary);
-  const [aiStatus, setAiStatus] = useState<AiSetupStatus>("checking");
+  const aiPhase = useProvisioningStore((s) => s.phase);
   const scrollRef = useRef<ScrollView>(null);
 
   const last = step === STEP_IDS.length - 1;
+
+  // Start the model download as early as possible; onboarding never waits on it.
+  useEffect(() => {
+    void ensureProvisioned();
+  }, []);
 
   // Persist progress so a killed/relaunched session resumes where it left off.
   useEffect(() => {
@@ -173,7 +179,7 @@ export default function OnboardingWelcomeScreen() {
       case 2:
         return <LedgerStep theme={theme} totalSteps={NUMBERED_TOTAL} />;
       case 3:
-        return <AIStep theme={theme} totalSteps={NUMBERED_TOTAL} onStatusChange={setAiStatus} />;
+        return <AIStep theme={theme} totalSteps={NUMBERED_TOTAL} />;
       case 4:
         return <SecureStep theme={theme} totalSteps={NUMBERED_TOTAL} biometric={biometric} />;
       default:
@@ -181,11 +187,10 @@ export default function OnboardingWelcomeScreen() {
     }
   };
 
-  const aiCtaLabel = () => {
-    if (aiStatus === "downloading") return t("onboarding.continueDownloadBg");
-    if (aiStatus === "downloaded" || aiStatus === "unsupported") return t("common.continue");
-    return t("onboarding.skipForNow");
-  };
+  const aiCtaLabel = () =>
+    aiPhase === "queued" || aiPhase === "downloading" || aiPhase === "verifying" || aiPhase === "waitingForWifi"
+      ? t("onboarding.continueInBackground")
+      : t("common.continue");
 
   const ctaLabel =
     step === 0

@@ -31,7 +31,7 @@ import { Icon, type IconName } from "@/components/nomad/Icon";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { localAuth, useAuthStore, useBiometricPresentation } from "@/features/auth";
-import { useAiModels } from "@/features/ai";
+import { useProvisioningStore } from "@/features/ai";
 import { useTripsStore } from "@/features/trips/store/tripsStore";
 import { useExpensesStore } from "@/features/expenses/store/expensesStore";
 import { useSettingsStore } from "@/features/settings";
@@ -199,7 +199,7 @@ export default function SettingsScreen() {
 
   const trips = useTripsStore((s) => s.trips);
   const expenses = useExpensesStore((s) => s.expenses);
-  const { capability } = useAiModels();
+  const aiDeviceSupported = useProvisioningStore((s) => s.deviceSupported);
 
   const [contacts, setContacts] = useState(() => emergencyContactsStorage.get());
   const [biometricAvailable, setBiometricAvailable] = useState(false);
@@ -660,7 +660,7 @@ export default function SettingsScreen() {
             <Toggle
               value={localAiEnabled}
               onValueChange={setLocalAiEnabled}
-              disabled={!capability?.supported}
+              disabled={aiDeviceSupported === false}
               theme={theme}
             />
           }

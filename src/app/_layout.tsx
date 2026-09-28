@@ -25,8 +25,8 @@ import { api } from "@convex/_generated/api";
 import { authClient, useAuthStore, useSyncAuthSession } from "@/features/auth";
 import LockScreen from "@/features/auth/screens/LockScreen";
 import {
+  ensureProvisioned,
   localModelService,
-  modelDownloadManager,
   modelNotifications,
   registerModelDownloadTask,
   useChatStore,
@@ -106,7 +106,7 @@ function AppStateLock() {
 
         if (nextState !== "active" || prev === "active") return;
 
-        modelDownloadManager.resumeIfInterrupted();
+        void ensureProvisioned();
         isLocationBroadcastRunning().then((running) => {
           if (running !== useSharingStore.getState().isBroadcasting) {
             useSharingStore.getState().setBroadcasting(running);
@@ -213,12 +213,12 @@ function RootLayout() {
 
   useSyncAuthSession();
 
-  // Resume any model download interrupted by a previous app kill, wire up the
-  // background task, and prepare local notifications for download completion.
+  // Provision the device-matched model (resuming any download from a previous
+  // session), wire up the background task, and prepare download notifications.
   useEffect(() => {
     modelNotifications.configure();
     registerModelDownloadTask();
-    modelDownloadManager.resumeIfInterrupted();
+    void ensureProvisioned();
   }, []);
 
   if (!fontsLoaded) return null;

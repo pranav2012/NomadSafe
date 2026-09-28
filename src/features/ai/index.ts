@@ -2,10 +2,12 @@ export { default as AiScreen } from "./screens/AiScreen";
 export {
   aiModelService,
   AI_MODELS,
+  findModel,
+  formatBytes,
   formatModelSize,
+  pickModelForDevice,
   type AiModel,
-  type AiModelCategory,
-  type DeviceCapability,
+  type AiModelId,
 } from "./services/aiModelService";
 export {
   localModelService,
@@ -16,17 +18,18 @@ export {
   type TripNameSuggestion,
 } from "./services/localModelService";
 export {
-  modelDownloadManager,
-  deleteDownloadedModel,
-  type DownloadErrorCode,
-  type DownloadState,
-  type DownloadStatus,
-} from "./services/modelDownloadManager";
+  ensureProvisioned,
+  useProvisioningStore,
+  wipeModels,
+  type ProvisionErrorCode,
+  type ProvisionPhase,
+  type ProvisioningState,
+} from "./services/modelProvisioner";
 export { modelNotifications } from "./services/modelNotifications";
 export {
   registerModelDownloadTask,
   MODEL_DOWNLOAD_TASK,
 } from "./services/modelDownloadTask";
-export { useModelDownload } from "./hooks/useModelDownload";
-export { useAiModels } from "./hooks/useAiModels";
+export { useAiProvisioning, useAiReadyModelId } from "./hooks/useAiProvisioning";
+export { provisionPercent } from "./utils/provisionCopy";
 export { useChatStore, type ChatMessage } from "./store/chatStore";

@@ -19,6 +19,8 @@ import { GENERAL_CHAT_KEY, useChatStore, useChatStreamStore, type ChatMessage } 
 import { localModelService } from "../services/localModelService";
 import { modelNotifications } from "../services/modelNotifications";
 import type { MoneyIntent } from "../services/moneyFacts";
+import { useAiProvisioning } from "../hooks/useAiProvisioning";
+import { provisionUnavailableText } from "../utils/provisionCopy";
 import { useTripsStore } from "@/features/trips/store/tripsStore";
 
 interface Props {
@@ -187,6 +189,8 @@ export function AiChat({ theme, activeModelName }: Props) {
   const streamingText = useChatStreamStore((s) =>
     s.conversationKey === conversationKey ? s.text : null,
   );
+  const provisioning = useAiProvisioning();
+  const unavailableText = provisioning.isReady ? null : provisionUnavailableText(provisioning, t);
   const [input, setInput] = useState("");
   const [notifyEnabled, setNotifyEnabled] = useState(() => modelNotifications.isEnabled());
   const [notifyDismissed, setNotifyDismissed] = useState(false);
@@ -240,7 +244,7 @@ export function AiChat({ theme, activeModelName }: Props) {
     const accepted = sendMessage(
       conversationKey,
       q,
-      { noModel: t("aiTab.chatNoModel"), error: t("aiTab.chatModelLoadError") },
+      { noModel: unavailableText ?? t("aiTab.provision.chatPreparing"), error: t("aiTab.chatModelLoadError") },
       { intent },
     );
     if (!accepted) return;
@@ -268,7 +272,7 @@ export function AiChat({ theme, activeModelName }: Props) {
     return formatDate(timestamp);
   };
 
-  const showNotifyBanner = !notifyEnabled && !notifyDismissed;
+  const showNotifyBanner = !notifyEnabled && !notifyDismissed && !unavailableText;
   const busyElsewhere = generatingKey !== null && !isGenerating;
   const canSend = input.trim().length > 0 && generatingKey === null;
   const lastIndex = messages.length - 1;
@@ -277,6 +281,15 @@ export function AiChat({ theme, activeModelName }: Props) {
     <View ref={containerRef} style={{ flex: 1 }} onLayout={measureOffset}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding" keyboardVerticalOffset={keyboardOffset}>
         <View style={{ flex: 1 }}>
+          {unavailableText ? (
+            <View
+              accessibilityLiveRegion="polite"
+              style={[styles.notifyBanner, { backgroundColor: theme.paperSoft, borderColor: theme.hairline }]}
+            >
+              <Icon name={provisioning.phase === "waitingForWifi" ? "wifi" : "download"} size={15} color={theme.inkSoft} strokeWidth={2} />
+              <Text style={[styles.notifyText, { color: theme.inkDeep }]}>{unavailableText}</Text>
+            </View>
+          ) : null}
           {showNotifyBanner && (
             <View style={[styles.notifyBanner, { backgroundColor: theme.tealSoft, borderColor: theme.teal }]}>
               <Icon name="bell" size={15} color={theme.teal} strokeWidth={2} />

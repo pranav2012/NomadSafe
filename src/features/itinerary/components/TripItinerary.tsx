@@ -4,7 +4,7 @@ import { Icon } from "@/components/nomad/Icon";
 import { NOMAD_FONTS } from "@/constants/nomadTokens";
 import { useTheme } from "@/hooks/useTheme";
 import { useLocalization } from "@/localization";
-import { localModelService, useModelDownload } from "@/features/ai";
+import { localModelService, useAiReadyModelId } from "@/features/ai";
 import { useSettingsStore } from "@/features/settings";
 import type { Trip } from "@/features/trips/store/tripsStore";
 import {
@@ -50,7 +50,7 @@ export function TripItinerary({ trip }: { trip: Trip }) {
   const deleteEvent = useEventsStore((state) => state.deleteEvent);
   const deleteEvents = useEventsStore((state) => state.deleteEvents);
   const localAiEnabled = useSettingsStore((state) => state.localAiEnabled);
-  const aiDownload = useModelDownload();
+  const aiReadyModelId = useAiReadyModelId();
 
   const [expanded, setExpanded] = useState(false);
   const [isAiAvailable, setIsAiAvailable] = useState(false);
@@ -85,7 +85,7 @@ export function TripItinerary({ trip }: { trip: Trip }) {
     return () => {
       mounted = false;
     };
-  }, [aiDownload.modelId, aiDownload.status, localAiEnabled]);
+  }, [aiReadyModelId, localAiEnabled]);
 
   const handleSave = (values: EventFormValues) => {
     if (editing && editing !== "new") {

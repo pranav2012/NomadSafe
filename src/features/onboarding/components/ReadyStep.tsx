@@ -3,7 +3,7 @@ import { View, Text, StyleSheet } from "react-native";
 import Animated, { ZoomIn } from "react-native-reanimated";
 import { NOMAD_FONTS, type NomadTheme } from "@/constants/nomadTokens";
 import { useAuthStore, type BiometricPresentation } from "@/features/auth";
-import { useAiModels } from "@/features/ai";
+import { findModel, provisionPercent, useAiProvisioning } from "@/features/ai";
 import { useLocalization } from "@/localization";
 import { Stamp } from "@/components/nomad/Stamp";
 import { Icon, type IconName } from "@/components/nomad/Icon";
@@ -33,7 +33,7 @@ export function ReadyStep({ theme, biometric }: Props) {
   const { t } = useLocalization();
   const isPinSet = useAuthStore((s) => s.isPinSet);
   const biometricEnabled = useAuthStore((s) => s.biometricEnabled);
-  const { models, capability, isChecking } = useAiModels();
+  const provisioning = useAiProvisioning();
   const [locationGranted, setLocationGranted] = useState<boolean | null>(null);
   const [notificationsGranted, setNotificationsGranted] = useState<boolean | null>(null);
   const [contacts] = useState(() => emergencyContactsStorage.get());
@@ -52,18 +52,29 @@ export function ReadyStep({ theme, biometric }: Props) {
 
   const notSet = t("onboarding.notSetYet");
   const contactsWithPhone = contacts.filter((c) => isValidPhone(c.phone)).length;
-  const downloadedModel = models.find((m) => m.isDownloaded);
-  const downloadingModel = models.find((m) => m.isDownloading || m.isPaused);
+  const readyModel = findModel(provisioning.activeModelId);
 
-  const aiValue = isChecking
-    ? t("onboarding.checkingDevice")
-    : downloadedModel
-      ? t("onboarding.aiReadyValue", { model: downloadedModel.model.name })
-      : downloadingModel
-        ? t("onboarding.modelDownloading", { progress: downloadingModel.progress })
-        : capability?.supported
-          ? t("onboarding.aiSkippedValue")
-          : t("onboarding.aiUnavailableValue");
+  const aiValue = (() => {
+    if (provisioning.phase === "ready" && readyModel) return t("onboarding.aiReadyValue", { model: readyModel.name });
+    switch (provisioning.phase) {
+      case "queued":
+      case "downloading":
+      case "verifying":
+        return t("onboarding.aiDownloadingValue", { percent: provisionPercent(provisioning) });
+      case "waitingForWifi":
+        return t("onboarding.aiWaitingValue");
+      case "insufficientStorage":
+        return t("onboarding.aiStorageValue");
+      case "unsupportedDevice":
+        return t("onboarding.aiUnavailableValue");
+      case "disabled":
+        return t("onboarding.aiOffValue");
+      case "error":
+        return t("onboarding.aiErrorValue");
+      default:
+        return readyModel ? t("onboarding.aiReadyValue", { model: readyModel.name }) : t("aiTab.provision.checking");
+    }
+  })();
 
   const rows: RecapRow[] = [
     {
@@ -108,7 +119,7 @@ export function ReadyStep({ theme, biometric }: Props) {
       l: t("onboarding.steps.onDeviceAi"),
       v: aiValue,
       c: theme.teal,
-      done: !!downloadedModel,
+      done: provisioning.phase === "ready",
     },
   ];
 

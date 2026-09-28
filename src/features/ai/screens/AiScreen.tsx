@@ -17,7 +17,9 @@ import { Icon } from "@/components/nomad/Icon";
 import { AiModelManager } from "../components/AiModelManager";
 import { AiDashboard } from "../components/AiDashboard";
 import { AiChat } from "../components/AiChat";
-import { useAiModels } from "../hooks/useAiModels";
+import { useAiProvisioning } from "../hooks/useAiProvisioning";
+import { findModel } from "../services/aiModelService";
+import { provisionPercent } from "../utils/provisionCopy";
 
 type Tab = "dashboard" | "chat" | "models";
 
@@ -27,13 +29,20 @@ export default function AiScreen() {
   const router = useRouter();
   const theme = nomad.colors;
   const localAiEnabled = useSettingsStore((s) => s.localAiEnabled);
-  const { models } = useAiModels();
+  const provisioning = useAiProvisioning();
   const [tab, setTab] = useState<Tab>("dashboard");
 
-  // Mirrors the chat's model pick: the active model if it fits this device, else any usable download.
-  const usableModels = models.filter((m) => m.isDownloaded && !m.needsMoreRam);
-  const activeModel = usableModels.find((m) => m.isActive) ?? usableModels[0] ?? null;
-  const anyDownloaded = usableModels.length > 0;
+  const activeModel = findModel(provisioning.activeModelId);
+  const anyDownloaded = activeModel !== null;
+  const downloading = provisioning.phase === "downloading" || provisioning.phase === "verifying";
+  const pillText =
+    provisioning.phase === "ready" || (anyDownloaded && !downloading)
+      ? t("aiTab.offlineReady")
+      : downloading
+        ? t("aiTab.provision.pillDownloading", { percent: provisionPercent(provisioning) })
+        : provisioning.phase === "waitingForWifi"
+          ? t("aiTab.provision.waitingForWifiTitle")
+          : t("aiTab.noModel");
 
   if (!localAiEnabled) {
     return (
@@ -103,7 +112,7 @@ export default function AiScreen() {
               { color: anyDownloaded ? theme.teal : theme.inkMuted },
             ]}
           >
-            {anyDownloaded ? t("aiTab.offlineReady") : t("aiTab.noModel")}
+            {pillText}
           </Text>
         </View>
       </View>
@@ -112,7 +121,7 @@ export default function AiScreen() {
         {[
           { id: "dashboard" as Tab, label: t("aiTab.dashboard"), icon: "trendUp" as const },
           { id: "chat" as Tab, label: t("aiTab.chat"), icon: "sparkle" as const },
-          { id: "models" as Tab, label: t("aiTab.models"), icon: "cpu" as const },
+          { id: "models" as Tab, label: t("aiTab.modelTab"), icon: "cpu" as const },
         ].map((tItem) => {
           const active = tab === tItem.id;
           return (
@@ -145,9 +154,9 @@ export default function AiScreen() {
         {tab === "dashboard" ? (
           <AiDashboard theme={theme} />
         ) : tab === "chat" ? (
-          <AiChat theme={theme} activeModelName={activeModel?.model.name ?? null} />
+          <AiChat theme={theme} activeModelName={activeModel?.name ?? null} />
         ) : (
-          <AiModelManager theme={theme} onEnableAi={() => setTab("dashboard")} />
+          <AiModelManager theme={theme} />
         )}
       </View>
     </SafeAreaView>

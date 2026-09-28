@@ -5,16 +5,14 @@ import type {
   DownloadProgressData,
   FileSystemDownloadResult,
 } from "expo-file-system/legacy";
-import * as Network from "expo-network";
 import { storage } from "@/stores/storage";
 import {
   aiModelService,
   AI_DOWNLOAD_STATE_KEY,
-  AI_MODELS,
+  findModel,
+  modelFileSize,
   type AiModel,
 } from "./aiModelService";
-import { localModelService } from "./localModelService";
-import { modelNotifications } from "./modelNotifications";
 
 export type DownloadStatus =
   | "idle"
@@ -37,7 +35,7 @@ export interface DownloadState {
   /** Raw diagnostic message (English); use errorCode for user-facing copy. */
   error: string | null;
   errorCode: DownloadErrorCode | null;
-  /** True when the user paused; such downloads are never auto-resumed. */
+  /** True when paused on purpose rather than interrupted by a kill or network error. */
   pausedByUser: boolean;
 }
 
@@ -114,33 +112,11 @@ function expectedTotalBytes(result: FileSystemDownloadResult): number | null {
   return null;
 }
 
-async function fileSize(uri: string): Promise<number | null> {
-  try {
-    const info = await LegacyFileSystem.getInfoAsync(uri);
-    return info.exists && !info.isDirectory ? info.size : null;
-  } catch {
-    return null;
-  }
-}
-
 async function deleteQuietly(uri: string) {
   try {
     await LegacyFileSystem.deleteAsync(uri, { idempotent: true });
   } catch {
     // ignore
-  }
-}
-
-async function isOnUnmeteredNetwork(): Promise<boolean> {
-  try {
-    const state = await Network.getNetworkStateAsync();
-    return (
-      state.isConnected === true &&
-      (state.type === Network.NetworkStateType.WIFI ||
-        state.type === Network.NetworkStateType.ETHERNET)
-    );
-  } catch {
-    return false;
   }
 }
 
@@ -164,6 +140,11 @@ class ModelDownloadManager {
   private deriveInitialState(): DownloadState {
     const persisted = readPersisted();
     if (!persisted) return { ...IDLE_STATE };
+    // Legacy ids map to a new revision, so their resume data is unusable.
+    if (findModel(persisted.modelId)?.id !== persisted.modelId) {
+      writePersisted(null);
+      return { ...IDLE_STATE };
+    }
     return {
       modelId: persisted.modelId,
       // A persisted "downloading" status means the app was killed mid-download.
@@ -227,22 +208,22 @@ class ModelDownloadManager {
   }
 
   private remainingBytes(model: AiModel): number {
-    const total = model.sizeBytes ?? model.sizeMb * MB;
+    const total = model.sizeBytes;
     const done = this.state.modelId === model.id ? this.state.progress / 100 : 0;
     return Math.max(0, total * (1 - done));
   }
 
   /**
-   * Begins a download for the given model. Resolves immediately if the model is
-   * already on disk, resumes if a partial download for it exists, and ignores
-   * repeat calls while a download is starting or running.
+   * Begins a download for the given model. Resolves immediately if the file is
+   * already complete, resumes a partial download for it, and ignores repeat
+   * calls while a download is starting or running.
    */
   async start(model: AiModel): Promise<void> {
     if (this.starting || this.state.status === "downloading") return;
     this.starting = true;
     try {
-      if (await aiModelService.isModelDownloaded(model)) {
-        await this.markCompleted(model, { notify: false });
+      if (await isComplete(model)) {
+        this.markCompleted(model);
         return;
       }
 
@@ -253,7 +234,7 @@ class ModelDownloadManager {
         return;
       }
 
-      if (!hasFreeSpaceFor(model.sizeBytes ?? model.sizeMb * MB)) {
+      if (!hasFreeSpaceFor(model.sizeBytes)) {
         this.fail(model, "insufficientStorage", "Not enough free storage for the model.");
         return;
       }
@@ -308,8 +289,8 @@ class ModelDownloadManager {
     }
     this.starting = true;
     try {
-      if (await aiModelService.isModelDownloaded(model)) {
-        await this.markCompleted(model, { notify: false });
+      if (await isComplete(model)) {
+        this.markCompleted(model);
         return;
       }
       if (!hasFreeSpaceFor(this.remainingBytes(model))) {
@@ -364,20 +345,6 @@ class ModelDownloadManager {
     this.emit({ ...IDLE_STATE });
   }
 
-  /**
-   * Picks up a download interrupted by an app kill or network failure on app
-   * launch / foreground / background task. Never resumes a download the user
-   * paused, and only auto-resumes on Wi-Fi/Ethernet. Safe to call repeatedly.
-   */
-  async resumeIfInterrupted(): Promise<void> {
-    const { status, pausedByUser, errorCode } = this.state;
-    const interrupted =
-      (status === "paused" && !pausedByUser) || (status === "error" && errorCode === "network");
-    if (!interrupted) return;
-    if (!(await isOnUnmeteredNetwork())) return;
-    await this.resume();
-  }
-
   private async runDownload(
     model: AiModel,
     run: () => Promise<FileSystemDownloadResult | undefined>,
@@ -406,32 +373,26 @@ class ModelDownloadManager {
     }
   }
 
-  /** Verifies HTTP status and size of the .part file, then moves it into place. */
+  /** Verifies HTTP status and exact size of the .part file, then moves it into place. */
   private async finalize(model: AiModel, result: FileSystemDownloadResult) {
     if (result.status !== 200 && result.status !== 206) {
       throw new DownloadError("server", `Download failed with HTTP ${result.status}.`);
     }
     const partUri = aiModelService.getPartialModelPath(model);
-    const size = await fileSize(partUri);
-    const expected = model.sizeBytes ?? expectedTotalBytes(result) ?? (this.progressExpectedBytes || null);
-    if (
-      size === null ||
-      size < aiModelService.getMinimumCompleteBytes(model) ||
-      (expected !== null && size < expected)
-    ) {
-      throw new DownloadError("incomplete", `Downloaded file is incomplete (${size ?? 0} of ${expected ?? "?"} bytes).`);
+    const size = await modelFileSize(partUri);
+    if (size !== model.sizeBytes) {
+      const served = expectedTotalBytes(result) ?? (this.progressExpectedBytes || "?");
+      throw new DownloadError("incomplete", `Downloaded ${size ?? 0} bytes, expected ${model.sizeBytes} (server: ${served}).`);
     }
 
     const finalUri = aiModelService.getLocalModelPath(model);
     await deleteQuietly(finalUri);
     await LegacyFileSystem.moveAsync({ from: partUri, to: finalUri });
-    await this.markCompleted(model, { notify: true });
+    this.markCompleted(model);
   }
 
-  private async markCompleted(model: AiModel, opts: { notify: boolean }) {
+  private markCompleted(model: AiModel) {
     this.resumable = null;
-    aiModelService.setDownloadedModelId(model.id);
-    aiModelService.setActiveModelId(model.id);
     writePersisted(null);
     this.emit({
       modelId: model.id,
@@ -441,14 +402,15 @@ class ModelDownloadManager {
       errorCode: null,
       pausedByUser: false,
     });
-    if (opts.notify) {
-      await modelNotifications.notifyModelReady(model.name);
-    }
   }
 
   private currentModel(): AiModel | null {
-    return AI_MODELS.find((m) => m.id === this.state.modelId) ?? null;
+    return findModel(this.state.modelId);
   }
+}
+
+async function isComplete(model: AiModel): Promise<boolean> {
+  return (await modelFileSize(aiModelService.getLocalModelPath(model))) === model.sizeBytes;
 }
 
 function messageFrom(err: unknown): string {
@@ -456,37 +418,3 @@ function messageFrom(err: unknown): string {
 }
 
 export const modelDownloadManager = new ModelDownloadManager();
-
-/**
- * Deletes a fully downloaded model file from disk and clears the selected /
- * downloaded / active IDs when that model was the only one tracked. Other
- * downloaded models are left untouched.
- */
-export async function deleteDownloadedModel(model: AiModel): Promise<void> {
-  await localModelService.release();
-  const removed = await aiModelService.deleteModel(model);
-  if (!removed) return;
-
-  const downloadedId = aiModelService.getDownloadedModelId();
-  const selectedId = aiModelService.getSelectedModelId();
-  const activeId = aiModelService.getActiveModelId();
-
-  if (downloadedId === model.id) {
-    aiModelService.setDownloadedModelId("");
-  }
-  if (selectedId === model.id) {
-    aiModelService.setSelectedModelId("");
-  }
-  if (activeId === model.id) {
-    aiModelService.setActiveModelId("");
-  }
-
-  // If another model is still on disk, promote it as the new default.
-  for (const candidate of AI_MODELS) {
-    if (candidate.id !== model.id && (await aiModelService.isModelDownloaded(candidate))) {
-      aiModelService.setDownloadedModelId(candidate.id);
-      aiModelService.setActiveModelId(candidate.id);
-      return;
-    }
-  }
-}

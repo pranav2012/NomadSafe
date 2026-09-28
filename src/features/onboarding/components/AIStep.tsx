@@ -1,13 +1,5 @@
 import React, { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  ActivityIndicator,
-  Alert,
-  Platform,
-} from "react-native";
+import { View, Text, StyleSheet, Alert, Platform } from "react-native";
 import Svg, { Line, Path, Rect } from "react-native-svg";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
@@ -29,21 +21,13 @@ import {
   HugeHeadline,
   HeadlineItalic,
 } from "@/components/nomad/Typography";
-import {
-  AI_MODELS,
-  modelNotifications,
-  useAiModels,
-  type AiModel,
-} from "@/features/ai";
-import type { ModelListItem } from "@/features/ai/hooks/useAiModels";
+import { formatBytes, modelNotifications, useAiProvisioning } from "@/features/ai";
+import { AiProvisionCard } from "@/features/ai/components/AiProvisionCard";
 import { ToggleRow } from "@/features/onboarding/components/ToggleRow";
-
-export type AiSetupStatus = "checking" | "unsupported" | "none" | "downloading" | "downloaded";
 
 interface Props {
   theme: NomadTheme;
   totalSteps: number;
-  onStatusChange?: (status: AiSetupStatus) => void;
 }
 
 // Illustrative prompts only; answers contain no user data.
@@ -129,41 +113,12 @@ function PulseRing({ index, color }: { index: number; color: string }) {
   );
 }
 
-export function AIStep({ theme, totalSteps, onStatusChange }: Props) {
-  const { t, isRTL } = useLocalization();
+export function AIStep({ theme, totalSteps }: Props) {
+  const { t, isRTL, locale } = useLocalization();
   const [qIdx, setQIdx] = useState(0);
   const [notifyEnabled, setNotifyEnabled] = useState(() => modelNotifications.isEnabled());
-  const {
-    models,
-    capability,
-    isChecking,
-    downloadErrorCode,
-    formatSize,
-    setDefaultModel,
-    startDownload,
-    pauseDownload,
-    resumeDownload,
-    cancelDownload,
-  } = useAiModels();
-
-  const supported = capability?.supported ?? false;
-  const assigned = AI_MODELS.find((m) => m.id === capability?.assignedCategory) ?? AI_MODELS[0];
-  const downloadingItem = models.find((m) => m.isDownloading || m.isPaused) ?? null;
-  const hasDownloaded = models.some((m) => m.isDownloaded);
-
-  const status: AiSetupStatus = isChecking
-    ? "checking"
-    : hasDownloaded
-      ? "downloaded"
-      : !supported
-        ? "unsupported"
-        : downloadingItem
-          ? "downloading"
-          : "none";
-
-  useEffect(() => {
-    onStatusChange?.(status);
-  }, [status, onStatusChange]);
+  const { model, deviceSupported, phase } = useAiProvisioning();
+  const supported = deviceSupported !== false && phase !== "unsupportedDevice";
 
   useEffect(() => {
     const timer = setInterval(() => setQIdx((i) => (i + 1) % exampleKeys.length), 2600);
@@ -197,221 +152,6 @@ export function AIStep({ theme, totalSteps, onStatusChange }: Props) {
     );
   }, [badgePulse]);
   const badgePulseStyle = useAnimatedStyle(() => ({ opacity: badgePulse.value }));
-
-  const beginDownload = (model: AiModel) => {
-    startDownload(model).catch((err) => {
-      console.warn("Model download failed to start", err);
-      Alert.alert(t("onboarding.downloadModelTitle"), t("aiTab.downloadError.unknown"));
-    });
-  };
-
-  const selectModel = (item: ModelListItem) => {
-    if (item.isDownloaded) {
-      setDefaultModel(item.model);
-      return;
-    }
-    const { model } = item;
-    Alert.alert(
-      t("onboarding.downloadModelTitle"),
-      t("onboarding.downloadModelBody", {
-        model: model.name,
-        size: formatSize(model.sizeMb),
-        ram: model.recommendedRamGb,
-      }),
-      [
-        { text: t("common.cancel"), style: "cancel" },
-        { text: t("common.continue"), onPress: () => beginDownload(model) },
-      ],
-    );
-  };
-
-  const renderCapabilityStatus = () => {
-    if (isChecking || !capability) {
-      return (
-        <View style={[styles.statusRow, { backgroundColor: theme.paperSoft, borderColor: theme.hairline }]}>
-          <ActivityIndicator size="small" color={theme.inkSoft} />
-          <Text style={[styles.statusText, { color: theme.inkSoft }]}>{t("onboarding.checkingDevice")}</Text>
-        </View>
-      );
-    }
-
-    const ram = capability.totalMemoryGb > 0
-      ? ` · ${t("onboarding.deviceRam", { ram: capability.totalMemoryGb })}`
-      : "";
-
-    if (!capability.supported) {
-      const subKey = capability.reason === "lowRam" ? "onboarding.unsupportedAiSub" : "onboarding.limitedAiSub";
-      return (
-        <View
-          accessibilityRole="alert"
-          style={[styles.statusRow, { backgroundColor: theme.stamp + "16", borderColor: theme.stamp }]}
-        >
-          <Icon name="alertTriangle" size={18} color={theme.stamp} strokeWidth={2} />
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.statusTitle, { color: theme.inkDeep }]}>{t("onboarding.deviceUnsupported")}{ram}</Text>
-            <Text style={[styles.statusSub, { color: theme.inkSoft }]}>{t(subKey)}</Text>
-          </View>
-        </View>
-      );
-    }
-
-    return (
-      <View style={[styles.statusRow, { backgroundColor: theme.tealSoft, borderColor: theme.teal }]}>
-        <Icon name="check" size={18} color={theme.teal} strokeWidth={2} />
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.statusTitle, { color: theme.inkDeep }]}>
-            {t("onboarding.deviceSupported")}{ram}
-          </Text>
-          <Text style={[styles.statusSub, { color: theme.inkSoft }]}>
-            {t("onboarding.modelAssigned", { model: assigned.name, quant: assigned.quantLabel })}
-          </Text>
-        </View>
-      </View>
-    );
-  };
-
-  const renderModelList = () => {
-    if (isChecking || !supported) return null;
-
-    const sectionTitle = capability?.limited
-      ? t("onboarding.modelAssignedTitle")
-      : t("onboarding.selectModel");
-
-    return (
-      <View style={{ paddingHorizontal: 16, paddingTop: 14, gap: 8 }}>
-        <Text style={[styles.sectionLabel, { color: theme.inkMuted }]}>{sectionTitle}</Text>
-        {models.map((item) => {
-          const { model, isAvailable, isDownloaded, isRecommended, isPaused, progress } = item;
-          const isDownloading = item.isDownloading || isPaused;
-          const isSelected = (item.isActive && isDownloaded) || isDownloading;
-          const disabled = !isAvailable || (downloadingItem !== null && !isDownloaded);
-          const fColor = isAvailable ? theme.teal : theme.inkMuted;
-          return (
-            <Pressable
-              key={model.id}
-              disabled={disabled}
-              onPress={() => selectModel(item)}
-              accessibilityRole="button"
-              accessibilityLabel={model.name}
-              accessibilityState={{ selected: isSelected, disabled, busy: item.isDownloading }}
-              style={({ pressed }) => [
-                styles.modelRow,
-                {
-                  backgroundColor: isSelected ? theme.tealSoft : theme.paperSoft,
-                  borderColor: isSelected ? theme.teal : theme.hairline,
-                  opacity: !isAvailable ? 0.55 : pressed ? 0.9 : 1,
-                },
-              ]}
-            >
-              <View style={[styles.modelIcon, { backgroundColor: fColor + "22" }]}>
-                <Icon name="sparkle" size={16} color={fColor} strokeWidth={2} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                  <Text style={[styles.modelName, { color: theme.inkDeep }]}>{model.name}</Text>
-                  {isRecommended && (
-                    <View style={[styles.badge, { backgroundColor: theme.mustard }]}>
-                      <Text style={[styles.badgeText, { color: theme.inkDeep }]}>{t("onboarding.modelRecommended")}</Text>
-                    </View>
-                  )}
-                </View>
-                <Text style={[styles.modelSub, { color: theme.inkSoft }]}>
-                  {isDownloading
-                    ? isPaused
-                      ? t("onboarding.modelPaused", { progress })
-                      : t("onboarding.modelDownloading", { progress })
-                    : isDownloaded
-                      ? t("onboarding.modelDownloaded")
-                      : t(model.descriptionKey)}
-                </Text>
-                <Text style={[styles.modelRequirement, { color: theme.inkMuted }]}>
-                  {t("onboarding.modelRequiredRam", { ram: model.recommendedRamGb })} · {formatSize(model.sizeMb)} · {model.quantLabel}
-                </Text>
-                {isDownloaded && isSelected && (
-                  <Text style={[styles.modelNote, { color: theme.inkMuted }]}>
-                    {t("onboarding.modelWillLoad")}
-                  </Text>
-                )}
-              </View>
-              {!isAvailable ? (
-                <Icon name="alertTriangle" size={16} color={theme.stamp} strokeWidth={2} />
-              ) : isDownloaded ? (
-                <Icon name="check" size={16} color={theme.teal} strokeWidth={2.4} />
-              ) : isDownloading ? (
-                isPaused ? (
-                  <Icon name="pause" size={16} color={theme.mustard} strokeWidth={2} />
-                ) : (
-                  <ActivityIndicator size="small" color={theme.teal} />
-                )
-              ) : (
-                <Icon name="chevronRight" size={16} color={theme.inkMuted} strokeWidth={2} />
-              )}
-            </Pressable>
-          );
-        })}
-        {downloadingItem !== null && (
-          <View style={[styles.dlControls, { backgroundColor: theme.paperSoft, borderColor: theme.hairline }]}>
-            <View
-              accessibilityRole="progressbar"
-              accessibilityValue={{ min: 0, max: 100, now: downloadingItem.progress }}
-              style={[styles.dlTrack, { backgroundColor: theme.hairline }]}
-            >
-              <View
-                style={[
-                  styles.dlFill,
-                  {
-                    width: `${downloadingItem.progress}%`,
-                    backgroundColor: downloadingItem.isPaused ? theme.mustard : theme.teal,
-                  },
-                ]}
-              />
-            </View>
-            <View style={styles.dlButtons}>
-              <Pressable
-                onPress={() => (downloadingItem.isPaused ? resumeDownload() : pauseDownload())}
-                accessibilityRole="button"
-                style={[styles.dlBtn, { borderColor: theme.hairline }]}
-              >
-                <Icon
-                  name={downloadingItem.isPaused ? "play" : "pause"}
-                  size={13}
-                  color={theme.inkDeep}
-                  strokeWidth={2}
-                />
-                <Text style={[styles.dlBtnText, { color: theme.inkDeep }]}>
-                  {downloadingItem.isPaused ? t("onboarding.resumeDownload") : t("onboarding.pauseDownload")}
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={() => cancelDownload()}
-                accessibilityRole="button"
-                style={[styles.dlBtn, { borderColor: theme.stamp }]}
-              >
-                <Icon name="x" size={13} color={theme.stamp} strokeWidth={2} />
-                <Text style={[styles.dlBtnText, { color: theme.stamp }]}>
-                  {t("common.cancel")}
-                </Text>
-              </Pressable>
-            </View>
-            <Text style={[styles.dlHint, { color: theme.inkMuted }]}>
-              {t("onboarding.downloadBackgroundHint")}
-            </Text>
-          </View>
-        )}
-        {downloadErrorCode ? (
-          <View
-            accessibilityRole="alert"
-            style={[styles.errorRow, { backgroundColor: theme.stamp + "16", borderColor: theme.stamp }]}
-          >
-            <Icon name="alertTriangle" size={16} color={theme.stamp} strokeWidth={2} />
-            <Text style={[styles.errorText, { color: theme.stamp }]}>
-              {t(`aiTab.downloadError.${downloadErrorCode}`)}
-            </Text>
-          </View>
-        ) : null}
-      </View>
-    );
-  };
 
   return (
     <View style={{ flex: 1 }}>
@@ -623,7 +363,9 @@ export function AIStep({ theme, totalSteps, onStatusChange }: Props) {
               </Svg>
               <View style={{ marginStart: 8, flexShrink: 1 }}>
                 <Text style={styles.chipTitle}>{t("onboarding.onDeviceModel")}</Text>
-                <Text style={styles.chipSub}>{formatSize(assigned.sizeMb)} · {assigned.quantLabel}</Text>
+                {model ? (
+                  <Text style={styles.chipSub}>{formatBytes(model.sizeBytes, locale)} · {model.quantLabel}</Text>
+                ) : null}
               </View>
             </View>
 
@@ -645,20 +387,15 @@ export function AIStep({ theme, totalSteps, onStatusChange }: Props) {
           <HeadlineItalic>{t("onboarding.aiHeadlineAccent")}</HeadlineItalic>.
         </HugeHeadline>
         <Text style={[styles.lede, { color: theme.inkSoft }]}>
-          {t("onboarding.aiLede")}
+          {t("onboarding.aiLedeAuto")}
         </Text>
       </View>
 
-      {/* Device capability status */}
       <View style={{ paddingHorizontal: 16, paddingTop: 18 }}>
-        {renderCapabilityStatus()}
+        <AiProvisionCard theme={theme} mode="onboarding" />
       </View>
 
-      {/* Model list */}
-      {renderModelList()}
-
-      {/* Notify-when-ready toggle */}
-      {!isChecking && supported && (
+      {supported && (
         <View style={{ paddingHorizontal: 16, paddingTop: 10 }}>
           <ToggleRow
             theme={theme}
@@ -670,7 +407,7 @@ export function AIStep({ theme, totalSteps, onStatusChange }: Props) {
         </View>
       )}
 
-      {/* What it can do — compact tiles, visually distinct from model rows */}
+      {/* What it can do */}
       <View style={{ paddingHorizontal: 16, paddingTop: 18 }}>
         <Text style={[styles.capabilitiesLabel, { color: theme.inkMuted }]}>
           {t("onboarding.aiCapabilities")}
@@ -707,17 +444,8 @@ export function AIStep({ theme, totalSteps, onStatusChange }: Props) {
         </View>
       </View>
 
-      <View style={{ paddingHorizontal: 26, paddingTop: 14, gap: 4 }}>
-        {supported && (
-          <Text style={[styles.estText, { color: theme.inkMuted }]}>
-            {t("onboarding.downloadEstimate", { size: formatSize(assigned.sizeMb) })}
-          </Text>
-        )}
-        {status !== "downloaded" && (
-          <Text style={[styles.estText, { color: theme.inkMuted }]}>
-            {t("onboarding.aiSkipHint")}
-          </Text>
-        )}
+      <View style={{ paddingHorizontal: 26, paddingTop: 14 }}>
+        <Text style={[styles.estText, { color: theme.inkMuted }]}>{t("onboarding.aiContinueHint")}</Text>
       </View>
     </View>
   );
@@ -956,140 +684,9 @@ const styles = StyleSheet.create({
     lineHeight: 13,
     fontFamily: NOMAD_FONTS.ui,
   },
-  dlControls: {
-    borderRadius: 14,
-    borderWidth: 1,
-    padding: 12,
-    gap: 10,
-  },
-  dlTrack: {
-    height: 5,
-    borderRadius: 999,
-    overflow: "hidden",
-  },
-  dlFill: {
-    height: "100%",
-    borderRadius: 999,
-  },
-  dlButtons: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  dlBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 9,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  dlBtnText: {
-    fontSize: 12,
-    fontWeight: "600",
-    fontFamily: NOMAD_FONTS.uiSemi,
-  },
-  dlHint: {
-    fontSize: 10.5,
-    textAlign: "center",
-    fontFamily: NOMAD_FONTS.ui,
-  },
   estText: {
     fontSize: 11,
     fontFamily: NOMAD_FONTS.mono,
     letterSpacing: 0.3,
-  },
-  statusRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-  },
-  statusText: {
-    fontSize: 13,
-    fontFamily: NOMAD_FONTS.ui,
-  },
-  statusTitle: {
-    fontSize: 13,
-    fontWeight: "600",
-    fontFamily: NOMAD_FONTS.uiSemi,
-  },
-  statusSub: {
-    fontSize: 11,
-    marginTop: 1,
-    fontFamily: NOMAD_FONTS.ui,
-  },
-  sectionLabel: {
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
-    fontFamily: NOMAD_FONTS.uiBold,
-  },
-  modelRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-  },
-  modelIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  modelName: {
-    fontSize: 14,
-    fontWeight: "600",
-    fontFamily: NOMAD_FONTS.uiSemi,
-  },
-  modelSub: {
-    fontSize: 11,
-    marginTop: 1,
-    fontFamily: NOMAD_FONTS.ui,
-  },
-  modelRequirement: {
-    fontSize: 10,
-    marginTop: 2,
-    fontFamily: NOMAD_FONTS.mono,
-    letterSpacing: 0.2,
-  },
-  badge: {
-    paddingVertical: 2,
-    paddingHorizontal: 6,
-    borderRadius: 999,
-  },
-  badgeText: {
-    fontSize: 8.5,
-    fontWeight: "700",
-    letterSpacing: 0.4,
-    fontFamily: NOMAD_FONTS.uiBold,
-  },
-  modelNote: {
-    fontSize: 10,
-    marginTop: 4,
-    fontFamily: NOMAD_FONTS.ui,
-  },
-  errorRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  errorText: {
-    flex: 1,
-    fontSize: 12,
-    fontFamily: NOMAD_FONTS.ui,
   },
 });
