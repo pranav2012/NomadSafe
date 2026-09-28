@@ -66,6 +66,7 @@ interface ProvisionRecord {
   phase: ProvisionPhase;
   userRemoved: boolean;
   errorCode: ProvisionErrorCode | null;
+  autoRetries: number;
 }
 
 interface NetworkInfo {
@@ -78,6 +79,9 @@ const RECORD_KEY = "ai-provision";
 const REJECTED_KEY = "ai-provision-rejected";
 const POLL_INTERVAL_MS = 1500;
 const JS_RETRY_BACKOFF_MS = 30_000;
+// Failures that may be transient get this many silent retries before the error card shows.
+const AUTO_RETRY_LIMIT = 2;
+const AUTO_RETRYABLE: ReadonlySet<ProvisionErrorCode> = new Set(["incomplete", "corrupt", "network", "unknown"]);
 const POLLED_PHASES: ReadonlySet<ProvisionPhase> = new Set(["queued", "downloading", "waitingForWifi"]);
 
 const DEFAULT_RECORD: ProvisionRecord = {
@@ -87,6 +91,7 @@ const DEFAULT_RECORD: ProvisionRecord = {
   phase: "checking",
   userRemoved: false,
   errorCode: null,
+  autoRetries: 0,
 };
 
 function readRecord(): ProvisionRecord {
@@ -220,7 +225,7 @@ async function finishReady(model: AiModel, uri: string, opts: { notify: boolean 
     verifiedKey: aiModelService.verifiedKey(model),
   });
   // Mobile-data consent covered this download only.
-  writeRecord({ modelId: model.id, downloadId: null, errorCode: null, allowMobileData: false });
+  writeRecord({ modelId: model.id, downloadId: null, errorCode: null, allowMobileData: false, autoRetries: 0 });
   const jsState = modelDownloadManager.getState();
   if (jsState.status !== "idle" && jsState.status !== "downloading") await modelDownloadManager.cancel();
   await deleteSuperseded(uri);
@@ -512,8 +517,12 @@ async function evaluate(): Promise<boolean> {
   }
 
   if (record.errorCode && record.modelId === model.id) {
-    patch({ phase: "error", errorCode: record.errorCode });
-    return false;
+    if (!AUTO_RETRYABLE.has(record.errorCode) || record.autoRetries >= AUTO_RETRY_LIMIT) {
+      patch({ phase: "error", errorCode: record.errorCode });
+      return false;
+    }
+    record = writeRecord({ errorCode: null, autoRetries: record.autoRetries + 1 });
+    if (!systemDownloader && modelDownloadManager.getState().status === "error") await modelDownloadManager.cancel();
   }
 
   if (systemDownloader) return driveNative(model, record);
@@ -550,7 +559,14 @@ function init() {
     appActive = next === "active";
     schedulePolling();
   });
-  Network.addNetworkStateListener(() => void ensureProvisioned());
+  // Android repeats identical network events; only a real connectivity change matters here.
+  let lastNetKey = "";
+  Network.addNetworkStateListener(({ isConnected, type }) => {
+    const key = `${isConnected}:${type}`;
+    if (key === lastNetKey) return;
+    lastNetKey = key;
+    void ensureProvisioned();
+  });
   useSettingsStore.subscribe((state, prev) => {
     if (state.localAiEnabled !== prev.localAiEnabled) void ensureProvisioned();
   });
@@ -625,7 +641,7 @@ export async function enableMobileData(): Promise<void> {
 export async function retry(): Promise<void> {
   const record = readRecord();
   await cancelDownload(record);
-  writeRecord({ errorCode: null, downloadId: null });
+  writeRecord({ errorCode: null, downloadId: null, autoRetries: 0 });
   patch({ errorCode: null, phase: "checking" });
   await ensureProvisioned();
 }
@@ -642,7 +658,7 @@ export async function removeModel(): Promise<void> {
 }
 
 export async function downloadAgain(): Promise<void> {
-  writeRecord({ userRemoved: false, errorCode: null });
+  writeRecord({ userRemoved: false, errorCode: null, autoRetries: 0 });
   patch({ phase: "checking" });
   await ensureProvisioned();
 }
