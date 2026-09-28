@@ -1218,10 +1218,5 @@
     "footnote": "بعد ذلك، سيطلب Android الوصول إلى الموقع. اختر “السماح دائمًا” حتى تستمر المشاركة في العمل عندما تكون شاشتك مطفأة. يمكنك تغيير هذا لاحقًا في إعدادات النظام.",
     "accept": "فهمت، متابعة",
     "decline": "ليس الآن"
-  },
-  "__generated": {
-    "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
-    "locale": "ar",
-    "lastGeneratedAt": "2026-09-28T07:24:51.659Z"
   }
 }

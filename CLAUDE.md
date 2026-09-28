@@ -15,7 +15,6 @@ NomadSafe is a travel safety and planning app built with Expo (SDK 57), React Na
 - **Type-check**: `pnpm exec tsc --noEmit`
 - **Tests**: `pnpm test` (node:test + esbuild: expense import/parser, trip utils, AI money facts)
 - **i18n check**: `node scripts/check-i18n-keys.mjs`
-- **Regenerate locales**: `pnpm localize` (needs `LOCALIZE_*` in `.env.local`)
 - **Backend**: `npx convex dev`
 - **Release**: see `docs/PLAY_RELEASE.md` (EAS profiles are in `eas.json`)
 
@@ -34,7 +33,7 @@ NomadSafe is a travel safety and planning app built with Expo (SDK 57), React Na
   - `convex/legalPages.ts`: `/privacy` and `/delete-account` pages.
 - **Background location**: `features/location-sharing/services/locationBroadcastTask.ts` exchanges the Better Auth session cookie for a Convex JWT and calls `sharing.publishLocation` with `ConvexHttpClient`. Its state is kept under its own MMKV key, not the UI store.
 - **Local AI**: llama.rn, managed by `features/ai/services/localModelService.ts`. All completions go through its internal queue, and `release()` is safe to call at any time.
-- **i18n**: `useLocalization().t` in components and `translate()` from `@/localization/translate` elsewhere. Add English strings to `en.json` only, then run `pnpm localize`. Counts use plural variants: `t("ns.key", { count })` picks `ns.key_one` / `ns.key_other`.
+- **i18n**: `useLocalization().t` in components and `translate()` from `@/localization/translate` elsewhere. Add strings to `en.json`, and add their translations to the other locale files in `src/localization/translations/` (a missing key falls back to English). `node scripts/check-i18n-keys.mjs` lists keys used in code but missing from `en.json`. Counts use plural variants: `t("ns.key", { count })` picks `ns.key_one` / `ns.key_other`.
 - **React Compiler caveat**: don't render values read from mutable module caches (e.g. the exchange-rate Map); the compiler memoizes them and they never update. Keep rendered values in state or stores.
 
 ## Play Store constraints (don't regress)

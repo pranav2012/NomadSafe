@@ -1218,10 +1218,5 @@
     "footnote": "Em seguida, o Android pedirá acesso à localização. Escolha “Permitir o tempo todo” para que o compartilhamento continue funcionando com a tela desligada. Você pode mudar isso depois nas configurações do sistema.",
     "accept": "Entendi, continuar",
     "decline": "Agora não"
-  },
-  "__generated": {
-    "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
-    "locale": "pt-BR",
-    "lastGeneratedAt": "2026-09-28T07:24:51.659Z"
   }
 }

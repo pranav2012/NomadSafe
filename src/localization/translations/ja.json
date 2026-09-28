@@ -1218,10 +1218,5 @@
     "footnote": "次に、Androidが位置情報アクセスを求めます。画面がオフの間も共有を続けるには「常に許可」を選択してください。あとでシステム設定から変更できます。",
     "accept": "理解しました、続ける",
     "decline": "今はしない"
-  },
-  "__generated": {
-    "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
-    "locale": "ja",
-    "lastGeneratedAt": "2026-09-28T07:24:51.659Z"
   }
 }

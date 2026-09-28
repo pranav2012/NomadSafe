@@ -1218,10 +1218,5 @@
     "footnote": "接下来，Android 会请求位置访问权限。请选择“始终允许”，以便在屏幕关闭时分享仍可正常工作。你可以稍后在系统设置中更改此项。",
     "accept": "我理解，继续",
     "decline": "暂不"
-  },
-  "__generated": {
-    "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
-    "locale": "zh-CN",
-    "lastGeneratedAt": "2026-09-28T07:24:51.659Z"
   }
 }

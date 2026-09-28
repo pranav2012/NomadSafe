@@ -1218,10 +1218,5 @@
     "footnote": "Successivamente, Android chiederà l'accesso alla posizione. Scegli “Consenti sempre” in modo che la condivisione continui a funzionare con lo schermo spento. Puoi cambiarlo più tardi nelle impostazioni di sistema.",
     "accept": "Ho capito, continua",
     "decline": "Non ora"
-  },
-  "__generated": {
-    "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
-    "locale": "it",
-    "lastGeneratedAt": "2026-09-28T07:24:51.659Z"
   }
 }

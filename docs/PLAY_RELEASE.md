@@ -15,7 +15,6 @@ Status of each step for the first Android release. ✅ = done, 🧑 = you do it 
 | 9 | Closed testing (new personal accounts: 12 testers × 14 days) | 🧑 |
 | 10 | Gmail restricted-scope verification (CASA) | 🧑 (can run in parallel) |
 | 11 | Sentry (optional) | 🧑 |
-| 12 | Re-run translations (`pnpm localize`) when your translation proxy is back | 🧑 |
 
 ## Reference values
 
@@ -148,16 +147,6 @@ If you want to launch before that finishes, ship with Gmail limited to test user
 1. Create a React Native project at <https://sentry.io>.
 2. Add EAS env vars (production): `EXPO_PUBLIC_SENTRY_DSN` (plaintext), `SENTRY_ORG`, `SENTRY_PROJECT` (plaintext), `SENTRY_AUTH_TOKEN` (**secret**).
 3. Remove `SENTRY_DISABLE_AUTO_UPLOAD` from `build.base.env` in `eas.json` so source maps upload, then rebuild. Crash reporting stays off until the DSN is set.
-
-## 12. Translations 🧑
-
-Stale strings were removed from the 14 locales, so they show English for new or changed text. With `LOCALIZE_API_*` reachable, run:
-
-```bash
-pnpm localize && node scripts/check-i18n-keys.mjs
-```
-
-Commit the result and rebuild.
 
 ## Store listing (Grow → Store presence → Main store listing)
 

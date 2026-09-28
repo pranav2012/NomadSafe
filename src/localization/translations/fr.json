@@ -1218,10 +1218,5 @@
     "footnote": "Ensuite, Android demandera l'accès à la localisation. Choisissez « Toujours autoriser » pour que le partage continue de fonctionner écran éteint. Vous pouvez modifier cela plus tard dans les réglages système.",
     "accept": "J'ai compris, continuer",
     "decline": "Pas maintenant"
-  },
-  "__generated": {
-    "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
-    "locale": "fr",
-    "lastGeneratedAt": "2026-09-28T07:24:51.659Z"
   }
 }

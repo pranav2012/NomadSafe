@@ -1218,10 +1218,5 @@
     "footnote": "आगे, Android लोकेशन एक्सेस मांगेगा। “हमेशा अनुमति दें” चुनें ताकि स्क्रीन बंद होने पर भी शेयरिंग काम करती रहे। आप इसे बाद में सिस्टम सेटिंग्स में बदल सकते हैं।",
     "accept": "मैं समझता हूं, जारी रखें",
     "decline": "अभी नहीं"
-  },
-  "__generated": {
-    "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
-    "locale": "hi",
-    "lastGeneratedAt": "2026-09-28T07:24:51.659Z"
   }
 }

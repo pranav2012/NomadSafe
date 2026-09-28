@@ -1218,10 +1218,5 @@
     "footnote": "A continuación, Android pedirá acceso a la ubicación. Elige «Permitir todo el tiempo» para que compartir siga funcionando con la pantalla apagada. Puedes cambiar esto más tarde en los ajustes del sistema.",
     "accept": "Entiendo, continuar",
     "decline": "Ahora no"
-  },
-  "__generated": {
-    "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
-    "locale": "es",
-    "lastGeneratedAt": "2026-09-28T07:24:51.659Z"
   }
 }

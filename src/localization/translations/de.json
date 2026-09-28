@@ -1218,10 +1218,5 @@
     "footnote": "Als Nächstes fragt Android nach Standortzugriff. Wähle „Immer erlauben“, damit die Freigabe auch bei ausgeschaltetem Bildschirm funktioniert. Du kannst dies später in den Systemeinstellungen ändern.",
     "accept": "Verstanden, weiter",
     "decline": "Nicht jetzt"
-  },
-  "__generated": {
-    "warning": "AUTO-GENERATED FILE. Do not edit labels in this file manually.",
-    "locale": "de",
-    "lastGeneratedAt": "2026-09-28T07:24:51.659Z"
   }
 }

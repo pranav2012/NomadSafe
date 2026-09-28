@@ -6,7 +6,7 @@ import { useSettingsStore } from "@/features/settings";
 import { storage } from "@/stores/storage";
 import { getEffectiveCurrency } from "@/utils/currency";
 import { LANGUAGE_OPTIONS, normalizeLocale, type SupportedLocale } from "./languages";
-import { translations } from "./translations.generated";
+import { translations } from "./resources";
 import { fallbackResource, interpolate, lookup, readPath, type TranslateParams as Params } from "./translate";
 
 interface LocalizationContextValue {

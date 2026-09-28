@@ -1,7 +1,7 @@
 import * as Localization from "expo-localization";
 import { useSettingsStore } from "@/features/settings/store/settingsStore";
 import { normalizeLocale, type SupportedLocale } from "./languages";
-import { translations, type TranslationResource } from "./translations.generated";
+import { translations, type TranslationResource } from "./resources";
 
 export type TranslateParams = Record<string, string | number | boolean | null | undefined>;
 
