@@ -3,6 +3,8 @@ import { httpAction } from "./_generated/server";
 
 const EFFECTIVE_DATE = "28 September 2026";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="120" fill="#072B40"/><path d="M80 300 C140 200 200 200 256 260 C320 330 360 320 400 260" fill="none" stroke="#22D3EE" stroke-width="5.5" stroke-linecap="round" stroke-dasharray="3 12" opacity="0.75"/><g transform="translate(400,260) rotate(-50)"><path d="M-14 -10 L14 0 L-14 10 L-6 0 Z" fill="#E6F6FF"/></g><path d="M196 184 L316 360" stroke="#E6F6FF" stroke-width="40" stroke-linecap="round" opacity="0.32"/><rect x="176" y="168" width="44" height="176" rx="22" fill="#E6F6FF"/><rect x="292" y="168" width="44" height="176" rx="22" fill="#E6F6FF"/><path d="M200 168 L320 344" stroke="#E6F6FF" stroke-width="40" stroke-linecap="round"/></svg>`;
+const FAVICON = `data:image/svg+xml,${encodeURIComponent(LOGO_SVG)}`;
 
 function escapeHtml(value: string) {
   return value
@@ -24,6 +26,7 @@ function page(title: string, body: string, status = 200) {
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${escapeHtml(title)} · NomadSafe</title>
+<link rel="icon" href="${FAVICON}">
 <style>
 body{font:16px/1.6 -apple-system,system-ui,Segoe UI,Roboto,sans-serif;max-width:760px;margin:0 auto;padding:32px 20px;color:#1d2327;background:#faf7f2}
 h1{font-size:28px;margin:0 0 4px}h2{font-size:19px;margin:28px 0 8px}
@@ -32,7 +35,9 @@ form{display:grid;gap:12px;margin-top:16px;max-width:420px}
 input,textarea,button{font:inherit;padding:10px 12px;border-radius:10px;border:1px solid #cfc8bc}
 button{background:#1d4d4f;color:#fff;border:0;cursor:pointer}
 .card{background:#fff;border:1px solid #e6dfd3;border-radius:14px;padding:16px 18px;margin-top:16px}
-</style></head><body>${body}</body></html>`;
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:24px;font-weight:600;font-size:18px;color:#072B40}
+.brand svg{width:40px;height:40px}
+</style></head><body><div class="brand">${LOGO_SVG}<span>NomadSafe</span></div>${body}</body></html>`;
   return new Response(html, {
     status,
     headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=300" },
