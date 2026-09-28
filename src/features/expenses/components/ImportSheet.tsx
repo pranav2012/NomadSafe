@@ -35,19 +35,20 @@ type Tab = "paste" | "gmail";
 
 export interface ImportSheetProps {
   tripId: string | null;
+  initialTab?: Tab;
   trip: Trip | null;
   onClose: () => void;
   onImported: (count: number) => void;
 }
 
-export function ImportSheet({ tripId, trip, onClose, onImported }: ImportSheetProps) {
+export function ImportSheet({ tripId, trip, initialTab = "paste", onClose, onImported }: ImportSheetProps) {
   const { nomad } = useTheme();
   const theme = nomad.colors;
   const { t, formatCurrency, locale } = useLocalization();
   const addExpenses = useExpensesStore((state) => state.addExpenses);
   const gmail = useGmailImport();
 
-  const [tab, setTab] = useState<Tab>("paste");
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [pasted, setPasted] = useState("");
   const [candidates, setCandidates] = useState<ImportCandidate[] | null>(null);
   const [isWorking, setIsWorking] = useState(false);
@@ -75,14 +76,15 @@ export function ImportSheet({ tripId, trip, onClose, onImported }: ImportSheetPr
 
   const scanGmail = () =>
     runImport(async () => {
-      const startedAt = Date.now();
-      const messages = await gmail.fetchEmails();
-      gmailFetchedAtRef.current = startedAt;
+      const { messages, fetchedAt } = await gmail.fetchEmails({ trip, fresh: true });
+      gmailFetchedAtRef.current = fetchedAt;
       return messages;
     }, "email");
 
   // Once Gmail finishes connecting, scan automatically — no second tap needed.
   useEffect(() => {
+    // A dropped grant flips back to "Connect"; scan again once it reconnects.
+    if (!gmail.connected) autoScannedRef.current = false;
     if (tab === "gmail" && gmail.connected && !autoScannedRef.current && candidates === null && !isWorking) {
       autoScannedRef.current = true;
       void scanGmail();
@@ -227,7 +229,9 @@ export function ImportSheet({ tripId, trip, onClose, onImported }: ImportSheetPr
                 {!gmail.configured
                   ? t("expenses.gmailNotConfigured")
                   : gmail.connected
-                    ? t("expenses.gmailConnected")
+                    ? gmail.accountEmail
+                      ? t("expenses.gmailConnectedAs", { email: gmail.accountEmail })
+                      : t("expenses.gmailConnected")
                     : t("expenses.gmailConnect")}
               </Text>
               <PrimaryButton

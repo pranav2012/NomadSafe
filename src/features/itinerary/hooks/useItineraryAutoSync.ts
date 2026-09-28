@@ -58,8 +58,7 @@ export function useItineraryAutoSync(trip: Trip | null): ItineraryAutoSync {
           .getState()
           .events.some((event) => event.tripId === tripId);
         const since = hasEvents ? await loadItineraryLastSyncAt(tripId) : null;
-        const startedAt = Date.now();
-        const messages = await fetchRef.current(since);
+        const { messages, fetchedAt } = await fetchRef.current(since, { trip: current });
         if (__DEV__) console.info("[itinerary-sync] fetched", { since, messages: messages.length });
         const candidates = await buildEventCandidates(messages, "email", { trip: current });
 
@@ -82,7 +81,7 @@ export function useItineraryAutoSync(trip: Trip | null): ItineraryAutoSync {
           );
           if (active) setImportedCount(fresh.length);
         }
-        await saveItineraryLastSyncAt(tripId, startedAt);
+        await saveItineraryLastSyncAt(tripId, fetchedAt);
       } catch (err) {
         sessionSyncedTripIds.delete(tripId);
         console.warn("[itinerary-sync] failed", err);

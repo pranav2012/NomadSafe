@@ -7,6 +7,8 @@ export interface StoredGmailTokens {
   refreshToken?: string;
   /** Epoch ms when the access token expires. */
   expiresAt?: number;
+  /** Address of the connected mailbox, from Gmail's profile endpoint. */
+  email?: string;
 }
 
 export async function loadGmailTokens(): Promise<StoredGmailTokens | null> {

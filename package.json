@@ -10,7 +10,7 @@
     "lint": "expo lint",
     "test:expense-import": "node --test tests/expense-import.test.mjs",
     "build": "expo prebuild --clean",
-    "test": "node --test tests/expense-import.test.mjs tests/trip-utils.test.mjs tests/ai-money-facts.test.mjs tests/ai-provisioning.test.mjs",
+    "test": "node --test tests/expense-import.test.mjs tests/gmail-import.test.mjs tests/trip-utils.test.mjs tests/ai-money-facts.test.mjs tests/ai-provisioning.test.mjs",
     "update:development": "node scripts/publish-update.mjs development",
     "update:preview": "node scripts/publish-update.mjs preview",
     "update:production": "node scripts/publish-update.mjs production"

@@ -1,6 +1,14 @@
 import type { RawMessage } from "@/features/expenses/services/transactionParser";
 import { ImportError } from "@/features/expenses/services/importErrors";
+import {
+  buildGmailQuery,
+  extractBody,
+  gmailErrorCode,
+  headerValue,
+  type GmailMessage,
+} from "@/features/expenses/services/gmailParsing";
 import { translate } from "@/localization/translate";
+import type { GmailFetchRange } from "@/features/expenses/services/gmailSharedFetch";
 
 export const GMAIL_SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"];
 
@@ -17,105 +25,11 @@ export function isGmailConfigured(): boolean {
   );
 }
 
-const GMAIL_QUERY =
-  "newer_than:50d (booking OR reservation OR flight OR airline OR hotel OR hostel OR resort OR visa OR receipt OR invoice OR payment OR transaction OR debited)";
 const MAX_MESSAGES = 2_000;
 
 interface GmailListResponse {
   messages?: { id: string }[];
   nextPageToken?: string;
-}
-
-interface GmailPart {
-  mimeType?: string;
-  body?: { data?: string };
-  parts?: GmailPart[];
-}
-
-interface GmailMessage {
-  id?: string;
-  snippet?: string;
-  internalDate?: string;
-  payload?: {
-    headers?: { name: string; value: string }[];
-    mimeType?: string;
-    body?: { data?: string };
-    parts?: GmailPart[];
-  };
-}
-
-function headerValue(message: GmailMessage, name: string): string | undefined {
-  return message.payload?.headers?.find(
-    (header) => header.name.toLowerCase() === name.toLowerCase(),
-  )?.value;
-}
-
-// Gmail encodes body data as URL-safe base64. Decode to a UTF-8 string.
-function decodeBase64Url(data: string): string {
-  try {
-    const normalized = data.replace(/-/g, "+").replace(/_/g, "/");
-    const binary = globalThis.atob(normalized);
-    // Reconstruct UTF-8 from the binary string produced by atob.
-    return decodeURIComponent(
-      binary
-        .split("")
-        .map((char) => `%${`00${char.charCodeAt(0).toString(16)}`.slice(-2)}`)
-        .join(""),
-    );
-  } catch {
-    return "";
-  }
-}
-
-function decodeQuotedPrintable(value: string): string {
-  const binary = value
-    .replace(/=\r?\n/g, "")
-    .replace(/=([A-Fa-f0-9]{2})/g, (_, hex) => String.fromCharCode(Number.parseInt(hex, 16)));
-  try {
-    return decodeURIComponent(
-      binary
-        .split("")
-        .map((char) => `%${char.charCodeAt(0).toString(16).padStart(2, "0")}`)
-        .join(""),
-    );
-  } catch {
-    return binary;
-  }
-}
-
-function stripHtml(html: string): string {
-  return html
-    .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<script[\s\S]*?<\/script>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&amp;/gi, "&")
-    .replace(/&lt;/gi, "<")
-    .replace(/&gt;/gi, ">")
-    .replace(/&#x([\da-f]+);/gi, (_, code) => String.fromCharCode(Number.parseInt(code, 16)))
-    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-// Walk the MIME tree, preferring text/plain and falling back to stripped HTML.
-function extractBody(message: GmailMessage): string {
-  const plain: string[] = [];
-  const html: string[] = [];
-
-  const visit = (part?: GmailPart | GmailMessage["payload"]) => {
-    if (!part) return;
-    const data = part.body?.data;
-    if (data) {
-      if (part.mimeType === "text/plain") plain.push(decodeBase64Url(data));
-      else if (part.mimeType === "text/html") html.push(stripHtml(decodeQuotedPrintable(decodeBase64Url(data))));
-    }
-    part.parts?.forEach(visit);
-  };
-
-  visit(message.payload);
-  const text = plain.join(" ").trim() || html.join(" ").trim();
-  return text;
 }
 
 async function gmailFetch<T>(path: string, accessToken: string): Promise<T> {
@@ -127,16 +41,45 @@ async function gmailFetch<T>(path: string, accessToken: string): Promise<T> {
     let detail = "";
     try {
       const body = (await response.json()) as { error?: { message?: string } };
-      detail = body.error?.message ? `: ${body.error.message}` : "";
+      detail = body.error?.message ?? "";
     } catch {
       // non-JSON body; keep the status only
     }
     throw new ImportError(
-      response.status === 401 || response.status === 403 ? "gmail-auth" : "gmail-api",
-      `Gmail API error ${response.status}${detail}`,
+      gmailErrorCode(response.status, detail),
+      `Gmail API error ${response.status}${detail ? `: ${detail}` : ""}`,
+      response.status,
     );
   }
   return (await response.json()) as T;
+}
+
+export async function fetchGmailAccountEmail(accessToken: string): Promise<string | null> {
+  const profile = await gmailFetch<{ emailAddress?: string }>("profile", accessToken);
+  return profile.emailAddress ?? null;
+}
+
+function toRawMessage(message: GmailMessage): RawMessage {
+  const subject = headerValue(message, "Subject") ?? "";
+  const sender = headerValue(message, "From") ?? "";
+  const bodyText = extractBody(message) || (message.snippet ?? "");
+  const body = `${subject}. ${bodyText}`.trim();
+  const date = message.internalDate
+    ? new Date(Number(message.internalDate)).toISOString()
+    : new Date().toISOString();
+  return {
+    body,
+    date,
+    sender,
+    note: [
+      `${translate("expenses.emailNote.from")}: ${sender || translate("expenses.emailNote.unknownSender")}`,
+      `${translate("expenses.emailNote.subject")}: ${subject || translate("expenses.emailNote.noSubject")}`,
+      `${translate("expenses.emailNote.received")}: ${date}`,
+      "",
+      bodyText,
+    ].join("\n"),
+    externalId: message.id ? `gmail:${message.id}` : undefined,
+  };
 }
 
 /**
@@ -147,10 +90,10 @@ async function gmailFetch<T>(path: string, accessToken: string): Promise<T> {
  */
 export async function fetchTransactionEmails(
   accessToken: string,
-  since?: number | null,
+  range: GmailFetchRange,
   max = MAX_MESSAGES,
 ): Promise<RawMessage[]> {
-  const query = since ? `${GMAIL_QUERY} after:${Math.floor(since / 1000)}` : GMAIL_QUERY;
+  const query = buildGmailQuery(range.since, range.before);
   const entries: { id: string }[] = [];
   let pageToken: string | undefined;
 
@@ -174,7 +117,12 @@ export async function fetchTransactionEmails(
     const resolved = await Promise.all(
       batch.map((entry) =>
         gmailFetch<GmailMessage>(`messages/${entry.id}?format=full`, accessToken).catch(
-          () => null,
+          (error: unknown) => {
+            // Mail deleted since listing is skipped. Any other failure aborts, so
+            // the caller never checkpoints past messages it didn't read.
+            if (error instanceof ImportError && error.status === 404) return null;
+            throw error;
+          },
         ),
       ),
     );
@@ -183,27 +131,6 @@ export async function fetchTransactionEmails(
 
   return messages
     .filter((message): message is GmailMessage => message != null)
-    .map((message) => {
-      const subject = headerValue(message, "Subject") ?? "";
-      const sender = headerValue(message, "From") ?? "";
-      const bodyText = extractBody(message) || (message.snippet ?? "");
-      const body = `${subject}. ${bodyText}`.trim();
-      const date = message.internalDate
-        ? new Date(Number(message.internalDate)).toISOString()
-        : new Date().toISOString();
-      return {
-        body,
-        date,
-        sender,
-        note: [
-          `${translate("expenses.emailNote.from")}: ${sender || translate("expenses.emailNote.unknownSender")}`,
-          `${translate("expenses.emailNote.subject")}: ${subject || translate("expenses.emailNote.noSubject")}`,
-          `${translate("expenses.emailNote.received")}: ${date}`,
-          "",
-          bodyText,
-        ].join("\n"),
-        externalId: message.id ? `gmail:${message.id}` : undefined,
-      };
-    })
+    .map(toRawMessage)
     .filter((message) => message.body.length > 0);
 }

@@ -37,6 +37,11 @@ import { useConvertedExpenses } from "@/features/expenses/hooks/useTripExpenseSu
 import { ExpenseForm } from "@/features/expenses/components/ExpenseForm";
 import { ImportSheet } from "@/features/expenses/components/ImportSheet";
 import { useGmailAutoSync } from "@/features/expenses/hooks/useGmailAutoSync";
+import {
+  dismissGmailLostAccess,
+  hasGmailGrant,
+  useGmailConnectionStore,
+} from "@/features/expenses/store/gmailConnectionStore";
 import { formatMoney } from "@/features/expenses/utils/money";
 
 const CHART_DAYS = 14;
@@ -73,9 +78,13 @@ export default function ExpensesScreen() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Expense | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [importTab, setImportTab] = useState<"paste" | "gmail">("paste");
   const [ledgerExpanded, setLedgerExpanded] = useState(false);
 
   const autoSync = useGmailAutoSync(activeTrip);
+  const gmailLostAccess = useGmailConnectionStore(
+    (state) => state.lostAccess && !hasGmailGrant(state.tokens),
+  );
 
   const currency = activeTrip?.currency ?? deviceCurrency;
 
@@ -153,6 +162,25 @@ export default function ExpensesScreen() {
               {t("expenses.autoSynced", { count: autoSync.importedCount })}
             </Text>
             <Pressable onPress={autoSync.dismiss} hitSlop={8}>
+              <Icon name="x" size={16} color={theme.inkSoft} />
+            </Pressable>
+          </View>
+        ) : null}
+
+        {gmailLostAccess ? (
+          <View style={[styles.syncBanner, { backgroundColor: theme.mustardSoft, borderColor: theme.mustard }]}>
+            <Icon name="mail" size={16} color={theme.mustard} />
+            <Text style={[styles.syncBannerText, { color: theme.inkDeep }]}>{t("expenses.gmailLostAccess")}</Text>
+            <Pressable
+              onPress={() => {
+                setImportTab("gmail");
+                setImportOpen(true);
+              }}
+              hitSlop={8}
+            >
+              <Text style={[styles.syncBannerAction, { color: theme.stamp }]}>{t("expenses.gmailReconnect")}</Text>
+            </Pressable>
+            <Pressable onPress={dismissGmailLostAccess} hitSlop={8}>
               <Icon name="x" size={16} color={theme.inkSoft} />
             </Pressable>
           </View>
@@ -289,7 +317,10 @@ export default function ExpensesScreen() {
         {/* Quick actions */}
         <View style={styles.quickRow}>
           <Pressable
-            onPress={() => setImportOpen(true)}
+            onPress={() => {
+              setImportTab("paste");
+              setImportOpen(true);
+            }}
             style={({ pressed }) => [
               styles.quickCard,
               {
@@ -422,6 +453,7 @@ export default function ExpensesScreen() {
           <ImportSheet
             tripId={activeTrip?.id ?? null}
             trip={activeTrip}
+            initialTab={importTab}
             onClose={() => setImportOpen(false)}
             onImported={() => setImportOpen(false)}
           />
@@ -597,6 +629,7 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
   },
   syncBannerText: { flex: 1, fontFamily: NOMAD_FONTS.uiSemi, fontSize: 13 },
+  syncBannerAction: { fontFamily: NOMAD_FONTS.uiBold, fontSize: 13 },
   heroCard: { borderRadius: 22, padding: 20, gap: 18, overflow: "hidden" },
   heroTopRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
   heroTotalBlock: { flex: 1 },

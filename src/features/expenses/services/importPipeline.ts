@@ -22,7 +22,7 @@ import {
   fetchExchangeRate,
 } from "@/features/expenses/services/currencyConversion";
 import { translate } from "@/localization/translate";
-import { toLocalDayKey } from "@/features/expenses/utils/dateKey";
+import { isPreTripBooking, tripMatchReason } from "@/features/expenses/services/tripEmailFilter";
 
 // Local model calls are slow; only unmatched candidates use it, capped per import.
 const MAX_MODEL_CALLS = 20;
@@ -53,53 +53,6 @@ export interface ImportCandidate {
   viaModel: boolean;
   duplicate: boolean;
   selected: boolean;
-}
-
-function normalizedText(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
-}
-
-function messageMentionsDestination(message: RawMessage, trip: Trip): boolean {
-  const email = normalizedText([message.body, message.sender].filter(Boolean).join(" "));
-  return trip.destinations.some((destination) => {
-    const destinationParts = normalizedText(destination)
-      .split(/[,/()\-]+/)
-      .map((part) => part.trim())
-      .filter((part) => part.length >= 3);
-    const meaningfulTokens = destinationParts.flatMap((part) =>
-      part
-        .split(/\s+/)
-        .filter((token) => token.length >= 4 && !["city", "municipality", "subdistrict"].includes(token)),
-    );
-    return [...destinationParts, ...meaningfulTokens].some((part) => email.includes(part));
-  });
-}
-
-function messageDateKey(message: RawMessage): string | null {
-  if (!message.date || Number.isNaN(new Date(message.date).getTime())) return null;
-  return toLocalDayKey(message.date);
-}
-
-function isPreTripBooking(message: RawMessage): boolean {
-  return /\b(?:flight|airline|airport|boarding|hotel|hostel|resort|accommodation|check[- ]?in|reservation|booking|visa|e-visa|immigration|consulate|passport)\b/i.test(
-    [message.body, message.sender].filter(Boolean).join(" "),
-  );
-}
-
-function tripMatchReason(message: RawMessage, trip: Trip): string | null {
-  const date = messageDateKey(message);
-  const startDate = trip.startDate.slice(0, 10);
-  const endDate = trip.endDate.slice(0, 10);
-  if (!date) return "invalid-email-date";
-  if (date > endDate) return "after-trip";
-
-  if (date >= startDate) return null;
-
-  if (!isPreTripBooking(message)) return "pretrip-not-booking";
-  return messageMentionsDestination(message, trip) ? null : "pretrip-destination-mismatch";
 }
 
 /**

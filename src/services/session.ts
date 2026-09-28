@@ -1,20 +1,13 @@
 import * as LocalAuthentication from "expo-local-authentication";
 import { authClient } from "@/features/auth/services/authClient";
 import { useAuthStore } from "@/features/auth/store/authStore";
-import {
-  clearGmailTokens,
-  loadGmailTokens,
-} from "@/features/expenses/services/gmailTokenStore";
+import { loadGmailTokens } from "@/features/expenses/services/gmailTokenStore";
+import { forgetGmailTokens } from "@/features/expenses/store/gmailConnectionStore";
 import {
   clearBroadcastState,
   stopLocationBroadcast,
 } from "@/features/location-sharing/services/locationBroadcastTask";
 import { useSharingStore } from "@/features/location-sharing/store/sharingStore";
-
-export async function isGmailConnected() {
-  const tokens = await loadGmailTokens();
-  return !!(tokens?.refreshToken || tokens?.accessToken);
-}
 
 /** Revokes the Google grant (best-effort) and forgets the local tokens. */
 export async function disconnectGmail() {
@@ -28,7 +21,7 @@ export async function disconnectGmail() {
       });
     } catch {}
   }
-  await clearGmailTokens();
+  await forgetGmailTokens({ lostAccess: false });
 }
 
 /**

@@ -15,7 +15,6 @@ import { LEGAL_URLS } from "@/constants/legal";
 import {
   confirmDeviceOwner,
   disconnectGmail,
-  isGmailConnected,
   signOutAndCleanup,
 } from "@/services/session";
 import Constants from "expo-constants";
@@ -34,6 +33,12 @@ import { localAuth, useAuthStore, useBiometricPresentation } from "@/features/au
 import { useProvisioningStore } from "@/features/ai";
 import { useTripsStore } from "@/features/trips/store/tripsStore";
 import { useExpensesStore } from "@/features/expenses/store/expensesStore";
+import {
+  hasGmailGrant,
+  hydrateGmailConnection,
+  useGmailConnectionStore,
+} from "@/features/expenses/store/gmailConnectionStore";
+import { ensureGmailAccountEmail } from "@/features/expenses/services/gmailAuth";
 import { useSettingsStore } from "@/features/settings";
 import { emergencyContactsStorage } from "@/features/onboarding/services/emergencyContactsStorage";
 import { smsFallbackStorage, type SmsTemplatePurpose } from "@/features/safety/services/smsFallbackStorage";
@@ -208,7 +213,9 @@ export default function SettingsScreen() {
   const [exporting, setExporting] = useState(false);
   const [wiping, setWiping] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [gmailConnected, setGmailConnected] = useState(false);
+  const gmailTokens = useGmailConnectionStore((s) => s.tokens);
+  const gmailConnected = hasGmailGrant(gmailTokens);
+  const gmailEmail = gmailTokens?.email;
   const [smsModalVisible, setSmsModalVisible] = useState(false);
   const [activeSmsPurpose, setActiveSmsPurpose] = useState<SmsTemplatePurpose>("missedCheckIn");
   const [smsDraft, setSmsDraft] = useState("");
@@ -231,7 +238,7 @@ export default function SettingsScreen() {
   useFocusEffect(
     useCallback(() => {
       setContacts(emergencyContactsStorage.get());
-      isGmailConnected().then(setGmailConnected).catch(() => setGmailConnected(false));
+      void hydrateGmailConnection().then(ensureGmailAccountEmail);
     }, []),
   );
 
@@ -389,7 +396,6 @@ export default function SettingsScreen() {
         style: "destructive",
         onPress: async () => {
           await disconnectGmail();
-          setGmailConnected(false);
         },
       },
     ]);
@@ -506,7 +512,7 @@ export default function SettingsScreen() {
             tint={theme.mustardSoft}
             iconColor={theme.mustard}
             title={t("settings.gmailConnected")}
-            sub={t("settings.gmailConnectedSub")}
+            sub={gmailEmail ? t("settings.gmailConnectedAsSub", { email: gmailEmail }) : t("settings.gmailConnectedSub")}
             theme={theme}
             right={<Text style={[styles.rowSub, { color: theme.stamp }]}>{t("settings.gmailDisconnect")}</Text>}
             onPress={handleDisconnectGmail}

@@ -1,7 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { Platform } from "react-native";
+import { useCallback, useEffect } from "react";
 import * as WebBrowser from "expo-web-browser";
-import * as AuthSession from "expo-auth-session";
 import * as Google from "expo-auth-session/providers/google";
 import {
   GMAIL_CLIENT_IDS,
@@ -10,129 +8,81 @@ import {
   isGmailConfigured,
 } from "@/features/expenses/services/gmailImport";
 import {
-  loadGmailTokens,
-  saveGmailTokens,
-  type StoredGmailTokens,
-} from "@/features/expenses/services/gmailTokenStore";
+  fetchTransactionEmailsShared,
+  type GmailFetchResult,
+} from "@/features/expenses/services/gmailSharedFetch";
+import { gmailBeforeBound } from "@/features/expenses/services/gmailParsing";
+import {
+  ensureGmailAccountEmail,
+  toStoredTokens,
+  withGmailAccess,
+} from "@/features/expenses/services/gmailAuth";
 import {
   loadGmailLastSyncAt,
   saveGmailLastSyncAt,
 } from "@/features/expenses/services/gmailSyncStore";
-import type { RawMessage } from "@/features/expenses/services/transactionParser";
+import {
+  hasGmailGrant,
+  hydrateGmailConnection,
+  storeGmailTokens,
+  useGmailConnectionStore,
+} from "@/features/expenses/store/gmailConnectionStore";
 import { ImportError } from "@/features/expenses/services/importErrors";
+import { useAuthStore } from "@/features/auth/store/authStore";
+import type { Trip } from "@/features/trips/store/tripsStore";
 
 WebBrowser.maybeCompleteAuthSession();
 
-const discovery: AuthSession.DiscoveryDocument = {
-  authorizationEndpoint: "https://accounts.google.com/o/oauth2/v2/auth",
-  tokenEndpoint: "https://oauth2.googleapis.com/token",
-  revocationEndpoint: "https://oauth2.googleapis.com/revoke",
-};
-
-// Renew a little early so a fetch never races the expiry boundary.
-const EXPIRY_SKEW_MS = 60_000;
-
-function platformClientId(): string | undefined {
-  if (Platform.OS === "ios") return GMAIL_CLIENT_IDS.ios ?? GMAIL_CLIENT_IDS.web;
-  if (Platform.OS === "android") return GMAIL_CLIENT_IDS.android ?? GMAIL_CLIENT_IDS.web;
-  return GMAIL_CLIENT_IDS.web;
-}
-
-function toStored(token: AuthSession.TokenResponse): StoredGmailTokens {
-  const expiresAt =
-    token.issuedAt && token.expiresIn
-      ? (token.issuedAt + token.expiresIn) * 1000
-      : undefined;
-  return {
-    accessToken: token.accessToken,
-    refreshToken: token.refreshToken,
-    expiresAt,
-  };
+export interface GmailFetchOptions {
+  trip: Trip | null;
+  /** Skip the shared launch fetch, e.g. when the user taps "Scan Gmail". */
+  fresh?: boolean;
 }
 
 export interface GmailImport {
   configured: boolean;
   ready: boolean;
   connected: boolean;
+  accountEmail: string | null;
   connect: () => Promise<void>;
-  fetchEmails: () => Promise<RawMessage[]>;
-  /** Fetches emails after `since` without touching the expense sync checkpoint,
-   *  so other consumers (e.g. itinerary) can keep an independent checkpoint. */
-  fetchEmailsSince: (since: number | null) => Promise<RawMessage[]>;
-  /** Saves the expense checkpoint; pass the fetch start time so mail that
+  fetchEmails: (options: GmailFetchOptions) => Promise<GmailFetchResult>;
+  /** Fetches mail after `since` without touching the expense checkpoint, so
+   *  other consumers (e.g. itinerary) can keep an independent checkpoint. */
+  fetchEmailsSince: (since: number | null, options: GmailFetchOptions) => Promise<GmailFetchResult>;
+  /** Saves the expense checkpoint; pass the result's `fetchedAt` so mail that
    *  arrived during review is picked up next time. */
-  completeSync: (at?: number) => Promise<void>;
+  completeSync: (at: number) => Promise<void>;
 }
 
 export function useGmailImport(): GmailImport {
   const configured = isGmailConfigured();
-  const clientId = platformClientId();
-  const [tokens, setTokens] = useState<StoredGmailTokens | null>(null);
+  const tokens = useGmailConnectionStore((state) => state.tokens);
+  const accountEmail = useAuthStore((state) => state.user?.email);
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     iosClientId: GMAIL_CLIENT_IDS.ios,
     androidClientId: GMAIL_CLIENT_IDS.android,
     webClientId: GMAIL_CLIENT_IDS.web,
     scopes: GMAIL_SCOPES,
+    // Pre-selects the signed-in Google account; the user can still pick another.
+    loginHint: accountEmail,
     // `offline` requests a refresh token; `consent` forces Google to re-issue
     // one even if the user previously granted access, so the connection can
     // survive app restarts.
     extraParams: { access_type: "offline", prompt: "consent" },
   });
 
-  // Restore a previously saved connection on mount.
   useEffect(() => {
-    let mounted = true;
-    loadGmailTokens().then((saved) => {
-      if (mounted && saved) setTokens(saved);
-    });
-    return () => {
-      mounted = false;
-    };
+    void hydrateGmailConnection().then(ensureGmailAccountEmail);
   }, []);
 
-  // Capture and persist tokens after a successful sign-in.
   useEffect(() => {
-    if (response?.type === "success" && response.authentication) {
-      const next = toStored(response.authentication);
-      // Google omits the refresh token on re-consent; keep the one we have.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setTokens((current) => {
-        const merged = { ...next, refreshToken: next.refreshToken ?? current?.refreshToken };
-        void saveGmailTokens(merged);
-        return merged;
-      });
-    }
+    if (response?.type !== "success" || !response.authentication) return;
+    const current = useGmailConnectionStore.getState().tokens;
+    // The user may have picked a different account, so drop the old address.
+    const next = toStoredTokens(response.authentication, current && { refreshToken: current.refreshToken });
+    void storeGmailTokens(next).then(ensureGmailAccountEmail);
   }, [response]);
-
-  const getValidAccessToken = useCallback(async (): Promise<string | null> => {
-    const current = tokens ?? (await loadGmailTokens());
-    if (!current) return null;
-
-    const stillValid =
-      current.accessToken &&
-      current.expiresAt &&
-      current.expiresAt - EXPIRY_SKEW_MS > Date.now();
-    if (stillValid) return current.accessToken ?? null;
-
-    if (current.refreshToken && clientId) {
-      try {
-        const refreshed = await AuthSession.refreshAsync(
-          { clientId, refreshToken: current.refreshToken, scopes: GMAIL_SCOPES },
-          discovery,
-        );
-        const next = toStored(refreshed);
-        const merged = { ...next, refreshToken: next.refreshToken ?? current.refreshToken };
-        setTokens(merged);
-        await saveGmailTokens(merged);
-        return merged.accessToken ?? null;
-      } catch {
-        return current.accessToken ?? null;
-      }
-    }
-
-    return current.accessToken ?? null;
-  }, [tokens, clientId]);
 
   const connect = useCallback(async () => {
     if (!configured) return;
@@ -140,34 +90,37 @@ export function useGmailImport(): GmailImport {
   }, [configured, promptAsync]);
 
   const fetchEmailsSince = useCallback(
-    async (since: number | null) => {
-      const token = await getValidAccessToken();
-      if (!token) {
-        throw new ImportError("gmail-not-connected");
-      }
-      return fetchTransactionEmails(token, since);
+    async (since: number | null, options: GmailFetchOptions) => {
+      await hydrateGmailConnection();
+      const current = useGmailConnectionStore.getState().tokens;
+      const account = current?.refreshToken ?? current?.accessToken;
+      if (!account) throw new ImportError("gmail-not-connected");
+
+      const range = { since, before: gmailBeforeBound(options.trip?.endDate) };
+      return fetchTransactionEmailsShared(
+        account,
+        range,
+        () => withGmailAccess((accessToken) => fetchTransactionEmails(accessToken, range)),
+        { fresh: options.fresh },
+      );
     },
-    [getValidAccessToken],
+    [],
   );
 
   const fetchEmails = useCallback(
-    async () => fetchEmailsSince(await loadGmailLastSyncAt()),
+    async (options: GmailFetchOptions) => fetchEmailsSince(await loadGmailLastSyncAt(), options),
     [fetchEmailsSince],
   );
 
-  const completeSync = useCallback(async (at?: number) => {
-    await saveGmailLastSyncAt(at ?? Date.now());
+  const completeSync = useCallback(async (at: number) => {
+    await saveGmailLastSyncAt(at);
   }, []);
-
-  // A refresh token lets us mint access tokens indefinitely; a bare access token
-  // (web implicit flow) counts as connected too — an expired one surfaces at
-  // fetch time as a reconnect prompt.
-  const connected = Boolean(tokens?.refreshToken || tokens?.accessToken);
 
   return {
     configured,
     ready: Boolean(request),
-    connected,
+    connected: hasGmailGrant(tokens),
+    accountEmail: tokens?.email ?? null,
     connect,
     fetchEmails,
     fetchEmailsSince,

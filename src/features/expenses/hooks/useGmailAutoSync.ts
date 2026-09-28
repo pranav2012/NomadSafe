@@ -35,8 +35,7 @@ export function useGmailAutoSync(trip: Trip | null): GmailAutoSync {
     let mounted = true;
     (async () => {
       try {
-        const startedAt = Date.now();
-        const messages = await gmail.fetchEmails();
+        const { messages, fetchedAt } = await gmail.fetchEmails({ trip });
         const candidates = await buildImportCandidates(messages, "email", {
           allowModel: false,
           trip,
@@ -51,7 +50,7 @@ export function useGmailAutoSync(trip: Trip | null): GmailAutoSync {
           if (mounted && added.length > 0) setImportedCount(added.length);
         }
         // Checkpoint only after the spends are saved so a failure rescans them.
-        await gmail.completeSync(startedAt);
+        await gmail.completeSync(fetchedAt);
         sessionSynced = true;
       } catch {
         // Background sync is best-effort; failures stay silent.

@@ -10,6 +10,7 @@ export class ImportError extends Error {
   constructor(
     readonly code: ImportErrorCode,
     message?: string,
+    readonly status?: number,
   ) {
     super(message ?? code);
     this.name = "ImportError";
