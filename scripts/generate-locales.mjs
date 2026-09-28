@@ -18,6 +18,9 @@ const apiKey = process.env.LOCALIZE_API_KEY;
 const model = process.env.LOCALIZE_MODEL;
 const generatedMetaKey = "__generated";
 const maxAttempts = Number(process.env.LOCALIZE_MAX_ATTEMPTS ?? 4);
+// Large single requests time out for scripts that tokenize heavily (e.g. Tamil).
+const batchSize = Number(process.env.LOCALIZE_BATCH_SIZE ?? 100);
+const requestTimeoutMs = Number(process.env.LOCALIZE_TIMEOUT_MS ?? 180_000);
 const targetLocales = process.env.LOCALIZE_TARGET_LOCALES
   ? process.env.LOCALIZE_TARGET_LOCALES.split(",").map((locale) => locale.trim()).filter(Boolean)
   : defaultTargetLocales;
@@ -126,8 +129,29 @@ async function translateBatch(locale, entries) {
   throw lastError;
 }
 
+async function translateInChunks(locale, entries) {
+  const keys = Object.keys(entries);
+  const result = {};
+  for (let start = 0; start < keys.length; start += batchSize) {
+    const chunk = Object.fromEntries(keys.slice(start, start + batchSize).map((key) => [key, entries[key]]));
+    Object.assign(result, await translateBatch(locale, chunk));
+  }
+  return result;
+}
+
 async function requestTranslation(locale, entries) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), requestTimeoutMs);
+  try {
+    return await sendTranslationRequest(locale, entries, controller.signal);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function sendTranslationRequest(locale, entries, signal) {
   const response = await fetch(`${apiBase.replace(/\/$/, "")}/chat/completions`, {
+    signal,
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -251,7 +275,7 @@ async function main() {
     });
 
     if (Object.keys(pending).length > 0) {
-      const translated = await translateBatch(locale, pending);
+      const translated = await translateInChunks(locale, pending);
       Object.entries(translated).forEach(([key, value]) => {
         if (typeof value === "string") existingFlat[key] = value;
       });
@@ -267,6 +291,8 @@ async function main() {
     await writeFile(localePath, `${JSON.stringify(inflated, null, 2)}\n`);
     nextManifest[locale] = sourceHashes;
     generatedLocales.push(locale);
+    // Save progress per locale so an interrupted run doesn't redo finished locales.
+    await writeFile(manifestPath, `${JSON.stringify(nextManifest, null, 2)}\n`);
 
     const count = Object.keys(pending).length;
     console.log(`${locale}: ${count ? `translated ${count} new/updated labels` : "no changes"}`);
