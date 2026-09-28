@@ -299,7 +299,11 @@ async function main() {
   }
 
   await writeFile(manifestPath, `${JSON.stringify(nextManifest, null, 2)}\n`);
-  await updateGeneratedIndex(generatedLocales);
+  // Always index every supported locale, not just the ones translated this run.
+  const indexedLocales = [...new Set([...defaultTargetLocales, ...generatedLocales])].filter((locale) =>
+    existsSync(path.join(translationsDir, `${locale}.json`)),
+  );
+  await updateGeneratedIndex(indexedLocales);
 }
 
 main().catch((error) => {
