@@ -1,6 +1,7 @@
 import { v } from "convex/values";
-import { components } from "./_generated/api";
+import { components, internal } from "./_generated/api";
 import { internalMutation, mutation, type MutationCtx } from "./_generated/server";
+import { POSTHOG_DELETE_DELAY_MS } from "./analytics";
 import { findAuthUserByEmail, normalizeEmail, requireUser } from "./users";
 
 type AuthModel = "session" | "account" | "user";
@@ -20,7 +21,8 @@ async function deleteAuthRows(ctx: MutationCtx, model: AuthModel, field: string,
 /**
  * Deletes every server-side record tied to a user: sharing links in both
  * directions, location shares, invites they sent or received, and finally
- * their Better Auth sessions, linked accounts and user record.
+ * their Better Auth sessions, linked accounts and user record. Their PostHog
+ * analytics are deleted by a scheduled action, which only runs if this commits.
  */
 async function purgeUser(ctx: MutationCtx, userId: string, email: string | null) {
   const owned = await ctx.db
@@ -58,6 +60,11 @@ async function purgeUser(ctx: MutationCtx, userId: string, email: string | null)
   await deleteAuthRows(ctx, "session", "userId", userId);
   await deleteAuthRows(ctx, "account", "userId", userId);
   await deleteAuthRows(ctx, "user", "_id", userId);
+
+  await ctx.scheduler.runAfter(POSTHOG_DELETE_DELAY_MS, internal.analytics.deletePostHogPerson, {
+    distinctId: userId,
+    attempt: 0,
+  });
 }
 
 export const deleteAccount = mutation({

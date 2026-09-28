@@ -42,6 +42,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { useLocalization } from "@/localization";
 import { useTripExpenseSummary } from "@/features/expenses/hooks/useTripExpenseSummary";
 import { formatMoney } from "@/features/expenses/utils/money";
+import { PostHogMaskView } from "posthog-react-native";
 
 interface UserLocation {
   city?: string;
@@ -532,54 +533,56 @@ function TripMap({
   }
 
   return (
-    <MapView
-      ref={mapRef}
-      style={styles.map}
-      provider={PROVIDER_DEFAULT}
-      initialRegion={initialRegion}
-      onLayout={fitMap}
-      scrollEnabled={false}
-      zoomEnabled={false}
-      rotateEnabled={false}
-      pitchEnabled={false}
-      toolbarEnabled={false}
-      mapType="standard"
-      // On Android, tapping a marker centers it by default and can push far-away
-      // destinations off-screen. Since map interactions are already disabled,
-      // ignoring marker selections keeps the original fitted view intact.
-      onMarkerSelect={() => {
-        if (Platform.OS === "android") {
-          // Returning nothing/undefined keeps native default behavior. Instead,
-          // we re-fit after a short delay so every destination stays visible.
-          setTimeout(() => fitMap(), 150);
-        }
-      }}
-    >
-      {destinationRoutePath.length > 1 ? (
-        <Polyline
-          coordinates={destinationRoutePath}
-          strokeColor={theme.inkSoft}
-          strokeWidth={2.5}
-          lineDashPattern={[6, 6]}
-          zIndex={1}
-        />
-      ) : null}
-      {userCoords ? (
-        <Marker
-          coordinate={userCoords}
-          title={t("trip.currentLocation")}
-          pinColor={theme.teal}
-        />
-      ) : null}
-      {pins.map((pin, index) => (
-        <Marker
-          key={`${trip.id}-dest-${index}`}
-          coordinate={pin.coord}
-          title={pin.name ?? t("trip.destination")}
-          pinColor={theme.stamp}
-        />
-      ))}
-    </MapView>
+    <PostHogMaskView style={styles.map}>
+      <MapView
+        ref={mapRef}
+        style={styles.map}
+        provider={PROVIDER_DEFAULT}
+        initialRegion={initialRegion}
+        onLayout={fitMap}
+        scrollEnabled={false}
+        zoomEnabled={false}
+        rotateEnabled={false}
+        pitchEnabled={false}
+        toolbarEnabled={false}
+        mapType="standard"
+        // On Android, tapping a marker centers it by default and can push far-away
+        // destinations off-screen. Since map interactions are already disabled,
+        // ignoring marker selections keeps the original fitted view intact.
+        onMarkerSelect={() => {
+          if (Platform.OS === "android") {
+            // Returning nothing/undefined keeps native default behavior. Instead,
+            // we re-fit after a short delay so every destination stays visible.
+            setTimeout(() => fitMap(), 150);
+          }
+        }}
+      >
+        {destinationRoutePath.length > 1 ? (
+          <Polyline
+            coordinates={destinationRoutePath}
+            strokeColor={theme.inkSoft}
+            strokeWidth={2.5}
+            lineDashPattern={[6, 6]}
+            zIndex={1}
+          />
+        ) : null}
+        {userCoords ? (
+          <Marker
+            coordinate={userCoords}
+            title={t("trip.currentLocation")}
+            pinColor={theme.teal}
+          />
+        ) : null}
+        {pins.map((pin, index) => (
+          <Marker
+            key={`${trip.id}-dest-${index}`}
+            coordinate={pin.coord}
+            title={pin.name ?? t("trip.destination")}
+            pinColor={theme.stamp}
+          />
+        ))}
+      </MapView>
+    </PostHogMaskView>
   );
 }
 

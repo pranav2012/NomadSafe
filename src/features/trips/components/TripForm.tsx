@@ -48,6 +48,7 @@ import { defaultTripName } from "@/features/trips/utils/tripName";
 import { useLocalization } from "@/localization";
 import { useTheme } from "@/hooks/useTheme";
 import { CURRENCY_OPTIONS } from "@/utils/currency";
+import { track } from "@/services/analytics";
 
 type DateField = "start" | "end";
 /** Who set the name: "auto" names follow the destinations; "user"/"ai" names are never overwritten by the default. */
@@ -540,6 +541,11 @@ export function TripForm({ editingTrip, onSave, onCancel, header }: TripFormProp
         updateTrip(editingTrip.id, input satisfies UpdateTripInput);
       } else {
         createTrip(input satisfies CreateTripInput);
+        track("trip_created", {
+          mode: input.mode,
+          destinations: input.destinations.length,
+          has_budget: budget > 0,
+        });
       }
 
       onSave();

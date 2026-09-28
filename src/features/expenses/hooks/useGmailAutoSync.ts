@@ -6,6 +6,7 @@ import {
 } from "@/features/expenses/services/importPipeline";
 import { useGmailImport } from "@/features/expenses/hooks/useGmailImport";
 import type { Trip } from "@/features/trips/store/tripsStore";
+import { track } from "@/services/analytics";
 
 // Succeeds once per app session; a failed attempt retries on the next trigger.
 let sessionSynced = false;
@@ -46,6 +47,7 @@ export function useGmailAutoSync(trip: Trip | null): GmailAutoSync {
             fresh.map((candidate) => candidateToInput(candidate, trip.id, trip.currency)),
           );
           const added = addExpenses(inputs);
+          if (added.length > 0) track("expense_added", { source: "gmail_auto", count: added.length });
           if (mounted && added.length > 0) setImportedCount(added.length);
         }
         // Checkpoint only after the spends are saved so a failure rescans them.

@@ -29,6 +29,7 @@ import { useGmailImport } from "@/features/expenses/hooks/useGmailImport";
 import type { ExpenseSource } from "@/features/expenses/store/expensesStore";
 import type { RawMessage } from "@/features/expenses/services/transactionParser";
 import type { Trip } from "@/features/trips/store/tripsStore";
+import { track } from "@/services/analytics";
 
 type Tab = "paste" | "gmail";
 
@@ -141,6 +142,7 @@ export function ImportSheet({ tripId, trip, onClose, onImported }: ImportSheetPr
       );
       const added = addExpenses(inputs);
       const fetchedAt = gmailFetchedAtRef.current;
+      track("expense_added", { source: fetchedAt !== null ? "gmail" : "paste", count: added.length });
       if (fetchedAt !== null) {
         await gmail.completeSync(fetchedAt);
       }

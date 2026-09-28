@@ -19,6 +19,7 @@ import { Stamp } from "@/components/nomad/Stamp";
 import { useLocalization } from "@/localization";
 import { LEGAL_URLS } from "@/constants/legal";
 import { BRAND_NAVY, NomadLogo } from "@/components/brand/NomadLogo";
+import { track } from "@/services/analytics";
 
 function GoogleGlyph() {
   return (
@@ -95,13 +96,18 @@ export default function SignInScreen() {
     setError(null);
     try {
       setLoading("google");
+      track("sign_in_started");
       const result = await authClient.signIn.social({
         provider: "google",
         callbackURL: "nomadsafe://",
       });
-      if (result?.error) setError(t("auth.signInFailed"));
+      if (result?.error) {
+        track("sign_in_failed");
+        setError(t("auth.signInFailed"));
+      }
       // Navigation is handled by the useEffect above once session syncs.
     } catch {
+      track("sign_in_failed");
       setError(t("auth.signInFailed"));
     } finally {
       setLoading(null);

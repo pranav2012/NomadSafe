@@ -84,7 +84,17 @@ export const privacyPolicy = httpAction(async () => {
 <li><strong>Frankfurter</strong>: currency pairs and dates, for exchange rates.</li>
 <li><strong>Hugging Face</strong>: model download requests (your IP address), if you download an AI model.</li>
 <li><strong>Sentry</strong>: crash and error reports (device model, OS version, app version and technical details of the error). We do not attach your trips, expenses, messages or location to crash reports.</li>
+<li><strong>PostHog</strong> (EU hosting): usage analytics, feature flags and session recordings, described below.</li>
 </ul>
+
+<h2>Usage analytics</h2>
+<p>To see which features work and which don't, and to test changes, NomadSafe sends usage analytics to PostHog, hosted in the EU. They are linked to your account ID once you sign in. They include:</p>
+<ul>
+<li>Which screens you open and actions you take, such as creating a trip, adding an expense, starting live sharing or triggering SOS, with counts and types only (for example "3 expenses imported from Gmail").</li>
+<li>Device model, OS, app version, language and an approximate country and city derived from your IP address. Your precise location is never sent.</li>
+<li>Session recordings: screenshots of the app with all text, input fields, images and maps masked. Recording pauses while the lock screen or PIN setup is showing.</li>
+</ul>
+<p>Analytics never include your trip names or destinations, expense amounts or merchants, notes, chats, emails, contacts or location. You can turn analytics off at any time in <em>Settings → Share usage analytics</em>. Analytics are kept for up to 12 months and session recordings for up to 30 days.</p>
 <p>We do not sell your data, use it for advertising, or share it with data brokers.</p>
 
 <h2>Permissions</h2>
@@ -96,7 +106,7 @@ export const privacyPolicy = httpAction(async () => {
 </ul>
 
 <h2>Retention and deletion</h2>
-<p>You can delete your account at any time in <em>Settings → Delete account</em>. This immediately deletes your account, sessions, sharing links, location shares and invites from our servers. You can also <a href="/delete-account">request deletion on the web</a>. Crash reports are retained by Sentry for up to 90 days.</p>
+<p>You can delete your account at any time in <em>Settings → Delete account</em>. This immediately deletes your account, sessions, sharing links, location shares and invites from our servers. Your usage analytics and session recordings are deleted from PostHog within a few days. You can also <a href="/delete-account">request deletion on the web</a>. Crash reports are retained by Sentry for up to 90 days. Otherwise, usage analytics are retained by PostHog for up to 12 months and session recordings for up to 30 days.</p>
 
 <h2>Children</h2>
 <p>NomadSafe is not directed to children under 13 (or the minimum age in your country) and we do not knowingly collect their data.</p>
@@ -125,7 +135,8 @@ export const deleteAccountPage = httpAction(async () => {
 </form>
 <h2>What gets deleted</h2>
 <ul><li>Your account profile (name, email, photo) and sign-in sessions.</li>
-<li>Live location shares, sharing links and invites, both sent and received.</li></ul>
+<li>Live location shares, sharing links and invites, both sent and received.</li>
+<li>Usage analytics and session recordings linked to your account in PostHog.</li></ul>
 <p>Data stored only on your phone (trips, expenses, contacts, chats) is removed when you uninstall the app or use <em>Settings → Wipe device data</em>. Crash reports expire from Sentry within 90 days. Nothing is kept after deletion except where the law requires it.</p>
 <p>Questions: ${contactLine()}.</p>`,
   );

@@ -22,6 +22,7 @@ import type { MoneyIntent } from "../services/moneyFacts";
 import { useAiProvisioning } from "../hooks/useAiProvisioning";
 import { provisionUnavailableText } from "../utils/provisionCopy";
 import { useTripsStore } from "@/features/trips/store/tripsStore";
+import { track } from "@/services/analytics";
 
 interface Props {
   theme: NomadColors;
@@ -248,6 +249,7 @@ export function AiChat({ theme, activeModelName }: Props) {
       { intent },
     );
     if (!accepted) return;
+    track("ai_message_sent", { quick_question: text !== undefined });
     if (text === undefined) setInput("");
     nearBottomRef.current = true;
   };

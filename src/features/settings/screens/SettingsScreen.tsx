@@ -196,6 +196,8 @@ export default function SettingsScreen() {
   const setDefaultCheckInDuration = useSettingsStore((s) => s.setDefaultCheckInDuration);
   const localAiEnabled = useSettingsStore((s) => s.localAiEnabled);
   const setLocalAiEnabled = useSettingsStore((s) => s.setLocalAiEnabled);
+  const analyticsEnabled = useSettingsStore((s) => s.analyticsEnabled);
+  const setAnalyticsEnabled = useSettingsStore((s) => s.setAnalyticsEnabled);
 
   const trips = useTripsStore((s) => s.trips);
   const expenses = useExpensesStore((s) => s.expenses);
@@ -510,6 +512,15 @@ export default function SettingsScreen() {
             onPress={handleDisconnectGmail}
           />
         )}
+        <SettingRow
+          icon="trendUp"
+          tint={theme.skySoft}
+          iconColor={theme.sky}
+          title={t("settings.usageAnalytics")}
+          sub={t("settings.usageAnalyticsSub")}
+          theme={theme}
+          right={<Toggle value={analyticsEnabled} onValueChange={setAnalyticsEnabled} theme={theme} />}
+        />
         <SettingRow
           icon="info"
           tint={theme.paperSoft}

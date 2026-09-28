@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { AppState, Modal, Pressable, StyleSheet, Text, View, type AppStateStatus } from "react-native";
-import { Stack, useRouter, type ErrorBoundaryProps } from "expo-router";
+import { Stack, useRouter, useSegments, type ErrorBoundaryProps } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ConvexReactClient, useConvexAuth, useMutation } from "convex/react";
 import { ConvexBetterAuthProvider } from "@convex-dev/better-auth/react";
@@ -37,6 +37,13 @@ import { useSettingsStore } from "@/features/settings";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { LocalizationProvider } from "@/localization";
 import { translate } from "@/localization/translate";
+import {
+  identifyUser,
+  resetAnalytics,
+  setAnalyticsEnabled,
+  setReplayRecording,
+  trackScreen,
+} from "@/services/analytics";
 
 const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN;
 
@@ -162,11 +169,43 @@ function SessionEffects() {
     if (!isAuthenticated || !userId) return;
     claimInvites({}).catch(() => {});
     Sentry.setUser({ id: userId });
+    identifyUser(userId);
   }, [claimInvites, isAuthenticated, userId]);
 
+  const previousUserId = useRef(userId);
   useEffect(() => {
     if (!userId) Sentry.setUser(null);
+    // Only reset on an actual sign-out, so signed-out launches keep one anonymous ID.
+    if (previousUserId.current && !userId) resetAnalytics();
+    previousUserId.current = userId;
   }, [userId]);
+
+  return null;
+}
+
+/** Screen tracking by route pattern (no IDs), the analytics opt-out, and pausing replay during PIN entry. */
+function AnalyticsEffects() {
+  const segments = useSegments();
+  const route = "/" + segments.join("/");
+  const analyticsEnabled = useSettingsStore((s) => s.analyticsEnabled);
+  const onboardingCompleted = useSettingsStore((s) => s.onboardingCompleted);
+  const isSignedIn = useAuthStore((s) => s.isSignedIn);
+  const isPinSet = useAuthStore((s) => s.isPinSet);
+  const isUnlocked = useAuthStore((s) => s.isUnlocked);
+  const locked = onboardingCompleted && isSignedIn && isPinSet && !isUnlocked;
+  const pinScreen = locked || route.endsWith("/setup-pin");
+
+  useEffect(() => {
+    setAnalyticsEnabled(analyticsEnabled);
+  }, [analyticsEnabled]);
+
+  useEffect(() => {
+    trackScreen(route);
+  }, [route]);
+
+  useEffect(() => {
+    setReplayRecording(analyticsEnabled && !pinScreen);
+  }, [analyticsEnabled, pinScreen]);
 
   return null;
 }
@@ -230,6 +269,7 @@ function RootLayout() {
           <ThemeProvider>
             <AppStateLock />
             <SessionEffects />
+            <AnalyticsEffects />
             <AppStack />
             <LockGate />
           </ThemeProvider>

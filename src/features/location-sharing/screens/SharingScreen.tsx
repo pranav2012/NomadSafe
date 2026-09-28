@@ -47,6 +47,8 @@ import {
 } from "../components/BackgroundLocationDisclosure";
 import { heavyImpact, successNotification } from "@/utils/haptics";
 import type { LatLng } from "@/features/trips/store/tripsStore";
+import { track } from "@/services/analytics";
+import { PostHogMaskView } from "posthog-react-native";
 
 const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.pranav.nomadsafe";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -167,6 +169,7 @@ export default function SharingScreen() {
     try {
       await startLocationBroadcast(nextMode);
       setBroadcasting(true);
+      track("live_share_started", { mode: nextMode, recipients: activeRecipientCount });
       setBroadcastInfo(readBroadcastState());
       heavyImpact();
     } catch (err) {
@@ -183,7 +186,7 @@ export default function SharingScreen() {
     } finally {
       setBusy(false);
     }
-  }, [setBroadcasting, t]);
+  }, [activeRecipientCount, setBroadcasting, t]);
 
   const handleToggleBroadcast = useCallback(async () => {
     if (busy) return;
@@ -192,6 +195,7 @@ export default function SharingScreen() {
       try {
         await stopLocationBroadcast();
         setBroadcasting(false);
+        track("live_share_stopped");
         successNotification();
       } catch {
         setBroadcasting(await isLocationBroadcastRunning());
@@ -417,28 +421,30 @@ export default function SharingScreen() {
           <View style={styles.mapCard}>
             <NomadCard theme={theme} padding={10}>
               {initialRegion ? (
-                <MapView
-                  ref={mapRef}
-                  style={styles.realMap}
-                  provider={PROVIDER_DEFAULT}
-                  initialRegion={initialRegion}
-                  scrollEnabled={false}
-                  zoomEnabled={false}
-                  rotateEnabled={false}
-                  pitchEnabled={false}
-                  toolbarEnabled={false}
-                  mapType="standard"
-                >
-                  {userPoint && <Marker coordinate={userPoint} title={t("sharing.youLabel")} pinColor={theme.stamp} />}
-                  {liveShares.map((share, index) => (
-                    <Marker
-                      key={share.ownerUserId}
-                      coordinate={{ latitude: share.latitude, longitude: share.longitude }}
-                      title={share.ownerName}
-                      pinColor={colorFor(index)}
-                    />
-                  ))}
-                </MapView>
+                <PostHogMaskView>
+                  <MapView
+                    ref={mapRef}
+                    style={styles.realMap}
+                    provider={PROVIDER_DEFAULT}
+                    initialRegion={initialRegion}
+                    scrollEnabled={false}
+                    zoomEnabled={false}
+                    rotateEnabled={false}
+                    pitchEnabled={false}
+                    toolbarEnabled={false}
+                    mapType="standard"
+                  >
+                    {userPoint && <Marker coordinate={userPoint} title={t("sharing.youLabel")} pinColor={theme.stamp} />}
+                    {liveShares.map((share, index) => (
+                      <Marker
+                        key={share.ownerUserId}
+                        coordinate={{ latitude: share.latitude, longitude: share.longitude }}
+                        title={share.ownerName}
+                        pinColor={colorFor(index)}
+                      />
+                    ))}
+                  </MapView>
+                </PostHogMaskView>
               ) : (
                 <View style={[styles.realMap, styles.mapFallback, { backgroundColor: theme.paperSoft }]}>
                   <Icon name="globe" size={34} color={theme.inkMuted} />

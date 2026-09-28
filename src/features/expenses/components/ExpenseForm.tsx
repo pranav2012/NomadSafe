@@ -31,6 +31,7 @@ import {
 import { categorizeHeuristic } from "@/features/expenses/services/categorizer";
 import { getCurrentExpenseLocation } from "@/features/expenses/services/locationTagging";
 import { localeDecimalSeparator, parseAmountInput } from "@/features/expenses/utils/amountInput";
+import { track } from "@/services/analytics";
 
 export interface ExpenseFormProps {
   editingExpense?: Expense | null;
@@ -150,6 +151,7 @@ export function ExpenseForm({
       updateExpense(editingExpense.id, payload);
     } else {
       addExpense({ ...payload, source: "manual", autoCategorized: false });
+      track("expense_added", { source: "manual", count: 1 });
     }
     onSave();
   };

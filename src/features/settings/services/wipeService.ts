@@ -13,6 +13,7 @@ import { useSafetyStore } from "@/features/safety/store/safetyStore";
 import { useSettingsStore } from "@/features/settings/store/settingsStore";
 import { useSharingStore } from "@/features/location-sharing/store/sharingStore";
 import { useTripsStore } from "@/features/trips/store/tripsStore";
+import { resetAnalytics } from "@/services/analytics";
 import { signOutAndCleanup } from "@/services/session";
 import { storage } from "@/stores/storage";
 
@@ -51,4 +52,6 @@ export async function wipeAllDeviceData(): Promise<void> {
   await attempt(() => pinAttempts.reset());
 
   storage.clearAll();
+  // PostHog keeps its IDs in memory, so rotate them after its stored copy is gone.
+  resetAnalytics();
 }

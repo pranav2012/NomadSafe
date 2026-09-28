@@ -35,6 +35,7 @@ import { emergencyContactsStorage } from "@/features/onboarding/services/emergen
 import { useBiometricPresentation, useAuthStore } from "@/features/auth";
 import { isValidPhone } from "@/features/safety/utils/phone";
 import { useLocalization } from "@/localization";
+import { track } from "@/services/analytics";
 
 const STEP_IDS = ["welcome", "safety", "ledger", "ai", "secure", "ready"] as const;
 
@@ -105,6 +106,7 @@ export default function OnboardingWelcomeScreen() {
 
   const onDone = () => {
     setOnboardingCompleted(true);
+    track("onboarding_completed");
     router.replace("/(auth)/sign-in");
   };
 

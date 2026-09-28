@@ -70,6 +70,8 @@ import {
   type SmsDelivery,
 } from "../store/safetyStore";
 import { errorNotification, heavyImpact, lightImpact, successNotification } from "@/utils/haptics";
+import { track } from "@/services/analytics";
+import { PostHogMaskView } from "posthog-react-native";
 
 const PRESETS = [
   { duration: 15 * 60, sub: "safety.presetQuick" },
@@ -426,6 +428,7 @@ export default function SafetyScreen() {
     heavyImpact();
     const previous = snapshotBroadcast();
     triggerSos(previous);
+    track("sos_triggered", { contacts: getContactPhones().length });
 
     // The SMS never waits on sharing. Sharing auto-starts only when it needs no
     // prompt; otherwise the SOS screen offers the disclosure flow instead.
@@ -438,6 +441,7 @@ export default function SafetyScreen() {
 
     const delivery = await deliveryPromise;
     recordSosDelivery(delivery);
+    track("sos_sms_result", { outcome: delivery.outcome, has_location: delivery.hasLocation });
     if (delivery.outcome === "failed") errorNotification();
     sosInFlightRef.current = false;
     setSosBusy(false);
@@ -548,6 +552,7 @@ export default function SafetyScreen() {
   const handleStart = useCallback((duration: number) => {
     setScheduleFailed(false);
     startTimer(duration);
+    track("check_in_started", { duration_minutes: Math.round(duration / 60) });
     heavyImpact();
   }, [startTimer]);
 
@@ -558,6 +563,7 @@ export default function SafetyScreen() {
 
   const handleCheckIn = useCallback(() => {
     stopTimer();
+    track("check_in_completed");
     successNotification();
   }, [stopTimer]);
 
@@ -583,6 +589,7 @@ export default function SafetyScreen() {
           const { previousBroadcast, sosDelivery: delivered } = useSafetyStore.getState();
           const contactsAlerted = delivered?.outcome === "sent" || delivered?.outcome === "opened";
           cancelSos();
+          track("sos_cancelled");
           successNotification();
           setSafeFollowUp(contactsAlerted && getContactPhones().length > 0);
           void restoreBroadcast(previousBroadcast);
@@ -772,28 +779,30 @@ export default function SafetyScreen() {
             <View style={{ paddingHorizontal: 16, marginTop: 14 }}>
               <View style={{ borderRadius: nomad.radii.xl, overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.2)" }}>
                 {location ? (
-                  <MapView
-                    style={styles.emergencyMap}
-                    provider={PROVIDER_DEFAULT}
-                    initialRegion={{
-                      latitude: location.latitude,
-                      longitude: location.longitude,
-                      latitudeDelta: 0.01,
-                      longitudeDelta: 0.01,
-                    }}
-                    scrollEnabled={false}
-                    zoomEnabled={false}
-                    rotateEnabled={false}
-                    pitchEnabled={false}
-                    toolbarEnabled={false}
-                    mapType="standard"
-                  >
-                    <Marker
-                      coordinate={{ latitude: location.latitude, longitude: location.longitude }}
-                      title={sharingLive ? t("sos.broadcasting") : t("sos.yourLocation")}
-                      pinColor={theme.stamp}
-                    />
-                  </MapView>
+                  <PostHogMaskView>
+                    <MapView
+                      style={styles.emergencyMap}
+                      provider={PROVIDER_DEFAULT}
+                      initialRegion={{
+                        latitude: location.latitude,
+                        longitude: location.longitude,
+                        latitudeDelta: 0.01,
+                        longitudeDelta: 0.01,
+                      }}
+                      scrollEnabled={false}
+                      zoomEnabled={false}
+                      rotateEnabled={false}
+                      pitchEnabled={false}
+                      toolbarEnabled={false}
+                      mapType="standard"
+                    >
+                      <Marker
+                        coordinate={{ latitude: location.latitude, longitude: location.longitude }}
+                        title={sharingLive ? t("sos.broadcasting") : t("sos.yourLocation")}
+                        pinColor={theme.stamp}
+                      />
+                    </MapView>
+                  </PostHogMaskView>
                 ) : (
                   <View style={[styles.emergencyMap, styles.emergencyMapFallback]}>
                     <Icon name="mapPin" size={28} color="rgba(255,255,255,0.7)" />

@@ -29,10 +29,11 @@ NomadSafe is a travel safety and planning app built with Expo (SDK 57), React Na
 - **Backend**: Convex + Better Auth (Google sign-in only).
   - `convex/users.ts`: auth helpers; user lookups go through the Better Auth component.
   - `convex/sharing.ts`: contact links, invites, location shares.
-  - `convex/account.ts`: account deletion.
+  - `convex/account.ts`: account deletion. It also schedules `convex/analytics.ts` to delete the user's PostHog data (needs `POSTHOG_PERSONAL_API_KEY` and `POSTHOG_PROJECT_ID` Convex env vars).
   - `convex/legalPages.ts`: `/privacy` and `/delete-account` pages.
 - **Background location**: `features/location-sharing/services/locationBroadcastTask.ts` exchanges the Better Auth session cookie for a Convex JWT and calls `sharing.publishLocation` with `ConvexHttpClient`. Its state is kept under its own MMKV key, not the UI store.
 - **Local AI**: llama.rn, managed by `features/ai/services/localModelService.ts`. All completions go through its internal queue, and `release()` is safe to call at any time.
+- **Analytics**: PostHog (EU), in `src/services/analytics.ts`. It's off when `EXPO_PUBLIC_POSTHOG_KEY` is unset and in `__DEV__`. Add events to `AnalyticsEvents` and flags to `FeatureFlags` before using them. Event properties are counts, enums and booleans only, never user content or coordinates. Session replay is started and stopped by the app (off during PIN entry). Wrap new maps or sensitive views in `PostHogMaskView`.
 - **i18n**: `useLocalization().t` in components and `translate()` from `@/localization/translate` elsewhere. Add strings to `en.json`, and add their translations to the other locale files in `src/localization/translations/` (a missing key falls back to English). `node scripts/check-i18n-keys.mjs` lists keys used in code but missing from `en.json`. Counts use plural variants: `t("ns.key", { count })` picks `ns.key_one` / `ns.key_other`.
 - **React Compiler caveat**: don't render values read from mutable module caches (e.g. the exchange-rate Map); the compiler memoizes them and they never update. Keep rendered values in state or stores.
 

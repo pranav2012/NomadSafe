@@ -116,6 +116,9 @@ npx eas-cli submit -p android --profile production --path <aab or latest>
 | Contacts | Yes (name + email of people invited to sharing) | No | No | Optional | App functionality |
 | App activity / Emails | No (Gmail is processed on-device only) | No | n/a | n/a | n/a |
 | App info and performance → Crash logs, Diagnostics | Yes, only if Sentry is enabled | No | No | Required | Analytics |
+| App activity → App interactions, Other user-generated content (masked session recordings) | Yes, if PostHog is enabled | No | No | Optional (Settings → Share usage analytics) | Analytics |
+| Location → Approximate (country/city from IP, via PostHog GeoIP) | Yes, if PostHog is enabled | No | No | Optional | Analytics |
+| Device or other IDs (PostHog anonymous ID) | Yes, if PostHog is enabled | No | No | Optional | Analytics |
 
 ### Sensitive permissions (Policy → App content → Sensitive permissions)
 - **Location permissions → background location**

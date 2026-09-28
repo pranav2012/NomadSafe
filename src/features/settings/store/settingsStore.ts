@@ -18,6 +18,7 @@ interface SettingsState {
   defaultTripMode: DefaultTripMode;
   defaultCheckInDuration: number; // seconds
   localAiEnabled: boolean;
+  analyticsEnabled: boolean;
 
   setThemeMode: (mode: ThemeMode) => void;
   setOnboardingCompleted: (value: boolean) => void;
@@ -29,6 +30,7 @@ interface SettingsState {
   setDefaultTripMode: (mode: DefaultTripMode) => void;
   setDefaultCheckInDuration: (seconds: number) => void;
   setLocalAiEnabled: (value: boolean) => void;
+  setAnalyticsEnabled: (value: boolean) => void;
   reset: () => void;
 }
 
@@ -47,6 +49,7 @@ export const useSettingsStore = create<SettingsState>()(
       defaultTripMode: "solo",
       defaultCheckInDuration: 2 * 60 * 60,
       localAiEnabled: true,
+      analyticsEnabled: true,
 
       setThemeMode: (mode) => set({ themeMode: mode }),
       setOnboardingCompleted: (value) =>
@@ -68,6 +71,7 @@ export const useSettingsStore = create<SettingsState>()(
       setDefaultTripMode: (mode) => set({ defaultTripMode: mode }),
       setDefaultCheckInDuration: (seconds) => set({ defaultCheckInDuration: seconds }),
       setLocalAiEnabled: (value) => set({ localAiEnabled: value }),
+      setAnalyticsEnabled: (value) => set({ analyticsEnabled: value }),
       reset: () =>
         set({
           themeMode: "system",
@@ -80,6 +84,7 @@ export const useSettingsStore = create<SettingsState>()(
           defaultTripMode: "solo",
           defaultCheckInDuration: 2 * 60 * 60,
           localAiEnabled: true,
+      analyticsEnabled: true,
         }),
     }),
     {
