@@ -1,8 +1,8 @@
 nodeLinker: hoisted
 minimumReleaseAge: 2880 # 2 days
 allowBuilds:
+  '@posthog/cli': true
   '@prisma/engines': true
-  '@sentry/cli': true
   esbuild: true
   llama.rn: true
   prisma: true

@@ -24,6 +24,7 @@ import {
   type EmergencyContact,
 } from "@/features/onboarding/services/emergencyContactsStorage";
 import { isValidPhone, normalizePhone } from "@/features/safety/utils/phone";
+import { logger } from "@/services/logger";
 
 const SLOT_COLORS = ["teal", "mustard", "sky", "stamp"] as const;
 const MAX_CONTACTS = 3;
@@ -137,7 +138,7 @@ export default function EmergencyContactsScreen() {
         Alert.alert(displayName, t("emergencyContacts.noPhoneWarning"));
       }
     } catch (err) {
-      console.warn("Contact picker failed", err);
+      logger.warn("contacts", "picker failed", err);
       Alert.alert(t("settings.emergencyContacts"), t("emergencyContacts.pickerFailed"), [
         { text: t("common.cancel"), style: "cancel" },
         { text: t("emergencyContacts.addManually"), onPress: openManualEntry },

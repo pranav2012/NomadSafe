@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import Constants from "expo-constants";
 import PostHog, { type PostHogCustomStorage } from "posthog-react-native";
 import { storage } from "@/stores/storage";
 
@@ -58,7 +59,19 @@ export const posthog: PostHog | null =
           captureLog: false,
           captureNetworkTelemetry: false,
         },
-        errorTracking: { autocapture: false },
+        errorTracking: {
+          autocapture: {
+            uncaughtExceptions: true,
+            unhandledRejections: true,
+            nativeCrashes: true,
+            androidNdkCrashes: true,
+          },
+        },
+        logs: {
+          serviceName: "nomadsafe-app",
+          serviceVersion: Constants.expoConfig?.version,
+          environment: "production",
+        },
         capturePushNotificationSubscriptions: false,
         capturePushNotificationOpened: false,
         disableSurveys: true,

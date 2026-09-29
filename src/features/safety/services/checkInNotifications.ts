@@ -1,5 +1,6 @@
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
+import { logger } from "@/services/logger";
 
 export const SAFETY_CHANNEL_ID = "safety-checkin-v2";
 export const SAFETY_NOTIFICATION_SOURCE = "nomadsafe-safety";
@@ -139,7 +140,7 @@ export async function scheduleCheckInNotifications(
     }
     return "scheduled";
   } catch (err) {
-    console.warn("Failed to schedule check-in notifications", err);
+    logger.warn("check-in", "failed to schedule notifications", err);
     return "error";
   }
 }

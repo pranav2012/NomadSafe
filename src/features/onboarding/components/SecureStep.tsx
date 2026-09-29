@@ -17,6 +17,7 @@ import type { BiometricPresentation } from "@/features/auth";
 import { ToggleRow } from "@/features/onboarding/components/ToggleRow";
 import { Icon } from "@/components/nomad/Icon";
 import { Eyebrow, HugeHeadline, HeadlineItalic } from "@/components/nomad/Typography";
+import { logger } from "@/services/logger";
 
 interface Props {
   theme: NomadTheme;
@@ -58,7 +59,7 @@ export function SecureStep({ theme, totalSteps, biometric }: Props) {
       });
       setIsAuthenticated(success);
     } catch (err) {
-      console.warn("Biometric check failed", err);
+      logger.warn("onboarding", "biometric check failed", err);
     }
   };
 

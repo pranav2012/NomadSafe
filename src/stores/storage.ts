@@ -2,6 +2,7 @@ import { createMMKV, type MMKV } from "react-native-mmkv";
 import * as Crypto from "expo-crypto";
 import * as SecureStore from "expo-secure-store";
 import type { StateStorage } from "zustand/middleware";
+import { logger } from "@/services/logger";
 
 const STORAGE_ID = "nomadsafe-main";
 const KEY_NAME = "nomadsafe.mmkv-key";
@@ -35,7 +36,8 @@ function openStorage(): MMKV {
     SecureStore.setItem(MIGRATED_NAME, "1", keyOptions);
     return store;
   } catch (error) {
-    if (__DEV__) console.warn("[storage] encryption unavailable, using plain MMKV", error);
+    // Deferred: logging loads analytics, which imports this module.
+    queueMicrotask(() => logger.warn("storage", "encryption unavailable, using plain MMKV", error));
     return createMMKV({ id: STORAGE_ID });
   }
 }

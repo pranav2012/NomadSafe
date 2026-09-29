@@ -13,6 +13,7 @@ import {
   type MoneyIntentMatch,
 } from "../services/moneyFacts";
 import { translate } from "@/localization/translate";
+import { logger } from "@/services/logger";
 
 export interface ChatMessage {
   from: "ai" | "you";
@@ -158,7 +159,7 @@ export const useChatStore = create<ChatState>()(
           // everything else goes to the model with those facts in the prompt.
           loadTripMoneySnapshot()
             .catch((error: unknown) => {
-              console.warn("[chatStore] money facts unavailable", error);
+              logger.warn("chatStore", "money facts unavailable", error);
               return null;
             })
             .then(async (snapshot) => {
@@ -234,7 +235,7 @@ export const useChatStore = create<ChatState>()(
             })
             .catch((error: unknown) => {
               clearStream();
-              console.warn("[chatStore] reply generation failed", error);
+              logger.warn("chatStore", "reply generation failed", error);
               const noModel = error instanceof Error && error.message.includes("not downloaded");
               updateLast(conversationKey, (message) => ({
                 ...message,

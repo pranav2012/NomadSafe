@@ -1,4 +1,4 @@
-// Publishes an EAS Update to a channel, then uploads its source maps to Sentry.
+// Publishes an EAS Update to a channel, then uploads its Hermes source maps to PostHog.
 // Usage: node scripts/publish-update.mjs <development|preview|production> [eas update flags]
 import { spawnSync } from "node:child_process";
 
@@ -31,8 +31,8 @@ run("npx", [
   ...extra,
 ]);
 
-if (!process.env.SENTRY_AUTH_TOKEN) {
-  console.warn("SENTRY_AUTH_TOKEN not set; skipping Sentry source map upload.");
+if (!process.env.POSTHOG_CLI_API_KEY || !process.env.POSTHOG_CLI_PROJECT_ID) {
+  console.warn("POSTHOG_CLI_API_KEY / POSTHOG_CLI_PROJECT_ID not set; skipping PostHog source map upload.");
   process.exit(0);
 }
-run("npx", ["sentry-expo-upload-sourcemaps", "dist"]);
+run("pnpm", ["exec", "posthog-cli", "hermes", "upload", "--directory", "dist"]);

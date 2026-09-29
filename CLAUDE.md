@@ -22,7 +22,7 @@ NomadSafe is a travel safety and planning app built with Expo (SDK 57), React Na
 
 - **Entry**: `index.ts` imports the background-task modules (location broadcast, model download) before `expo-router/entry`, so Android can run them on a headless launch. New `TaskManager.defineTask` modules must be imported there.
 - **Routing**: Expo Router, with routes in `src/app/`. Route files are thin re-exports of feature screens.
-  - `src/app/_layout.tsx`: providers, Sentry, `ErrorBoundary`, `AppStateLock` (auto-lock timer), `LockGate` (the PIN/biometric lock as an RN `Modal` over every route) and `SessionEffects`.
+  - `src/app/_layout.tsx`: providers, `ErrorBoundary` (reports to PostHog), `AppStateLock` (auto-lock timer), `LockGate` (the PIN/biometric lock as an RN `Modal` over every route) and `SessionEffects`.
 - **Features**: `src/features/<name>/{screens,components,hooks,services,store,utils}`
 - **Path aliases**: `@/` → `./src/`, `@convex/` → `./convex/`
 - **State**: zustand stores persisted to **encrypted MMKV** (`src/stores/storage.ts`, AES-256, key in Keystore/Keychain via SecureStore). No other MMKV instances.
@@ -34,6 +34,7 @@ NomadSafe is a travel safety and planning app built with Expo (SDK 57), React Na
 - **Background location**: `features/location-sharing/services/locationBroadcastTask.ts` exchanges the Better Auth session cookie for a Convex JWT and calls `sharing.publishLocation` with `ConvexHttpClient`. Its state is kept under its own MMKV key, not the UI store.
 - **Local AI**: llama.rn, managed by `features/ai/services/localModelService.ts`. All completions go through its internal queue, and `release()` is safe to call at any time.
 - **Analytics**: PostHog (EU), in `src/services/analytics.ts`. It's off when `EXPO_PUBLIC_POSTHOG_KEY` is unset and in `__DEV__`. Add events to `AnalyticsEvents` and flags to `FeatureFlags` before using them. Event properties are counts, enums and booleans only, never user content or coordinates. Session replay is started and stopped by the app (off during PIN entry). Wrap new maps or sensitive views in `PostHogMaskView`.
+- **Errors and logs**: PostHog error tracking (JS, Android JVM + NDK, iOS crashes) and PostHog Logs; there is no Sentry. Log through `logger` from `src/services/logger.ts`, not `console.*`: it prints in dev and sends to PostHog in production, so attributes follow the analytics rules (no user content). `logger.error` also creates an exception. Release builds upload source maps and native symbols through the `posthog-react-native/expo` plugin and need the `POSTHOG_CLI_*` EAS env vars.
 - **i18n**: `useLocalization().t` in components and `translate()` from `@/localization/translate` elsewhere. Add strings to `en.json`, and add their translations to the other locale files in `src/localization/translations/` (a missing key falls back to English). `node scripts/check-i18n-keys.mjs` lists keys used in code but missing from `en.json`. Counts use plural variants: `t("ns.key", { count })` picks `ns.key_one` / `ns.key_other`.
 - **React Compiler caveat**: don't render values read from mutable module caches (e.g. the exchange-rate Map); the compiler memoizes them and they never update. Keep rendered values in state or stores.
 

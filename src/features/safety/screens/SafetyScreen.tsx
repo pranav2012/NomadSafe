@@ -72,6 +72,7 @@ import {
 import { errorNotification, heavyImpact, lightImpact, successNotification } from "@/utils/haptics";
 import { track } from "@/services/analytics";
 import { PostHogMaskView } from "posthog-react-native";
+import { logger } from "@/services/logger";
 
 const PRESETS = [
   { duration: 15 * 60, sub: "safety.presetQuick" },
@@ -270,7 +271,7 @@ export default function SafetyScreen() {
         if (mounted) setLocation(fix);
       } catch (err) {
         // Location services off or unavailable; SOS will retry for a fresh fix.
-        console.warn("Safety location bootstrap failed", err);
+        logger.warn("safety", "location bootstrap failed", err);
       }
     }
     bootstrap();
@@ -388,7 +389,7 @@ export default function SafetyScreen() {
       const outcome = await composeSms(phones, buildMessage(purpose, position));
       return { outcome, recipients: phones.length, hasLocation: !!position, at: Date.now() };
     } catch (err) {
-      console.warn("Alert SMS failed", err);
+      logger.error("sos", "alert SMS failed", err);
       return { outcome: "failed", recipients: phones.length, hasLocation: false, at: Date.now() };
     }
   }, [buildMessage, location]);

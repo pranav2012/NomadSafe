@@ -1,6 +1,7 @@
 import * as Location from "expo-location";
 import * as Contacts from "expo-contacts";
 import * as Notifications from "expo-notifications";
+import { logger } from "@/services/logger";
 
 export type PermissionKind = "location" | "contacts" | "notifications";
 
@@ -34,7 +35,7 @@ async function safely(
   try {
     return toStatus(kind, await call());
   } catch (err) {
-    console.warn(`[permissions] ${kind} check failed`, err);
+    logger.warn("permissions", "check failed", err, { kind });
     return { kind, granted: false, canAskAgain: true, denied: false };
   }
 }

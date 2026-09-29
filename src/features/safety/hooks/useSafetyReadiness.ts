@@ -8,6 +8,7 @@ import {
   requestNotificationPermission,
 } from "../services/checkInNotifications";
 import { getContactPhones } from "../services/sosService";
+import { logger } from "@/services/logger";
 
 export type PermissionReadiness = "granted" | "askable" | "blocked";
 
@@ -121,7 +122,7 @@ export function useSafetyReadiness(notificationChannelName: string) {
         await Linking.openSettings();
       }
     } catch (err) {
-      console.warn("Background location request failed", err);
+      logger.warn("safety", "background location request failed", err);
     }
     await refresh();
   }, [refresh]);

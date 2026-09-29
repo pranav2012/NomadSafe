@@ -49,6 +49,7 @@ import { useLocalization } from "@/localization";
 import { useTheme } from "@/hooks/useTheme";
 import { CURRENCY_OPTIONS } from "@/utils/currency";
 import { track } from "@/services/analytics";
+import { logger } from "@/services/logger";
 
 type DateField = "start" | "end";
 /** Who set the name: "auto" names follow the destinations; "user"/"ai" names are never overwritten by the default. */
@@ -347,7 +348,7 @@ export function TripForm({ editingTrip, onSave, onCancel, header }: TripFormProp
         }
       }
 
-      console.warn("Budget estimate failed after retries:", lastError);
+      logger.warn("trip-form", "budget estimate failed after retries", lastError);
       setBudgetEstimate(null);
       setBudgetEstimateError(t("trip.aiBudgetError"));
     } finally {
@@ -438,7 +439,7 @@ export function TripForm({ editingTrip, onSave, onCancel, header }: TripFormProp
         }
       }
 
-      console.warn("Trip name generation failed after retries:", lastError);
+      logger.warn("trip-form", "trip name generation failed after retries", lastError);
       setNameError(t("trip.aiNameError"));
     } finally {
       await localModelService.release();

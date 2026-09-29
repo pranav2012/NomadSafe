@@ -126,7 +126,7 @@
     "durationHoursMinutes": "{{hours}} 小时 {{minutes}} 分钟",
     "privacyPolicy": "隐私政策",
     "usageAnalytics": "共享使用情况分析",
-    "usageAnalyticsSub": "帮助改进 NomadSafe 的使用统计和已遮挡的屏幕录制。绝不包含你的行程、支出、聊天或精确位置。",
+    "usageAnalyticsSub": "帮助改进 NomadSafe 的使用统计、崩溃报告和已遮挡的屏幕录制。绝不包含你的行程、支出、聊天或精确位置。",
     "gmailConnected": "Gmail 已连接",
     "gmailConnectedSub": "只读权限，用于查找预订和收据",
     "gmailConnectedAsSub": "{{email}} · 只读权限，用于查找预订和收据",

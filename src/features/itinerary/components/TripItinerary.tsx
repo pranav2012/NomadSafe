@@ -14,6 +14,7 @@ import {
 import { getEventTypeMeta } from "@/features/itinerary/constants/eventTypes";
 import { EventForm, type EventFormValues } from "@/features/itinerary/components/EventForm";
 import { localizeEventDetail, localizeEventTitle } from "@/features/itinerary/utils/eventText";
+import { logger } from "@/services/logger";
 
 type ThemeColors = ReturnType<typeof useTheme>["nomad"]["colors"];
 type Translate = ReturnType<typeof useLocalization>["t"];
@@ -145,7 +146,7 @@ export function TripItinerary({ trip }: { trip: Trip }) {
         ],
       );
     } catch (error) {
-      console.warn("[itinerary-refinement] failed", error);
+      logger.warn("itinerary-refinement", "failed", error);
       Alert.alert(t("itinerary.refineErrorTitle"), t("itinerary.refineErrorBody"));
     } finally {
       await localModelService.release();

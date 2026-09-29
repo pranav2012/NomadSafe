@@ -143,9 +143,9 @@
       ],
       "expo-localization",
       [
-        "@sentry/react-native/expo",
+        "posthog-react-native/expo",
         {
-          "url": "https://sentry.io/"
+          "uploadNativeSymbols": true
         }
       ],
       "expo-sharing",

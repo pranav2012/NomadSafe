@@ -36,6 +36,7 @@ import {
 } from "@/features/onboarding/services/emergencyContactsStorage";
 import { isValidPhone, normalizePhone } from "@/features/safety/utils/phone";
 import { ToggleRow } from "@/features/onboarding/components/ToggleRow";
+import { logger } from "@/services/logger";
 
 export interface ContactsSummary {
   count: number;
@@ -214,7 +215,7 @@ export function SafetyStep({
         Alert.alert(displayName, t("emergencyContacts.noPhoneWarning"));
       }
     } catch (err) {
-      console.warn("Contact picker failed", err);
+      logger.warn("onboarding", "contact picker failed", err);
       Alert.alert(t("onboarding.trustedContactsTitle"), t("emergencyContacts.pickerFailed"), [
         { text: t("common.cancel"), style: "cancel" },
         { text: t("emergencyContacts.addManually"), onPress: openManualEntry },

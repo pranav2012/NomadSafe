@@ -14,6 +14,7 @@ import {
 } from "@/features/itinerary/store/eventsStore";
 import type { EventType } from "@/features/itinerary/constants/eventTypes";
 import { fromDateKey } from "@/features/trips/utils/dates";
+import { countAttributes, logger } from "@/services/logger";
 
 export interface BuildEventsOptions {
   /** Events are scoped to the selected trip's date window. */
@@ -345,13 +346,11 @@ export async function buildEventCandidates(
   });
   diagnostics.relevant = relevant.length;
 
-  if (__DEV__) {
-    console.info("[itinerary-import] scan", {
-      messages: messages.length,
-      relevant: relevant.length,
-      trip: trip ? { id: trip.id, startDate: trip.startDate, endDate: trip.endDate } : null,
-    });
-  }
+  logger.info("itinerary-import", "scan", {
+    messages: messages.length,
+    relevant: relevant.length,
+    has_trip: Boolean(trip),
+  });
 
   for (const message of relevant) {
     const extracted = extractEvents(message, trip ?? null);
@@ -396,13 +395,15 @@ export async function buildEventCandidates(
     }
   }
 
-  if (__DEV__) {
-    console.info("[itinerary-import] result", {
-      ...diagnostics,
-      candidates: candidates.length,
-      fresh: candidates.filter((candidate) => !candidate.duplicate).length,
-    });
-  }
+  logger.info("itinerary-import", "result", {
+    hinted: diagnostics.hinted,
+    relevant: diagnostics.relevant,
+    extracted: diagnostics.extracted,
+    duplicates: diagnostics.duplicates,
+    candidates: candidates.length,
+    fresh: candidates.filter((candidate) => !candidate.duplicate).length,
+    ...countAttributes("rejected", diagnostics.rejected),
+  });
 
   return candidates;
 }

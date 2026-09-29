@@ -337,7 +337,7 @@
     "durationHoursMinutes": "{{hours}} hr {{minutes}} min",
     "privacyPolicy": "Privacy policy",
     "usageAnalytics": "Share usage analytics",
-    "usageAnalyticsSub": "Usage stats and masked screen recordings that help improve NomadSafe. Never your trips, expenses, chats or precise location.",
+    "usageAnalyticsSub": "Usage stats, crash reports and masked screen recordings that help improve NomadSafe. Never your trips, expenses, chats or precise location.",
     "gmailConnected": "Gmail connected",
     "gmailConnectedSub": "Read-only access to find bookings and receipts",
     "gmailConnectedAsSub": "{{email}} · Read-only access to find bookings and receipts",

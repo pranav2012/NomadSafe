@@ -84,9 +84,10 @@ that owns the Gmail client IDs.
 
 Keep it compliant:
 
-- Email content must never reach Convex, Sentry, analytics or logs that leave
-  the device. Production builds strip `console.log/info/debug`, but not
-  `console.warn` / `console.error`.
+- Email content must never reach Convex, analytics, crash reports or logs that
+  leave the device. `logger` (`src/services/logger.ts`) sends to PostHog in
+  production, so pass it counts and flags only. Production builds strip
+  `console.log/info/debug`, but not `console.warn` / `console.error`.
 - If a code change sends email data off the device, the privacy policy, the Play
   Data safety form and the CASA exemption all need revisiting.
 - Verification is reviewed again each year.

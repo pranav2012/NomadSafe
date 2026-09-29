@@ -3,6 +3,7 @@ import { initLlama, type LlamaContext } from "llama.rn";
 import { useSettingsStore } from "@/features/settings/store/settingsStore";
 import { storage } from "@/stores/storage";
 import { aiModelService, findModel, modelFileSize, type AiModel } from "./aiModelService";
+import { logger } from "@/services/logger";
 
 export type { AiModel };
 
@@ -294,13 +295,12 @@ function isMissingFileError(err: unknown): boolean {
 }
 
 function logBackend(model: AiModel, context: LlamaContext) {
-  if (!__DEV__) return;
-  const devices = context.devices?.join(", ") || "none";
-  console.log(
-    `[localModelService] ${model.id} loaded on ${context.gpu ? "GPU" : "CPU"} (devices: ${devices})${
-      context.gpu ? "" : ` ${context.reasonNoGPU}`
-    }`,
-  );
+  logger.info("localModelService", "model loaded", {
+    model: model.id,
+    gpu: context.gpu,
+    devices: context.devices?.join(", ") || "none",
+    reason_no_gpu: context.gpu ? undefined : context.reasonNoGPU,
+  });
 }
 
 /**
@@ -323,7 +323,7 @@ async function initAndroidGpu(model: AiModel, params: { model: string; use_mlock
   } catch (err) {
     storage.remove(GPU_ATTEMPT_KEY);
     if (isMissingFileError(err)) throw err;
-    console.warn("[localModelService] GPU load failed, falling back to CPU", err);
+    logger.warn("localModelService", "GPU load failed, falling back to CPU", err);
     storage.set(GPU_DISABLED_KEY, true);
     if (context) await context.release().catch(() => undefined);
     return null;
@@ -341,7 +341,7 @@ async function initContext(model: AiModel, path: string, contextTokens: number):
       return await initLlama({ ...params, n_gpu_layers: 0, no_gpu_devices: true, flash_attn_type: "auto" });
     } catch (err) {
       if (isMissingFileError(err)) throw err;
-      console.warn("[localModelService] fast CPU load failed, retrying without flash attention", err);
+      logger.warn("localModelService", "fast CPU load failed, retrying without flash attention", err);
       return initLlama({ ...params, n_gpu_layers: 0, no_gpu_devices: true });
     }
   }
@@ -350,7 +350,7 @@ async function initContext(model: AiModel, path: string, contextTokens: number):
     return await initLlama({ ...params, n_gpu_layers: 99, flash_attn_type: "auto" });
   } catch (err) {
     if (isMissingFileError(err)) throw err;
-    console.warn("[localModelService] fast load failed, retrying on CPU", err);
+    logger.warn("localModelService", "fast load failed, retrying on CPU", err);
     return initLlama({ ...params, n_gpu_layers: 0 });
   }
 }
@@ -640,7 +640,7 @@ export const localModelService = {
             return stripThinking(result.text) || partial;
           } catch (err) {
             if (!isThinkingFlagError(err) || partial) throw err;
-            console.warn("[localModelService] enable_thinking rejected, retrying without it", err);
+            logger.warn("localModelService", "enable_thinking rejected, retrying without it", err);
             disableThinkingSupported = false;
           }
         }
@@ -767,7 +767,7 @@ export const localModelService = {
       const category = parsed.category?.trim().toLowerCase() as ExpenseCategoryId;
       return EXPENSE_CATEGORY_VALUES.includes(category) ? category : null;
     } catch (err) {
-      console.warn("[localModelService] expense categorization failed", err);
+      logger.warn("localModelService", "expense categorization failed", err);
       return null;
     }
   },

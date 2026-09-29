@@ -7,6 +7,7 @@ import {
   saveItineraryLastSyncAt,
 } from "@/features/itinerary/services/itinerarySyncStore";
 import type { Trip } from "@/features/trips/store/tripsStore";
+import { logger } from "@/services/logger";
 
 // Each trip syncs at most once per app session.
 const sessionSyncedTripIds = new Set<string>();
@@ -37,13 +38,11 @@ export function useItineraryAutoSync(trip: Trip | null): ItineraryAutoSync {
   useEffect(() => {
     const current = tripRef.current;
     if (!tripId || !current || sessionSyncedTripIds.has(tripId) || !gmail.connected) {
-      if (__DEV__) {
-        console.info("[itinerary-sync] skip", {
-          hasTrip: Boolean(tripId),
-          synced: tripId ? sessionSyncedTripIds.has(tripId) : false,
-          connected: gmail.connected,
-        });
-      }
+      logger.debug("itinerary-sync", "skip", {
+        has_trip: Boolean(tripId),
+        synced: tripId ? sessionSyncedTripIds.has(tripId) : false,
+        connected: gmail.connected,
+      });
       return;
     }
     sessionSyncedTripIds.add(tripId);
@@ -59,11 +58,11 @@ export function useItineraryAutoSync(trip: Trip | null): ItineraryAutoSync {
           .events.some((event) => event.tripId === tripId);
         const since = hasEvents ? await loadItineraryLastSyncAt(tripId) : null;
         const { messages, fetchedAt } = await fetchRef.current(since, { trip: current });
-        if (__DEV__) console.info("[itinerary-sync] fetched", { since, messages: messages.length });
+        logger.info("itinerary-sync", "fetched", { incremental: Boolean(since), messages: messages.length });
         const candidates = await buildEventCandidates(messages, "email", { trip: current });
 
         const fresh = candidates.filter((candidate) => !candidate.duplicate);
-        if (__DEV__) console.info("[itinerary-sync] adding", { fresh: fresh.length });
+        logger.info("itinerary-sync", "adding", { fresh: fresh.length });
         // Events belong to `tripId`, so they're stored even if the user switched trips meanwhile.
         if (fresh.length > 0) {
           useEventsStore.getState().addEvents(
@@ -84,7 +83,7 @@ export function useItineraryAutoSync(trip: Trip | null): ItineraryAutoSync {
         await saveItineraryLastSyncAt(tripId, fetchedAt);
       } catch (err) {
         sessionSyncedTripIds.delete(tripId);
-        console.warn("[itinerary-sync] failed", err);
+        logger.warn("itinerary-sync", "failed", err);
       }
     })();
 

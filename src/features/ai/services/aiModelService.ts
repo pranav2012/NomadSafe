@@ -13,6 +13,7 @@ import {
   type AiModel,
   type AiModelId,
 } from "./modelCatalog";
+import { logger } from "@/services/logger";
 
 export * from "./modelCatalog";
 
@@ -101,7 +102,7 @@ function nativeModelsDir(): string | null {
     cachedNativeDir = systemDownloader.getModelsDirectory();
     return cachedNativeDir;
   } catch (err) {
-    console.warn("[aiModelService] models directory unavailable", err);
+    logger.warn("aiModelService", "models directory unavailable", err);
     return null;
   }
 }
@@ -171,7 +172,7 @@ async function migrateLegacyCacheFiles(): Promise<void> {
         await LegacyFileSystem.deleteAsync(cacheUri, { idempotent: true });
       }
     } catch (err) {
-      console.warn("[aiModelService] legacy cache migration failed", err);
+      logger.warn("aiModelService", "legacy cache migration failed", err);
     }
   }
 }
@@ -295,7 +296,7 @@ export const aiModelService = {
   /** Maps ids/files persisted by older builds. Runs once per launch. */
   migrateLegacyStorage(): Promise<void> {
     legacyMigration ??= migrateLegacyState().catch((err) => {
-      console.warn("[aiModelService] legacy migration failed", err);
+      logger.warn("aiModelService", "legacy migration failed", err);
     });
     return legacyMigration;
   },

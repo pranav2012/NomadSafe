@@ -21,6 +21,7 @@ import { localModelService } from "./localModelService";
 import { modelDownloadManager, type DownloadState } from "./modelDownloadManager";
 import { modelNotifications } from "./modelNotifications";
 import { systemDownloader, type SystemDownloadInfo } from "./systemDownloader";
+import { logger } from "@/services/logger";
 
 export type ProvisionPhase =
   | "checking"
@@ -328,7 +329,7 @@ async function driveNative(model: AiModel, record: ProvisionRecord): Promise<boo
         !record.allowMobileData,
       );
     } catch (err) {
-      console.warn("[modelProvisioner] enqueue failed", err);
+      logger.warn("modelProvisioner", "enqueue failed", err);
       writeRecord({ modelId: model.id });
       fail("storageUnavailable");
       return false;
@@ -426,7 +427,7 @@ async function driveJs(model: AiModel, record: ProvisionRecord): Promise<void> {
   patch({ phase: "downloading", progress, bytesDownloaded, errorCode: null });
   // Not awaited: resolves only when the download ends; progress arrives via subscribe().
   const run = isJsDownloadFor(model, state) ? modelDownloadManager.resume() : modelDownloadManager.start(model);
-  run.catch((err: unknown) => console.warn("[modelProvisioner] JS download failed", err));
+  run.catch((err: unknown) => logger.warn("modelProvisioner", "JS download failed", err));
 }
 
 /** One pass of the state machine. Returns true when it should run again. */
@@ -605,7 +606,7 @@ export function ensureProvisioned(): Promise<void> {
         again = await evaluate();
       }
     } catch (err) {
-      console.warn("[modelProvisioner] evaluation failed", err);
+      logger.warn("modelProvisioner", "evaluation failed", err);
       patch({ phase: "error", errorCode: "unknown" });
     } finally {
       running = null;

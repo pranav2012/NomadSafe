@@ -126,7 +126,7 @@
     "durationHoursMinutes": "{{hours}}시간 {{minutes}}분",
     "privacyPolicy": "개인정보 처리방침",
     "usageAnalytics": "사용 분석 공유",
-    "usageAnalyticsSub": "NomadSafe 개선에 도움이 되는 사용 통계와 가려진 화면 녹화입니다. 여행, 지출, 채팅, 정확한 위치는 절대 포함되지 않습니다.",
+    "usageAnalyticsSub": "NomadSafe 개선에 도움이 되는 사용 통계, 오류 보고서, 가려진 화면 녹화입니다. 여행, 지출, 채팅, 정확한 위치는 절대 포함되지 않습니다.",
     "gmailConnected": "Gmail 연결됨",
     "gmailConnectedSub": "예약 및 영수증을 찾기 위한 읽기 전용 접근 권한",
     "gmailConnectedAsSub": "{{email}} · 예약 및 영수증을 찾기 위한 읽기 전용 접근 권한",

@@ -23,6 +23,7 @@ import {
 } from "@/features/expenses/services/currencyConversion";
 import { translate } from "@/localization/translate";
 import { isPreTripBooking, tripMatchReason } from "@/features/expenses/services/tripEmailFilter";
+import { countAttributes, logger } from "@/services/logger";
 
 // Local model calls are slow; only unmatched candidates use it, capped per import.
 const MAX_MODEL_CALLS = 20;
@@ -74,16 +75,9 @@ export async function buildImportCandidates(
   let loggedRejections = 0;
 
   if (source === "email") {
-    console.info("[gmail-import] scan", {
+    logger.info("gmail-import", "scan", {
       messages: messages.length,
-      activeTrip: options.trip
-        ? {
-            id: options.trip.id,
-            destinations: options.trip.destinations,
-            startDate: options.trip.startDate,
-            endDate: options.trip.endDate,
-          }
-        : null,
+      has_active_trip: Boolean(options.trip),
     });
   }
 
@@ -93,7 +87,7 @@ export async function buildImportCandidates(
       const reason = options.trip ? tripMatchReason(message, options.trip) : "no-active-trip";
       if (reason) {
         diagnostics.rejected[reason] = (diagnostics.rejected[reason] ?? 0) + 1;
-        if (loggedRejections < 20 && isPreTripBooking(message)) {
+        if (__DEV__ && loggedRejections < 20 && isPreTripBooking(message)) {
           console.info("[gmail-import] rejected", {
             id: message.externalId,
             date: message.date,
@@ -158,9 +152,11 @@ export async function buildImportCandidates(
   }
 
   if (source === "email") {
-    console.info("[gmail-import] result", {
-      ...diagnostics,
+    logger.info("gmail-import", "result", {
+      trip_matched: diagnostics.tripMatched,
+      parsed_debits: diagnostics.parsedDebits,
       candidates: candidates.length,
+      ...countAttributes("rejected", diagnostics.rejected),
     });
   }
 

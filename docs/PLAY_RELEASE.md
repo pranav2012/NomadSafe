@@ -14,7 +14,7 @@ Status of each step for the first Android release. ✅ = done, 🧑 = you do it 
 | 8 | Play Console forms (content rating, data safety, permissions) | 🧑 |
 | 9 | Closed testing (new personal accounts: 12 testers × 14 days) | 🧑 |
 | 10 | Gmail restricted-scope verification (CASA) | 🧑 (can run in parallel) |
-| 11 | Sentry (optional) | 🧑 |
+| 11 | PostHog error tracking and logs | 🧑 |
 
 ## Reference values
 
@@ -115,7 +115,7 @@ npx eas-cli submit -p android --profile production --path <aab or latest>
 | Personal info → Name, Email, User IDs | Yes | No | No | Required | Account management |
 | Contacts | Yes (name + email of people invited to sharing) | No | No | Optional | App functionality |
 | App activity / Emails | No (Gmail is processed on-device only) | No | n/a | n/a | n/a |
-| App info and performance → Crash logs, Diagnostics | Yes, only if Sentry is enabled | No | No | Required | Analytics |
+| App info and performance → Crash logs, Diagnostics | Yes, if PostHog is enabled | No | No | Optional (Settings → Share usage analytics) | Analytics |
 | App activity → App interactions, Other user-generated content (masked session recordings) | Yes, if PostHog is enabled | No | No | Optional (Settings → Share usage analytics) | Analytics |
 | Location → Approximate (country/city from IP, via PostHog GeoIP) | Yes, if PostHog is enabled | No | No | Optional | Analytics |
 | Device or other IDs (PostHog anonymous ID) | Yes, if PostHog is enabled | No | No | Optional | Analytics |
@@ -145,11 +145,14 @@ Personal developer accounts created after Nov 2023 must run a **closed test with
 
 If you want to launch before that finishes, ship with Gmail limited to test users and turn it on for everyone after verification. No new build is needed.
 
-## 11. Sentry 🧑 (optional)
+## 11. PostHog error tracking and logs 🧑
 
-1. Create a React Native project at <https://sentry.io>.
-2. Add EAS env vars (production): `EXPO_PUBLIC_SENTRY_DSN` (plaintext), `SENTRY_ORG`, `SENTRY_PROJECT` (plaintext), `SENTRY_AUTH_TOKEN` (**secret**).
-3. Remove `SENTRY_DISABLE_AUTO_UPLOAD` from `build.base.env` in `eas.json` so source maps upload, then rebuild. Crash reporting stays off until the DSN is set.
+Crash reports (JS, Android JVM + NDK, iOS) and logs go through the same PostHog client as analytics, so they follow the analytics opt-out.
+
+1. In PostHog → Settings → Error tracking, turn on **Exception autocapture** (the SDK only captures when this is on).
+2. Create a personal API key with the **error tracking write** scope.
+3. Add EAS env vars for **preview and production**: `POSTHOG_CLI_API_KEY` (**secret**), `POSTHOG_CLI_PROJECT_ID` and `POSTHOG_CLI_HOST=https://eu.posthog.com` (plaintext). Release builds upload Hermes source maps, R8 mappings, `.so` symbols and dSYMs, and fail without them.
+4. OTA updates: `pnpm update:<channel>` uploads the update's Hermes maps too, when the `POSTHOG_CLI_*` vars are set in your shell.
 
 ## Store listing (Grow → Store presence → Main store listing)
 

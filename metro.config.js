@@ -1,3 +1,3 @@
-const { getSentryExpoConfig } = require("@sentry/react-native/metro");
+const { getPostHogExpoConfig } = require("posthog-react-native/metro");
 
-module.exports = getSentryExpoConfig(__dirname);
+module.exports = getPostHogExpoConfig(__dirname);

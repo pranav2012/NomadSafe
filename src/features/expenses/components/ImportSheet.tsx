@@ -30,6 +30,7 @@ import type { ExpenseSource } from "@/features/expenses/store/expensesStore";
 import type { RawMessage } from "@/features/expenses/services/transactionParser";
 import type { Trip } from "@/features/trips/store/tripsStore";
 import { track } from "@/services/analytics";
+import { logger } from "@/services/logger";
 
 type Tab = "paste" | "gmail";
 
@@ -67,7 +68,7 @@ export function ImportSheet({ tripId, trip, initialTab = "paste", onClose, onImp
       const result = await buildImportCandidates(messages, source, { trip });
       setCandidates(result);
     } catch (err) {
-      console.warn("[expense-import] failed", err);
+      logger.warn("expense-import", "failed", err);
       setError(t(`expenses.importErrors.${importErrorCode(err)}`));
     } finally {
       setIsWorking(false);
@@ -150,7 +151,7 @@ export function ImportSheet({ tripId, trip, initialTab = "paste", onClose, onImp
       }
       onImported(added.length);
     } catch (err) {
-      console.warn("[expense-import] confirm failed", err);
+      logger.warn("expense-import", "confirm failed", err);
       setError(t(`expenses.importErrors.${importErrorCode(err)}`));
       submittingRef.current = false;
       setIsSubmitting(false);

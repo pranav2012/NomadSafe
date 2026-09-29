@@ -24,6 +24,7 @@ import {
 import { formatBytes, modelNotifications, useAiProvisioning } from "@/features/ai";
 import { AiProvisionCard } from "@/features/ai/components/AiProvisionCard";
 import { ToggleRow } from "@/features/onboarding/components/ToggleRow";
+import { logger } from "@/services/logger";
 
 interface Props {
   theme: NomadTheme;
@@ -134,7 +135,7 @@ export function AIStep({ theme, totalSteps }: Props) {
         Alert.alert(t("onboarding.notificationsOffTitle"), t("onboarding.notificationsOffBody"));
       }
     } catch (err) {
-      console.warn("Notification opt-in failed", err);
+      logger.warn("onboarding", "notification opt-in failed", err);
     }
   };
 

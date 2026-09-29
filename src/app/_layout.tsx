@@ -4,7 +4,6 @@ import { Stack, useRouter, useSegments, type ErrorBoundaryProps } from "expo-rou
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ConvexReactClient, useConvexAuth, useMutation } from "convex/react";
 import { ConvexBetterAuthProvider } from "@convex-dev/better-auth/react";
-import * as Sentry from "@sentry/react-native";
 import {
   useFonts as useFraunces,
   Fraunces_500Medium,
@@ -44,20 +43,7 @@ import {
   setReplayRecording,
   trackScreen,
 } from "@/services/analytics";
-
-const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN;
-
-Sentry.init({
-  dsn: sentryDsn,
-  enabled: !!sentryDsn && !__DEV__,
-  sendDefaultPii: false,
-  tracesSampleRate: 0.1,
-  // HTTP/console breadcrumbs can carry coordinates or destinations; keep them off.
-  beforeBreadcrumb: (breadcrumb) =>
-    breadcrumb.category === "fetch" || breadcrumb.category === "xhr" || breadcrumb.category === "console"
-      ? null
-      : breadcrumb,
-});
+import { logger } from "@/services/logger";
 
 const convexUrl = process.env.EXPO_PUBLIC_CONVEX_URL;
 
@@ -73,7 +59,7 @@ const convex = new ConvexReactClient(convexUrl, {
 
 export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
   useEffect(() => {
-    Sentry.captureException(error);
+    logger.error("error-boundary", "render crashed", error);
   }, [error]);
 
   return (
@@ -168,13 +154,11 @@ function SessionEffects() {
   useEffect(() => {
     if (!isAuthenticated || !userId) return;
     claimInvites({}).catch(() => {});
-    Sentry.setUser({ id: userId });
     identifyUser(userId);
   }, [claimInvites, isAuthenticated, userId]);
 
   const previousUserId = useRef(userId);
   useEffect(() => {
-    if (!userId) Sentry.setUser(null);
     // Only reset on an actual sign-out, so signed-out launches keep one anonymous ID.
     if (previousUserId.current && !userId) resetAnalytics();
     previousUserId.current = userId;
@@ -279,7 +263,7 @@ function RootLayout() {
   );
 }
 
-export default Sentry.wrap(RootLayout);
+export default RootLayout;
 
 const styles = StyleSheet.create({
   errorRoot: {

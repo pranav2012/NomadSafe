@@ -126,7 +126,7 @@
     "durationHoursMinutes": "{{hours}} Std. {{minutes}} Min.",
     "privacyPolicy": "Datenschutzerklärung",
     "usageAnalytics": "Nutzungsanalysen teilen",
-    "usageAnalyticsSub": "Nutzungsstatistiken und maskierte Bildschirmaufnahmen, die helfen, NomadSafe zu verbessern. Niemals deine Reisen, Ausgaben, Chats oder dein genauer Standort.",
+    "usageAnalyticsSub": "Nutzungsstatistiken, Absturzberichte und maskierte Bildschirmaufnahmen, die helfen, NomadSafe zu verbessern. Niemals deine Reisen, Ausgaben, Chats oder dein genauer Standort.",
     "gmailConnected": "Gmail verbunden",
     "gmailConnectedSub": "Nur-Lese-Zugriff zum Finden von Buchungen und Belegen",
     "gmailConnectedAsSub": "{{email}} · Nur-Lese-Zugriff zum Finden von Buchungen und Belegen",

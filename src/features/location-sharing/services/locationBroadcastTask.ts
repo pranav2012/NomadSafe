@@ -6,6 +6,7 @@ import { api } from "@convex/_generated/api";
 import { storage } from "@/stores/storage";
 import { authClient } from "@/features/auth/services/authClient";
 import { translate } from "@/localization/translate";
+import { logger } from "@/services/logger";
 import { getIntervalForMode, type BroadcastMode } from "../store/sharingStore";
 
 export const BROADCAST_TASK_NAME = "nomadsafe-location-broadcast";
@@ -104,6 +105,7 @@ export async function publishLocation(
   const now = Date.now();
   let ok = false;
   let error: string | null = null;
+  let failure: unknown;
 
   try {
     const jwt = convexUrl ? await getConvexJwt() : null;
@@ -123,6 +125,11 @@ export async function publishLocation(
   } catch (err) {
     cachedJwt = null;
     error = err instanceof Error ? err.message : "network_error";
+    failure = err;
+  }
+  // Only the first failure of a streak, so a long offline stretch doesn't log every interval.
+  if (!ok && !readBroadcastState().lastError) {
+    logger.warn("location-broadcast", "publish failed", failure, { mode, authenticated: error !== "not_authenticated" });
   }
 
   storage.set(

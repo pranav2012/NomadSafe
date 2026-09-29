@@ -12,6 +12,7 @@ import { hasAcceptedBackgroundDisclosure } from "@/features/location-sharing/com
 import { emergencyContactsStorage } from "@/features/onboarding/services/emergencyContactsStorage";
 import { normalizePhone, isValidPhone } from "../utils/phone";
 import { readLastKnownFix, saveLastKnownFix } from "./lastKnownLocation";
+import { logger } from "@/services/logger";
 
 export type SmsOutcome = "sent" | "cancelled" | "opened" | "failed";
 
@@ -123,7 +124,7 @@ export async function composeSms(phones: string[], body: string): Promise<SmsOut
       return "opened";
     }
   } catch (err) {
-    console.warn("expo-sms failed, falling back to sms: URL", err);
+    logger.warn("sos", "expo-sms failed, falling back to sms: URL", err);
   }
   try {
     const encoded = encodeURIComponent(body);
@@ -133,7 +134,7 @@ export async function composeSms(phones: string[], body: string): Promise<SmsOut
     await Linking.openURL(url);
     return "opened";
   } catch (err) {
-    console.warn("sms: URL fallback failed", err);
+    logger.error("sos", "sms: URL fallback failed", err);
     return "failed";
   }
 }
@@ -172,7 +173,7 @@ export async function startEmergencyBroadcast(): Promise<"started" | "denied" | 
     return "started";
   } catch (err) {
     if (err instanceof BackgroundLocationDeniedError) return "denied";
-    console.warn("Emergency location broadcast failed", err);
+    logger.error("sos", "emergency location broadcast failed", err);
     return "failed";
   }
 }
@@ -190,7 +191,7 @@ export async function restoreBroadcast(previous: BroadcastSnapshot | null) {
       sharing.setMode(previous?.mode ?? "normal");
     }
   } catch (err) {
-    console.warn("Failed to restore location broadcast", err);
+    logger.warn("sos", "failed to restore location broadcast", err);
     await stopLocationBroadcast().catch(() => {});
     sharing.setBroadcasting(false);
   }

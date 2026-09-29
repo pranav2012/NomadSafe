@@ -15,6 +15,7 @@ import { NOMAD_FONTS } from "@/constants/nomadTokens";
 import { useTheme } from "@/hooks/useTheme";
 import { useLocalization } from "@/localization";
 import type { NearbyPlace } from "@/features/places/services/nearbyPlaces";
+import { logger } from "@/services/logger";
 
 interface UserLocation {
   city?: string;
@@ -87,7 +88,7 @@ export function NearbyPlaces({ userLocation }: { userLocation: UserLocation | nu
         if (!cancelled) setState({ status: "ready", places });
       })
       .catch((error) => {
-        if (__DEV__) console.warn("[nearby-places] failed", error);
+        logger.warn("nearby-places", "failed", error);
         if (!cancelled) setState({ status: "unavailable" });
       });
 
