@@ -4,7 +4,6 @@ import {
   BlurMask,
   Canvas,
   Circle,
-  DashPathEffect,
   Group,
   Line,
   LinearGradient,
@@ -21,7 +20,6 @@ import { selectionChanged } from "@/utils/haptics";
 
 interface SpendChartProps {
   values: number[];
-  pace: number | null;
   accent: string;
   guide: string;
   onScrub: (index: number | null) => void;
@@ -36,10 +34,10 @@ const PAD_BOTTOM = 6;
  * Daily spend as a smooth area chart that wipes in from the left. Dragging snaps a
  * glowing cursor to each day (with a haptic tick) and reports the day under the finger.
  */
-export function SpendChart({ values, pace, accent, guide, onScrub, height = 120 }: SpendChartProps) {
+export function SpendChart({ values, accent, guide, onScrub, height = 120 }: SpendChartProps) {
   const [width, setWidth] = useState(0);
   const series = useMemo(() => (values.length > 0 ? values : [0]), [values]);
-  const max = Math.max(1, ...series, pace ?? 0) * 1.15;
+  const max = Math.max(1, ...series) * 1.15;
   const plotH = height - PAD_TOP - PAD_BOTTOM;
   const stepX = series.length > 1 ? (width - PAD_X * 2) / (series.length - 1) : 0;
   const points = useMemo(
@@ -100,7 +98,6 @@ export function SpendChart({ values, pace, accent, guide, onScrub, height = 120 
   const cursorTop = useDerivedValue(() => vec(cursorX.get(), PAD_TOP - 6));
   const cursorBottom = useDerivedValue(() => vec(cursorX.get(), height));
   const cursorOpacity = useDerivedValue(() => cursorOn.get());
-  const paceY = pace !== null ? PAD_TOP + (1 - pace / max) * plotH : null;
 
   const pan = Gesture.Pan()
     .activeOffsetX([-4, 4])
@@ -129,11 +126,6 @@ export function SpendChart({ values, pace, accent, guide, onScrub, height = 120 
       <View style={{ height }} onLayout={(event) => setWidth(event.nativeEvent.layout.width)}>
         {width > 0 ? (
           <Canvas style={StyleSheet.absoluteFill}>
-            {paceY !== null ? (
-              <Line p1={vec(0, paceY)} p2={vec(width, paceY)} color={guide} strokeWidth={1}>
-                <DashPathEffect intervals={[3, 5]} />
-              </Line>
-            ) : null}
             <Group clip={clip}>
               <Path path={area}>
                 <LinearGradient start={vec(0, PAD_TOP)} end={vec(0, height)} colors={[`${accent}55`, `${accent}00`]} />

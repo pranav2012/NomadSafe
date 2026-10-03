@@ -308,15 +308,11 @@ export function TripHome({
                 lineHeight={42}
                 style={[styles.moneyValue, { color: c.text }]}
               />
-              {nothingSpent && data.dailyPace !== null ? null : (
-                <Text style={[styles.moneySub, { color: c.textMuted }]}>{data.moneySub}</Text>
-              )}
             </View>
             {showChart ? (
               <View style={styles.chart}>
                 <SpendChart
                   values={data.spendDays.map((d) => d.amount)}
-                  pace={data.dailyPace}
                   accent={accent}
                   guide={isDark ? "rgba(255,255,255,0.2)" : "rgba(14,16,24,0.16)"}
                   onScrub={setSpendDay}
@@ -428,7 +424,6 @@ const styles = StyleSheet.create({
   moneyText: { flexShrink: 1, gap: 2 },
   moneyLabel: { fontFamily: f.medium, fontSize: 13 },
   moneyValue: { fontFamily: f.semibold, fontSize: 36, letterSpacing: -1.2 },
-  moneySub: { fontFamily: f.regular, fontSize: 13 },
   chart: { flex: 1 },
   actions: { flexDirection: "row", marginTop: 26, marginHorizontal: -6 },
   sectionTitle: {

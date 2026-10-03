@@ -15,11 +15,10 @@ import { PressableScale } from "@/components/motion/PressableScale";
 import { TAB_BAR_GAP, TAB_BAR_HEIGHT, useKeyboardVisible, useTabBarInset } from "@/components/tabbar/tabBarInset";
 import { auraStatusAccent } from "@/constants/aura";
 import { useLocalization } from "@/localization";
-import { hasTripBudget, selectActiveTrip, type Trip, useTripsStore } from "@/features/trips/store/tripsStore";
-import { TripFormSheet } from "@/features/trips/components/TripForm";
+import { selectActiveTrip, type Trip, useTripsStore } from "@/features/trips/store/tripsStore";
 import { countInclusiveDays, fromDateKey, getTripStatus, startOfLocalDay } from "@/features/trips/utils/dates";
 import { useExpensesStore, type Expense } from "@/features/expenses/store/expensesStore";
-import { averagePerDay, categoryBreakdown, dailySeries, filterByTrip, sumAmount } from "@/features/expenses/utils/aggregate";
+import { categoryBreakdown, filterByTrip, sumAmount } from "@/features/expenses/utils/aggregate";
 import { useConvertedExpenses } from "@/features/expenses/hooks/useTripExpenseSummary";
 import { useGmailAutoSync } from "@/features/expenses/hooks/useGmailAutoSync";
 import { dismissGmailLostAccess, hasGmailGrant, useGmailConnectionStore } from "@/features/expenses/store/gmailConnectionStore";
@@ -29,25 +28,22 @@ import { CAPTURE_BAR_HEIGHT, CaptureBar } from "@/features/expenses/components/C
 import { ExpenseForm } from "@/features/expenses/components/ExpenseForm";
 import { ExpenseRow } from "@/features/expenses/components/ExpenseRow";
 import { ImportSheet } from "@/features/expenses/components/ImportSheet";
-import { RunwayHero } from "@/features/expenses/components/RunwayHero";
+import { SpendHero } from "@/features/expenses/components/SpendHero";
 import { TripBalances } from "@/features/expenses/components/TripBalances";
 
-const AVG_DAYS = 14;
 const LEDGER_PAGE = 30;
 
 type MoneyView = "spending" | "splits";
 
-/** Days left (today included) and share of the trip already elapsed. */
-function tripTiming(trip: Trip) {
-  const total = countInclusiveDays(fromDateKey(trip.startDate), fromDateKey(trip.endDate));
+/** Days left in the trip, today included. */
+function daysLeftIn(trip: Trip) {
   const status = getTripStatus(trip);
-  if (status === "complete") return { daysLeft: 0, elapsed: 1 };
-  if (status === "upcoming") return { daysLeft: total, elapsed: 0 };
-  const daysLeft = countInclusiveDays(startOfLocalDay(new Date()), fromDateKey(trip.endDate));
-  return { daysLeft, elapsed: (total - daysLeft) / Math.max(1, total) };
+  if (status === "complete") return 0;
+  if (status === "upcoming") return countInclusiveDays(fromDateKey(trip.startDate), fromDateKey(trip.endDate));
+  return countInclusiveDays(startOfLocalDay(new Date()), fromDateKey(trip.endDate));
 }
 
-/** Money tab: daily runway hero, the ledger or splits, and a floating capture bar. */
+/** Money tab: total-spent hero, the ledger or splits, and a floating capture bar. */
 export default function ExpensesScreen() {
   const { c, f, isDark } = useAura();
   const { t, currency: deviceCurrency, formatCurrency } = useLocalization();
@@ -63,7 +59,6 @@ export default function ExpensesScreen() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Expense | null>(null);
   const [importTab, setImportTab] = useState<"paste" | "gmail" | null>(null);
-  const [budgetOpen, setBudgetOpen] = useState(false);
   const [ledgerLimit, setLedgerLimit] = useState(LEDGER_PAGE);
   const autoSync = useGmailAutoSync(activeTrip);
   const gmailLostAccess = useGmailConnectionStore((state) => state.lostAccess && !hasGmailGrant(state.tokens));
@@ -75,8 +70,7 @@ export default function ExpensesScreen() {
   // Aggregates run on amounts converted to the display currency so they match Home.
   const converted: Expense[] = conversion.convertedExpenses.map(({ expense, amount }) => ({ ...expense, amount, currency }));
   const total = sumAmount(converted);
-  const budget = activeTrip && hasTripBudget(activeTrip) ? activeTrip.budget : 0;
-  const timing = activeTrip ? tripTiming(activeTrip) : { daysLeft: 0, elapsed: 0 };
+  const daysLeft = activeTrip ? daysLeftIn(activeTrip) : 0;
   const unconvertedLabel = conversion.unconvertedTotals.map((entry) => formatMoney(formatCurrency, entry.amount, entry.currency)).join(" + ");
 
   const hasSplits =
@@ -130,14 +124,11 @@ export default function ExpensesScreen() {
             />
           ) : null}
 
-          <RunwayHero
+          <SpendHero
             label={activeTrip?.name ?? null}
             currency={currency}
             total={total}
-            budget={budget}
-            daysLeft={timing.daysLeft}
-            elapsed={timing.elapsed}
-            avgPerDay={averagePerDay(dailySeries(converted, AVG_DAYS))}
+            daysLeft={daysLeft}
             breakdown={categoryBreakdown(converted)}
             note={
               unconvertedLabel
@@ -146,7 +137,6 @@ export default function ExpensesScreen() {
                   : t("expenses.notConverted", { amount: unconvertedLabel })
                 : null
             }
-            onSetBudget={activeTrip ? () => setBudgetOpen(true) : undefined}
           />
 
           {hasSplits ? (
@@ -224,7 +214,6 @@ export default function ExpensesScreen() {
         onClose={() => setImportTab(null)}
         onImported={() => setImportTab(null)}
       />
-      <TripFormSheet visible={budgetOpen} editingTrip={activeTrip} onClose={() => setBudgetOpen(false)} />
     </View>
   );
 }

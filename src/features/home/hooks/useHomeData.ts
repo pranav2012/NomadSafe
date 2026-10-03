@@ -4,7 +4,7 @@ import { toLocalDayKey } from "@/features/expenses/utils/dateKey";
 import { formatMoney } from "@/features/expenses/utils/money";
 import { useEventsStore } from "@/features/itinerary";
 import { useSharingStore } from "@/features/location-sharing";
-import { getDestinationCoordinates, hasTripBudget, selectActiveTrip, useTripsStore } from "@/features/trips/store/tripsStore";
+import { getDestinationCoordinates, selectActiveTrip, useTripsStore } from "@/features/trips/store/tripsStore";
 import { addDays, countInclusiveDays, fromDateKey, getTripStatus, startOfLocalDay } from "@/features/trips/utils/dates";
 import { useLocalization } from "@/localization";
 import type { HomeData, HomeEvent } from "@/features/home/types";
@@ -39,8 +39,6 @@ export function useHomeData(): HomeData | null {
   const status = getTripStatus(trip);
   const day =
     status === "upcoming" ? 0 : status === "complete" ? totalDays : Math.min(countInclusiveDays(start, startOfLocalDay(now)), totalDays);
-  const hasBudget = hasTripBudget(trip);
-  const remaining = Math.max(0, trip.budget - summary.total);
   const dayDates = Array.from({ length: totalDays }, (_, i) => shortDate.format(addDays(start, i)));
 
   const totalsByDay = new Map(summary.dailyTotals.map((entry) => [entry.date, entry.amount]));
@@ -81,13 +79,9 @@ export function useHomeData(): HomeData | null {
           ? t("trip.completed")
           : t("trip.dayProgress", { day, total: totalDays }),
     daysLeftLabel: t("trip.daysLeft", { count: Math.max(0, totalDays - day) }),
-    moneyLabel: hasBudget ? t("trip.remaining") : t("trip.spent"),
-    moneyValue: formatMoney(formatCurrency, hasBudget ? remaining : summary.total, trip.currency),
-    moneySub: hasBudget
-      ? t("trip.ofBudget", { total: formatMoney(formatCurrency, trip.budget, trip.currency) })
-      : t("trip.noBudgetSet"),
+    moneyLabel: t("trip.spent"),
+    moneyValue: formatMoney(formatCurrency, summary.total, trip.currency),
     spendDays,
-    dailyPace: hasBudget && totalDays > 0 ? trip.budget / totalDays : null,
     isSharing,
     sharingLabel,
     travellersLabel: trip.mode === "solo" ? t("trip.solo") : t("trip.groupWithCount", { count: trip.companions.length + 1 }),

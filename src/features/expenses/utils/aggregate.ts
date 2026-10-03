@@ -3,7 +3,6 @@ import {
   EXPENSE_CATEGORIES,
   type ExpenseCategory,
 } from "@/features/expenses/constants/categories";
-import { toLocalDayKey } from "@/features/expenses/utils/dateKey";
 
 export interface CategoryTotal {
   category: ExpenseCategory;
@@ -11,19 +10,10 @@ export interface CategoryTotal {
   pct: number;
 }
 
-export interface DayTotal {
-  date: string;
-  amount: number;
-}
-
 export interface MerchantTotal {
   merchant: string;
   amount: number;
   count: number;
-}
-
-function startOfDay(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
 export function filterByTrip(expenses: Expense[], tripId: string | null): Expense[] {
@@ -64,25 +54,6 @@ export function categoryBreakdown(expenses: Expense[]): CategoryTotal[] {
     .sort((a, b) => b.amount - a.amount);
 }
 
-/** Daily totals for the last `days` days ending today, oldest first. */
-export function dailySeries(expenses: Expense[], days: number): DayTotal[] {
-  const today = startOfDay(new Date());
-  const byDay = new Map<string, number>();
-  for (const expense of expenses) {
-    const key = toLocalDayKey(startOfDay(new Date(expense.date)));
-    byDay.set(key, (byDay.get(key) ?? 0) + expense.amount);
-  }
-
-  const series: DayTotal[] = [];
-  for (let offset = days - 1; offset >= 0; offset -= 1) {
-    const date = new Date(today);
-    date.setDate(date.getDate() - offset);
-    const key = toLocalDayKey(date);
-    series.push({ date: key, amount: byDay.get(key) ?? 0 });
-  }
-  return series;
-}
-
 export function topMerchants(expenses: Expense[], limit: number): MerchantTotal[] {
   const byMerchant = new Map<string, MerchantTotal>();
   for (const expense of expenses) {
@@ -98,10 +69,4 @@ export function topMerchants(expenses: Expense[], limit: number): MerchantTotal[
   return [...byMerchant.values()]
     .sort((a, b) => b.amount - a.amount)
     .slice(0, limit);
-}
-
-export function averagePerDay(series: DayTotal[]): number {
-  if (series.length === 0) return 0;
-  const total = series.reduce((sum, entry) => sum + entry.amount, 0);
-  return total / series.length;
 }

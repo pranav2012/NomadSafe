@@ -38,10 +38,7 @@ export interface HomeData {
   daysLeftLabel: string;
   moneyLabel: string;
   moneyValue: string;
-  moneySub: string;
   spendDays: HomeSpendDay[];
-  /** Even daily spend that would land exactly on budget, or null without a budget. */
-  dailyPace: number | null;
   isSharing: boolean;
   sharingLabel: string;
   travellersLabel: string;
