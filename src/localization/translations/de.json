@@ -952,7 +952,15 @@
     "minutesShort": "{{count}}Min.",
     "hoursShort": "{{count}}Std.",
     "addShort": "Hinzufügen",
-    "removeHint": "Halte eine Person gedrückt, um das Teilen mit ihr zu beenden."
+    "removeHint": "Halte eine Person gedrückt, um das Teilen mit ihr zu beenden.",
+    "shareFor": "Teilen für",
+    "durationHours": "{{count}} Std.",
+    "durationUntilStopped": "Bis ich stoppe",
+    "endsAt": "Endet um {{time}}",
+    "noEnd": "Aktiv, bis du es beendest",
+    "noRecipientsTitle": "Noch niemand zum Teilen",
+    "noRecipientsBody": "Füge im Tab „Sicherheit“ eine Person hinzu und warte, bis sie annimmt. Starte dann das Teilen.",
+    "emergencyAutoDowngrade": "Wechselt nach 1 Stunde zurück zu Normal"
   },
   "expenses": {
     "allTime": "Gesamte Ausgaben",

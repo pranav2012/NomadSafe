@@ -952,7 +952,15 @@
     "minutesShort": "{{count}}分钟",
     "hoursShort": "{{count}}小时",
     "addShort": "添加",
-    "removeHint": "长按某人即可停止与其共享。"
+    "removeHint": "长按某人即可停止与其共享。",
+    "shareFor": "共享时长",
+    "durationHours": "{{count}} 小时",
+    "durationUntilStopped": "直到我停止",
+    "endsAt": "{{time}} 停止",
+    "noEnd": "持续共享，直到你停止",
+    "noRecipientsTitle": "还没有可共享的人",
+    "noRecipientsBody": "请在“安全”标签页添加联系人并等待对方接受，然后开始共享。",
+    "emergencyAutoDowngrade": "1 小时后恢复为普通模式"
   },
   "expenses": {
     "allTime": "所有支出",

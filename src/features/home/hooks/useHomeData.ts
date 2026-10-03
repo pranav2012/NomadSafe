@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useAuthStore } from "@/features/auth";
 import { useTripExpenseSummary } from "@/features/expenses/hooks/useTripExpenseSummary";
 import { toLocalDayKey } from "@/features/expenses/utils/dateKey";
@@ -23,6 +24,16 @@ export function useHomeData(): HomeData | null {
   const allEvents = useEventsStore((state) => state.events);
   const isSharing = useSharingStore((state) => state.isBroadcasting);
   const summary = useTripExpenseSummary(trip);
+  // Stable per trip, so the globe's pins, weather and imagery don't recompute on every Home render.
+  const stops = useMemo(
+    () =>
+      trip
+        ? getDestinationCoordinates(trip).flatMap((coord, i) =>
+            coord ? [{ name: trip.destinations[i] ?? "", latitude: coord.latitude, longitude: coord.longitude }] : [],
+          )
+        : [],
+    [trip],
+  );
 
   const now = new Date();
   const userName = user?.name?.split(" ")[0] ?? t("common.fallbackUser");
@@ -64,9 +75,7 @@ export function useHomeData(): HomeData | null {
     userName,
     tripName: trip.name,
     destinations: trip.destinations,
-    stops: getDestinationCoordinates(trip).flatMap((coord, i) =>
-      coord ? [{ name: trip.destinations[i] ?? "", latitude: coord.latitude, longitude: coord.longitude }] : [],
-    ),
+    stops,
     progress: totalDays > 0 ? day / totalDays : 0,
     day,
     totalDays,

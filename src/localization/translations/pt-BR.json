@@ -952,7 +952,15 @@
     "minutesShort": "{{count}}min",
     "hoursShort": "{{count}}h",
     "addShort": "Adicionar",
-    "removeHint": "Toque e segure uma pessoa para parar de compartilhar com ela."
+    "removeHint": "Toque e segure uma pessoa para parar de compartilhar com ela.",
+    "shareFor": "Compartilhar por",
+    "durationHours": "{{count}} h",
+    "durationUntilStopped": "Até eu parar",
+    "endsAt": "Para às {{time}}",
+    "noEnd": "Ativo até você parar",
+    "noRecipientsTitle": "Ainda não há ninguém para compartilhar",
+    "noRecipientsBody": "Adicione alguém na aba Segurança e espere a pessoa aceitar; depois comece a compartilhar.",
+    "emergencyAutoDowngrade": "Volta ao Normal depois de 1 hora"
   },
   "expenses": {
     "allTime": "Todos os gastos",

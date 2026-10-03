@@ -63,6 +63,8 @@ export const posthog: PostHog | null =
           maskAllSandboxedViews: true,
           captureLog: false,
           captureNetworkTelemetry: false,
+          // Snapshots cost main-thread time and battery; one every 3 s is enough to follow a session.
+          throttleDelayMs: 3000,
         },
         errorTracking: {
           autocapture: {
@@ -113,10 +115,14 @@ export function setAnalyticsEnabled(enabled: boolean) {
 let replayQueue = Promise.resolve();
 let replayRecording = false;
 
+// Replay records a sample of app launches rather than every session, decided once per launch.
+const REPLAY_SAMPLE_RATE = 0.1;
+const replaySampled = Math.random() < REPLAY_SAMPLE_RATE;
+
 /** Starts or stops session replay, serialised so rapid lock/unlock can't reorder calls. */
 export function setReplayRecording(record: boolean) {
   const client = posthog;
-  if (!client) return;
+  if (!client || !replaySampled) return;
   replayQueue = replayQueue.then(async () => {
     if (record === replayRecording) return;
     replayRecording = record;

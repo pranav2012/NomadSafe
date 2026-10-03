@@ -952,7 +952,15 @@
     "minutesShort": "{{count}}分",
     "hoursShort": "{{count}}時間",
     "addShort": "追加",
-    "removeHint": "共有を停止するには、その人を長押ししてください。"
+    "removeHint": "共有を停止するには、その人を長押ししてください。",
+    "shareFor": "共有する時間",
+    "durationHours": "{{count}}時間",
+    "durationUntilStopped": "停止するまで",
+    "endsAt": "{{time}}に停止",
+    "noEnd": "停止するまで共有を続けます",
+    "noRecipientsTitle": "共有できる相手がまだいません",
+    "noRecipientsBody": "安全タブで相手を追加し、承認されたら共有を開始してください。",
+    "emergencyAutoDowngrade": "1時間後に通常モードに戻ります"
   },
   "expenses": {
     "allTime": "すべての支出",

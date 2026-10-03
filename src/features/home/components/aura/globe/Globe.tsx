@@ -15,7 +15,6 @@ import {
   Path,
   Shader,
   Skia,
-  useClock,
   usePathValue,
   type SkImage,
   type SkPathBuilder,
@@ -31,10 +30,12 @@ import Animated, {
   withDecay,
   withSpring,
   withTiming,
+  type SharedValue,
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import { springs } from "@/components/motion/springs";
 import { useAura } from "@/components/aura/useAura";
+import { useAnimationsActive } from "@/hooks/useAnimationsActive";
 import { useGlobeWeather } from "@/features/home/hooks/useGlobeWeather";
 import { detailBoxFor, getRegionImagery, type DetailBox } from "@/features/home/services/globeImagery";
 import { CLOUD_COLS, CLOUD_ROWS, CLOUD_STEP, type StopWeather } from "@/features/home/services/globeWeather";
@@ -53,6 +54,8 @@ const DEFAULT_SPAN_KM = 400;
 // Overview spin: one turn every 2.5 minutes, eastward like the real Earth.
 const SPIN_RAD_PER_MS = (2 * Math.PI) / 150_000;
 const SPIN_RESUME_MS = 2000;
+// The shader is the expensive part, and clouds drift slowly: redraw it at ~15 fps, pins and arcs at full rate.
+const SHADER_TICK_MS = 66;
 const EARTH_RADIUS_KM = 6371;
 // Below this zoom the bundled 2048px textures are sharp enough; above it, regional NASA imagery fades in.
 const DETAIL_ZOOM = 2.5;
@@ -375,8 +378,10 @@ interface GlobeProps {
   entry?: { latitude: number; longitude: number } | null;
   /** Space at the top of the canvas kept for overlaid content; the globe centres below it. */
   topInset?: number;
-  /** A finger is on the globe; the page should stop scrolling so drags spin the globe instead. */
+  /** A pinch is in progress; the page should stop scrolling until it ends. */
   onTouchActive?: (active: boolean) => void;
+  /** True while the parent is scrolling; the globe holds still so scroll frames aren't dropped. */
+  scrolling?: SharedValue<boolean>;
   /** No trip: show the whole globe, slowly spinning until a stop is picked, never zoomed in. */
   overview?: boolean;
 }
@@ -426,7 +431,7 @@ function arcPoint(a: GlobeStop, b: GlobeStop, t: number) {
  * On mount it spins and zooms in on the current stop; drag to spin it, pinch out for the route and
  * the whole globe or in to hand off to the map.
  */
-export function Globe({ stops, focusIndex, width, height, origin, contacts = [], contactColor, accent, isDark, onZoomThrough, entry, topInset = 0, onTouchActive, overview = false }: GlobeProps) {
+export function Globe({ stops, focusIndex, width, height, origin, contacts = [], contactColor, accent, isDark, onZoomThrough, entry, topInset = 0, onTouchActive, scrolling, overview = false }: GlobeProps) {
   const textures = useGlobeTextures();
   const dayImage = textures?.day ?? null;
   const nightImage = textures?.night ?? null;
@@ -436,7 +441,10 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
   const sun = sunVector(now);
   const moon = 0.2 + 0.8 * moonIllumination(now);
   const reduceMotion = useReducedMotion();
-  const clock = useClock();
+  const animating = useAnimationsActive();
+  const clock = useSharedValue(0);
+  const shaderTime = useSharedValue(0);
+  const shaderTickAt = useSharedValue(0);
   const baseRadius = Math.min(width, height - topInset) * 0.45;
   const focus = stops[focusIndex] ?? { name: "", latitude: 20, longitude: 0 };
   const frame = useMemo(
@@ -472,22 +480,32 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
   const touching = useSharedValue(false);
   const resumeAt = useSharedValue(0);
 
-  // Overview spin, paused while touched and for a moment after, so drags and momentum aren't fought.
-  const spin = useFrameCallback((info) => {
-    if (touching.get()) return;
+  // One clock for clouds, comet, pin pulses and the overview spin. It only runs while the globe is
+  // visible and holds still during page scrolls; the shader and spin advance in coarse ticks.
+  const ticker = useFrameCallback((info) => {
+    if (scrolling?.get()) return;
+    const dt = info.timeSincePreviousFrame ?? 16;
+    clock.set(clock.get() + dt);
+    if (clock.get() - shaderTickAt.get() < SHADER_TICK_MS) return;
+    const step = clock.get() - shaderTickAt.get();
+    shaderTickAt.set(clock.get());
+    if (!reduceMotion) shaderTime.set(clock.get() / 1000);
+    // Overview spin, paused while touched and for a moment after, so drags and momentum aren't fought.
+    if (!spinning || touching.get()) return;
     if (resumeAt.get() < 0) resumeAt.set(info.timestamp + SPIN_RESUME_MS);
     if (info.timestamp < resumeAt.get()) return;
-    rotLng.set(rotLng.get() - SPIN_RAD_PER_MS * (info.timeSincePreviousFrame ?? 16));
+    rotLng.set(rotLng.get() - SPIN_RAD_PER_MS * step);
   }, false);
   useEffect(() => {
-    spin.setActive(spinning);
-  }, [spin, spinning]);
+    ticker.setActive(animating && (!reduceMotion || spinning));
+  }, [animating, reduceMotion, spinning, ticker]);
 
   // The terminator follows the real sun, so keep the clock fresh.
   useEffect(() => {
+    if (!animating) return;
     const id = setInterval(() => setNow(new Date()), 30_000);
     return () => clearInterval(id);
-  }, []);
+  }, [animating]);
 
   useEffect(() => {
     const ease = Easing.bezier(0.2, 0.8, 0.2, 1);
@@ -520,7 +538,7 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
     rotLat: rotLat.get(),
     skyScale: Math.min(width, height - topInset) / 2,
     sun,
-    time: clock.get() / 1000,
+    time: shaderTime.get(),
     moon,
     detailBox,
     detailSize,
@@ -562,10 +580,11 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
 
   const pins = useMemo(() => stops.map((stop, i) => ({ stop, focused: i === focusIndex })), [focusIndex, stops]);
 
-  // Drags in any direction spin the globe; the parent pauses its scroll while a finger is down.
+  // Horizontal drags spin the globe (and may then tilt it); vertical swipes are left to the page scroll.
   const pan = Gesture.Pan()
     .averageTouches(true)
-    .minDistance(6)
+    .activeOffsetX([-8, 8])
+    .failOffsetY([-10, 10])
     .onBegin(() => {
       touching.set(true);
     })
@@ -587,9 +606,13 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
       zoomStart.set(zoom.get());
       touching.set(true);
     })
+    .onStart(() => {
+      if (onTouchActive) scheduleOnRN(onTouchActive, true);
+    })
     .onFinalize(() => {
       touching.set(false);
       resumeAt.set(-1);
+      if (onTouchActive) scheduleOnRN(onTouchActive, false);
     })
     .onUpdate((event) => {
       // Pinches cover more ground the further in you are, so the whole globe is a pinch or two away.
@@ -613,13 +636,9 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
 
   return (
     <GestureDetector gesture={Gesture.Simultaneous(pinch, pan)}>
-      <View
-        style={{ width, height }}
-        onTouchStart={() => onTouchActive?.(true)}
-        onTouchEnd={() => onTouchActive?.(false)}
-        onTouchCancel={() => onTouchActive?.(false)}
-      >
+      <View style={{ width, height }}>
         {textures && dayImage && nightImage ? (
+          <>
           <Canvas style={StyleSheet.absoluteFill}>
             <Group opacity={fade}>
             <Fill>
@@ -658,6 +677,11 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
                 <ImageShader image={textures.sky} fit="fill" x={0} y={0} width={SKY_W} height={SKY_H} tx="repeat" ty="clamp" sampling={SMOOTH} />
               </Shader>
             </Fill>
+            </Group>
+          </Canvas>
+          {/* Separate surface so per-frame comet and pin pulses don't re-run the globe shader. */}
+          <Canvas style={StyleSheet.absoluteFill}>
+            <Group opacity={fade}>
             <Path path={homeArc} style="stroke" strokeWidth={1.4} color={isDark ? "#EDEFF5" : "#0E1018"} opacity={0.55} strokeCap="round">
               <DashPathEffect intervals={[3, 5]} />
             </Path>
@@ -688,6 +712,7 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
             ))}
             </Group>
           </Canvas>
+          </>
         ) : null}
         {dayImage && nightImage && focusOnly[0] && stopWeather[0] ? (
           <WeatherBadge

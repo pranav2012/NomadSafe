@@ -12,7 +12,7 @@ import { AuraSegmented } from "@/components/aura/AuraSegmented";
 import { useAura } from "@/components/aura/useAura";
 import { Icon } from "@/components/nomad/Icon";
 import { PressableScale } from "@/components/motion/PressableScale";
-import { TAB_BAR_GAP, TAB_BAR_HEIGHT, useKeyboardVisible, useTabBarInset } from "@/components/tabbar/tabBarInset";
+import { useFloatingBarBottom, useKeyboardVisible, useTabBarInset } from "@/components/tabbar/tabBarInset";
 import { auraStatusAccent } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { selectActiveTrip, type Trip, useTripsStore } from "@/features/trips/store/tripsStore";
@@ -89,7 +89,7 @@ export default function ExpensesScreen() {
     router.push({ pathname: "/voice-expense", params: activeTrip ? { tripId: activeTrip.id } : {} });
   };
 
-  const captureBottom = insets.bottom + TAB_BAR_GAP + TAB_BAR_HEIGHT + 10;
+  const captureBottom = useFloatingBarBottom();
 
   return (
     <View style={[styles.root, { backgroundColor: c.bg }]}>

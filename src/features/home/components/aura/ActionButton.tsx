@@ -1,7 +1,16 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { Canvas, Circle, Group, SweepGradient, useClock, vec } from "react-native-skia";
-import { Easing, useDerivedValue, useSharedValue, withTiming } from "react-native-reanimated";
+import { Canvas, Circle, SweepGradient, vec } from "react-native-skia";
+import Animated, {
+  Easing,
+  cancelAnimation,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from "react-native-reanimated";
+import { useAnimationsActive } from "@/hooks/useAnimationsActive";
 import { Icon, type IconName } from "@/components/nomad/Icon";
 import { PressableScale } from "@/components/motion/PressableScale";
 import { auraFonts, type AuraPalette } from "@/constants/aura";
@@ -21,12 +30,14 @@ const BLEED = 18;
 const CANVAS = SIZE + BLEED * 2;
 const CENTER = CANVAS / 2;
 
-/** Round action with a Skia ripple ring on every press. */
+/** Round action with a ripple ring on every press. */
 export function ActionButton({ icon, label, palette, accent, live = false, onPress }: ActionButtonProps) {
   const ripple = useSharedValue(1);
 
-  const rippleRadius = useDerivedValue(() => SIZE / 2 + ripple.get() * BLEED);
-  const rippleOpacity = useDerivedValue(() => (1 - ripple.get()) * 0.6);
+  const rippleStyle = useAnimatedStyle(() => ({
+    opacity: (1 - ripple.get()) * 0.6,
+    transform: [{ scale: (SIZE / 2 + ripple.get() * BLEED) / (CANVAS / 2) }],
+  }));
 
   return (
     <View style={styles.root}>
@@ -47,10 +58,8 @@ export function ActionButton({ icon, label, palette, accent, live = false, onPre
         >
           <Icon name={icon} size={22} color={live ? accent : palette.text} strokeWidth={1.9} />
         </PressableScale>
-        <Canvas style={styles.canvas} pointerEvents="none">
-          <Circle cx={CENTER} cy={CENTER} r={rippleRadius} color={accent} style="stroke" strokeWidth={1.5} opacity={rippleOpacity} />
-          {live ? <RimBeam accent={accent} /> : null}
-        </Canvas>
+        <Animated.View pointerEvents="none" style={[styles.canvas, styles.ripple, { borderColor: accent }, rippleStyle]} />
+        {live ? <RimBeam accent={accent} /> : null}
       </View>
       <Text numberOfLines={1} style={[styles.label, { color: palette.textSoft }]}>
         {label}
@@ -59,15 +68,31 @@ export function ActionButton({ icon, label, palette, accent, live = false, onPre
   );
 }
 
+/** The beam is drawn once; a native rotation spins it, so Skia never redraws while it turns. */
 function RimBeam({ accent }: { accent: string }) {
-  const clock = useClock();
-  const rotation = useDerivedValue(() => [{ rotate: ((clock.get() / 1000) * Math.PI * 0.9) % (Math.PI * 2) }]);
+  const animating = useAnimationsActive();
+  const reduceMotion = useReducedMotion();
+  const turn = useSharedValue(0);
+
+  useEffect(() => {
+    if (!animating || reduceMotion) {
+      cancelAnimation(turn);
+      return;
+    }
+    turn.set(turn.get() % 360);
+    turn.set(withRepeat(withTiming(turn.get() + 360, { duration: 2222, easing: Easing.linear }), -1, false));
+  }, [animating, reduceMotion, turn]);
+
+  const spinStyle = useAnimatedStyle(() => ({ transform: [{ rotate: `${turn.get()}deg` }] }));
+
   return (
-    <Group origin={vec(CENTER, CENTER)} transform={rotation}>
-      <Circle cx={CENTER} cy={CENTER} r={SIZE / 2 - 0.75} style="stroke" strokeWidth={1.5}>
-        <SweepGradient c={vec(CENTER, CENTER)} colors={[`${accent}00`, `${accent}00`, accent, `${accent}00`]} />
-      </Circle>
-    </Group>
+    <Animated.View pointerEvents="none" style={[styles.canvas, spinStyle]}>
+      <Canvas style={StyleSheet.absoluteFill}>
+        <Circle cx={CENTER} cy={CENTER} r={SIZE / 2 - 0.75} style="stroke" strokeWidth={1.5}>
+          <SweepGradient c={vec(CENTER, CENTER)} colors={[`${accent}00`, `${accent}00`, accent, `${accent}00`]} />
+        </Circle>
+      </Canvas>
+    </Animated.View>
   );
 }
 
@@ -75,6 +100,7 @@ const styles = StyleSheet.create({
   root: { alignItems: "center", gap: 8, flex: 1 },
   stage: { width: SIZE, height: SIZE, alignItems: "center", justifyContent: "center" },
   canvas: { position: "absolute", width: CANVAS, height: CANVAS, left: -BLEED, top: -BLEED },
+  ripple: { borderRadius: CANVAS / 2, borderWidth: 1.5 },
   button: {
     width: SIZE,
     height: SIZE,

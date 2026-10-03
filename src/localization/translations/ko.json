@@ -952,7 +952,15 @@
     "minutesShort": "{{count}}분",
     "hoursShort": "{{count}}시간",
     "addShort": "추가",
-    "removeHint": "공유를 중지하려면 해당 사람을 길게 누르세요."
+    "removeHint": "공유를 중지하려면 해당 사람을 길게 누르세요.",
+    "shareFor": "공유 시간",
+    "durationHours": "{{count}}시간",
+    "durationUntilStopped": "직접 중지할 때까지",
+    "endsAt": "{{time}}에 중지",
+    "noEnd": "중지할 때까지 계속 공유",
+    "noRecipientsTitle": "아직 공유할 사람이 없어요",
+    "noRecipientsBody": "안전 탭에서 사람을 추가하고 수락을 기다린 후 공유를 시작하세요.",
+    "emergencyAutoDowngrade": "1시간 후 일반 모드로 돌아갑니다"
   },
   "expenses": {
     "allTime": "모든 지출",

@@ -8,6 +8,7 @@ import { Icon } from "@/components/nomad/Icon";
 import { PressableScale } from "@/components/motion/PressableScale";
 import { RollingNumber } from "@/components/motion/RollingNumber";
 import { useTabBarInset } from "@/components/tabbar/tabBarInset";
+import { useScrollActivity } from "@/hooks/useScrollActivity";
 import { auraDark, auraFonts as f, auraLight, auraStatusAccent, auraStatusColors, type AuraStatus } from "@/constants/aura";
 import { useGlobeContext } from "@/features/home/hooks/useGlobeContext";
 import { useHotelPin, useSafetyPlaces } from "@/features/home/hooks/useTripSafety";
@@ -148,6 +149,7 @@ export function TripHome({
       }
   >({ mode: "globe", entry: null });
   const [heroTouched, setHeroTouched] = useState(false);
+  const { scrolling, onScroll } = useScrollActivity();
   // The header sits over the globe's dark space backdrop in globe mode, even in light mode.
   const hc = hero.mode === "globe" ? auraDark : c;
 
@@ -158,6 +160,8 @@ export function TripHome({
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         scrollEnabled={!heroTouched}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
         contentContainerStyle={{
           paddingBottom: tabBarInset + 24,
         }}
@@ -207,6 +211,7 @@ export function TripHome({
                 isDark={isDark}
                 entry={hero.entry}
                 onTouchActive={setHeroTouched}
+                scrolling={scrolling}
                 onZoomThrough={(center, radiusPx) => setHero({ mode: "map", center, radiusPx })}
               />
             </Animated.View>
@@ -266,7 +271,7 @@ export function TripHome({
         ) : null}
 
         <PostHogMaskView style={styles.passWrap}>
-          <BoardingPass data={data} palette={c} accent={accent} gradient={auraStatusColors[status]} isDark={isDark} emergency={emergency} />
+          <BoardingPass data={data} palette={c} accent={accent} gradient={auraStatusColors[status]} isDark={isDark} emergency={emergency} scrolling={scrolling} />
         </PostHogMaskView>
 
         <View style={styles.body}>

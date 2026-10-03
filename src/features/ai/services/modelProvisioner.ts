@@ -83,7 +83,8 @@ const JS_RETRY_BACKOFF_MS = 30_000;
 // Failures that may be transient get this many silent retries before the error card shows.
 const AUTO_RETRY_LIMIT = 2;
 const AUTO_RETRYABLE: ReadonlySet<ProvisionErrorCode> = new Set(["incomplete", "corrupt", "network", "unknown"]);
-const POLLED_PHASES: ReadonlySet<ProvisionPhase> = new Set(["queued", "downloading", "waitingForWifi"]);
+// waitingForWifi isn't polled: nothing changes until the network does, and the network listener handles that.
+const POLLED_PHASES: ReadonlySet<ProvisionPhase> = new Set(["queued", "downloading"]);
 
 const DEFAULT_RECORD: ProvisionRecord = {
   modelId: null,

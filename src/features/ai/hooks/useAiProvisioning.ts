@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useIsFocused } from "expo-router";
 import {
   downloadAgain,
   enableMobileData,
@@ -18,14 +19,16 @@ export interface AiProvisioning extends ProvisioningState {
   downloadAgain: () => Promise<void>;
 }
 
-/** Live provisioning state for screens that show it; keeps download status polled while mounted. */
+/** Live provisioning state for screens that show it; keeps download status polled while focused. */
 export function useAiProvisioning(): AiProvisioning {
   const state = useProvisioningStore();
+  const focused = useIsFocused();
   useEffect(() => {
+    if (!focused) return;
     const unsubscribe = subscribeProvisioning();
     void ensureProvisioned();
     return unsubscribe;
-  }, []);
+  }, [focused]);
   return {
     ...state,
     isReady: state.activeModelId !== null,

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { KeyboardAvoidingView, Platform, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PostHogMaskView } from "posthog-react-native";
@@ -7,6 +7,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { AuraButton } from "@/components/aura/AuraButton";
 import { useAura } from "@/components/aura/useAura";
 import { useTabBarInset } from "@/components/tabbar/tabBarInset";
+import { useScrollActivity } from "@/hooks/useScrollActivity";
 import { auraStatusAccent } from "@/constants/aura";
 import { useGlobeContext } from "@/features/home/hooks/useGlobeContext";
 import type { HomeStop } from "@/features/home/types";
@@ -32,6 +33,7 @@ export function EmptyHome({ tripCount, onViewTrips }: { tripCount: number; onVie
   const [picked, setPicked] = useState<HomeStop | null>(null);
   const [sheetFor, setSheetFor] = useState<string[] | null>(null);
   const [globeTouched, setGlobeTouched] = useState(false);
+  const { scrolling, onScroll } = useScrollActivity();
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const globe = useGlobeContext(picked ?? undefined);
   const globeHeight = Math.round(width * 0.78);
@@ -57,10 +59,12 @@ export function EmptyHome({ tripCount, onViewTrips }: { tripCount: number; onVie
   return (
     <View style={[styles.root, { backgroundColor: c.bg }]}>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.root}>
-        <ScrollView
+        <Animated.ScrollView
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           scrollEnabled={!globeTouched}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
           contentContainerStyle={{ paddingBottom: tabBarInset + 24 }}
         >
           <PostHogMaskView style={{ height: globeHeight + insets.top + 8 }}>
@@ -77,6 +81,7 @@ export function EmptyHome({ tripCount, onViewTrips }: { tripCount: number; onVie
                 accent={auraStatusAccent.calm}
                 isDark={isDark}
                 onTouchActive={setGlobeTouched}
+                scrolling={scrolling}
                 overview
               />
             </Animated.View>
@@ -98,7 +103,7 @@ export function EmptyHome({ tripCount, onViewTrips }: { tripCount: number; onVie
               />
             ) : null}
           </Animated.View>
-        </ScrollView>
+        </Animated.ScrollView>
       </KeyboardAvoidingView>
 
       <TripFormSheet

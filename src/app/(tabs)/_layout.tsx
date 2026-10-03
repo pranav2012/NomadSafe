@@ -1,7 +1,8 @@
 import React, { useEffect, useRef } from "react";
-import { StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import { BlurTargetView } from "expo-blur";
-import { TabList, TabSlot, TabTrigger, Tabs, useTabTrigger } from "expo-router/ui";
+import { NativeTabs } from "expo-router/unstable-native-tabs";
+import { TabList, TabSlot, TabTrigger, Tabs, defaultTabsSlotRender, useTabTrigger, type TabsSlotRenderOptions } from "expo-router/ui";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { GlassTabBar, type GlassTabItem } from "@/components/tabbar/GlassTabBar";
@@ -11,22 +12,44 @@ import { useTheme } from "@/hooks/useTheme";
 import { useLocalization } from "@/localization";
 
 const TABS = [
-  { name: "index", href: "/(tabs)", labelKey: "tabs.trip", icon: "compass" },
-  { name: "sos", href: "/(tabs)/sos", labelKey: "tabs.safety", icon: "shield" },
-  { name: "expenses", href: "/(tabs)/expenses", labelKey: "tabs.money", icon: "wallet" },
-  { name: "ai", href: "/(tabs)/ai", labelKey: "tabs.ai", icon: "sparkle" },
+  { name: "index", href: "/(tabs)", labelKey: "tabs.trip", icon: "compass", sf: "safari", sfSelected: "safari.fill" },
+  { name: "sos", href: "/(tabs)/sos", labelKey: "tabs.safety", icon: "shield", sf: "shield", sfSelected: "shield.fill" },
+  { name: "expenses", href: "/(tabs)/expenses", labelKey: "tabs.money", icon: "wallet", sf: "wallet.pass", sfSelected: "wallet.pass.fill" },
+  { name: "ai", href: "/(tabs)/ai", labelKey: "tabs.ai", icon: "sparkle", sf: "sparkles", sfSelected: "sparkles" },
 ] as const;
+
+export default function TabsLayout() {
+  return Platform.OS === "ios" ? <NativeTabsLayout /> : <GlassTabsLayout />;
+}
+
+/** The system UITabBar (Liquid Glass on iOS 26), minimizing while scrolling down. */
+function NativeTabsLayout() {
+  const { isDark } = useTheme();
+  const { t } = useLocalization();
+  const c = isDark ? auraDark : auraLight;
+  return (
+    <NativeTabs tintColor={c.text} minimizeBehavior="onScrollDown">
+      {TABS.map((tab) => (
+        // Screens pad themselves from the safe area (the globe hero runs under the status bar).
+        <NativeTabs.Trigger key={tab.name} name={tab.name} disableAutomaticContentInsets>
+          <NativeTabs.Trigger.Label>{t(tab.labelKey)}</NativeTabs.Trigger.Label>
+          <NativeTabs.Trigger.Icon sf={{ default: tab.sf, selected: tab.sfSelected }} />
+        </NativeTabs.Trigger>
+      ))}
+    </NativeTabs>
+  );
+}
 
 /**
  * Headless tabs so the screens can sit inside the Android blur target while the floating glass
  * tab bar sits outside it (a blur view can't sample a target that contains itself).
  */
-export default function TabsLayout() {
+function GlassTabsLayout() {
   const blurTarget = useRef<View>(null);
   return (
     <Tabs style={styles.root}>
       <BlurTargetView ref={blurTarget} style={styles.root}>
-        <TabSlot />
+        <TabSlot renderFn={renderFrozenWhenHidden} />
       </BlurTargetView>
       <TabList style={styles.hidden}>
         {TABS.map((tab) => (
@@ -36,6 +59,12 @@ export default function TabsLayout() {
       <AppTabBar blurTarget={blurTarget} />
     </Tabs>
   );
+}
+
+// Hidden tabs stay mounted; freezing them stops their React updates (Convex data, timers) from
+// re-rendering offscreen screens while another tab is scrolling.
+function renderFrozenWhenHidden(descriptor: Parameters<typeof defaultTabsSlotRender>[0], options: TabsSlotRenderOptions) {
+  return defaultTabsSlotRender({ ...descriptor, options: { ...descriptor.options, freezeOnBlur: true } }, options);
 }
 
 function AppTabBar({ blurTarget }: { blurTarget: React.RefObject<View | null> }) {

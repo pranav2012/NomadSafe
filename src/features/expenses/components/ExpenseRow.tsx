@@ -15,6 +15,18 @@ const SOURCE_KEYS: Partial<Record<Expense["source"], string>> = {
   voice: "expenses.sourceVoice",
 };
 
+const dayFormatters = new Map<string, Intl.DateTimeFormat>();
+
+/** Building an Intl formatter is slow, and the ledger renders one row per expense. */
+function dayFormatter(locale: string) {
+  let formatter = dayFormatters.get(locale);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(locale, { month: "short", day: "numeric" });
+    dayFormatters.set(locale, formatter);
+  }
+  return formatter;
+}
+
 export function ExpenseRow({ expense, onPress }: { expense: Expense; onPress: () => void }) {
   const { c, f } = useAura();
   const { t, locale, formatCurrency } = useLocalization();
@@ -22,7 +34,7 @@ export function ExpenseRow({ expense, onPress }: { expense: Expense; onPress: ()
   const tone = auraCategoryColors[expense.category];
   const sourceKey = SOURCE_KEYS[expense.source];
   const details = [
-    new Intl.DateTimeFormat(locale, { month: "short", day: "numeric" }).format(new Date(expense.date)),
+    dayFormatter(locale).format(new Date(expense.date)),
     sourceKey ? t(sourceKey) : null,
     expense.shares?.length ? t("split.badge", { count: expense.shares.length }) : null,
   ]

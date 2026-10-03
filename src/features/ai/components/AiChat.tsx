@@ -19,6 +19,7 @@ import { Icon, type IconName } from "@/components/nomad/Icon";
 import { PressableScale } from "@/components/motion/PressableScale";
 import { useTabBarInset } from "@/components/tabbar/tabBarInset";
 import { auraStatusAccent } from "@/constants/aura";
+import { useAnimationsActive } from "@/hooks/useAnimationsActive";
 import { useLocalization } from "@/localization";
 import { useTripsStore } from "@/features/trips/store/tripsStore";
 import { track } from "@/services/analytics";
@@ -79,6 +80,7 @@ export function AiChat({ activeModelName }: { activeModelName: string | null }) 
   const blurTarget = useRef<View>(null);
   const nearBottomRef = useRef(true);
 
+  const animating = useAnimationsActive();
   const isEmpty = messages.length === 0;
   const busy = generatingKey !== null;
   const busyElsewhere = busy && !isGenerating;
@@ -234,7 +236,7 @@ export function AiChat({ activeModelName }: { activeModelName: string | null }) 
 
               {isEmpty ? (
                 <Animated.View entering={FadeIn.duration(260)} style={styles.empty}>
-                  <AuraOrb size={124} mode="idle" isDark={isDark} />
+                  <AuraOrb size={124} mode="idle" isDark={isDark} paused={!animating} />
                   <Text style={[styles.emptyTitle, { color: c.text, fontFamily: f.semibold }]}>{t("aiTab.introTitle")}</Text>
                   <Text style={[styles.tryAsking, { color: c.textMuted, fontFamily: f.medium }]}>{t("aiTab.tryAsking")}</Text>
                   <View style={styles.promptGrid}>

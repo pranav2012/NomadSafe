@@ -1005,7 +1005,15 @@
     "minutesShort": "{{count}}m",
     "hoursShort": "{{count}}h",
     "addShort": "Add",
-    "removeHint": "Long-press someone to stop sharing with them."
+    "removeHint": "Long-press someone to stop sharing with them.",
+    "shareFor": "Share for",
+    "durationHours": "{{count}} hr",
+    "durationUntilStopped": "Until I stop",
+    "endsAt": "Stops at {{time}}",
+    "noEnd": "On until you stop it",
+    "noRecipientsTitle": "No one to share with yet",
+    "noRecipientsBody": "Add someone on the Safety tab and wait for them to accept, then start sharing.",
+    "emergencyAutoDowngrade": "Returns to Normal after 1 hour"
   },
   "expenses": {
     "allTime": "All spending",

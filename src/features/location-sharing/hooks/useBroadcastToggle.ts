@@ -9,6 +9,7 @@ import { hasAcceptedBackgroundDisclosure } from "../components/BackgroundLocatio
 import {
   BackgroundLocationDeniedError,
   isLocationBroadcastRunning,
+  readBroadcastState,
   startLocationBroadcast,
   stopLocationBroadcast,
 } from "../services/locationBroadcastTask";
@@ -27,6 +28,8 @@ export function useBroadcastToggle() {
   const mode = useSharingStore((s) => s.mode);
   const setBroadcasting = useSharingStore((s) => s.setBroadcasting);
   const setMode = useSharingStore((s) => s.setMode);
+  const shareDuration = useSharingStore((s) => s.shareDuration);
+  const setShareDuration = useSharingStore((s) => s.setShareDuration);
   const [busy, setBusy] = useState(false);
   const [disclosureVisible, setDisclosureVisible] = useState(false);
 
@@ -39,10 +42,16 @@ export function useBroadcastToggle() {
     (link) => link.status === "accepted" && !paused.has(link.linkedUserId),
   ).length;
 
-  const begin = useCallback(async (nextMode: BroadcastMode = mode) => {
+  // A mode change restarts the task but keeps the share's original end time.
+  const begin = useCallback(async (nextMode: BroadcastMode = mode, keepExpiry = false) => {
     setBusy(true);
     try {
-      await startLocationBroadcast(nextMode);
+      const expiresAt = keepExpiry
+        ? readBroadcastState().expiresAt
+        : shareDuration
+          ? Date.now() + shareDuration
+          : null;
+      await startLocationBroadcast(nextMode, { expiresAt });
       setBroadcasting(true);
       track("live_share_started", { mode: nextMode, recipients: activeRecipientCount });
       heavyImpact();
@@ -56,7 +65,7 @@ export function useBroadcastToggle() {
     } finally {
       setBusy(false);
     }
-  }, [activeRecipientCount, mode, setBroadcasting, t]);
+  }, [activeRecipientCount, mode, setBroadcasting, shareDuration, t]);
 
   const toggle = useCallback(async () => {
     if (busy) return;
@@ -75,24 +84,31 @@ export function useBroadcastToggle() {
       }
       return;
     }
+    // Sharing with nobody would keep location running for no one; contactLinks is undefined while loading.
+    if (contactLinks && activeRecipientCount === 0) {
+      Alert.alert(t("sharing.noRecipientsTitle"), t("sharing.noRecipientsBody"));
+      return;
+    }
     if (!hasAcceptedBackgroundDisclosure()) {
       setDisclosureVisible(true);
       return;
     }
     await begin();
-  }, [begin, busy, isBroadcasting, setBroadcasting, t]);
+  }, [activeRecipientCount, begin, busy, contactLinks, isBroadcasting, setBroadcasting, t]);
 
   // Restarts a running broadcast so the new update interval takes effect.
   const changeMode = useCallback(async (next: BroadcastMode) => {
     if (next === mode || busy) return;
     setMode(next);
-    if (isBroadcasting) await begin(next);
+    if (isBroadcasting) await begin(next, true);
   }, [begin, busy, isBroadcasting, mode, setMode]);
 
   return {
     isBroadcasting,
     busy,
     mode,
+    shareDuration,
+    setShareDuration,
     activeRecipientCount,
     toggle,
     changeMode,

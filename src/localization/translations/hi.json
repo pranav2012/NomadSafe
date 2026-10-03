@@ -952,7 +952,15 @@
     "minutesShort": "{{count}}मि",
     "hoursShort": "{{count}}घं",
     "addShort": "जोड़ें",
-    "removeHint": "किसी के साथ शेयर करना बंद करने के लिए उन्हें देर तक दबाएँ।"
+    "removeHint": "किसी के साथ शेयर करना बंद करने के लिए उन्हें देर तक दबाएँ।",
+    "shareFor": "कितनी देर शेयर करें",
+    "durationHours": "{{count}} घं",
+    "durationUntilStopped": "जब तक मैं बंद न करूँ",
+    "endsAt": "{{time}} पर बंद होगा",
+    "noEnd": "जब तक आप बंद न करें, चालू रहेगा",
+    "noRecipientsTitle": "अभी शेयर करने के लिए कोई नहीं है",
+    "noRecipientsBody": "सुरक्षा टैब में किसी को जोड़ें और उनके स्वीकार करने का इंतज़ार करें, फिर शेयर करना शुरू करें।",
+    "emergencyAutoDowngrade": "1 घंटे बाद सामान्य पर लौट आता है"
   },
   "expenses": {
     "allTime": "कुल खर्च",

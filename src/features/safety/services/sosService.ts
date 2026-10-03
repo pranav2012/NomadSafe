@@ -3,6 +3,7 @@ import * as SMS from "expo-sms";
 import { Linking, Platform } from "react-native";
 import {
   BackgroundLocationDeniedError,
+  readBroadcastState,
   startLocationBroadcast,
   stopLocationBroadcast,
   useSharingStore,
@@ -27,6 +28,7 @@ export interface AlertPosition {
 export interface BroadcastSnapshot {
   wasBroadcasting: boolean;
   mode: BroadcastMode;
+  expiresAt: number | null;
 }
 
 const FRESH_FIX_TIMEOUT_MS = 10_000;
@@ -141,7 +143,7 @@ export async function composeSms(phones: string[], body: string): Promise<SmsOut
 
 export function snapshotBroadcast(): BroadcastSnapshot {
   const { isBroadcasting, mode } = useSharingStore.getState();
-  return { wasBroadcasting: isBroadcasting, mode };
+  return { wasBroadcasting: isBroadcasting, mode, expiresAt: readBroadcastState().expiresAt };
 }
 
 export async function hasBackgroundLocationPermission(): Promise<boolean> {
@@ -166,7 +168,7 @@ export async function canAutoStartEmergencyBroadcast(): Promise<boolean> {
  */
 export async function startEmergencyBroadcast(): Promise<"started" | "denied" | "failed"> {
   try {
-    await startLocationBroadcast("emergency");
+    await startLocationBroadcast("emergency", { sos: true });
     const sharing = useSharingStore.getState();
     sharing.setMode("emergency");
     sharing.setBroadcasting(true);
@@ -184,7 +186,7 @@ export async function restoreBroadcast(previous: BroadcastSnapshot | null) {
   try {
     if (previous?.wasBroadcasting) {
       sharing.setMode(previous.mode);
-      await startLocationBroadcast(previous.mode);
+      await startLocationBroadcast(previous.mode, { expiresAt: previous.expiresAt });
     } else {
       await stopLocationBroadcast();
       sharing.setBroadcasting(false);

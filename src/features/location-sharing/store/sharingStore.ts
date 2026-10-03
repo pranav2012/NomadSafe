@@ -4,6 +4,11 @@ import { mmkvStateStorage } from "@/stores/storage";
 
 export type BroadcastMode = "normal" | "low" | "emergency";
 
+const HOUR_MS = 60 * 60_000;
+/** How long a new share lasts before it stops itself; null shares until stopped. */
+export const SHARE_DURATIONS: (number | null)[] = [HOUR_MS, 8 * HOUR_MS, 24 * HOUR_MS, null];
+const DEFAULT_SHARE_DURATION = 8 * HOUR_MS;
+
 export type RecipientLinkStatus =
   | "none"
   | "pending"
@@ -39,6 +44,7 @@ export interface Geofence {
 export interface SharingState {
   isBroadcasting: boolean;
   mode: BroadcastMode;
+  shareDuration: number | null;
   lastPublishedAt: number | null;
   recipients: ShareRecipient[];
   geofences: Geofence[];
@@ -46,6 +52,7 @@ export interface SharingState {
 
   setBroadcasting: (enabled: boolean) => void;
   setMode: (mode: BroadcastMode) => void;
+  setShareDuration: (duration: number | null) => void;
   setCurrentBattery: (battery: number | null) => void;
   setLastPublishedAt: (timestamp: number | null) => void;
   addRecipient: (
@@ -79,6 +86,7 @@ export const useSharingStore = create<SharingState>()(
     (set, get) => ({
       isBroadcasting: false,
       mode: DEFAULT_MODE,
+      shareDuration: DEFAULT_SHARE_DURATION,
       lastPublishedAt: null,
       recipients: [],
       geofences: [],
@@ -90,6 +98,10 @@ export const useSharingStore = create<SharingState>()(
 
       setMode: (mode) => {
         set({ mode });
+      },
+
+      setShareDuration: (shareDuration) => {
+        set({ shareDuration });
       },
 
       setCurrentBattery: (battery) => {
@@ -181,6 +193,7 @@ export const useSharingStore = create<SharingState>()(
         set({
           isBroadcasting: false,
           mode: DEFAULT_MODE,
+          shareDuration: DEFAULT_SHARE_DURATION,
           lastPublishedAt: null,
           recipients: [],
           geofences: [],

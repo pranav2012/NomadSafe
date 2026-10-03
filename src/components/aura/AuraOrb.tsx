@@ -12,6 +12,7 @@ import {
   type SharedValue,
 } from "react-native-reanimated";
 import { auraStatusColors } from "@/constants/aura";
+import { useAppActive } from "@/hooks/useAnimationsActive";
 
 export type AuraOrbMode = "idle" | "listening" | "thinking" | "done";
 
@@ -22,10 +23,25 @@ const DONE = ["#3DDC97", "#22C7B8", "#8BE8C0"] as const;
 /**
  * Three blurred blobs orbiting a glassy core. They swell with `level` (mic volume, -2..10) while
  * listening, swirl faster and warm to the live palette while thinking, and turn green when done.
- * Shared by voice capture, the lock screen and the AI tab.
+ * Shared by voice capture, the lock screen and the AI tab. Pass `paused` when it's offscreen.
  */
-export function AuraOrb({ size, mode, level = 0, isDark, core = true }: { size: number; mode: AuraOrbMode; level?: number; isDark: boolean; core?: boolean }) {
+export function AuraOrb({
+  size,
+  mode,
+  level = 0,
+  isDark,
+  core = true,
+  paused = false,
+}: {
+  size: number;
+  mode: AuraOrbMode;
+  level?: number;
+  isDark: boolean;
+  core?: boolean;
+  paused?: boolean;
+}) {
   const reduceMotion = useReducedMotion();
+  const appActive = useAppActive();
   const phase = useSharedValue(0);
   const speed = useSharedValue(0.35);
   const energy = useSharedValue(0);
@@ -44,9 +60,12 @@ export function AuraOrb({ size, mode, level = 0, isDark, core = true }: { size: 
     energy.set(withSpring(normalized, { damping: 14, stiffness: 160 }));
   }, [energy, level, mode]);
 
-  useFrameCallback((frame) => {
+  const orbit = useFrameCallback((frame) => {
     phase.set(phase.get() + ((frame.timeSincePreviousFrame ?? 16) / 1000) * speed.get());
-  });
+  }, false);
+  useEffect(() => {
+    orbit.setActive(appActive && !paused && !reduceMotion);
+  }, [appActive, orbit, paused, reduceMotion]);
 
   const center = size / 2;
   const blob = size * 0.22;

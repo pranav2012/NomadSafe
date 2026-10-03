@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { StyleSheet, View } from "react-native";
 import { Canvas, Fill, Shader, Skia } from "react-native-skia";
+import { useAnimationsActive } from "@/hooks/useAnimationsActive";
 import {
   Easing,
   SensorType,
@@ -238,6 +239,8 @@ half4 main(float2 xy) {
 `)!;
 
 const TILT_RANGE = 0.25;
+// The aurora moves slowly; redrawing the full-screen shader at ~30 fps instead of 60–120 halves its cost.
+const SKY_TICK_S = 0.033;
 
 /** Sign-in/onboarding hero: an animated northern-lights landscape with tilt parallax and an optional intro. */
 export function AuraSkyHero({
@@ -259,15 +262,19 @@ export function AuraSkyHero({
   const tiltX = useSharedValue(0);
   const tiltY = useSharedValue(0);
   const base = useSharedValue<{ x: number; y: number } | null>(null);
-  const gravity = useAnimatedSensor(SensorType.GRAVITY, { interval: "auto" });
+  const gravity = useAnimatedSensor(SensorType.GRAVITY, { interval: 33 });
+  const animating = useAnimationsActive();
+  const elapsed = useSharedValue(0);
 
   useEffect(() => {
     if (reveal.get() < 1) reveal.set(withTiming(1, { duration: SKY_INTRO_MS, easing: Easing.inOut(Easing.cubic) }));
   }, [reveal]);
 
-  useFrameCallback((frame) => {
-    if (reduceMotion) return;
-    const dt = (frame.timeSincePreviousFrame ?? 16) / 1000;
+  const ticker = useFrameCallback((frame) => {
+    elapsed.set(elapsed.get() + (frame.timeSincePreviousFrame ?? 16) / 1000);
+    if (elapsed.get() < SKY_TICK_S) return;
+    const dt = Math.min(elapsed.get(), 0.1);
+    elapsed.set(0);
     clock.set(clock.get() + dt);
     const g = gravity.sensor.get();
     const len = Math.hypot(g.x, g.y, g.z) || 1;
@@ -282,7 +289,10 @@ export function AuraSkyHero({
     const k = Math.min(1, dt * 4);
     tiltX.set(tiltX.get() + (tx - tiltX.get()) * k);
     tiltY.set(tiltY.get() + (ty - tiltY.get()) * k);
-  });
+  }, false);
+  useEffect(() => {
+    ticker.setActive(animating && !reduceMotion);
+  }, [animating, reduceMotion, ticker]);
 
   const uniforms = useDerivedValue(() => ({
     res: [width, height],

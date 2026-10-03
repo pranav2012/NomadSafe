@@ -952,7 +952,15 @@
     "minutesShort": "{{count}}m",
     "hoursShort": "{{count}}h",
     "addShort": "Añadir",
-    "removeHint": "Mantén pulsada a una persona para dejar de compartir con ella."
+    "removeHint": "Mantén pulsada a una persona para dejar de compartir con ella.",
+    "shareFor": "Compartir durante",
+    "durationHours": "{{count}} h",
+    "durationUntilStopped": "Hasta que lo detenga",
+    "endsAt": "Se detiene a las {{time}}",
+    "noEnd": "Activo hasta que lo detengas",
+    "noRecipientsTitle": "Aún no hay nadie con quien compartir",
+    "noRecipientsBody": "Añade a alguien en la pestaña Seguridad y espera a que acepte; luego empieza a compartir.",
+    "emergencyAutoDowngrade": "Vuelve a Normal después de 1 hora"
   },
   "expenses": {
     "allTime": "Todos los gastos",

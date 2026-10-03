@@ -209,25 +209,27 @@ export default function SafetyScreen() {
     }, [setStoreContacts]),
   );
 
-  // Live clock while a check-in or SOS runs; also refresh immediately on foreground.
+  // Coarse clock while a check-in or SOS runs, plus an exact tick when the timer runs out; the
+  // per-second countdown lives in CheckInCard so the whole screen (and its map) doesn't re-render.
   useEffect(() => {
     if (status === "idle") return;
     const tick = () => setNow(Date.now());
     tick();
-    const id = setInterval(tick, status === "active" ? 1000 : 15_000);
+    const id = setInterval(tick, 15_000);
+    const dueIn = status === "active" && checkInEndsAt ? checkInEndsAt - Date.now() : -1;
+    const dueTimer = dueIn > 0 ? setTimeout(tick, dueIn + 50) : undefined;
     const sub = AppState.addEventListener("change", (next) => {
       if (next === "active") tick();
     });
     return () => {
       clearInterval(id);
+      clearTimeout(dueTimer);
       sub.remove();
     };
-  }, [status]);
+  }, [status, checkInEndsAt]);
 
   const isMissed = isCheckInMissed({ status, checkInEndsAt }, now);
   const isActive = status === "active" && !isMissed;
-  const secondsLeft = isActive && checkInEndsAt ? Math.max(0, Math.ceil((checkInEndsAt - now) / 1000)) : 0;
-  const overdueSeconds = isMissed && checkInEndsAt ? Math.floor((now - checkInEndsAt) / 1000) : 0;
 
   useEffect(() => {
     if (isMissed) markCheckInMissed();
@@ -884,7 +886,8 @@ export default function SafetyScreen() {
           <AuraSection title={t("safety.factorCheckIn")} />
           <CheckInCard
             state={isMissed ? "missed" : isActive ? "active" : "idle"}
-            seconds={isMissed ? overdueSeconds : isActive ? secondsLeft : plannedDuration}
+            seconds={plannedDuration}
+            endsAt={checkInEndsAt}
             presets={PRESETS.map((duration) => ({ duration, label: formatDurationLabel(duration, t) }))}
             plannedDuration={plannedDuration}
             plannedLabel={formatDurationLabel(plannedDuration, t)}
@@ -905,9 +908,11 @@ export default function SafetyScreen() {
             busy={share.busy}
             mode={share.mode}
             activeRecipientCount={share.activeRecipientCount}
+            shareDuration={share.shareDuration}
             accent={accent}
             onToggle={() => void share.toggle()}
             onModeChange={(next) => void share.changeMode(next)}
+            onDurationChange={share.setShareDuration}
           />
 
           <SharingPeople

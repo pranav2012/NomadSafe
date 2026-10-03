@@ -369,18 +369,30 @@ function enqueue<T>(task: () => Promise<T>): Promise<T> {
   return run;
 }
 
+const IDLE_RELEASE_MS = 3 * 60_000;
+let idleTimer: ReturnType<typeof setTimeout> | null = null;
+
 /**
  * Runs a model job exclusively. A release() requested while jobs are pending
  * is deferred until the queue drains.
  */
 function runExclusive<T>(task: () => Promise<T>): Promise<T> {
   pendingJobs += 1;
+  if (idleTimer) clearTimeout(idleTimer);
+  idleTimer = null;
   return enqueue(task).finally(() => {
     pendingJobs -= 1;
-    if (pendingJobs === 0 && releaseRequested) {
+    if (pendingJobs > 0) return;
+    if (releaseRequested) {
       releaseRequested = false;
       void enqueue(releaseContext);
+      return;
     }
+    // Free the model's memory once nothing has used it for a while; the next job reloads it.
+    idleTimer = setTimeout(() => {
+      idleTimer = null;
+      if (pendingJobs === 0) void enqueue(releaseContext);
+    }, IDLE_RELEASE_MS);
   });
 }
 

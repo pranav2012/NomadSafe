@@ -10,7 +10,7 @@ import { Icon } from "@/components/nomad/Icon";
 import { LiveDot } from "@/components/motion/LiveDot";
 import { useLocalization } from "@/localization";
 import { isLocationBroadcastRunning, readBroadcastState } from "../services/locationBroadcastTask";
-import { getDrainPercentForMode, useSharingStore, type BroadcastMode } from "../store/sharingStore";
+import { getDrainPercentForMode, SHARE_DURATIONS, useSharingStore, type BroadcastMode } from "../store/sharingStore";
 
 const MODES: { id: BroadcastMode; labelKey: string; subKey: string }[] = [
   { id: "normal", labelKey: "sharing.modeNormal", subKey: "sharing.modeNormalSub" },
@@ -25,15 +25,27 @@ interface LiveSharingCardProps {
   busy: boolean;
   mode: BroadcastMode;
   activeRecipientCount: number;
+  shareDuration: number | null;
   accent: string;
   onToggle: () => void;
   onModeChange: (mode: BroadcastMode) => void;
+  onDurationChange: (duration: number | null) => void;
 }
 
 /** Live location status, update interval and battery estimate, with start/stop. */
-export function LiveSharingCard({ isBroadcasting, busy, mode, activeRecipientCount, accent, onToggle, onModeChange }: LiveSharingCardProps) {
+export function LiveSharingCard({
+  isBroadcasting,
+  busy,
+  mode,
+  activeRecipientCount,
+  shareDuration,
+  accent,
+  onToggle,
+  onModeChange,
+  onDurationChange,
+}: LiveSharingCardProps) {
   const { c, f } = useAura();
-  const { t } = useLocalization();
+  const { t, formatTime } = useLocalization();
   const setBroadcasting = useSharingStore((s) => s.setBroadcasting);
   const currentBattery = useSharingStore((s) => s.currentBattery);
   const setCurrentBattery = useSharingStore((s) => s.setCurrentBattery);
@@ -56,20 +68,28 @@ export function LiveSharingCard({ isBroadcasting, busy, mode, activeRecipientCou
 
   useEffect(() => {
     let mounted = true;
+    const refresh = setTimeout(() => setInfo(readBroadcastState()), 0);
     Battery.getBatteryLevelAsync()
       .then((level) => {
         if (mounted && level >= 0) setCurrentBattery(Math.round(level * 100));
       })
       .catch(() => {});
+    if (!isBroadcasting) {
+      return () => {
+        mounted = false;
+        clearTimeout(refresh);
+      };
+    }
     const id = setInterval(() => {
       setNow(Date.now());
       setInfo(readBroadcastState());
     }, 15_000);
     return () => {
       mounted = false;
+      clearTimeout(refresh);
       clearInterval(id);
     };
-  }, [setCurrentBattery]);
+  }, [isBroadcasting, setCurrentBattery]);
 
   const lastUpdate = info.lastPublishedAt ? formatAgo(now - info.lastPublishedAt, t) : t("sharing.neverUpdated");
   const drain = getDrainPercentForMode(mode);
@@ -101,7 +121,28 @@ export function LiveSharingCard({ isBroadcasting, busy, mode, activeRecipientCou
       </View>
       <Text style={[styles.note, { color: c.textMuted, fontFamily: f.regular }]}>
         {modeSub} · {drainText}
+        {mode === "emergency" ? ` · ${t("sharing.emergencyAutoDowngrade")}` : ""}
       </Text>
+
+      {isBroadcasting ? (
+        <Text style={[styles.note, { color: c.textSoft, fontFamily: f.medium }]}>
+          {info.expiresAt ? t("sharing.endsAt", { time: formatTime(info.expiresAt) }) : t("sharing.noEnd")}
+        </Text>
+      ) : (
+        <>
+          <Text style={[styles.durationLabel, { color: c.textMuted, fontFamily: f.medium }]}>{t("sharing.shareFor")}</Text>
+          <View style={styles.durations} accessibilityRole="radiogroup">
+            {SHARE_DURATIONS.map((duration) => (
+              <AuraChip
+                key={duration ?? "open"}
+                label={durationLabel(duration, t)}
+                selected={shareDuration === duration}
+                onPress={busy ? undefined : () => onDurationChange(duration)}
+              />
+            ))}
+          </View>
+        </>
+      )}
 
       {isBroadcasting && info.lastError ? (
         <View style={styles.inline}>
@@ -128,6 +169,11 @@ export function LiveSharingCard({ isBroadcasting, busy, mode, activeRecipientCou
   );
 }
 
+function durationLabel(duration: number | null, t: ReturnType<typeof useLocalization>["t"]) {
+  if (duration === null) return t("sharing.durationUntilStopped");
+  return t("sharing.durationHours", { count: Math.round(duration / 3_600_000) });
+}
+
 function formatAgo(ms: number, t: ReturnType<typeof useLocalization>["t"]) {
   const minutes = Math.floor(Math.max(0, ms) / 60_000);
   if (minutes < 1) return t("sharing.justNow");
@@ -141,6 +187,8 @@ const styles = StyleSheet.create({
   meta: { fontSize: 12.5, fontVariant: ["tabular-nums"] },
   modes: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 16 },
   note: { fontSize: 12.5, lineHeight: 18, marginTop: 10 },
+  durationLabel: { fontSize: 12.5, marginTop: 16 },
+  durations: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 8 },
   inline: { flexDirection: "row", alignItems: "flex-start", gap: 8, marginTop: 12 },
   inlineText: { flex: 1, fontSize: 12.5, lineHeight: 18 },
   privacy: { fontSize: 12 },

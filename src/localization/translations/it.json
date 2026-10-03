@@ -952,7 +952,15 @@
     "minutesShort": "{{count}}m",
     "hoursShort": "{{count}}h",
     "addShort": "Aggiungi",
-    "removeHint": "Tieni premuta una persona per smettere di condividere con lei."
+    "removeHint": "Tieni premuta una persona per smettere di condividere con lei.",
+    "shareFor": "Condividi per",
+    "durationHours": "{{count}} h",
+    "durationUntilStopped": "Finché non interrompo",
+    "endsAt": "Si interrompe alle {{time}}",
+    "noEnd": "Attiva finché non la interrompi",
+    "noRecipientsTitle": "Ancora nessuno con cui condividere",
+    "noRecipientsBody": "Aggiungi qualcuno nella scheda Sicurezza e attendi che accetti, poi avvia la condivisione.",
+    "emergencyAutoDowngrade": "Torna a Normale dopo 1 ora"
   },
   "expenses": {
     "allTime": "Tutte le spese",

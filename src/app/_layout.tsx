@@ -16,7 +16,7 @@ import {
   registerModelDownloadTask,
   useChatStore,
 } from "@/features/ai";
-import { isLocationBroadcastRunning, useSharingStore } from "@/features/location-sharing";
+import { enforceBroadcastLimits, isLocationBroadcastRunning, readBroadcastState, useSharingStore } from "@/features/location-sharing";
 import { useSafetyNotificationRouting } from "@/features/safety";
 import { useSettingsStore } from "@/features/settings";
 import {
@@ -64,6 +64,8 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
   );
 }
 
+const BACKGROUND_REPLY_LIMIT_MS = 30_000;
+
 function AppStateLock() {
   const router = useRouter();
   const pathname = usePathname();
@@ -89,6 +91,13 @@ function AppStateLock() {
           // store releases it once the reply finishes (and notifies the user).
           if (!useChatStore.getState().generatingConversationKey) {
             localModelService.release();
+          } else {
+            // Android keeps running in the background, so cap how long a reply may keep the CPU/GPU busy.
+            setTimeout(() => {
+              if (AppState.currentState !== "active" && useChatStore.getState().generatingConversationKey) {
+                useChatStore.getState().stop();
+              }
+            }, BACKGROUND_REPLY_LIMIT_MS);
           }
           return;
         }
@@ -96,11 +105,15 @@ function AppStateLock() {
         if (nextState !== "active" || prev === "active") return;
 
         void ensureProvisioned();
-        isLocationBroadcastRunning().then((running) => {
-          if (running !== useSharingStore.getState().isBroadcasting) {
-            useSharingStore.getState().setBroadcasting(running);
-          }
-        });
+        // Apply share expiry and the emergency time limit, then mirror the task's state in the UI store.
+        void enforceBroadcastLimits()
+          .then(() => isLocationBroadcastRunning())
+          .then((running) => {
+            const sharing = useSharingStore.getState();
+            if (running !== sharing.isBroadcasting) sharing.setBroadcasting(running);
+            const { mode } = readBroadcastState();
+            if (running && mode !== sharing.mode) sharing.setMode(mode);
+          });
 
         const auth = useAuthStore.getState();
         const since = backgroundedAt.current;

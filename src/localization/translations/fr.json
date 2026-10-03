@@ -952,7 +952,15 @@
     "minutesShort": "{{count}} min",
     "hoursShort": "{{count}} h",
     "addShort": "Ajouter",
-    "removeHint": "Appuyez longuement sur une personne pour arrêter le partage avec elle."
+    "removeHint": "Appuyez longuement sur une personne pour arrêter le partage avec elle.",
+    "shareFor": "Partager pendant",
+    "durationHours": "{{count}} h",
+    "durationUntilStopped": "Jusqu'à ce que j'arrête",
+    "endsAt": "S'arrête à {{time}}",
+    "noEnd": "Actif jusqu'à ce que vous l'arrêtiez",
+    "noRecipientsTitle": "Personne avec qui partager pour l'instant",
+    "noRecipientsBody": "Ajoutez quelqu'un dans l'onglet Sécurité et attendez qu'il accepte, puis lancez le partage.",
+    "emergencyAutoDowngrade": "Repasse en Normal après 1 heure"
   },
   "expenses": {
     "allTime": "Toutes les dépenses",

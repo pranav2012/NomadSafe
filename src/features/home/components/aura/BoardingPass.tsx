@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Linking, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import {
   Canvas,
@@ -12,17 +12,20 @@ import {
   Skia,
   rect,
   rrect,
-  useClock,
   vec,
 } from "react-native-skia";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   SensorType,
+  useAnimatedReaction,
   useAnimatedSensor,
   useAnimatedStyle,
   useDerivedValue,
+  useFrameCallback,
+  useReducedMotion,
   useSharedValue,
   withSpring,
+  type SharedValue,
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import { Icon } from "@/components/nomad/Icon";
@@ -31,6 +34,7 @@ import { springs } from "@/components/motion/springs";
 import type { EmergencyContact } from "@/features/onboarding/services/emergencyContactsStorage";
 import { lightImpact } from "@/utils/haptics";
 import { LiveDot } from "@/components/motion/LiveDot";
+import { useAnimationsActive } from "@/hooks/useAnimationsActive";
 import type { HomeData } from "@/features/home/types";
 import { RollingNumber } from "@/components/motion/RollingNumber";
 import { SAFETY_KIND_META } from "./safety/kinds";
@@ -88,6 +92,11 @@ const HEIGHT = 200;
 const RADIUS = 24;
 const MAX_TILT = 0.45;
 const STUB_Y = 130;
+// The aura pools drift slowly, so ~15 fps is indistinguishable from full rate; tilt samples at ~30 Hz.
+const AURA_TICK_MS = 66;
+const SENSOR_INTERVAL_MS = 33;
+// Gravity for a phone held at a normal reading angle, so the card rests flat before the first sample.
+const REST_GRAVITY = { x: 0, y: -0.6, z: -0.8 };
 
 function code(name: string | undefined) {
   return (name ?? "").replace(/[^A-Za-z]/g, "").slice(0, 3).toUpperCase() || "—";
@@ -112,26 +121,40 @@ interface BoardingPassProps {
   gradient: [string, string, string];
   isDark: boolean;
   emergency: EmergencyInfo;
+  /** True while the page scrolls; the aura and tilt hold still so scroll frames aren't dropped. */
+  scrolling?: SharedValue<boolean>;
 }
 
 /**
  * Trip as a Wallet-style pass: the safety-state aura glows inside it under a holographic foil
  * that shifts as the phone tilts (or as you drag it). Tap to flip it to an emergency card.
  */
-export function BoardingPass({ data, palette: c, accent, gradient, isDark, emergency }: BoardingPassProps) {
+export function BoardingPass({ data, palette: c, accent, gradient, isDark, emergency, scrolling }: BoardingPassProps) {
   const { width: windowWidth } = useWindowDimensions();
   const width = windowWidth - 40;
   const [isBack, setIsBack] = useState(false);
   const { t } = useLocalization();
-  const clock = useClock();
+  const reduceMotion = useReducedMotion();
+  const animating = useAnimationsActive() && !reduceMotion;
+  const auraTime = useSharedValue(0);
+  const auraClock = useSharedValue(0);
 
-  const gravity = useAnimatedSensor(SensorType.GRAVITY, { interval: "auto" });
+  const auraTicker = useFrameCallback((info) => {
+    if (scrolling?.get()) return;
+    auraClock.set(auraClock.get() + (info.timeSincePreviousFrame ?? 16));
+    if (auraClock.get() - auraTime.get() * 1000 >= AURA_TICK_MS) auraTime.set(auraClock.get() / 1000);
+  }, false);
+  useEffect(() => {
+    auraTicker.setActive(animating);
+  }, [animating, auraTicker]);
+
+  const gravity = useSharedValue(REST_GRAVITY);
   const drag = useSharedValue({ x: 0, y: 0 });
   const dragging = useSharedValue(0);
   const flip = useSharedValue(0);
 
   const tilt = useDerivedValue(() => {
-    const g = gravity.sensor.get();
+    const g = gravity.get();
     const len = Math.hypot(g.x, g.y, g.z) || 1;
     const sx = Math.max(-MAX_TILT, Math.min(MAX_TILT, (g.x / len) * 0.9));
     const sy = Math.max(-MAX_TILT, Math.min(MAX_TILT, (g.y / len + 0.6) * 0.9));
@@ -179,7 +202,7 @@ export function BoardingPass({ data, palette: c, accent, gradient, isDark, emerg
   const foilUniforms = useDerivedValue(() => ({ res: [width, HEIGHT], tilt: [tilt.get().x, tilt.get().y], strength: isDark ? 1 : 0.7 }));
   const auraUniforms = useDerivedValue(() => ({
     res: [width, HEIGHT],
-    time: clock.get() / 1000,
+    time: auraTime.get(),
     c1: auraColors[0],
     c2: auraColors[1],
     c3: auraColors[2],
@@ -197,6 +220,7 @@ export function BoardingPass({ data, palette: c, accent, gradient, isDark, emerg
   return (
     <GestureDetector gesture={Gesture.Exclusive(pan, tap)}>
       <Animated.View style={[styles.card, { width, height: HEIGHT }, cardStyle]}>
+        {animating ? <GravitySensor target={gravity} scrolling={scrolling} /> : null}
         <Animated.View style={[StyleSheet.absoluteFill, frontStyle]} accessible accessibilityRole="button" accessibilityLabel={data.tripName}>
           <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
             <Group clip={cardShape}>
@@ -398,3 +422,16 @@ const styles = StyleSheet.create({
   contactChip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, height: 28, borderRadius: 14, maxWidth: 110 },
   contactName: { fontFamily: f.semibold, fontSize: 12.5 },
 });
+
+/** Mounted only while the pass is visible, so the gravity sensor is released otherwise. */
+function GravitySensor({ target, scrolling }: { target: SharedValue<{ x: number; y: number; z: number }>; scrolling?: SharedValue<boolean> }) {
+  const sensor = useAnimatedSensor(SensorType.GRAVITY, { interval: SENSOR_INTERVAL_MS });
+  useAnimatedReaction(
+    () => sensor.sensor.get(),
+    (g) => {
+      if (scrolling?.get()) return;
+      target.set({ x: g.x, y: g.y, z: g.z });
+    },
+  );
+  return null;
+}

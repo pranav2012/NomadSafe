@@ -1,18 +1,21 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { AuraButton } from "@/components/aura/AuraButton";
 import { AuraCard } from "@/components/aura/AuraCard";
 import { AuraChip } from "@/components/aura/AuraChip";
 import { useAura } from "@/components/aura/useAura";
 import { auraStatusAccent } from "@/constants/aura";
+import { useAnimationsActive } from "@/hooks/useAnimationsActive";
 import { useLocalization } from "@/localization";
 
 const ALERT = auraStatusAccent.alert;
 
 interface CheckInCardProps {
   state: "idle" | "active" | "missed";
-  /** Seconds left (active), overdue (missed) or planned (idle). */
+  /** Planned duration in seconds, shown while idle. */
   seconds: number;
+  /** When the running check-in is due (ms); drives the live countdown while active or missed. */
+  endsAt: number | null;
   presets: { duration: number; label: string }[];
   plannedDuration: number;
   plannedLabel: string;
@@ -36,10 +39,26 @@ export function formatCountdown(totalSeconds: number) {
     : `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
+function useSecondTicker(running: boolean) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!running) return;
+    const tick = () => setNow(Date.now());
+    const first = setTimeout(tick, 0);
+    const id = setInterval(tick, 1000);
+    return () => {
+      clearTimeout(first);
+      clearInterval(id);
+    };
+  }, [running]);
+  return now;
+}
+
 /** Safe-arrival timer: pick a duration, count down, and escalate when it's missed. */
 export function CheckInCard({
   state,
   seconds,
+  endsAt,
   presets,
   plannedDuration,
   plannedLabel,
@@ -56,6 +75,14 @@ export function CheckInCard({
   const { c, f } = useAura();
   const { t } = useLocalization();
   const missed = state === "missed";
+  const visible = useAnimationsActive();
+  const now = useSecondTicker(visible && state !== "idle" && endsAt !== null);
+  const shown =
+    state === "idle" || endsAt === null
+      ? seconds
+      : missed
+        ? Math.max(0, Math.floor((now - endsAt) / 1000))
+        : Math.max(0, Math.ceil((endsAt - now) / 1000));
 
   return (
     <AuraCard tone={missed ? ALERT : state === "active" ? accent : undefined}>
@@ -66,7 +93,7 @@ export function CheckInCard({
         accessibilityRole={missed ? "alert" : undefined}
         style={[styles.value, { color: missed ? ALERT : c.text, fontFamily: f.semibold }]}
       >
-        {missed ? `+${formatCountdown(seconds)}` : formatCountdown(seconds)}
+        {missed ? `+${formatCountdown(shown)}` : formatCountdown(shown)}
       </Text>
       <Text style={[styles.sub, { color: c.textSoft, fontFamily: f.regular }]}>
         {missed ? missedBody : state === "active" ? t("safety.autoAlert") : t("safety.setTarget")}

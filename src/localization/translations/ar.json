@@ -952,7 +952,15 @@
     "minutesShort": "{{count}} د",
     "hoursShort": "{{count}} س",
     "addShort": "إضافة",
-    "removeHint": "اضغط مطولًا على شخص لإيقاف المشاركة معه."
+    "removeHint": "اضغط مطولًا على شخص لإيقاف المشاركة معه.",
+    "shareFor": "المشاركة لمدة",
+    "durationHours": "{{count}} س",
+    "durationUntilStopped": "حتى أوقفها",
+    "endsAt": "تتوقف عند {{time}}",
+    "noEnd": "مستمرة حتى توقفها",
+    "noRecipientsTitle": "لا يوجد أحد للمشاركة معه بعد",
+    "noRecipientsBody": "أضف شخصًا من تبويب الأمان وانتظر قبوله، ثم ابدأ المشاركة.",
+    "emergencyAutoDowngrade": "تعود إلى الوضع العادي بعد ساعة"
   },
   "expenses": {
     "allTime": "كل الإنفاق",
