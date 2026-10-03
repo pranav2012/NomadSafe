@@ -1,7 +1,5 @@
 import React, { useEffect, useMemo, useState, type RefObject } from "react";
 import { PixelRatio, Platform, StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
-import { BlurView } from "expo-blur";
-import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import {
   Canvas,
   Group,
@@ -23,6 +21,7 @@ import { springs } from "@/components/motion/springs";
 import { selectionChanged } from "@/utils/haptics";
 import { TAB_ICONS, type TabIconName } from "./tabIcons";
 import { TAB_BAR_HEIGHT } from "./tabBarInset";
+import { GlassSurface } from "./GlassSurface";
 
 export interface GlassTabItem {
   key: string;
@@ -54,7 +53,6 @@ const GROW_Y = 0.24;
 const ICON = 22;
 const LABEL_SIZE = 10.5;
 const PD = PixelRatio.get();
-const IOS_NATIVE_GLASS = Platform.OS === "ios" && isLiquidGlassAvailable();
 const RIM_DARK = ["rgba(255,255,255,0.3)", "rgba(255,255,255,0.05)", "rgba(255,255,255,0.05)", "rgba(255,255,255,0.18)"];
 const RIM_LIGHT = ["rgba(255,255,255,0.95)", "rgba(255,255,255,0.3)", "rgba(255,255,255,0.3)", "rgba(255,255,255,0.8)"];
 
@@ -226,12 +224,11 @@ export function GlassTabBar({
       return paragraph;
     });
   }, [activeColor, fontManager, inactiveColor, items, shownIndex, slot]);
-  const tint = isDark ? "rgba(10,12,18,0.3)" : "rgba(255,255,255,0.42)";
   const pillTint = isDark ? "rgba(255,255,255,0.12)" : "rgba(14,16,24,0.06)";
 
   return (
     <View accessibilityRole="tablist" style={[styles.bar, style]} onLayout={(event) => setWidth(event.nativeEvent.layout.width)}>
-      <BarSurface isDark={isDark} tint={tint} blurTarget={blurTarget} />
+      <GlassSurface isDark={isDark} radius={HEIGHT / 2} blurTarget={blurTarget} />
 
       {slot > 0 && labels ? (
         <Canvas style={[styles.canvas, { width: width + BLEED * 2 }]} pointerEvents="none">
@@ -310,27 +307,6 @@ export function GlassTabBar({
   );
 }
 
-function BarSurface({ isDark, tint, blurTarget }: { isDark: boolean; tint: string; blurTarget?: RefObject<View | null> }) {
-  if (Platform.OS === "android") {
-    return (
-      <BlurView
-        style={styles.surface}
-        intensity={isDark ? 55 : 65}
-        tint={isDark ? "dark" : "light"}
-        blurMethod="dimezisBlurViewSdk31Plus"
-        blurTarget={blurTarget}
-        blurReductionFactor={2.5}
-      >
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: tint }]} />
-      </BlurView>
-    );
-  }
-  if (IOS_NATIVE_GLASS) {
-    return <GlassView style={styles.surface} glassEffectStyle="regular" colorScheme={isDark ? "dark" : "light"} />;
-  }
-  return <BlurView style={styles.surface} intensity={80} tint={isDark ? "systemChromeMaterialDark" : "systemChromeMaterialLight"} />;
-}
-
 const styles = StyleSheet.create({
   bar: {
     height: HEIGHT,
@@ -340,7 +316,6 @@ const styles = StyleSheet.create({
     shadowRadius: 24,
     shadowOffset: { width: 0, height: 10 },
   },
-  surface: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: HEIGHT / 2, overflow: "hidden" },
   canvas: { position: "absolute", top: -BLEED, left: -BLEED, height: HEIGHT + BLEED * 2 },
   row: { flex: 1, flexDirection: "row", paddingHorizontal: INSET },
   item: { flex: 1 },

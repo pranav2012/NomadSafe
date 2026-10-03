@@ -1,12 +1,19 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import * as Haptics from "expo-haptics";
+import Animated, { FadeIn, FadeInDown, FadeOut, LinearTransition } from "react-native-reanimated";
 import { PostHogMaskView } from "posthog-react-native";
+import { AuraButton } from "@/components/aura/AuraButton";
+import { AuraCard } from "@/components/aura/AuraCard";
+import { AuraChip } from "@/components/aura/AuraChip";
+import { AuraSheet } from "@/components/aura/AuraSheet";
+import { useAura } from "@/components/aura/useAura";
 import { Icon } from "@/components/nomad/Icon";
-import { NOMAD_FONTS } from "@/constants/nomadTokens";
-import { useTheme } from "@/hooks/useTheme";
+import { PressableScale } from "@/components/motion/PressableScale";
+import { auraStatusAccent } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { track } from "@/services/analytics";
 import { logger } from "@/services/logger";
@@ -19,6 +26,7 @@ import { useExpensesStore } from "@/features/expenses/store/expensesStore";
 import { useSpeechCapture } from "@/features/expenses/hooks/useSpeechCapture";
 import { ExpenseForm } from "@/features/expenses/components/ExpenseForm";
 import { VoiceDraftCard } from "@/features/expenses/components/VoiceDraftCard";
+import { VoiceOrb, type VoiceOrbMode } from "@/features/expenses/components/VoiceOrb";
 import {
   interpretVoiceExtraction,
   replaceDraftPerson,
@@ -39,8 +47,9 @@ type Phase =
 
 /** Speak-to-add screen. It also runs while PIN-locked, so it never shows the ledger or balances. */
 export default function VoiceExpenseScreen() {
-  const { nomad } = useTheme();
-  const theme = nomad.colors;
+  const { c, f, isDark } = useAura();
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const { t, formatCurrency, currency: deviceCurrency } = useLocalization();
   const router = useRouter();
   const params = useLocalSearchParams<{ tripId?: string; autostart?: string; pickTrip?: string; source?: string }>();
@@ -211,43 +220,48 @@ export default function VoiceExpenseScreen() {
   const listening = speech.state.status === "listening";
   const partial = speech.state.status === "listening" ? speech.state.partial : "";
 
+  const orbMode: VoiceOrbMode =
+    phase.name === "thinking" ? "thinking" : phase.name === "saved" ? "done" : listening ? "listening" : "idle";
+  const compact = phase.name === "review";
+  const orbSize = Math.min(compact ? 150 : 280, width - 80);
+  const heard = phase.name === "thinking" || phase.name === "unclear" ? phase.transcript : phase.name === "review" ? phase.draft.transcript : partial;
+  const status =
+    phase.name === "thinking"
+      ? t("voiceExpense.thinking")
+      : listening
+        ? t("voiceExpense.listening")
+        : phase.name === "unclear"
+          ? t("voiceExpense.unclear")
+          : phase.name === "saved"
+            ? phase.summary
+            : phase.name === "review"
+              ? null
+              : t("voiceExpense.tapToSpeak");
+
   return (
-    <SafeAreaView style={[styles.root, { backgroundColor: theme.paper }]}>
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <View style={styles.header}>
-          <View style={styles.flex}>
-            <Text style={[styles.eyebrow, { color: theme.inkMuted }]}>{t("voiceExpense.eyebrow")}</Text>
-            <Text style={[styles.title, { color: theme.inkDeep }]}>{t("voiceExpense.title")}</Text>
-          </View>
-          <Pressable
-            onPress={close}
-            hitSlop={10}
-            accessibilityLabel={t("common.close")}
-            style={[styles.closeButton, { backgroundColor: theme.paperSoft, borderColor: theme.hairline }]}
-          >
-            <Icon name="x" size={18} color={theme.inkSoft} />
-          </Pressable>
+    <View style={[styles.root, { backgroundColor: c.bg }]}>
+      <StatusBar style={isDark ? "light" : "dark"} />
+      <ScrollView
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 10, paddingBottom: insets.bottom + 24 }]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.topBar}>
+          <PressableScale onPress={close} accessibilityRole="button" accessibilityLabel={t("common.close")} style={[styles.close, { backgroundColor: c.surfaceStrong }]}>
+            <Icon name="x" size={16} color={c.text} />
+          </PressableScale>
+          <AuraChip
+            label={trip ? t("voiceExpense.addingToName", { name: trip.name }) : t("voiceExpense.noTrip")}
+            icon="compass"
+            onPress={trips.length > 1 ? () => setPickerOpen(true) : undefined}
+          />
         </View>
 
-        <Pressable
-          onPress={() => trips.length > 0 && setPickerOpen(true)}
-          style={[styles.tripSelect, { backgroundColor: theme.paperSoft, borderColor: theme.hairline }]}
-        >
-          <Icon name="compass" size={17} color={theme.teal} />
-          <View style={styles.flex}>
-            <Text style={[styles.tripLabel, { color: theme.inkMuted }]}>{t("voiceExpense.addingTo")}</Text>
-            <Text style={[styles.tripName, { color: theme.inkDeep }]} numberOfLines={1}>
-              {trip?.name ?? t("voiceExpense.noTrip")}
-            </Text>
-          </View>
-          {trips.length > 1 ? <Icon name="chevronDown" size={18} color={theme.inkSoft} /> : null}
-        </Pressable>
-
         {!modelReady ? (
-          <View style={[styles.infoCard, { backgroundColor: theme.mustardSoft, borderColor: theme.mustard }]}>
-            <Icon name="cpu" size={20} color={theme.stamp} />
-            <Text style={[styles.infoTitle, { color: theme.inkDeep }]}>{t("voiceExpense.needsModelTitle")}</Text>
-            <Text style={[styles.infoBody, { color: theme.inkSoft }]}>
+          <AuraCard tone={auraStatusAccent.live} style={styles.needsModel}>
+            <Icon name="cpu" size={20} color={auraStatusAccent.live} />
+            <Text style={[styles.cardTitle, { color: c.text, fontFamily: f.semibold }]}>{t("voiceExpense.needsModelTitle")}</Text>
+            <Text style={[styles.cardBody, { color: c.textSoft, fontFamily: f.regular }]}>
               {!localAiEnabled
                 ? t("voiceExpense.needsModelDisabled")
                 : locked
@@ -255,132 +269,111 @@ export default function VoiceExpenseScreen() {
                   : t("voiceExpense.needsModelBody")}
             </Text>
             {!locked ? (
-              <Pressable onPress={() => router.replace("/(tabs)/ai")} hitSlop={6}>
-                <Text style={[styles.infoAction, { color: theme.teal }]}>{t("voiceExpense.openAi")}</Text>
-              </Pressable>
+              <AuraButton label={t("voiceExpense.openAi")} icon="sparkle" variant="secondary" size="md" onPress={() => router.replace("/(tabs)/ai")} style={styles.start} />
             ) : null}
-          </View>
-        ) : phase.name === "review" && draft ? (
-          <PostHogMaskView>
-            <VoiceDraftCard
-              key={draft.transcript}
-              draft={draft}
-              shares={shares}
-              tripName={trip?.name ?? null}
-              canAddPeople={trip !== null}
-              onAddPerson={addPerson}
-              onLeaveOut={(name) => updateDraft(replaceDraftPerson(draft, name, null))}
-              onSave={saveDraft}
-              onEdit={draft.kind === "expense" ? () => setEditing(true) : undefined}
-              onRetry={listen}
-            />
-          </PostHogMaskView>
-        ) : phase.name === "saved" ? (
-          <View style={[styles.savedCard, { backgroundColor: theme.tealSoft, borderColor: theme.teal }]}>
-            <View style={[styles.savedIcon, { backgroundColor: theme.teal }]}>
-              <Icon name="check" size={22} color={theme.inverse} strokeWidth={2.6} />
-            </View>
-            <Text style={[styles.savedText, { color: theme.inkDeep }]}>{phase.summary}</Text>
-            <View style={styles.savedActions}>
-              <Pressable
-                onPress={listen}
-                style={({ pressed }) => [styles.secondary, { borderColor: theme.teal, opacity: pressed ? 0.85 : 1 }]}
-              >
-                <Icon name="mic" size={15} color={theme.teal} />
-                <Text style={[styles.secondaryText, { color: theme.teal }]}>{t("voiceExpense.addAnother")}</Text>
-              </Pressable>
-              <Pressable
-                onPress={close}
-                style={({ pressed }) => [styles.primary, { backgroundColor: theme.teal, opacity: pressed ? 0.9 : 1 }]}
-              >
-                <Text style={[styles.primaryText, { color: theme.inverse }]}>{t("voiceExpense.done")}</Text>
-              </Pressable>
-            </View>
-          </View>
+          </AuraCard>
         ) : (
-          <View style={styles.micArea}>
-            <Pressable
-              onPress={listening ? speech.stop : listen}
-              disabled={phase.name === "thinking"}
-              accessibilityRole="button"
-              accessibilityLabel={listening ? t("voiceExpense.stop") : t("voiceExpense.speakToAdd")}
-              style={[
-                styles.micHalo,
-                {
-                  backgroundColor: listening ? theme.tealSoft : "transparent",
-                  transform: [{ scale: listening ? 1 + Math.min(speech.volume, 10) / 40 : 1 }],
-                },
-              ]}
-            >
-              <View style={[styles.micButton, { backgroundColor: listening ? theme.stamp : theme.teal }]}>
-                {phase.name === "thinking" ? (
-                  <ActivityIndicator color={theme.inverse} />
-                ) : (
-                  <Icon name={listening ? "pause" : "mic"} size={34} color={theme.inverse} />
-                )}
-              </View>
-            </Pressable>
+          <>
+            <Animated.View layout={LinearTransition.springify().damping(18)} style={styles.stage}>
+              <PressableScale
+                onPress={listening ? speech.stop : listen}
+                disabled={phase.name === "thinking" || phase.name === "review"}
+                pressedScale={0.95}
+                accessibilityRole="button"
+                accessibilityLabel={listening ? t("voiceExpense.stop") : t("voiceExpense.speakToAdd")}
+                style={{ width: orbSize, height: orbSize }}
+              >
+                <VoiceOrb size={orbSize} mode={orbMode} level={speech.volume} isDark={isDark} />
+                <View style={styles.orbIcon} pointerEvents="none">
+                  <Icon
+                    name={phase.name === "saved" ? "check" : listening ? "pause" : "mic"}
+                    size={compact ? 22 : 30}
+                    color={isDark ? "#FFFFFF" : c.text}
+                    strokeWidth={phase.name === "saved" ? 2.6 : 2}
+                  />
+                </View>
+              </PressableScale>
 
-            <PostHogMaskView>
-              <Text style={[styles.status, { color: theme.inkDeep }]}>
-                {phase.name === "thinking"
-                  ? t("voiceExpense.thinking")
-                  : listening
-                    ? partial || t("voiceExpense.listening")
-                    : phase.name === "unclear"
-                      ? t("voiceExpense.unclear")
-                      : t("voiceExpense.tapToSpeak")}
-              </Text>
-              {phase.name === "thinking" || phase.name === "unclear" ? (
-                <Text style={[styles.heard, { color: theme.inkSoft }]}>“{phase.transcript}”</Text>
-              ) : null}
-            </PostHogMaskView>
+              <PostHogMaskView style={styles.words}>
+                {status ? <Text style={[styles.status, { color: c.text, fontFamily: f.semibold }]}>{status}</Text> : null}
+                {heard ? (
+                  <Animated.Text entering={FadeIn.duration(160)} style={[styles.heard, { color: c.textSoft, fontFamily: f.regular }]}>
+                    “{heard}”
+                  </Animated.Text>
+                ) : null}
+              </PostHogMaskView>
+            </Animated.View>
 
-            {speech.state.status === "unavailable" ? (
-              <SpeechProblem
-                reason={speech.state.reason}
-                locale={speech.state.locale}
-                onDownload={speech.downloadLanguage}
-              />
+            {phase.name === "review" && draft ? (
+              <Animated.View entering={FadeInDown.springify().damping(18)} exiting={FadeOut.duration(150)}>
+                <PostHogMaskView>
+                  <VoiceDraftCard
+                    key={draft.transcript}
+                    draft={draft}
+                    shares={shares}
+                    tripName={trip?.name ?? null}
+                    canAddPeople={trip !== null}
+                    onAddPerson={addPerson}
+                    onLeaveOut={(name) => updateDraft(replaceDraftPerson(draft, name, null))}
+                    onSave={saveDraft}
+                    onEdit={draft.kind === "expense" ? () => setEditing(true) : undefined}
+                    onRetry={listen}
+                  />
+                </PostHogMaskView>
+              </Animated.View>
+            ) : phase.name === "saved" ? (
+              <Animated.View entering={FadeInDown.springify().damping(18)} style={styles.savedActions}>
+                <AuraButton label={t("voiceExpense.addAnother")} icon="mic" variant="secondary" onPress={listen} style={styles.flex} />
+                <AuraButton label={t("voiceExpense.done")} onPress={close} style={styles.flex} />
+              </Animated.View>
+            ) : speech.state.status === "unavailable" ? (
+              <SpeechProblem reason={speech.state.reason} locale={speech.state.locale} onDownload={speech.downloadLanguage} />
             ) : phase.name === "idle" && !listening ? (
-              <View style={[styles.examples, { borderColor: theme.hairline }]}>
-                <Text style={[styles.examplesLabel, { color: theme.inkMuted }]}>{t("voiceExpense.try")}</Text>
-                <Text style={[styles.example, { color: theme.inkSoft }]}>{t("voiceExpense.example1")}</Text>
-                <Text style={[styles.example, { color: theme.inkSoft }]}>{t("voiceExpense.example2")}</Text>
-                <Text style={[styles.example, { color: theme.inkSoft }]}>{t("voiceExpense.example3")}</Text>
-              </View>
+              <Animated.View entering={FadeIn.duration(300)} style={styles.examples}>
+                <Text style={[styles.examplesLabel, { color: c.textMuted, fontFamily: f.medium }]}>{t("voiceExpense.try")}</Text>
+                {[t("voiceExpense.example1"), t("voiceExpense.example2"), t("voiceExpense.example3")].map((example) => (
+                  <Text key={example} style={[styles.example, { color: c.textSoft, fontFamily: f.regular }]}>
+                    {example}
+                  </Text>
+                ))}
+              </Animated.View>
             ) : null}
-            <Text style={[styles.privacy, { color: theme.inkMuted }]}>{t("voiceExpense.privacy")}</Text>
-          </View>
+          </>
         )}
+
+        <View style={styles.spacer} />
+        <View style={styles.privacy}>
+          <Icon name="lock" size={12} color={c.textMuted} />
+          <Text style={[styles.privacyText, { color: c.textMuted, fontFamily: f.regular }]}>{t("voiceExpense.privacy")}</Text>
+        </View>
       </ScrollView>
 
-      <Modal visible={pickerOpen} transparent animationType="fade" onRequestClose={() => setPickerOpen(false)}>
-        <Pressable style={styles.backdrop} onPress={() => setPickerOpen(false)} />
-        <View style={[styles.picker, { backgroundColor: theme.paperSoft, borderColor: theme.hairline }]}>
-          <Text style={[styles.pickerTitle, { color: theme.inkDeep }]}>{t("voiceExpense.chooseTrip")}</Text>
-          <ScrollView style={styles.pickerList}>
-            {trips.map((entry) => {
-              const active = entry.id === tripId;
-              return (
-                <Pressable
-                  key={entry.id}
-                  onPress={() => selectTrip(entry.id)}
-                  style={[styles.pickerRow, { backgroundColor: active ? theme.tealSoft : "transparent" }]}
-                >
-                  <Text style={[styles.pickerName, { color: theme.inkDeep }]} numberOfLines={1}>
-                    {entry.name}
-                  </Text>
-                  {entry.id === activeTripId ? (
-                    <Text style={[styles.pickerBadge, { color: theme.teal }]}>{t("voiceExpense.activeTrip")}</Text>
-                  ) : null}
-                  {active ? <Icon name="check" size={16} color={theme.teal} strokeWidth={2.4} /> : null}
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        </View>
-      </Modal>
+      <AuraSheet visible={pickerOpen} onClose={() => setPickerOpen(false)} title={t("voiceExpense.chooseTrip")}>
+        <ScrollView contentContainerStyle={styles.pickerList}>
+          {trips.map((entry) => {
+            const active = entry.id === tripId;
+            return (
+              <PressableScale
+                key={entry.id}
+                haptic={false}
+                pressedScale={0.98}
+                onPress={() => selectTrip(entry.id)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+                style={[styles.pickerRow, { backgroundColor: active ? c.surfaceStrong : "transparent" }]}
+              >
+                <Text style={[styles.pickerName, { color: c.text, fontFamily: f.medium }]} numberOfLines={1}>
+                  {entry.name}
+                </Text>
+                {entry.id === activeTripId ? (
+                  <Text style={[styles.pickerBadge, { color: c.textMuted, fontFamily: f.medium }]}>{t("voiceExpense.activeTrip")}</Text>
+                ) : null}
+                {active ? <Icon name="check" size={16} color={c.text} strokeWidth={2.4} /> : null}
+              </PressableScale>
+            );
+          })}
+        </ScrollView>
+      </AuraSheet>
 
       {draft?.kind === "expense" ? (
         <ExpenseForm
@@ -410,7 +403,7 @@ export default function VoiceExpenseScreen() {
           }}
         />
       ) : null}
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -423,127 +416,55 @@ function SpeechProblem({
   locale?: string;
   onDownload: (locale: string) => Promise<string | null>;
 }) {
-  const { nomad } = useTheme();
-  const theme = nomad.colors;
+  const { c, f } = useAura();
   const { t } = useLocalization();
   const [downloadStatus, setDownloadStatus] = useState<string | null>(null);
-
   return (
-    <View style={[styles.infoCard, { backgroundColor: theme.mustardSoft, borderColor: theme.mustard }]}>
-      <Text style={[styles.infoBody, { color: theme.inkDeep }]}>{t(`voiceExpense.speech.${reason}`)}</Text>
+    <AuraCard tone={auraStatusAccent.live} style={styles.problem}>
+      <Text style={[styles.cardBody, { color: c.text, fontFamily: f.regular }]}>{t(`voiceExpense.speech.${reason}`)}</Text>
       {reason === "language-missing" && locale && process.env.EXPO_OS === "android" ? (
         downloadStatus ? (
-          <Text style={[styles.infoBody, { color: theme.inkSoft }]}>{t("voiceExpense.speech.downloadStarted")}</Text>
+          <Text style={[styles.cardBody, { color: c.textSoft, fontFamily: f.regular }]}>{t("voiceExpense.speech.downloadStarted")}</Text>
         ) : (
-          <Pressable
+          <AuraButton
+            label={t("voiceExpense.speech.download")}
+            icon="download"
+            variant="secondary"
+            size="md"
             onPress={async () => setDownloadStatus((await onDownload(locale)) ?? "failed")}
-            hitSlop={6}
-          >
-            <Text style={[styles.infoAction, { color: theme.teal }]}>{t("voiceExpense.speech.download")}</Text>
-          </Pressable>
+            style={styles.start}
+          />
         )
       ) : null}
-    </View>
+    </AuraCard>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
   flex: { flex: 1 },
-  scroll: { padding: 20, gap: 16, paddingBottom: 60 },
-  header: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
-  eyebrow: {
-    fontFamily: NOMAD_FONTS.uiBold,
-    fontSize: 10.5,
-    letterSpacing: 1.6,
-    textTransform: "uppercase",
-  },
-  title: { fontFamily: NOMAD_FONTS.display, fontSize: 32, lineHeight: 36, marginTop: 4 },
-  closeButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 999,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  tripSelect: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    borderWidth: 1,
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  tripLabel: {
-    fontFamily: NOMAD_FONTS.uiBold,
-    fontSize: 9.5,
-    letterSpacing: 1.1,
-    textTransform: "uppercase",
-  },
-  tripName: { fontFamily: NOMAD_FONTS.uiSemi, fontSize: 16, marginTop: 2 },
-  infoCard: { borderWidth: 1, borderRadius: 16, padding: 16, gap: 8 },
-  infoTitle: { fontFamily: NOMAD_FONTS.uiSemi, fontSize: 15 },
-  infoBody: { fontFamily: NOMAD_FONTS.ui, fontSize: 13.5, lineHeight: 19 },
-  infoAction: { fontFamily: NOMAD_FONTS.uiBold, fontSize: 14 },
-  micArea: { alignItems: "center", gap: 18, paddingTop: 24 },
-  micHalo: { width: 150, height: 150, borderRadius: 75, alignItems: "center", justifyContent: "center" },
-  micButton: { width: 104, height: 104, borderRadius: 52, alignItems: "center", justifyContent: "center" },
-  status: { fontFamily: NOMAD_FONTS.uiSemi, fontSize: 18, textAlign: "center", lineHeight: 25 },
-  heard: { fontFamily: NOMAD_FONTS.ui, fontSize: 14, fontStyle: "italic", textAlign: "center", marginTop: 6 },
-  examples: { alignSelf: "stretch", borderTopWidth: 1, paddingTop: 16, gap: 6 },
-  examplesLabel: {
-    fontFamily: NOMAD_FONTS.uiBold,
-    fontSize: 10,
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
-  },
-  example: { fontFamily: NOMAD_FONTS.ui, fontSize: 14, lineHeight: 20 },
-  privacy: { fontFamily: NOMAD_FONTS.ui, fontSize: 12, textAlign: "center" },
-  savedCard: { borderWidth: 1, borderRadius: 20, padding: 20, gap: 14, alignItems: "center" },
-  savedIcon: { width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center" },
-  savedText: { fontFamily: NOMAD_FONTS.uiSemi, fontSize: 16, textAlign: "center", lineHeight: 22 },
-  savedActions: { flexDirection: "row", gap: 8, alignSelf: "stretch" },
-  secondary: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    borderWidth: 1,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  secondaryText: { fontFamily: NOMAD_FONTS.uiSemi, fontSize: 14 },
-  primary: { flex: 1, alignItems: "center", justifyContent: "center", borderRadius: 14, paddingVertical: 12 },
-  primaryText: { fontFamily: NOMAD_FONTS.uiSemi, fontSize: 14 },
-  backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.35)" },
-  picker: {
-    position: "absolute",
-    left: 20,
-    right: 20,
-    top: "22%",
-    borderWidth: 1,
-    borderRadius: 20,
-    padding: 16,
-    gap: 10,
-  },
-  pickerTitle: { fontFamily: NOMAD_FONTS.display, fontSize: 22 },
-  pickerList: { maxHeight: 360 },
-  pickerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-  },
-  pickerName: { flex: 1, fontFamily: NOMAD_FONTS.uiSemi, fontSize: 15 },
-  pickerBadge: {
-    fontFamily: NOMAD_FONTS.uiBold,
-    fontSize: 9.5,
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
-  },
+  scroll: { flexGrow: 1, paddingHorizontal: 20 },
+  topBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
+  close: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center" },
+  needsModel: { marginTop: 40, gap: 8 },
+  cardTitle: { fontSize: 17 },
+  cardBody: { fontSize: 14, lineHeight: 20 },
+  start: { alignSelf: "flex-start", marginTop: 6 },
+  stage: { alignItems: "center", marginTop: 28, marginBottom: 20 },
+  orbIcon: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0, alignItems: "center", justifyContent: "center" },
+  words: { alignItems: "center", marginTop: 18, paddingHorizontal: 8, gap: 8 },
+  status: { fontSize: 20, letterSpacing: -0.4, textAlign: "center", lineHeight: 26 },
+  heard: { fontSize: 15.5, lineHeight: 22, textAlign: "center" },
+  savedActions: { flexDirection: "row", gap: 10 },
+  problem: { gap: 10 },
+  examples: { alignItems: "center", gap: 6 },
+  examplesLabel: { fontSize: 13, marginBottom: 2 },
+  example: { fontSize: 14.5, lineHeight: 20, textAlign: "center" },
+  spacer: { flex: 1, minHeight: 24 },
+  privacy: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingHorizontal: 12 },
+  privacyText: { fontSize: 12, textAlign: "center", flexShrink: 1 },
+  pickerList: { paddingHorizontal: 12, paddingBottom: 12 },
+  pickerRow: { flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 14 },
+  pickerName: { flex: 1, fontSize: 16 },
+  pickerBadge: { fontSize: 12.5 },
 });

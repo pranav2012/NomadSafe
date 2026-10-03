@@ -1,9 +1,14 @@
 import React, { useMemo, useState } from "react";
-import { Alert, Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Icon } from "@/components/nomad/Icon";
-import { NOMAD_FONTS } from "@/constants/nomadTokens";
-import { useTheme } from "@/hooks/useTheme";
+import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
+import { AuraButton } from "@/components/aura/AuraButton";
+import { AuraCard } from "@/components/aura/AuraCard";
+import { AuraChip } from "@/components/aura/AuraChip";
+import { AuraField } from "@/components/aura/AuraField";
+import { AuraSection } from "@/components/aura/AuraSection";
+import { AuraSheet } from "@/components/aura/AuraSheet";
+import { useAura } from "@/components/aura/useAura";
+import { PressableScale } from "@/components/motion/PressableScale";
+import { auraStatusAccent } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { track } from "@/services/analytics";
 import type { Trip } from "@/features/trips/store/tripsStore";
@@ -22,12 +27,14 @@ import {
   type Transfer,
 } from "@/features/expenses/utils/split";
 
+const OWED = "#3DDC97";
+const OWES = auraStatusAccent.alert;
+
 const rateKey = (currency: string, date: string) => `${currency}|${toLocalDayKey(date)}`;
 
-/** Who owes whom on a trip, in the trip currency, with settle-up actions. */
+/** Who owes whom on a trip, in the trip currency: net balance per person, settle-ups and payments. */
 export function TripBalances({ trip }: { trip: Trip }) {
-  const { nomad } = useTheme();
-  const theme = nomad.colors;
+  const { c, f } = useAura();
   const { t, locale, formatCurrency } = useLocalization();
   const allExpenses = useExpensesStore((state) => state.expenses);
   const allSettlements = useExpensesStore((state) => state.settlements);
@@ -56,11 +63,9 @@ export function TripBalances({ trip }: { trip: Trip }) {
   );
   const transfers = simplifyDebts(net, trip.currency);
   const myNet = roundMoney(net.get(SELF_ID) ?? 0, trip.currency);
-
-  if (splitExpenses.length === 0 && settlements.length === 0) return null;
-
   const money = (amount: number) => formatMoney(formatCurrency, amount, trip.currency);
   const everyone = [...new Set([SELF_ID, ...trip.companions, ...net.keys()])];
+  const others = everyone.filter((person) => person !== SELF_ID);
 
   const confirmDelete = (id: string) =>
     Alert.alert(t("split.deletePaymentTitle"), t("split.deletePaymentBody"), [
@@ -69,82 +74,99 @@ export function TripBalances({ trip }: { trip: Trip }) {
     ]);
 
   return (
-    <View style={[styles.card, { backgroundColor: theme.paperSoft, borderColor: theme.hairline }]}>
-      <View style={styles.headerRow}>
-        <View style={styles.flex}>
-          <Text style={[styles.sectionLabel, { color: theme.inkMuted }]}>{t("split.balances")}</Text>
-          <Text style={[styles.position, { color: myNet < 0 ? theme.stamp : theme.inkDeep }]}>
-            {myNet > 0
-              ? t("split.youAreOwed", { amount: money(myNet) })
-              : myNet < 0
-                ? t("split.youOwe", { amount: money(-myNet) })
-                : t("split.settled")}
-          </Text>
-        </View>
-        <Pressable
-          onPress={() => setSettling({ from: trip.companions[0] ?? SELF_ID, to: SELF_ID, amount: 0 })}
-          hitSlop={8}
-          style={({ pressed }) => [styles.smallButton, { borderColor: theme.hairline, opacity: pressed ? 0.8 : 1 }]}
-        >
-          <Text style={[styles.smallButtonText, { color: theme.teal }]}>{t("split.recordPayment")}</Text>
-        </Pressable>
-      </View>
+    <View>
+      <Text style={[styles.position, { color: myNet > 0 ? OWED : myNet < 0 ? OWES : c.text, fontFamily: f.semibold }]}>
+        {myNet > 0
+          ? t("split.youAreOwed", { amount: money(myNet) })
+          : myNet < 0
+            ? t("split.youOwe", { amount: money(-myNet) })
+            : t("split.settled")}
+      </Text>
+      {splitExpenses.length === 0 && settlements.length === 0 ? (
+        <Text style={[styles.body, { color: c.textSoft, fontFamily: f.regular }]}>{t("split.emptyBody")}</Text>
+      ) : null}
 
-      {transfers.map((transfer) => (
-        <View key={`${transfer.from}->${transfer.to}`} style={[styles.row, { borderColor: theme.hairline }]}>
-          <View style={styles.flex}>
-            <Text style={[styles.rowTitle, { color: theme.inkDeep }]}>
-              {t("split.owes", { from: personLabel(transfer.from, t), to: personLabel(transfer.to, t) })}
-            </Text>
-            <Text style={[styles.rowAmount, { color: theme.inkDeep }]}>{money(transfer.amount)}</Text>
-          </View>
-          <Pressable
-            onPress={() => setSettling(transfer)}
-            style={({ pressed }) => [styles.settleButton, { backgroundColor: theme.tealSoft, opacity: pressed ? 0.85 : 1 }]}
-          >
-            <Icon name="check" size={14} color={theme.teal} strokeWidth={2.2} />
-            <Text style={[styles.settleText, { color: theme.teal }]}>{t("split.settle")}</Text>
-          </Pressable>
-        </View>
-      ))}
+      {others.length > 0 ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.people} style={styles.peopleScroll}>
+          {others.map((person) => {
+            const value = roundMoney(net.get(person) ?? 0, trip.currency);
+            return (
+              <View key={person} style={[styles.person, { backgroundColor: c.surface, borderColor: c.hairline }]}>
+                <View style={[styles.avatar, { backgroundColor: c.surfaceStrong }]}>
+                  <Text style={[styles.initial, { color: c.text, fontFamily: f.semibold }]}>{person.slice(0, 1).toUpperCase()}</Text>
+                </View>
+                <Text style={[styles.personName, { color: c.text, fontFamily: f.medium }]} numberOfLines={1}>
+                  {personLabel(person, t)}
+                </Text>
+                <Text style={[styles.personNet, { color: value > 0 ? OWED : value < 0 ? OWES : c.textMuted, fontFamily: f.semibold }]}>
+                  {value === 0 ? "—" : `${value > 0 ? "+" : "−"}${money(Math.abs(value))}`}
+                </Text>
+              </View>
+            );
+          })}
+        </ScrollView>
+      ) : null}
+
+      {transfers.length > 0 ? (
+        <AuraCard style={styles.card}>
+          {transfers.map((transfer, index) => (
+            <View
+              key={`${transfer.from}->${transfer.to}`}
+              style={[styles.transfer, index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderColor: c.hairline }]}
+            >
+              <View style={styles.flex}>
+                <Text style={[styles.transferWho, { color: c.textSoft, fontFamily: f.regular }]} numberOfLines={1}>
+                  {t("split.owes", { from: personLabel(transfer.from, t), to: personLabel(transfer.to, t) })}
+                </Text>
+                <Text style={[styles.transferAmount, { color: c.text, fontFamily: f.semibold }]}>{money(transfer.amount)}</Text>
+              </View>
+              <AuraButton label={t("split.settle")} icon="check" size="md" variant="secondary" onPress={() => setSettling(transfer)} />
+            </View>
+          ))}
+        </AuraCard>
+      ) : null}
 
       {unconverted > 0 ? (
-        <Text style={[styles.note, { color: theme.inkSoft }]}>{t("split.unconverted", { count: unconverted })}</Text>
+        <Text style={[styles.note, { color: c.textMuted, fontFamily: f.regular }]}>{t("split.unconverted", { count: unconverted })}</Text>
       ) : null}
+
+      <AuraButton
+        label={t("split.recordPayment")}
+        icon="plus"
+        variant="secondary"
+        size="md"
+        onPress={() => setSettling({ from: trip.companions[0] ?? SELF_ID, to: SELF_ID, amount: 0 })}
+        style={styles.record}
+      />
 
       {settlements.length > 0 ? (
-        <View style={styles.payments}>
-          <Text style={[styles.sectionLabel, { color: theme.inkMuted }]}>{t("split.payments")}</Text>
-          {settlements.slice(0, 5).map((settlement) => (
-            <Pressable key={settlement.id} onLongPress={() => confirmDelete(settlement.id)} style={styles.paymentRow}>
-              <Text style={[styles.paymentText, { color: theme.inkSoft }]} numberOfLines={1}>
-                {t("split.paid", { from: personLabel(settlement.from, t), to: personLabel(settlement.to, t) })}
-                {" · "}
-                {new Intl.DateTimeFormat(locale, { month: "short", day: "numeric" }).format(new Date(settlement.date))}
-              </Text>
-              <Text style={[styles.paymentAmount, { color: theme.inkDeep }]}>
+        <>
+          <AuraSection title={t("split.payments")} />
+          {settlements.map((settlement) => (
+            <PressableScale
+              key={settlement.id}
+              haptic={false}
+              pressedScale={0.98}
+              onLongPress={() => confirmDelete(settlement.id)}
+              style={styles.payment}
+            >
+              <View style={styles.flex}>
+                <Text style={[styles.paymentWho, { color: c.text, fontFamily: f.medium }]} numberOfLines={1}>
+                  {t("split.paid", { from: personLabel(settlement.from, t), to: personLabel(settlement.to, t) })}
+                </Text>
+                <Text style={[styles.paymentDate, { color: c.textMuted, fontFamily: f.regular }]}>
+                  {new Intl.DateTimeFormat(locale, { month: "short", day: "numeric" }).format(new Date(settlement.date))}
+                </Text>
+              </View>
+              <Text style={[styles.paymentAmount, { color: c.text, fontFamily: f.semibold }]}>
                 {formatMoney(formatCurrency, settlement.amount, settlement.currency)}
               </Text>
-            </Pressable>
+            </PressableScale>
           ))}
-        </View>
+        </>
       ) : null}
 
-      <Modal
-        visible={settling !== null}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setSettling(null)}
-      >
-        {settling ? (
-          <SettleUpSheet
-            trip={trip}
-            everyone={everyone}
-            initial={settling}
-            onClose={() => setSettling(null)}
-          />
-        ) : null}
-      </Modal>
+      <SettleUpSheet trip={trip} everyone={everyone} initial={settling} onClose={() => setSettling(null)} />
     </View>
   );
 }
@@ -157,17 +179,25 @@ function SettleUpSheet({
 }: {
   trip: Trip;
   everyone: string[];
-  initial: Transfer;
+  initial: Transfer | null;
   onClose: () => void;
 }) {
-  const { nomad } = useTheme();
-  const theme = nomad.colors;
+  const { c, f } = useAura();
   const { t, locale } = useLocalization();
   const addSettlement = useExpensesStore((state) => state.addSettlement);
   const decimalSeparator = localeDecimalSeparator(locale);
-  const [from, setFrom] = useState(initial.from);
-  const [to, setTo] = useState(initial.to);
-  const [amount, setAmount] = useState(initial.amount > 0 ? String(initial.amount).replace(".", decimalSeparator) : "");
+  const [from, setFrom] = useState(SELF_ID);
+  const [to, setTo] = useState(SELF_ID);
+  const [amount, setAmount] = useState("");
+  const [shown, setShown] = useState<Transfer | null>(null);
+
+  // Reset the form each time the sheet opens with a new transfer.
+  if (initial && initial !== shown) {
+    setShown(initial);
+    setFrom(initial.from);
+    setTo(initial.to);
+    setAmount(initial.amount > 0 ? String(initial.amount).replace(".", decimalSeparator) : "");
+  }
 
   const save = () => {
     const value = parseAmountInput(amount, decimalSeparator);
@@ -190,106 +220,61 @@ function SettleUpSheet({
 
   const picker = (label: string, selected: string, onSelect: (person: string) => void) => (
     <View style={styles.group}>
-      <Text style={[styles.sectionLabel, { color: theme.inkMuted }]}>{label}</Text>
+      <Text style={[styles.label, { color: c.textSoft, fontFamily: f.medium }]}>{label}</Text>
       <View style={styles.chips}>
-        {everyone.map((person) => {
-          const active = person === selected;
-          return (
-            <Pressable
-              key={person}
-              onPress={() => onSelect(person)}
-              style={[
-                styles.chip,
-                { backgroundColor: active ? theme.tealSoft : theme.paper, borderColor: active ? theme.teal : theme.hairline },
-              ]}
-            >
-              <Text style={[styles.chipText, { color: active ? theme.inkDeep : theme.inkSoft }]}>
-                {personLabel(person, t)}
-              </Text>
-            </Pressable>
-          );
-        })}
+        {everyone.map((person) => (
+          <AuraChip key={person} label={personLabel(person, t)} selected={person === selected} onPress={() => onSelect(person)} />
+        ))}
       </View>
     </View>
   );
 
   return (
-    <SafeAreaView edges={["top"]} style={[styles.sheet, { backgroundColor: theme.paper }]}>
-      <View style={styles.headerRow}>
-        <Text style={[styles.sheetTitle, { color: theme.inkDeep }]}>{t("split.recordPayment")}</Text>
-        <Pressable onPress={onClose} hitSlop={10}>
-          <Icon name="x" size={20} color={theme.inkSoft} />
-        </Pressable>
-      </View>
-      {picker(t("split.whoPaid"), from, setFrom)}
-      {picker(t("split.whoReceived"), to, setTo)}
-      <View style={styles.group}>
-        <Text style={[styles.sectionLabel, { color: theme.inkMuted }]}>
-          {t("expenses.amount")} · {trip.currency}
-        </Text>
-        <TextInput
+    <AuraSheet
+      visible={initial !== null}
+      onClose={onClose}
+      title={t("split.recordPayment")}
+      footer={<AuraButton label={t("split.savePayment")} onPress={save} />}
+    >
+      <ScrollView contentContainerStyle={styles.sheetBody} keyboardShouldPersistTaps="handled">
+        {picker(t("split.whoPaid"), from, setFrom)}
+        {picker(t("split.whoReceived"), to, setTo)}
+        <AuraField
+          label={`${t("expenses.amount")} · ${trip.currency}`}
           value={amount}
           onChangeText={(value) => setAmount(value.replace(/[^0-9.,]/g, ""))}
           keyboardType="decimal-pad"
           placeholder="0"
-          placeholderTextColor={theme.inkMuted}
-          style={[styles.amountInput, { color: theme.inkDeep, borderColor: theme.hairline, backgroundColor: theme.paperSoft }]}
+          large
         />
-      </View>
-      <Pressable
-        onPress={save}
-        style={({ pressed }) => [styles.saveButton, { backgroundColor: theme.teal, opacity: pressed ? 0.9 : 1 }]}
-      >
-        <Text style={[styles.saveText, { color: theme.inverse }]}>{t("split.savePayment")}</Text>
-      </Pressable>
-    </SafeAreaView>
+      </ScrollView>
+    </AuraSheet>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  card: { borderWidth: 1, borderRadius: 18, padding: 16, gap: 12 },
-  headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
-  sectionLabel: {
-    fontFamily: NOMAD_FONTS.uiBold,
-    fontSize: 10.5,
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
-  },
-  position: { fontFamily: NOMAD_FONTS.display, fontSize: 22, marginTop: 2 },
-  smallButton: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 },
-  smallButtonText: { fontFamily: NOMAD_FONTS.uiSemi, fontSize: 12.5 },
-  row: { flexDirection: "row", alignItems: "center", gap: 10, borderTopWidth: 1, paddingTop: 12 },
-  rowTitle: { fontFamily: NOMAD_FONTS.uiSemi, fontSize: 14 },
-  rowAmount: { fontFamily: NOMAD_FONTS.monoMedium, fontSize: 13, marginTop: 2 },
-  settleButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  settleText: { fontFamily: NOMAD_FONTS.uiSemi, fontSize: 13 },
-  note: { fontFamily: NOMAD_FONTS.ui, fontSize: 12 },
-  payments: { gap: 6 },
-  paymentRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  paymentText: { flex: 1, fontFamily: NOMAD_FONTS.ui, fontSize: 12.5 },
-  paymentAmount: { fontFamily: NOMAD_FONTS.monoMedium, fontSize: 12.5 },
-  sheet: { flex: 1, padding: 20, gap: 18 },
-  sheetTitle: { fontFamily: NOMAD_FONTS.display, fontSize: 26 },
-  group: { gap: 8 },
+  position: { fontSize: 26, letterSpacing: -0.7, marginTop: 4 },
+  body: { fontSize: 14.5, lineHeight: 21, marginTop: 6 },
+  peopleScroll: { marginHorizontal: -20, marginTop: 18 },
+  people: { paddingHorizontal: 20, gap: 10 },
+  person: { width: 112, borderRadius: 20, borderWidth: StyleSheet.hairlineWidth, padding: 12, gap: 4 },
+  avatar: { width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center", marginBottom: 6 },
+  initial: { fontSize: 15 },
+  personName: { fontSize: 14 },
+  personNet: { fontSize: 14, fontVariant: ["tabular-nums"] },
+  card: { marginTop: 16, paddingVertical: 6 },
+  transfer: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12 },
+  transferWho: { fontSize: 13.5 },
+  transferAmount: { fontSize: 18, marginTop: 2, fontVariant: ["tabular-nums"] },
+  note: { fontSize: 12.5, marginTop: 10 },
+  record: { alignSelf: "flex-start", marginTop: 16 },
+  payment: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10 },
+  paymentWho: { fontSize: 15 },
+  paymentDate: { fontSize: 12.5, marginTop: 2 },
+  paymentAmount: { fontSize: 15, fontVariant: ["tabular-nums"] },
+  sheetBody: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12, gap: 20 },
+  group: { gap: 10 },
+  label: { fontSize: 13.5 },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  chip: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 },
-  chipText: { fontFamily: NOMAD_FONTS.uiSemi, fontSize: 13 },
-  amountInput: {
-    borderWidth: 1,
-    borderRadius: 14,
-    minHeight: 52,
-    paddingHorizontal: 14,
-    fontFamily: NOMAD_FONTS.uiSemi,
-    fontSize: 22,
-  },
-  saveButton: { alignItems: "center", borderRadius: 18, paddingVertical: 16 },
-  saveText: { fontFamily: NOMAD_FONTS.uiSemi, fontSize: 15 },
 });

@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { AuraButton } from "@/components/aura/AuraButton";
+import { useAura } from "@/components/aura/useAura";
 import { Icon } from "@/components/nomad/Icon";
-import { NOMAD_FONTS } from "@/constants/nomadTokens";
-import { useTheme } from "@/hooks/useTheme";
+import { PressableScale } from "@/components/motion/PressableScale";
+import { auraCategoryColors, auraStatusAccent } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { getCategoryMeta } from "@/features/expenses/constants/categories";
 import { personLabel } from "@/features/expenses/components/SplitEditor";
@@ -36,8 +38,7 @@ export function VoiceDraftCard({
   onEdit,
   onRetry,
 }: VoiceDraftCardProps) {
-  const { nomad } = useTheme();
-  const theme = nomad.colors;
+  const { c, f } = useAura();
   const { t, locale, formatCurrency } = useLocalization();
   const [paused, setPaused] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(AUTO_SAVE_SECONDS);
@@ -62,174 +63,116 @@ export function VoiceDraftCard({
   const dateLabel = new Intl.DateTimeFormat(locale, { weekday: "short", month: "short", day: "numeric" }).format(
     new Date(draft.date),
   );
+  const tone = draft.kind === "expense" ? auraCategoryColors[draft.category] : c.textSoft;
 
   return (
-    <Pressable
-      onPress={pause}
-      style={[styles.card, { backgroundColor: theme.paperSoft, borderColor: theme.hairline }]}
-    >
-      <Text style={[styles.transcript, { color: theme.inkSoft }]}>“{draft.transcript}”</Text>
-
+    <Pressable onPress={pause} style={[styles.card, { backgroundColor: c.card, borderColor: c.hairline }]}>
+      <View style={[styles.highlight, { backgroundColor: c.highlight }]} />
       {draft.kind === "expense" ? (
         <>
           <View style={styles.amountRow}>
-            <Text style={[styles.amount, { color: theme.inkDeep }]}>{amount}</Text>
-            <View style={[styles.categoryPill, { backgroundColor: theme[getCategoryMeta(draft.category).soft] }]}>
-              <Icon
-                name={getCategoryMeta(draft.category).icon}
-                size={13}
-                color={theme[getCategoryMeta(draft.category).color]}
-              />
-              <Text style={[styles.categoryText, { color: theme.inkDeep }]}>
-                {t(`expenses.category.${draft.category}`)}
-              </Text>
+            <Text style={[styles.amount, { color: c.text, fontFamily: f.semibold }]}>{amount}</Text>
+            <View style={[styles.categoryPill, { backgroundColor: `${tone}1F` }]}>
+              <Icon name={getCategoryMeta(draft.category).icon} size={13} color={tone} />
+              <Text style={[styles.categoryText, { color: c.text, fontFamily: f.medium }]}>{t(`expenses.category.${draft.category}`)}</Text>
             </View>
           </View>
-          <Text style={[styles.meta, { color: theme.inkDeep }]}>
+          <Text style={[styles.merchant, { color: c.text, fontFamily: f.medium }]}>
             {draft.merchant || t(`expenses.category.${draft.category}`)}
           </Text>
-          <Text style={[styles.metaSoft, { color: theme.inkSoft }]}>
-            {[tripName, dateLabel, t("split.paidByName", { name: personLabel(draft.paidBy, t) })]
-              .filter(Boolean)
-              .join(" · ")}
+          <Text style={[styles.meta, { color: c.textMuted, fontFamily: f.regular }]}>
+            {[tripName, dateLabel, t("split.paidByName", { name: personLabel(draft.paidBy, t) })].filter(Boolean).join(" · ")}
           </Text>
 
           {shares?.ok ? (
-            <View style={[styles.shares, { borderColor: theme.hairline }]}>
+            <View style={[styles.shares, { borderColor: c.hairline }]}>
               {shares.shares.map((share) => (
                 <View key={share.person} style={styles.shareRow}>
-                  <Text style={[styles.shareName, { color: theme.inkDeep }]}>{personLabel(share.person, t)}</Text>
-                  <Text style={[styles.shareAmount, { color: theme.inkDeep }]}>
+                  <Text style={[styles.shareText, { color: c.textSoft, fontFamily: f.regular }]}>{personLabel(share.person, t)}</Text>
+                  <Text style={[styles.shareText, { color: c.text, fontFamily: f.medium }]}>
                     {formatMoney(formatCurrency, share.amount, draft.currency)}
                   </Text>
                 </View>
               ))}
             </View>
           ) : shares === null ? (
-            <Text style={[styles.metaSoft, { color: theme.inkSoft }]}>{t("split.notSplit")}</Text>
+            <Text style={[styles.meta, { color: c.textMuted, fontFamily: f.regular }]}>{t("split.notSplit")}</Text>
           ) : (
-            <Text style={[styles.warning, { color: theme.stamp }]}>{t(`split.invalid.${shares.reason}`)}</Text>
+            <Text style={[styles.warning, { fontFamily: f.medium }]}>{t(`split.invalid.${shares.reason}`)}</Text>
           )}
         </>
       ) : (
         <>
-          <Text style={[styles.amount, { color: theme.inkDeep }]}>{amount}</Text>
-          <Text style={[styles.meta, { color: theme.inkDeep }]}>
+          <Text style={[styles.amount, { color: c.text, fontFamily: f.semibold }]}>{amount}</Text>
+          <Text style={[styles.merchant, { color: c.text, fontFamily: f.medium }]}>
             {t("split.paid", { from: personLabel(draft.from, t), to: personLabel(draft.to, t) })}
           </Text>
-          <Text style={[styles.metaSoft, { color: theme.inkSoft }]}>
+          <Text style={[styles.meta, { color: c.textMuted, fontFamily: f.regular }]}>
             {[tripName ?? t("voiceExpense.repaymentNeedsTrip"), dateLabel].join(" · ")}
           </Text>
         </>
       )}
 
       {draft.amountUncertain ? (
-        <View style={[styles.notice, { backgroundColor: theme.mustardSoft }]}>
-          <Icon name="alertTriangle" size={15} color={theme.stamp} />
-          <Text style={[styles.noticeText, { color: theme.inkDeep }]}>{t("voiceExpense.checkAmount")}</Text>
+        <View style={[styles.notice, { backgroundColor: `${auraStatusAccent.live}1F` }]}>
+          <Icon name="alertTriangle" size={15} color={auraStatusAccent.live} />
+          <Text style={[styles.noticeText, { color: c.text, fontFamily: f.regular }]}>{t("voiceExpense.checkAmount")}</Text>
         </View>
       ) : null}
 
       {draft.unknownNames.map((name) => (
-        <View key={name} style={[styles.notice, { backgroundColor: theme.mustardSoft }]}>
-          <Icon name="users" size={15} color={theme.stamp} />
-          <Text style={[styles.noticeText, { color: theme.inkDeep }]}>{t("voiceExpense.notOnTrip", { name })}</Text>
+        <View key={name} style={[styles.notice, { backgroundColor: `${auraStatusAccent.live}1F` }]}>
+          <Icon name="users" size={15} color={auraStatusAccent.live} />
+          <Text style={[styles.noticeText, { color: c.text, fontFamily: f.regular }]}>{t("voiceExpense.notOnTrip", { name })}</Text>
           {canAddPeople ? (
-            <Pressable onPress={() => onAddPerson(name)} hitSlop={6}>
-              <Text style={[styles.noticeAction, { color: theme.teal }]}>{t("voiceExpense.addToTrip")}</Text>
-            </Pressable>
+            <PressableScale onPress={() => onAddPerson(name)} hitSlop={6} accessibilityRole="button">
+              <Text style={[styles.noticeAction, { color: c.text, fontFamily: f.semibold }]}>{t("voiceExpense.addToTrip")}</Text>
+            </PressableScale>
           ) : null}
-          <Pressable onPress={() => onLeaveOut(name)} hitSlop={6}>
-            <Text style={[styles.noticeAction, { color: theme.stamp }]}>{t("voiceExpense.leaveOut")}</Text>
-          </Pressable>
+          <PressableScale onPress={() => onLeaveOut(name)} hitSlop={6} accessibilityRole="button">
+            <Text style={[styles.noticeAction, { color: c.textSoft, fontFamily: f.semibold }]}>{t("voiceExpense.leaveOut")}</Text>
+          </PressableScale>
         </View>
       ))}
 
       <View style={styles.actions}>
-        <Pressable
-          onPress={onRetry}
-          style={({ pressed }) => [styles.secondary, { borderColor: theme.hairline, opacity: pressed ? 0.8 : 1 }]}
-        >
-          <Icon name="mic" size={15} color={theme.inkSoft} />
-          <Text style={[styles.secondaryText, { color: theme.inkSoft }]}>{t("voiceExpense.retry")}</Text>
-        </Pressable>
+        <PressableScale onPress={onRetry} accessibilityRole="button" accessibilityLabel={t("voiceExpense.retry")} style={[styles.round, { backgroundColor: c.surfaceStrong }]}>
+          <Icon name="mic" size={17} color={c.text} />
+        </PressableScale>
         {onEdit ? (
-          <Pressable
-            onPress={onEdit}
-            style={({ pressed }) => [styles.secondary, { borderColor: theme.hairline, opacity: pressed ? 0.8 : 1 }]}
-          >
-            <Icon name="edit" size={15} color={theme.inkSoft} />
-            <Text style={[styles.secondaryText, { color: theme.inkSoft }]}>{t("voiceExpense.edit")}</Text>
-          </Pressable>
+          <PressableScale onPress={onEdit} accessibilityRole="button" accessibilityLabel={t("voiceExpense.edit")} style={[styles.round, { backgroundColor: c.surfaceStrong }]}>
+            <Icon name="edit" size={16} color={c.text} />
+          </PressableScale>
         ) : null}
-        <Pressable
+        <AuraButton
+          label={counting ? t("voiceExpense.savingIn", { count: secondsLeft }) : t("voiceExpense.save")}
+          icon="check"
           disabled={needsReview}
           onPress={() => onSave(false)}
-          style={({ pressed }) => [
-            styles.primary,
-            { backgroundColor: theme.teal, opacity: needsReview ? 0.45 : pressed ? 0.9 : 1 },
-          ]}
-        >
-          <Icon name="check" size={16} color={theme.inverse} />
-          <Text style={[styles.primaryText, { color: theme.inverse }]}>
-            {counting ? t("voiceExpense.savingIn", { count: secondsLeft }) : t("voiceExpense.save")}
-          </Text>
-        </Pressable>
+          style={styles.flex}
+        />
       </View>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { borderWidth: 1, borderRadius: 20, padding: 18, gap: 10 },
-  transcript: { fontFamily: NOMAD_FONTS.ui, fontSize: 13.5, fontStyle: "italic", lineHeight: 19 },
+  flex: { flex: 1 },
+  card: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 26, padding: 18, gap: 8, overflow: "hidden" },
+  highlight: { position: "absolute", top: 0, left: 28, right: 28, height: StyleSheet.hairlineWidth },
   amountRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
-  amount: { fontFamily: NOMAD_FONTS.display, fontSize: 38, lineHeight: 42 },
-  categoryPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  categoryText: { fontFamily: NOMAD_FONTS.uiSemi, fontSize: 12 },
-  meta: { fontFamily: NOMAD_FONTS.uiSemi, fontSize: 16 },
-  metaSoft: { fontFamily: NOMAD_FONTS.ui, fontSize: 12.5 },
-  shares: { borderTopWidth: 1, paddingTop: 10, gap: 6 },
+  amount: { fontSize: 38, letterSpacing: -1.2 },
+  categoryPill: { flexDirection: "row", alignItems: "center", gap: 5, height: 28, borderRadius: 14, paddingHorizontal: 10 },
+  categoryText: { fontSize: 12.5 },
+  merchant: { fontSize: 16.5 },
+  meta: { fontSize: 13 },
+  shares: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 10, marginTop: 4, gap: 6 },
   shareRow: { flexDirection: "row", justifyContent: "space-between" },
-  shareName: { fontFamily: NOMAD_FONTS.uiMedium, fontSize: 14 },
-  shareAmount: { fontFamily: NOMAD_FONTS.monoMedium, fontSize: 14 },
-  warning: { fontFamily: NOMAD_FONTS.uiSemi, fontSize: 13 },
-  notice: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  noticeText: { flex: 1, fontFamily: NOMAD_FONTS.uiMedium, fontSize: 13 },
-  noticeAction: { fontFamily: NOMAD_FONTS.uiBold, fontSize: 13 },
-  actions: { flexDirection: "row", gap: 8, marginTop: 6 },
-  secondary: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    borderWidth: 1,
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-  },
-  secondaryText: { fontFamily: NOMAD_FONTS.uiSemi, fontSize: 13 },
-  primary: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    borderRadius: 14,
-    paddingVertical: 12,
-  },
-  primaryText: { fontFamily: NOMAD_FONTS.uiSemi, fontSize: 14 },
+  shareText: { fontSize: 14, fontVariant: ["tabular-nums"] },
+  warning: { color: auraStatusAccent.alert, fontSize: 13 },
+  notice: { flexDirection: "row", alignItems: "center", gap: 8, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 10 },
+  noticeText: { flex: 1, fontSize: 13 },
+  noticeAction: { fontSize: 13 },
+  actions: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 10 },
+  round: { width: 54, height: 54, borderRadius: 27, alignItems: "center", justifyContent: "center" },
 });
