@@ -4,22 +4,7 @@ import { Stack, usePathname, useRouter, useSegments, type ErrorBoundaryProps } f
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ConvexReactClient, useConvexAuth, useMutation } from "convex/react";
 import { ConvexBetterAuthProvider } from "@convex-dev/better-auth/react";
-import {
-  useFonts as useFraunces,
-  Fraunces_500Medium,
-  Fraunces_500Medium_Italic,
-  Fraunces_600SemiBold,
-} from "@expo-google-fonts/fraunces";
-import {
-  Geist_400Regular,
-  Geist_500Medium,
-  Geist_600SemiBold,
-  Geist_700Bold,
-} from "@expo-google-fonts/geist";
-import {
-  GeistMono_400Regular,
-  GeistMono_500Medium,
-} from "@expo-google-fonts/geist-mono";
+import { useFonts } from "expo-font";
 import { api } from "@convex/_generated/api";
 import { AURA_FONT_FILES } from "@/constants/aura";
 import { authClient, useAuthStore, useSyncAuthSession } from "@/features/auth";
@@ -245,18 +230,7 @@ function AppStack() {
 }
 
 function RootLayout() {
-  const [fontsLoaded] = useFraunces({
-    Fraunces_500Medium,
-    Fraunces_500Medium_Italic,
-    Fraunces_600SemiBold,
-    Geist_400Regular,
-    Geist_500Medium,
-    Geist_600SemiBold,
-    Geist_700Bold,
-    GeistMono_400Regular,
-    GeistMono_500Medium,
-    ...AURA_FONT_FILES,
-  });
+  const [fontsLoaded] = useFonts(AURA_FONT_FILES);
 
   useSyncAuthSession();
 

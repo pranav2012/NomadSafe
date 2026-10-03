@@ -1,4 +1,3 @@
-import type { NomadColors } from "@/constants/theme";
 import type { IconName } from "@/components/nomad/Icon";
 
 export type ExpenseCategory =
@@ -10,17 +9,15 @@ export type ExpenseCategory =
 
 export interface CategoryMeta {
   id: ExpenseCategory;
-  color: keyof NomadColors;
-  soft: keyof NomadColors;
   icon: IconName;
 }
 
 export const EXPENSE_CATEGORIES: CategoryMeta[] = [
-  { id: "food", color: "stamp", soft: "stampSoft", icon: "utensils" },
-  { id: "stays", color: "teal", soft: "tealSoft", icon: "building" },
-  { id: "travel", color: "mustard", soft: "mustardSoft", icon: "car" },
-  { id: "shopping", color: "sky", soft: "skySoft", icon: "wallet" },
-  { id: "other", color: "inkMuted", soft: "hairline", icon: "receipt" },
+  { id: "food", icon: "utensils" },
+  { id: "stays", icon: "building" },
+  { id: "travel", icon: "car" },
+  { id: "shopping", icon: "wallet" },
+  { id: "other", icon: "receipt" },
 ];
 
 export const EXPENSE_CATEGORY_IDS = EXPENSE_CATEGORIES.map((c) => c.id);

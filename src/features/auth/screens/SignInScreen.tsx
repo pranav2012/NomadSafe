@@ -1,25 +1,21 @@
 import React, { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Linking,
-} from "react-native";
+import { ActivityIndicator, Linking, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import Svg, { Path } from "react-native-svg";
-import { NOMAD_FONTS, type NomadTheme } from "@/constants/nomadTokens";
-import { useTheme } from "@/hooks/useTheme";
-import { authClient, useAuthStore } from "@/features/auth";
-import { Stamp } from "@/components/nomad/Stamp";
-import { useLocalization } from "@/localization";
+import { useAura } from "@/components/aura/useAura";
+import { PressableScale } from "@/components/motion/PressableScale";
+import { auraStatusAccent } from "@/constants/aura";
 import { LEGAL_URLS } from "@/constants/legal";
-import { BRAND_NAVY, NomadLogo } from "@/components/brand/NomadLogo";
+import { authClient, useAuthStore } from "@/features/auth";
+import { Globe } from "@/features/home/components/aura/globe/Globe";
+import { useLocalization } from "@/localization";
 import { track } from "@/services/analytics";
+
+const DANGER = "#FF4D5E";
 
 function GoogleGlyph() {
   return (
@@ -44,41 +40,18 @@ function GoogleGlyph() {
   );
 }
 
-interface SocialButtonProps {
-  theme: NomadTheme;
-  glyph: React.ReactNode;
-  label: string;
-  bg: string;
-  fg: string;
-  border: string;
-  onPress: () => void;
-}
-
-function SocialButton({ theme, glyph, label, bg, fg, border, onPress }: SocialButtonProps) {
-  void theme;
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.social,
-        { backgroundColor: bg, borderColor: border, transform: [{ scale: pressed ? 0.98 : 1 }] },
-      ]}
-    >
-      {glyph}
-      <Text style={[styles.socialLabel, { color: fg }]}>{label}</Text>
-    </Pressable>
-  );
-}
-
 export default function SignInScreen() {
   const router = useRouter();
-  const { isDark, nomad } = useTheme();
+  const { c, f, isDark } = useAura();
   const { t } = useLocalization();
-  const theme = nomad.colors;
+  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
   const { isSignedIn, isPinSet, setUnlocked } = useAuthStore();
 
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const globeHeight = Math.round(Math.min(width * 1.05, height * 0.56)) + insets.top;
 
   // Once the session listener confirms we are signed in, route forward.
   useEffect(() => {
@@ -114,188 +87,106 @@ export default function SignInScreen() {
     }
   };
 
+  const busy = loading === "google";
+
   return (
-    <View style={{ flex: 1, backgroundColor: theme.paper }}>
+    <View style={[styles.root, { backgroundColor: c.bg }]}>
       <StatusBar style={isDark ? "light" : "dark"} />
-      <SafeAreaView style={{ flex: 1 }} edges={["top", "left", "right"]}>
-        {/* Hero */}
-        <View style={styles.hero}>
-          <LinearGradient
-            colors={[theme.stampSoft, theme.paper]}
-            locations={[0, 0.65]}
-            start={{ x: 0.6, y: 0.3 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFill}
+
+      <View style={{ height: globeHeight }}>
+        <Animated.View entering={FadeIn.duration(900)}>
+          <Globe
+            stops={[]}
+            focusIndex={0}
+            width={width}
+            height={globeHeight}
+            topInset={insets.top}
+            contacts={[]}
+            contactColor="#3DDC97"
+            accent={auraStatusAccent.calm}
+            isDark={isDark}
+            overview
           />
-          <Svg
-            width="100%"
-            height="100%"
-            viewBox="0 0 390 200"
-            preserveAspectRatio="none"
-            style={[StyleSheet.absoluteFill, { opacity: 0.22 }]}
+        </Animated.View>
+        <LinearGradient pointerEvents="none" colors={[`${c.bg}00`, c.bg]} style={styles.globeFade} />
+      </View>
+
+      <View style={[styles.body, { paddingBottom: insets.bottom + 16 }]}>
+        <Animated.View entering={FadeInDown.delay(200).duration(480)}>
+          <Text style={[styles.title, { color: c.text, fontFamily: f.bold }]}>{t("common.appName")}</Text>
+          <Text style={[styles.tagline, { color: c.textSoft, fontFamily: f.regular }]}>{t("auth.tagline")}</Text>
+        </Animated.View>
+
+        <Animated.View entering={FadeInDown.delay(340).duration(480)} style={styles.actions}>
+          <PressableScale
+            onPress={handleGoogleSignIn}
+            disabled={busy}
+            pressedScale={0.97}
+            accessibilityRole="button"
+            accessibilityLabel={t("auth.continueWithGoogle")}
+            accessibilityState={{ busy, disabled: busy }}
+            style={[styles.google, { backgroundColor: c.inverse }]}
           >
-            {Array.from({ length: 9 }).map((_, i) => (
-              <Path
-                key={i}
-                d={`M-20,${24 + i * 22} Q120,${12 + i * 20} 220,${28 + i * 22} T420,${32 + i * 21}`}
-                fill="none"
-                stroke={theme.inkMuted}
-                strokeWidth="0.6"
-                strokeDasharray={i % 3 === 0 ? "0" : "2 3"}
-              />
-            ))}
-          </Svg>
-
-          <View style={[styles.stampSEA]}>
-            <Stamp label="SEA" sub="MAR 2025" color={theme.teal} rot={-12} size={84} />
-          </View>
-          <View style={[styles.stampLIS]}>
-            <Stamp label="LIS" sub="JUL 2024" color={theme.mustard} rot={13} size={72} />
-          </View>
-
-          <View
-            style={[
-              styles.shieldMark,
-              { backgroundColor: BRAND_NAVY, shadowColor: theme.shadow },
-            ]}
-          >
-            <NomadLogo size={60} tile={false} />
-          </View>
-        </View>
-
-        {/* Content */}
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <Text style={[styles.eyebrow, { color: theme.stamp }]}>{t("auth.welcome")}</Text>
-          <Text style={[styles.headline, { color: theme.inkDeep }]}>
-            {t("auth.continueTo")}{" "}
-            <Text style={[styles.headlineItalic, { color: theme.stamp }]}>
-              {t("common.appName")}
+            {busy ? (
+              <ActivityIndicator color={c.onInverse} />
+            ) : (
+              <View style={styles.googleMark}>
+                <GoogleGlyph />
+              </View>
+            )}
+            <Text style={[styles.googleLabel, { color: c.onInverse, fontFamily: f.semibold }]}>
+              {busy ? t("auth.connecting") : t("auth.continueWithGoogle")}
             </Text>
-            .
-          </Text>
-
-          {/* Social */}
-          <View style={styles.socialGroup}>
-            <SocialButton
-              theme={theme}
-              glyph={<GoogleGlyph />}
-              label={loading === "google" ? t("auth.connecting") : t("auth.continueWithGoogle")}
-              bg={theme.paperSoft}
-              fg={theme.inkDeep}
-              border={theme.hairline}
-              onPress={handleGoogleSignIn}
-            />
-          </View>
+          </PressableScale>
 
           {error ? (
-            <Text accessibilityRole="alert" style={[styles.error, { color: theme.stamp }]}>
+            <Text accessibilityRole="alert" style={[styles.error, { color: DANGER, fontFamily: f.medium }]}>
               {error}
             </Text>
           ) : null}
 
-          <Text style={[styles.footer, { color: theme.inkMuted }]}>
+          <Text style={[styles.legal, { color: c.textMuted, fontFamily: f.regular }]}>
             {t("auth.legalPrefix")}{" "}
             <Text
               accessibilityRole="link"
-              style={styles.footerLink}
+              style={[styles.legalLink, { color: c.textSoft, fontFamily: f.medium }]}
               onPress={() => Linking.openURL(LEGAL_URLS.privacy)}
             >
               {t("auth.privacyPolicy")}
             </Text>
           </Text>
-        </ScrollView>
-      </SafeAreaView>
+        </Animated.View>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  hero: {
-    height: 200,
-    overflow: "hidden",
-    position: "relative",
-  },
-  stampSEA: { position: "absolute", left: 32, top: 44 },
-  stampLIS: { position: "absolute", right: 36, top: 58 },
-  shieldMark: {
-    position: "absolute",
-    left: "50%",
-    bottom: 16,
-    marginLeft: -32,
-    width: 64,
-    height: 64,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowOpacity: 0.25,
-    shadowRadius: 30,
-    shadowOffset: { width: 0, height: 12 },
-    elevation: 10,
-  },
-  content: {
-    paddingHorizontal: 26,
-    paddingTop: 20,
-    paddingBottom: 40,
-  },
-  eyebrow: {
-    fontSize: 10.5,
-    letterSpacing: 1.8,
-    fontWeight: "700",
-    textTransform: "uppercase",
-    fontFamily: NOMAD_FONTS.uiBold,
-  },
-  headline: {
-    fontFamily: NOMAD_FONTS.display,
-    fontWeight: "500",
-    fontSize: 38,
-    lineHeight: 38 * 1.02,
-    marginTop: 6,
-    letterSpacing: 0,
-  },
-  headlineItalic: {
-    fontFamily: NOMAD_FONTS.displayItalic,
-    fontStyle: "italic",
-  },
-  socialGroup: {
-    flexDirection: "column",
-    gap: 10,
-    marginTop: 24,
-  },
-  social: {
-    width: "100%",
+  root: { flex: 1 },
+  globeFade: { position: "absolute", left: 0, right: 0, bottom: 0, height: 96 },
+  body: { flex: 1, paddingHorizontal: 24, justifyContent: "space-between", marginTop: -12 },
+  title: { fontSize: 40, letterSpacing: -1.6, lineHeight: 44 },
+  tagline: { fontSize: 16, lineHeight: 23, marginTop: 8, maxWidth: 340 },
+  actions: { gap: 14 },
+  google: {
+    height: 56,
+    borderRadius: 999,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
-    paddingVertical: 14,
-    paddingHorizontal: 18,
+    paddingHorizontal: 22,
+  },
+  googleMark: {
+    width: 28,
+    height: 28,
     borderRadius: 14,
-    borderWidth: 1,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  socialLabel: {
-    fontFamily: NOMAD_FONTS.uiSemi,
-    fontWeight: "600",
-    fontSize: 15,
-    letterSpacing: 0,
-  },
-  error: {
-    fontFamily: NOMAD_FONTS.uiSemi,
-    fontSize: 13,
-    marginTop: 14,
-    textAlign: "center",
-  },
-  footerLink: { textDecorationLine: "underline" },
-  footer: {
-    textAlign: "center",
-    fontSize: 11,
-    fontFamily: NOMAD_FONTS.mono,
-    marginTop: 22,
-    letterSpacing: 0.3,
-    lineHeight: 11 * 1.6,
-  },
+  googleLabel: { fontSize: 16 },
+  error: { fontSize: 13, lineHeight: 18, textAlign: "center" },
+  legal: { fontSize: 12, lineHeight: 17, textAlign: "center" },
+  legalLink: { textDecorationLine: "underline" },
 });

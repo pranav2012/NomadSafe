@@ -1,264 +1,57 @@
 import React from "react";
-import { BRAND_NAVY, NomadLogo } from "@/components/brand/NomadLogo";
-import { View, Text, StyleSheet } from "react-native";
-import Svg, { Path } from "react-native-svg";
+import { StyleSheet, View, useWindowDimensions } from "react-native";
+import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
-import Animated, {
-  FadeIn,
-  FadeInDown,
-  ZoomIn,
-} from "react-native-reanimated";
-import { NOMAD_FONTS, type NomadTheme } from "@/constants/nomadTokens";
+import { AuraListGroup, AuraListRow } from "@/components/aura/AuraList";
+import { useAura } from "@/components/aura/useAura";
+import { auraStatusAccent, auraStatusColors } from "@/constants/aura";
+import { Globe } from "@/features/home/components/aura/globe/Globe";
 import { useLocalization } from "@/localization";
-import { Stamp } from "@/components/nomad/Stamp";
-import { Eyebrow, HugeHeadline, HeadlineItalic } from "@/components/nomad/Typography";
+import { StepHeader } from "./StepHeader";
 
-interface Props {
-  theme: NomadTheme;
-}
+const [CALM, TEAL, VIOLET] = auraStatusColors.calm;
 
-const HERO_H = 300;
-
-// Decorative passport-stamp dates for the illustration.
-const STAMP_DATES = {
-  tko: new Date(2024, 3, 1),
-  lis: new Date(2024, 6, 1),
-  sea: new Date(2025, 2, 1),
-};
-
-export function WelcomeStep({ theme }: Props) {
-  const { t, locale, isRTL, formatDate } = useLocalization();
-  const stampDate = (date: Date) =>
-    formatDate(date, { month: "short", year: "numeric" }).toLocaleUpperCase(locale);
-  const kpis = [
-    { v: t("onboarding.sosStatValue"), l: t("onboarding.safetyFocusedStat") },
-    { v: t("onboarding.onDeviceStatValue"), l: t("onboarding.onDeviceStat") },
-    { v: "∞", l: t("onboarding.funStat") },
-  ];
+/** Intro: the live globe (real day/night, slow spin) and the three things the app does. */
+export function WelcomeStep({ onGlobeTouch }: { onGlobeTouch?: (active: boolean) => void }) {
+  const { c, isDark } = useAura();
+  const { t } = useLocalization();
+  const { width } = useWindowDimensions();
+  const globeHeight = Math.round(width * 0.82);
 
   return (
-    <View style={{ flex: 1 }}>
-      {/* HERO */}
-      <View
-        style={{ height: HERO_H, overflow: "hidden", position: "relative" }}
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
-      >
-        <LinearGradient
-          colors={[theme.stampSoft, theme.paper]}
-          locations={[0, 0.65]}
-          start={{ x: 0.6, y: 0.4 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-
-        {/* faint world-map lines */}
-        <Svg
-          width="100%"
-          height="100%"
-          viewBox={`0 0 390 ${HERO_H}`}
-          preserveAspectRatio="none"
-          style={[StyleSheet.absoluteFill, { opacity: 0.24 }]}
-        >
-          {Array.from({ length: 14 }).map((_, i) => (
-            <Path
-              key={i}
-              d={`M-20,${20 + i * 22} Q100,${10 + i * 20} 200,${25 + i * 22} T420,${30 + i * 21}`}
-              fill="none"
-              stroke={theme.inkMuted}
-              strokeWidth="0.6"
-              strokeDasharray={i % 3 === 0 ? "0" : "2 3"}
-            />
-          ))}
-          <Path
-            d="M40,220 Q195,90 340,220"
-            fill="none"
-            stroke={theme.stamp}
-            strokeWidth="1"
-            strokeDasharray="3 4"
-            opacity="0.35"
+    <View>
+      <View style={{ height: globeHeight }} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+        <Animated.View entering={FadeIn.duration(700)}>
+          <Globe
+            stops={[]}
+            focusIndex={0}
+            width={width}
+            height={globeHeight}
+            contacts={[]}
+            contactColor="#3DDC97"
+            accent={auraStatusAccent.calm}
+            isDark={isDark}
+            onTouchActive={onGlobeTouch}
+            overview
           />
-          <Path
-            d="M60,80 Q195,240 340,80"
-            fill="none"
-            stroke={theme.stamp}
-            strokeWidth="1"
-            strokeDasharray="3 4"
-            opacity="0.35"
-          />
-        </Svg>
-
-        {/* three stamps */}
-        <Animated.View
-          entering={ZoomIn.delay(100).duration(600).springify().damping(10)}
-          style={[styles.stampTKO]}
-        >
-          <Stamp label="TKO" sub={stampDate(STAMP_DATES.tko)} color={theme.teal} rot={-14} size={82} />
         </Animated.View>
-
-        <Animated.View
-          entering={ZoomIn.delay(300).duration(600).springify().damping(10)}
-          style={[styles.stampLIS]}
-        >
-          <Stamp label="LIS" sub={stampDate(STAMP_DATES.lis)} color={theme.mustard} rot={14} size={80} />
-        </Animated.View>
-
-        <Animated.View
-          entering={ZoomIn.delay(500).duration(600).springify().damping(10)}
-          style={[styles.stampSEA]}
-        >
-          <Stamp label="SEA" sub={stampDate(STAMP_DATES.sea)} color={theme.stamp} rot={-4} size={124} />
-        </Animated.View>
-
-        {/* connecting dashed arcs */}
-        <Svg
-          width="100%"
-          height="100%"
-          viewBox={`0 0 390 ${HERO_H}`}
-          preserveAspectRatio="none"
-          style={StyleSheet.absoluteFill}
-          pointerEvents="none"
-        >
-          <Path
-            d="M70,85 Q195,20 320,95"
-            fill="none"
-            stroke={theme.stamp}
-            strokeWidth="1.2"
-            strokeDasharray="3 4"
-            opacity="0.45"
-          />
-          <Path
-            d="M90,135 Q195,230 300,135"
-            fill="none"
-            stroke={theme.inkMuted}
-            strokeWidth="1"
-            strokeDasharray="2 4"
-            opacity="0.3"
-          />
-        </Svg>
-
-        {/* shield glyph */}
-        <Animated.View
-          entering={FadeIn.delay(700).duration(400)}
-          style={[
-            styles.shieldBadge,
-            {
-              backgroundColor: BRAND_NAVY,
-              shadowColor: theme.shadow,
-            },
-          ]}
-        >
-          <NomadLogo size={44} tile={false} />
-        </Animated.View>
+        <LinearGradient pointerEvents="none" colors={[`${c.bg}00`, c.bg]} style={styles.globeFade} />
       </View>
 
-      {/* COPY */}
-      <Animated.View
-        entering={FadeInDown.delay(200).duration(500)}
-        style={styles.copyWrap}
-      >
-        <Eyebrow color={theme.stamp}>{t("onboarding.welcomeEyebrow")}</Eyebrow>
-        <HugeHeadline color={theme.inkDeep}>
-          {t("onboarding.welcomeHeadlinePrefix")}{" "}
-          <HeadlineItalic color={theme.stamp}>
-            {t("onboarding.welcomeHeadlineAccent")}
-          </HeadlineItalic>.
-        </HugeHeadline>
-        <Text style={[styles.lede, { color: theme.inkSoft }]}>
-          {t("onboarding.welcomeLede")}
-        </Text>
-
-        {/* KPI row */}
-        <View
-          style={[
-            styles.kpiRow,
-            { borderTopColor: theme.hairline },
-          ]}
-        >
-          {kpis.map((kpi, i) => (
-            <View key={i} style={{ flex: 1 }}>
-              <Text
-                style={[
-                  styles.kpiValue,
-                  { color: theme.inkDeep },
-                  // The ∞ glyph reads smaller than digits in the display face.
-                  // Scale (not fontSize) enlarges it without changing the line
-                  // box — anchored bottom-left so its baseline and left edge stay
-                  // aligned with the digits and the label, and it never crops.
-                  kpi.v === "∞" && {
-                    transform: [{ scale: 1.6 }],
-                    transformOrigin: isRTL ? "right bottom" : "left bottom",
-                  },
-                ]}
-              >
-                {kpi.v}
-              </Text>
-              <Text style={[styles.kpiLabel, { color: theme.inkMuted }]}>
-                {kpi.l}
-              </Text>
-            </View>
-          ))}
-        </View>
+      <Animated.View entering={FadeInDown.delay(200).duration(420)} style={styles.body}>
+        <StepHeader title={t("onboarding.welcomeTitle")} lede={t("onboarding.welcomeBody")} />
+        <AuraListGroup style={styles.facts}>
+          <AuraListRow icon="shield" tone={CALM} label={t("onboarding.factSafetyTitle")} detail={t("onboarding.factSafetyBody")} />
+          <AuraListRow icon="wallet" tone={TEAL} label={t("onboarding.factMoneyTitle")} detail={t("onboarding.factMoneyBody")} />
+          <AuraListRow icon="sparkle" tone={VIOLET} label={t("onboarding.factAiTitle")} detail={t("onboarding.factAiBody")} />
+        </AuraListGroup>
       </Animated.View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  stampTKO: { position: "absolute", start: 28, top: 42 },
-  stampLIS: { position: "absolute", end: 34, top: 54 },
-  stampSEA: {
-    position: "absolute",
-    left: "50%",
-    bottom: 18,
-    marginLeft: -62,
-  },
-  shieldBadge: {
-    position: "absolute",
-    end: 18,
-    top: 22,
-    width: 46,
-    height: 46,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    transform: [{ rotate: "-6deg" }],
-    shadowOpacity: 0.22,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 8,
-  },
-  copyWrap: {
-    paddingHorizontal: 26,
-    paddingTop: 28,
-  },
-  lede: {
-    fontSize: 15,
-    marginTop: 12,
-    lineHeight: 15 * 1.55,
-    fontFamily: NOMAD_FONTS.ui,
-  },
-  kpiRow: {
-    flexDirection: "row",
-    gap: 18,
-    marginTop: 22,
-    paddingTop: 18,
-    borderTopWidth: 1,
-    borderStyle: "dashed",
-  },
-  kpiValue: {
-    fontFamily: NOMAD_FONTS.display,
-    fontWeight: "500",
-    fontSize: 22,
-    letterSpacing: 0,
-    lineHeight: 22,
-  },
-  kpiLabel: {
-    fontSize: 10,
-    letterSpacing: 1,
-    fontWeight: "600",
-    textTransform: "uppercase",
-    marginTop: 4,
-    fontFamily: NOMAD_FONTS.uiSemi,
-  },
+  globeFade: { position: "absolute", left: 0, right: 0, bottom: 0, height: 72 },
+  body: { paddingHorizontal: 20, marginTop: -8 },
+  facts: { marginTop: 22 },
 });

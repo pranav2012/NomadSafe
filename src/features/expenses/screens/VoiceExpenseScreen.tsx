@@ -9,6 +9,7 @@ import { PostHogMaskView } from "posthog-react-native";
 import { AuraButton } from "@/components/aura/AuraButton";
 import { AuraCard } from "@/components/aura/AuraCard";
 import { AuraChip } from "@/components/aura/AuraChip";
+import { AuraOrb, type AuraOrbMode } from "@/components/aura/AuraOrb";
 import { AuraSheet } from "@/components/aura/AuraSheet";
 import { useAura } from "@/components/aura/useAura";
 import { Icon } from "@/components/nomad/Icon";
@@ -26,7 +27,6 @@ import { useExpensesStore } from "@/features/expenses/store/expensesStore";
 import { useSpeechCapture } from "@/features/expenses/hooks/useSpeechCapture";
 import { ExpenseForm } from "@/features/expenses/components/ExpenseForm";
 import { VoiceDraftCard } from "@/features/expenses/components/VoiceDraftCard";
-import { VoiceOrb, type VoiceOrbMode } from "@/features/expenses/components/VoiceOrb";
 import {
   interpretVoiceExtraction,
   replaceDraftPerson,
@@ -220,7 +220,7 @@ export default function VoiceExpenseScreen() {
   const listening = speech.state.status === "listening";
   const partial = speech.state.status === "listening" ? speech.state.partial : "";
 
-  const orbMode: VoiceOrbMode =
+  const orbMode: AuraOrbMode =
     phase.name === "thinking" ? "thinking" : phase.name === "saved" ? "done" : listening ? "listening" : "idle";
   const compact = phase.name === "review";
   const orbSize = Math.min(compact ? 150 : 280, width - 80);
@@ -283,7 +283,7 @@ export default function VoiceExpenseScreen() {
                 accessibilityLabel={listening ? t("voiceExpense.stop") : t("voiceExpense.speakToAdd")}
                 style={{ width: orbSize, height: orbSize }}
               >
-                <VoiceOrb size={orbSize} mode={orbMode} level={speech.volume} isDark={isDark} />
+                <AuraOrb size={orbSize} mode={orbMode} level={speech.volume} isDark={isDark} />
                 <View style={styles.orbIcon} pointerEvents="none">
                   <Icon
                     name={phase.name === "saved" ? "check" : listening ? "pause" : "mic"}

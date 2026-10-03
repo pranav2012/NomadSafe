@@ -1,181 +1,59 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  View,
-  Text,
-  TextInput,
-  Pressable,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
-  KeyboardAvoidingView,
+  Text,
+  TextInput,
+  View,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from "react-native";
-import { NOMAD_FONTS, type NomadColors } from "@/constants/nomadTokens";
+import { BlurTargetView } from "expo-blur";
+import Animated, { FadeIn } from "react-native-reanimated";
+import { AuraCard } from "@/components/aura/AuraCard";
+import { AuraOrb } from "@/components/aura/AuraOrb";
+import { useAura } from "@/components/aura/useAura";
+import { Icon, type IconName } from "@/components/nomad/Icon";
+import { PressableScale } from "@/components/motion/PressableScale";
+import { useTabBarInset } from "@/components/tabbar/tabBarInset";
+import { auraStatusAccent } from "@/constants/aura";
 import { useLocalization } from "@/localization";
-import { Icon } from "@/components/nomad/Icon";
-import { GENERAL_CHAT_KEY, useChatStore, useChatStreamStore, type ChatMessage } from "../store/chatStore";
+import { useTripsStore } from "@/features/trips/store/tripsStore";
+import { track } from "@/services/analytics";
+import { GENERAL_CHAT_KEY, useChatStore, useChatStreamStore } from "../store/chatStore";
 import { localModelService } from "../services/localModelService";
 import { modelNotifications } from "../services/modelNotifications";
 import type { MoneyIntent } from "../services/moneyFacts";
 import { useAiProvisioning } from "../hooks/useAiProvisioning";
 import { provisionUnavailableText } from "../utils/provisionCopy";
-import { useTripsStore } from "@/features/trips/store/tripsStore";
-import { track } from "@/services/analytics";
-import { useTabBarInset } from "@/components/tabbar/tabBarInset";
-
-interface Props {
-  theme: NomadColors;
-  activeModelName?: string | null;
-}
+import { AiComposer, type QuickQuestion } from "./AiComposer";
+import { AiMessage } from "./AiMessage";
 
 const EMPTY_CONVERSATION = { messages: [], summary: null, contextMessages: [] };
 const NEAR_BOTTOM_PX = 80;
-
-/** Renders **bold** and `code` spans within a single line. */
-function renderInline(line: string, theme: NomadColors, keyPrefix: string) {
-  return line.split(/(\*\*[^*]+\*\*|`[^`]+`)/).map((part, i) => {
-    const key = `${keyPrefix}-${i}`;
-    if (part.length > 4 && part.startsWith("**") && part.endsWith("**")) {
-      return (
-        <Text key={key} style={{ fontFamily: NOMAD_FONTS.uiBold, color: theme.inkDeep }}>
-          {part.slice(2, -2)}
-        </Text>
-      );
-    }
-    if (part.length > 2 && part.startsWith("`") && part.endsWith("`")) {
-      return (
-        <Text key={key} style={[styles.inlineCode, { backgroundColor: theme.hairline, color: theme.inkDeep }]}>
-          {part.slice(1, -1)}
-        </Text>
-      );
-    }
-    return <Text key={key}>{part}</Text>;
-  });
-}
-
-/** Minimal markdown: headings, bullet / numbered lists, bold, inline code. */
-function MarkdownText({ text, color, theme }: { text: string; color: string; theme: NomadColors }) {
-  const lines = text.split("\n");
-  return (
-    <View style={{ gap: 4 }}>
-      {lines.map((raw, i) => {
-        const line = raw.trimEnd();
-        if (!line.trim()) return <View key={i} style={{ height: 4 }} />;
-
-        const heading = /^#{1,6}\s+(.*)$/.exec(line.trim());
-        if (heading) {
-          return (
-            <Text key={i} style={[styles.bubbleText, styles.heading, { color }]}>
-              {renderInline(heading[1], theme, `h${i}`)}
-            </Text>
-          );
-        }
-
-        const bullet = /^\s*(?:[-*•]|(\d+)[.)])\s+(.*)$/.exec(line);
-        if (bullet) {
-          return (
-            <View key={i} style={styles.listRow}>
-              <Text style={[styles.bubbleText, styles.listMarker, { color }]}>
-                {bullet[1] ? `${bullet[1]}.` : "•"}
-              </Text>
-              <Text style={[styles.bubbleText, { color, flex: 1 }]}>
-                {renderInline(bullet[2], theme, `l${i}`)}
-              </Text>
-            </View>
-          );
-        }
-
-        return (
-          <Text key={i} style={[styles.bubbleText, { color }]}>
-            {renderInline(line, theme, `p${i}`)}
-          </Text>
-        );
-      })}
-    </View>
-  );
-}
-
-function ChatBubble({
-  msg,
-  theme,
-  label,
-  streamingText,
-}: {
-  msg: ChatMessage;
-  theme: NomadColors;
-  label: string;
-  streamingText?: string;
-}) {
-  const you = msg.from === "you";
-  const text = streamingText ?? msg.text;
-  const showPlaceholder = msg.generating && !text;
-  const textColor = you ? theme.paperSoft : theme.inkDeep;
-  return (
-    <View style={{ alignSelf: you ? "flex-end" : "flex-start", maxWidth: "86%" }}>
-      {!you && (
-        <View style={styles.aiLabel}>
-          <View style={[styles.aiOrb, { backgroundColor: theme.teal }]} />
-          <Text style={[styles.aiLabelText, { color: theme.inkMuted }]}>{label}</Text>
-        </View>
-      )}
-      <View
-        style={[
-          styles.bubble,
-          {
-            backgroundColor: you ? theme.inkDeep : theme.paperSoft,
-            borderTopRightRadius: you ? 6 : 18,
-            borderTopLeftRadius: you ? 18 : 6,
-            borderWidth: you ? 0 : 1,
-            borderColor: theme.hairline,
-          },
-        ]}
-      >
-        {showPlaceholder ? (
-          <GeneratingBars theme={theme} />
-        ) : you ? (
-          <Text style={[styles.bubbleText, { color: textColor }]}>{text}</Text>
-        ) : (
-          <MarkdownText text={text} color={textColor} theme={theme} />
-        )}
-      </View>
-    </View>
-  );
-}
-
-function GeneratingBars({ theme }: { theme: NomadColors }) {
-  return (
-    <View style={{ gap: 6, width: "100%" }}>
-      {[85, 65, 75].map((w, i) => (
-        <View
-          key={i}
-          style={{
-            width: `${w}%`,
-            height: 9,
-            borderRadius: 5,
-            backgroundColor: theme.hairline,
-          }}
-        />
-      ))}
-    </View>
-  );
-}
+const COMPOSER_FALLBACK_HEIGHT = 150;
 
 function localDayKey(timestamp: number): string {
   const date = new Date(timestamp);
   return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
 }
 
-function DayDivider({ label, theme }: { label: string; theme: NomadColors }) {
+function DayDivider({ label }: { label: string }) {
+  const { c, f } = useAura();
   return (
     <View style={styles.divider}>
-      <View style={[styles.dividerLine, { backgroundColor: theme.hairline }]} />
-      <Text style={[styles.dividerText, { color: theme.inkMuted }]}>{label}</Text>
-      <View style={[styles.dividerLine, { backgroundColor: theme.hairline }]} />
+      <View style={[styles.dividerLine, { backgroundColor: c.hairline }]} />
+      <Text style={[styles.dividerText, { color: c.textMuted, fontFamily: f.medium }]}>{label}</Text>
+      <View style={[styles.dividerLine, { backgroundColor: c.hairline }]} />
     </View>
   );
 }
 
-export function AiChat({ theme, activeModelName }: Props) {
+/** Chat with the on-device model, scoped to the active trip (or a general thread). */
+export function AiChat({ activeModelName }: { activeModelName: string | null }) {
+  const { c, f, isDark } = useAura();
   const { t, formatDate } = useLocalization();
   const tabBarInset = useTabBarInset();
   const activeTripId = useTripsStore((state) => state.activeTripId);
@@ -186,22 +64,25 @@ export function AiChat({ theme, activeModelName }: Props) {
   const isGenerating = generatingKey === conversationKey;
   const sendMessage = useChatStore((s) => s.send);
   const stopReply = useChatStore((s) => s.stop);
-  const streamingText = useChatStreamStore((s) =>
-    s.conversationKey === conversationKey ? s.text : null,
-  );
+  const streamingText = useChatStreamStore((s) => (s.conversationKey === conversationKey ? s.text : null));
   const provisioning = useAiProvisioning();
   const unavailableText = provisioning.isReady ? null : provisionUnavailableText(provisioning, t);
   const [input, setInput] = useState("");
   const [notifyEnabled, setNotifyEnabled] = useState(() => modelNotifications.isEnabled());
   const [notifyDismissed, setNotifyDismissed] = useState(false);
   const [keyboardOffset, setKeyboardOffset] = useState(0);
+  const [composerHeight, setComposerHeight] = useState(COMPOSER_FALLBACK_HEIGHT);
   const [now] = useState(() => Date.now());
   const scrollRef = useRef<ScrollView>(null);
   const inputRef = useRef<TextInput>(null);
   const containerRef = useRef<View>(null);
+  const blurTarget = useRef<View>(null);
   const nearBottomRef = useRef(true);
 
   const isEmpty = messages.length === 0;
+  const busy = generatingKey !== null;
+  const busyElsewhere = busy && !isGenerating;
+  const composerBottom = tabBarInset > 0 ? tabBarInset + 2 : 8;
 
   useEffect(() => {
     localModelService.preload();
@@ -209,8 +90,7 @@ export function AiChat({ theme, activeModelName }: Props) {
 
   const onScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
-    nearBottomRef.current =
-      contentSize.height - (contentOffset.y + layoutMeasurement.height) < NEAR_BOTTOM_PX;
+    nearBottomRef.current = contentSize.height - (contentOffset.y + layoutMeasurement.height) < NEAR_BOTTOM_PX;
   }, []);
 
   const onContentSizeChange = useCallback(() => {
@@ -224,19 +104,6 @@ export function AiChat({ theme, activeModelName }: Props) {
       if (Number.isFinite(y)) setKeyboardOffset(Math.max(0, Math.round(y)));
     });
   }, []);
-
-  const prompts = [
-    { icon: "trendDown" as const, label: t("aiTab.promptOverspend"), color: theme.stamp },
-    { icon: "trendUp" as const, label: t("aiTab.promptForecast"), color: theme.teal },
-    { icon: "wallet" as const, label: t("aiTab.promptCategory"), color: theme.mustard },
-    { icon: "sparkle" as const, label: t("aiTab.promptSave"), color: theme.sky },
-  ];
-
-  const quickQuestions: { label: string; question: string; intent: MoneyIntent }[] = [
-    { label: t("aiTab.quickDaily"), question: t("aiTab.quickDailyQuestion"), intent: "dailyBudget" },
-    { label: t("aiTab.quickLeft"), question: t("aiTab.quickLeftQuestion"), intent: "remaining" },
-    { label: t("aiTab.quickTop"), question: t("aiTab.quickTopQuestion"), intent: "topCategory" },
-  ];
 
   const send = (text?: string, intent?: MoneyIntent) => {
     const q = (text ?? input).trim();
@@ -273,215 +140,140 @@ export function AiChat({ theme, activeModelName }: Props) {
     return formatDate(timestamp);
   };
 
+  const prompts: { icon: IconName; label: string }[] = [
+    { icon: "trendDown", label: t("aiTab.promptOverspend") },
+    { icon: "trendUp", label: t("aiTab.promptForecast") },
+    { icon: "wallet", label: t("aiTab.promptCategory") },
+    { icon: "sparkle", label: t("aiTab.promptSave") },
+  ];
+
+  const quickQuestions: QuickQuestion[] = [
+    { key: "daily", label: t("aiTab.quickDaily"), question: t("aiTab.quickDailyQuestion"), intent: "dailyBudget" },
+    { key: "left", label: t("aiTab.quickLeft"), question: t("aiTab.quickLeftQuestion"), intent: "remaining" },
+    { key: "top", label: t("aiTab.quickTop"), question: t("aiTab.quickTopQuestion"), intent: "topCategory" },
+    { key: "afford", label: t("aiTab.quickAfford") },
+  ];
+
+  const onQuickQuestion = (chip: QuickQuestion) => {
+    if (chip.intent && chip.question) send(chip.question, chip.intent);
+    else startAffordQuestion();
+  };
+
   const showNotifyBanner = !notifyEnabled && !notifyDismissed && !unavailableText;
-  const busyElsewhere = generatingKey !== null && !isGenerating;
-  const canSend = input.trim().length > 0 && generatingKey === null;
   const lastIndex = messages.length - 1;
 
   return (
-    <View ref={containerRef} style={{ flex: 1 }} onLayout={measureOffset}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding" keyboardVerticalOffset={keyboardOffset}>
-        <View style={{ flex: 1 }}>
-          {unavailableText ? (
-            <View
-              accessibilityLiveRegion="polite"
-              style={[styles.notifyBanner, { backgroundColor: theme.paperSoft, borderColor: theme.hairline }]}
-            >
-              <Icon name={provisioning.phase === "waitingForWifi" ? "wifi" : "download"} size={15} color={theme.inkSoft} strokeWidth={2} />
-              <Text style={[styles.notifyText, { color: theme.inkDeep }]}>{unavailableText}</Text>
-            </View>
-          ) : null}
-          {showNotifyBanner && (
-            <View style={[styles.notifyBanner, { backgroundColor: theme.tealSoft, borderColor: theme.teal }]}>
-              <Icon name="bell" size={15} color={theme.teal} strokeWidth={2} />
-              <Text style={[styles.notifyText, { color: theme.inkDeep }]} numberOfLines={2}>
-                {t("aiTab.notifyBannerText")}
-              </Text>
-              <Pressable onPress={enableNotifications} hitSlop={8}>
-                <Text style={[styles.notifyAction, { color: theme.teal }]}>{t("aiTab.notifyBannerAction")}</Text>
-              </Pressable>
-              <Pressable onPress={() => setNotifyDismissed(true)} hitSlop={8}>
-                <Icon name="x" size={15} color={theme.inkMuted} strokeWidth={2} />
-              </Pressable>
-            </View>
-          )}
-          <ScrollView
-            ref={scrollRef}
-            contentContainerStyle={[styles.content, { gap: 14 }]}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            onScroll={onScroll}
-            scrollEventThrottle={100}
-            onContentSizeChange={onContentSizeChange}
-          >
-            {messages.map((m, i) => {
-              const previous = messages[i - 1];
-              const showDivider =
-                m.createdAt !== undefined &&
-                (previous?.createdAt === undefined ||
-                  localDayKey(previous.createdAt) !== localDayKey(m.createdAt));
-              return (
-                <React.Fragment key={i}>
-                  {showDivider && m.createdAt !== undefined ? (
-                    <DayDivider label={dayLabel(m.createdAt)} theme={theme} />
-                  ) : null}
-                  <ChatBubble
-                    msg={m}
-                    theme={theme}
-                    label={t("aiTab.assistantName")}
-                    streamingText={
-                      isGenerating && i === lastIndex && streamingText ? streamingText : undefined
-                    }
-                  />
-                </React.Fragment>
-              );
-            })}
-
-            {isEmpty && (
-              <View style={{ paddingTop: 8 }}>
-                <Text style={[styles.tryAsking, { color: theme.inkMuted }]}>{t("aiTab.tryAsking")}</Text>
-                <View style={styles.promptGrid}>
-                  {prompts.map((p, i) => (
-                    <Pressable
-                      key={i}
-                      onPress={() => send(p.label)}
-                      disabled={generatingKey !== null}
-                      style={({ pressed }) => [
-                        styles.prompt,
-                        {
-                          backgroundColor: theme.paperSoft,
-                          borderColor: theme.hairline,
-                          opacity: generatingKey !== null ? 0.5 : pressed ? 0.8 : 1,
-                        },
-                      ]}
-                    >
-                      <View style={[styles.promptIcon, { backgroundColor: `${p.color}22` }]}>
-                        <Icon name={p.icon} size={15} color={p.color} strokeWidth={2} />
-                      </View>
-                      <Text style={[styles.promptLabel, { color: theme.inkDeep }]}>{p.label}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-            )}
-          </ScrollView>
-
-          <View
-            style={[
-              styles.composer,
-              {
-                backgroundColor: theme.paper,
-                borderTopColor: theme.hairline,
-                // The floating tab bar overlays content on both platforms (hidden while typing).
-                paddingBottom: tabBarInset + 10,
-              },
-            ]}
-          >
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-              accessibilityLabel={t("aiTab.quickQuestions")}
-              style={styles.chipScroll}
-              contentContainerStyle={styles.chipRow}
-            >
-              {quickQuestions.map((chip) => (
-                <Pressable
-                  key={chip.intent}
-                  onPress={() => send(chip.question, chip.intent)}
-                  disabled={generatingKey !== null}
-                  accessibilityRole="button"
-                  accessibilityHint={chip.question}
-                  style={({ pressed }) => [
-                    styles.chip,
-                    {
-                      backgroundColor: theme.paperSoft,
-                      borderColor: theme.hairline,
-                      opacity: generatingKey !== null ? 0.5 : pressed ? 0.8 : 1,
-                    },
-                  ]}
-                >
-                  <Text style={[styles.chipText, { color: theme.inkDeep }]}>{chip.label}</Text>
-                </Pressable>
-              ))}
-              <Pressable
-                onPress={startAffordQuestion}
-                accessibilityRole="button"
-                style={({ pressed }) => [
-                  styles.chip,
-                  { backgroundColor: theme.paperSoft, borderColor: theme.hairline, opacity: pressed ? 0.8 : 1 },
-                ]}
-              >
-                <Text style={[styles.chipText, { color: theme.inkDeep }]}>{t("aiTab.quickAfford")}</Text>
-              </Pressable>
-            </ScrollView>
-            {busyElsewhere ? (
-              <Text style={[styles.busyText, { color: theme.inkMuted }]}>{t("aiTab.chatBusyElsewhere")}</Text>
-            ) : activeModelName ? (
-              <View style={styles.modelPill}>
-                <View style={[styles.modelOrb, { backgroundColor: theme.teal }]} />
-                <Text style={[styles.modelPillText, { color: theme.inkSoft }]}>
-                  {t("aiTab.chatModel", { model: activeModelName })}
-                </Text>
-              </View>
-            ) : null}
-            <View
-              style={[
-                styles.inputRow,
-                { backgroundColor: theme.paperSoft, borderColor: theme.hairline },
-              ]}
-            >
-              <View style={[styles.inputOrb, { backgroundColor: theme.teal }]} />
-              <TextInput
-                ref={inputRef}
-                value={input}
-                onChangeText={setInput}
-                placeholder={t("aiTab.chatPlaceholder")}
-                placeholderTextColor={theme.inkMuted}
-                multiline
-                maxLength={300}
-                style={[styles.input, { color: theme.inkDeep }]}
-              />
-              {isGenerating ? (
-                <Pressable
-                  onPress={stopReply}
-                  accessibilityRole="button"
-                  accessibilityLabel={t("aiTab.stopReply")}
-                  style={({ pressed }) => [
-                    styles.sendBtn,
-                    { backgroundColor: theme.stamp, opacity: pressed ? 0.9 : 1 },
-                  ]}
-                >
-                  <View style={[styles.stopSquare, { backgroundColor: theme.paperSoft }]} />
-                </Pressable>
-              ) : (
-                <Pressable
-                  onPress={() => send()}
-                  disabled={!canSend}
-                  accessibilityRole="button"
-                  accessibilityLabel={t("aiTab.sendMessage")}
-                  style={({ pressed }) => [
-                    styles.sendBtn,
-                    {
-                      backgroundColor: canSend ? theme.inkDeep : theme.hairline,
-                      opacity: pressed && canSend ? 0.9 : 1,
-                    },
-                  ]}
-                >
+    <View ref={containerRef} style={styles.flex} onLayout={measureOffset}>
+      <KeyboardAvoidingView style={styles.flex} behavior="padding" keyboardVerticalOffset={keyboardOffset}>
+        <View style={styles.flex}>
+          <BlurTargetView ref={blurTarget} style={styles.flex}>
+            {unavailableText ? (
+              <AuraCard tone={provisioning.phase === "waitingForWifi" ? auraStatusAccent.live : undefined} style={styles.banner}>
+                <View accessibilityLiveRegion="polite" style={styles.bannerRow}>
                   <Icon
-                    name="send"
+                    name={provisioning.phase === "waitingForWifi" ? "wifi" : "download"}
                     size={16}
-                    color={canSend ? theme.paperSoft : theme.inkMuted}
-                    strokeWidth={2}
+                    color={provisioning.phase === "waitingForWifi" ? auraStatusAccent.live : c.textSoft}
                   />
-                </Pressable>
-              )}
-            </View>
-            <View style={styles.privacyRow}>
-              <Icon name="lock" size={11} color={theme.inkMuted} strokeWidth={2} />
-              <Text style={[styles.privacyText, { color: theme.inkMuted }]}>{t("aiTab.chatPrivacy")}</Text>
-            </View>
-          </View>
+                  <Text style={[styles.bannerText, { color: c.text, fontFamily: f.regular }]}>{unavailableText}</Text>
+                </View>
+              </AuraCard>
+            ) : null}
+            {showNotifyBanner ? (
+              <AuraCard style={styles.banner}>
+                <View style={styles.bannerRow}>
+                  <Icon name="bell" size={16} color={c.textSoft} />
+                  <Text numberOfLines={2} style={[styles.bannerText, { color: c.text, fontFamily: f.regular }]}>
+                    {t("aiTab.notifyBannerText")}
+                  </Text>
+                  <PressableScale onPress={enableNotifications} hitSlop={8} accessibilityRole="button">
+                    <Text style={[styles.bannerAction, { color: c.text, fontFamily: f.semibold }]}>{t("aiTab.notifyBannerAction")}</Text>
+                  </PressableScale>
+                  <PressableScale
+                    onPress={() => setNotifyDismissed(true)}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("common.close")}
+                  >
+                    <Icon name="x" size={15} color={c.textMuted} />
+                  </PressableScale>
+                </View>
+              </AuraCard>
+            ) : null}
+
+            <ScrollView
+              ref={scrollRef}
+              contentContainerStyle={[
+                styles.content,
+                isEmpty && styles.contentEmpty,
+                { paddingBottom: composerBottom + composerHeight + 20 },
+              ]}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="interactive"
+              onScroll={onScroll}
+              scrollEventThrottle={100}
+              onContentSizeChange={onContentSizeChange}
+            >
+              {messages.map((m, i) => {
+                const previous = messages[i - 1];
+                const showDivider =
+                  m.createdAt !== undefined &&
+                  (previous?.createdAt === undefined || localDayKey(previous.createdAt) !== localDayKey(m.createdAt));
+                return (
+                  <React.Fragment key={i}>
+                    {showDivider && m.createdAt !== undefined ? <DayDivider label={dayLabel(m.createdAt)} /> : null}
+                    <AiMessage
+                      msg={m}
+                      label={t("aiTab.assistantName")}
+                      streamingText={isGenerating && i === lastIndex && streamingText ? streamingText : undefined}
+                    />
+                  </React.Fragment>
+                );
+              })}
+
+              {isEmpty ? (
+                <Animated.View entering={FadeIn.duration(260)} style={styles.empty}>
+                  <AuraOrb size={124} mode="idle" isDark={isDark} />
+                  <Text style={[styles.emptyTitle, { color: c.text, fontFamily: f.semibold }]}>{t("aiTab.introTitle")}</Text>
+                  <Text style={[styles.tryAsking, { color: c.textMuted, fontFamily: f.medium }]}>{t("aiTab.tryAsking")}</Text>
+                  <View style={styles.promptGrid}>
+                    {prompts.map((p) => (
+                      <PressableScale
+                        key={p.label}
+                        onPress={() => send(p.label)}
+                        disabled={busy}
+                        pressedScale={0.97}
+                        accessibilityRole="button"
+                        accessibilityState={{ disabled: busy }}
+                        style={[styles.prompt, { backgroundColor: c.surface, borderColor: c.hairline, opacity: busy ? 0.5 : 1 }]}
+                      >
+                        <Icon name={p.icon} size={16} color={c.textSoft} />
+                        <Text style={[styles.promptLabel, { color: c.text, fontFamily: f.medium }]}>{p.label}</Text>
+                      </PressableScale>
+                    ))}
+                  </View>
+                </Animated.View>
+              ) : null}
+            </ScrollView>
+          </BlurTargetView>
+
+          <AiComposer
+            bottom={composerBottom}
+            inputRef={inputRef}
+            value={input}
+            onChange={setInput}
+            onSend={() => send()}
+            onStop={stopReply}
+            quickQuestions={quickQuestions}
+            onQuickQuestion={onQuickQuestion}
+            generating={isGenerating}
+            busy={busy}
+            busyElsewhere={busyElsewhere}
+            modelName={activeModelName}
+            blurTarget={Platform.OS === "android" ? blurTarget : undefined}
+            onLayout={(event) => setComposerHeight(Math.round(event.nativeEvent.layout.height))}
+          />
         </View>
       </KeyboardAvoidingView>
     </View>
@@ -489,109 +281,27 @@ export function AiChat({ theme, activeModelName }: Props) {
 }
 
 const styles = StyleSheet.create({
-  notifyBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginHorizontal: 16,
-    marginBottom: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  notifyText: { flex: 1, fontFamily: NOMAD_FONTS.uiSemi, fontSize: 12, lineHeight: 16 },
-  notifyAction: {
-    fontFamily: NOMAD_FONTS.uiBold,
-    fontSize: 11,
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
-  },
-  content: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 8 },
-  divider: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 4 },
-  dividerLine: { flex: 1, height: 1 },
-  dividerText: {
-    fontFamily: NOMAD_FONTS.uiBold,
-    fontSize: 9.5,
-    letterSpacing: 1.5,
-    textTransform: "uppercase",
-  },
-  aiLabel: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 6, paddingLeft: 2 },
-  aiOrb: { width: 10, height: 10, borderRadius: 999 },
-  aiLabelText: { fontFamily: NOMAD_FONTS.uiBold, fontSize: 10, letterSpacing: 1.2, textTransform: "uppercase" },
-  bubble: {
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 18,
-  },
-  bubbleText: { fontFamily: NOMAD_FONTS.ui, fontSize: 14, lineHeight: 20 },
-  heading: { fontFamily: NOMAD_FONTS.uiBold, fontSize: 15 },
-  listRow: { flexDirection: "row", gap: 6 },
-  listMarker: { minWidth: 14 },
-  inlineCode: { fontFamily: NOMAD_FONTS.mono, fontSize: 13 },
-  busyText: { fontFamily: NOMAD_FONTS.mono, fontSize: 10, marginBottom: 8, textAlign: "center" },
-  stopSquare: { width: 12, height: 12, borderRadius: 2 },
-  tryAsking: {
-    fontFamily: NOMAD_FONTS.uiBold,
-    fontSize: 10.5,
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
-    marginBottom: 10,
-    paddingLeft: 2,
-  },
-  promptGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  flex: { flex: 1 },
+  banner: { marginHorizontal: 20, marginBottom: 10, paddingVertical: 12 },
+  bannerRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  bannerText: { flex: 1, fontSize: 13.5, lineHeight: 19 },
+  bannerAction: { fontSize: 13.5 },
+  content: { paddingHorizontal: 20, paddingTop: 6, gap: 18 },
+  contentEmpty: { flexGrow: 1, justifyContent: "center" },
+  divider: { flexDirection: "row", alignItems: "center", gap: 10 },
+  dividerLine: { flex: 1, height: StyleSheet.hairlineWidth },
+  dividerText: { fontSize: 12 },
+  empty: { alignItems: "center" },
+  emptyTitle: { fontSize: 22, letterSpacing: -0.6, textAlign: "center", marginTop: 6 },
+  tryAsking: { fontSize: 13, marginTop: 22, marginBottom: 10 },
+  promptGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, alignSelf: "stretch" },
   prompt: {
-    width: "48%",
-    borderRadius: 14,
-    padding: 12,
-    borderWidth: 1,
-    gap: 8,
+    flexBasis: "47%",
+    flexGrow: 1,
+    gap: 10,
+    padding: 14,
+    borderRadius: 18,
+    borderWidth: StyleSheet.hairlineWidth,
   },
-  promptIcon: { width: 26, height: 26, borderRadius: 8, alignItems: "center", justifyContent: "center" },
-  promptLabel: { fontFamily: NOMAD_FONTS.uiSemi, fontSize: 12, lineHeight: 16 },
-  composer: {
-    paddingHorizontal: 14,
-    paddingTop: 10,
-    borderTopWidth: 1,
-  },
-  chipScroll: { flexGrow: 0, marginHorizontal: -14, marginBottom: 8 },
-  chipRow: { gap: 6, paddingHorizontal: 14 },
-  chip: { borderRadius: 999, borderWidth: 1, paddingVertical: 6, paddingHorizontal: 12 },
-  chipText: { fontFamily: NOMAD_FONTS.uiSemi, fontSize: 12 },
-  modelPill: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8, alignSelf: "center" },
-  modelOrb: { width: 8, height: 8, borderRadius: 999 },
-  modelPillText: { fontFamily: NOMAD_FONTS.mono, fontSize: 10, letterSpacing: 0.3 },
-  inputRow: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    gap: 8,
-    borderRadius: 22,
-    borderWidth: 1,
-    paddingVertical: 6,
-    paddingHorizontal: 6,
-    paddingLeft: 12,
-  },
-  inputOrb: {
-    width: 20,
-    height: 20,
-    borderRadius: 999,
-    marginBottom: 10,
-  },
-  input: {
-    flex: 1,
-    paddingVertical: 10,
-    fontFamily: NOMAD_FONTS.ui,
-    fontSize: 14,
-    lineHeight: 20,
-    maxHeight: 80,
-  },
-  sendBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 999,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  privacyRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 8 },
-  privacyText: { fontFamily: NOMAD_FONTS.mono, fontSize: 10, letterSpacing: 0.5 },
+  promptLabel: { fontSize: 14, lineHeight: 19 },
 });

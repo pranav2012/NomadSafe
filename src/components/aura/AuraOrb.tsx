@@ -13,17 +13,18 @@ import {
 } from "react-native-reanimated";
 import { auraStatusColors } from "@/constants/aura";
 
-export type VoiceOrbMode = "idle" | "listening" | "thinking" | "done";
+export type AuraOrbMode = "idle" | "listening" | "thinking" | "done";
 
 const CALM = auraStatusColors.calm;
 const LIVE = auraStatusColors.live;
 const DONE = ["#3DDC97", "#22C7B8", "#8BE8C0"] as const;
 
 /**
- * Three blurred blobs orbiting a glassy core. They swell with the mic level while listening,
- * swirl faster and warm to the live palette while the model thinks, and turn green once saved.
+ * Three blurred blobs orbiting a glassy core. They swell with `level` (mic volume, -2..10) while
+ * listening, swirl faster and warm to the live palette while thinking, and turn green when done.
+ * Shared by voice capture, the lock screen and the AI tab.
  */
-export function VoiceOrb({ size, mode, level, isDark }: { size: number; mode: VoiceOrbMode; level: number; isDark: boolean }) {
+export function AuraOrb({ size, mode, level = 0, isDark, core = true }: { size: number; mode: AuraOrbMode; level?: number; isDark: boolean; core?: boolean }) {
   const reduceMotion = useReducedMotion();
   const phase = useSharedValue(0);
   const speed = useSharedValue(0.35);
@@ -69,13 +70,15 @@ export function VoiceOrb({ size, mode, level, isDark }: { size: number; mode: Vo
             <OrbBlob key={index} index={index} center={center} radius={blob} phase={phase} energy={energy} warm={warm} done={done} size={size} />
           ))}
         </Group>
-        <Circle cx={center} cy={center} r={coreR}>
-          <RadialGradient
-            c={vec(center - size * 0.05, center - size * 0.06)}
-            r={size * 0.24}
-            colors={isDark ? ["rgba(255,255,255,0.55)", "rgba(255,255,255,0.08)"] : ["rgba(255,255,255,0.95)", "rgba(255,255,255,0.35)"]}
-          />
-        </Circle>
+        {core ? (
+          <Circle cx={center} cy={center} r={coreR}>
+            <RadialGradient
+              c={vec(center - size * 0.05, center - size * 0.06)}
+              r={size * 0.24}
+              colors={isDark ? ["rgba(255,255,255,0.55)", "rgba(255,255,255,0.08)"] : ["rgba(255,255,255,0.95)", "rgba(255,255,255,0.35)"]}
+            />
+          </Circle>
+        ) : null}
       </Canvas>
     </View>
   );

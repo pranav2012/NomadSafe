@@ -1,16 +1,16 @@
 import React from "react";
 import { View, Text, StyleSheet, ActivityIndicator, Alert } from "react-native";
-import { NOMAD_FONTS, type NomadTheme } from "@/constants/nomadTokens";
+import { AuraButton } from "@/components/aura/AuraButton";
+import { useAura } from "@/components/aura/useAura";
+import { auraStatusAccent } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { Icon, type IconName } from "@/components/nomad/Icon";
-import { NomadButton } from "@/components/nomad/Button";
 import { useAiProvisioning } from "../hooks/useAiProvisioning";
 import { aiModelService, findModel, formatBytes } from "../services/aiModelService";
 import type { ProvisionPhase } from "../services/modelProvisioner";
 import { provisionCopy, provisionPercent, provisionProgressText } from "../utils/provisionCopy";
 
 interface Props {
-  theme: NomadTheme;
   /** "manage" adds Remove / Download again (AI tab); onboarding only shows status. */
   mode: "onboarding" | "manage";
   /** Blocks removing the model while a reply is generating. */
@@ -37,7 +37,10 @@ function phaseIcon(phase: ProvisionPhase): IconName {
   }
 }
 
-export function AiProvisionCard({ theme, mode, busy = false }: Props) {
+const READY = "#3DDC97";
+
+export function AiProvisionCard({ mode, busy = false }: Props) {
+  const { c, f, accent: calm } = useAura();
   const { t, locale } = useLocalization();
   const provisioning = useAiProvisioning();
   const { phase, model } = provisioning;
@@ -47,8 +50,7 @@ export function AiProvisionCard({ theme, mode, busy = false }: Props) {
   const activeModel = findModel(provisioning.activeModelId);
   const usingInterim = activeModel !== null && phase !== "ready";
   const alert = phase === "error" || phase === "insufficientStorage" || phase === "unsupportedDevice";
-  const accent = phase === "ready" ? theme.teal : alert ? theme.stamp : phase === "waitingForWifi" ? theme.mustard : theme.sky;
-  const accentSoft = phase === "ready" ? theme.tealSoft : alert ? theme.stampSoft : theme.paper;
+  const accent = phase === "ready" ? READY : alert ? auraStatusAccent.alert : phase === "waitingForWifi" ? auraStatusAccent.live : calm;
 
   const confirmRemove = () => {
     if (!activeModel) return;
@@ -57,31 +59,22 @@ export function AiProvisionCard({ theme, mode, busy = false }: Props) {
       t("aiTab.provision.removeConfirmBody", { model: activeModel.name }),
       [
         { text: t("common.cancel"), style: "cancel" },
-        {
-          text: t("common.delete"),
-          style: "destructive",
-          onPress: () => void provisioning.removeModel(),
-        },
+        { text: t("common.delete"), style: "destructive", onPress: () => void provisioning.removeModel() },
       ],
     );
   };
 
   return (
-    <View style={[styles.card, { backgroundColor: theme.paperSoft, borderColor: theme.hairline }]}>
+    <View style={styles.root}>
       {model && phase !== "unsupportedDevice" ? (
         <View style={styles.modelRow}>
-          <View style={[styles.modelIcon, { backgroundColor: theme.teal + "22" }]}>
-            <Icon name="sparkle" size={16} color={theme.teal} strokeWidth={2} />
+          <View style={[styles.modelIcon, { backgroundColor: `${calm}24` }]}>
+            <Icon name="sparkle" size={17} color={calm} strokeWidth={2} />
           </View>
-          <View style={{ flex: 1 }}>
-            <View style={styles.nameRow}>
-              <Text style={[styles.modelName, { color: theme.inkDeep }]}>{model.name}</Text>
-              <View style={[styles.badge, { backgroundColor: theme.mustard }]}>
-                <Text style={[styles.badgeText, { color: theme.inkDeep }]}>{t("aiTab.provision.pickedForPhone")}</Text>
-              </View>
-            </View>
-            <Text style={[styles.modelMeta, { color: theme.inkMuted }]}>
-              {t("aiTab.provision.modelMeta", { size: formatBytes(model.sizeBytes, locale) })}
+          <View style={styles.flex}>
+            <Text style={[styles.modelName, { color: c.text, fontFamily: f.semibold }]}>{model.name}</Text>
+            <Text style={[styles.modelMeta, { color: c.textMuted, fontFamily: f.regular }]}>
+              {t("aiTab.provision.pickedForPhone")} · {t("aiTab.provision.modelMeta", { size: formatBytes(model.sizeBytes, locale) })}
             </Text>
           </View>
         </View>
@@ -90,16 +83,16 @@ export function AiProvisionCard({ theme, mode, busy = false }: Props) {
       <View
         accessibilityRole={alert ? "alert" : undefined}
         accessibilityLiveRegion="polite"
-        style={[styles.statusRow, { backgroundColor: accentSoft, borderColor: accent }]}
+        style={[styles.status, { backgroundColor: `${accent}14`, borderColor: `${accent}55` }]}
       >
         {phase === "checking" || phase === "verifying" ? (
           <ActivityIndicator size="small" color={accent} />
         ) : (
           <Icon name={phaseIcon(phase)} size={18} color={accent} strokeWidth={2} />
         )}
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.statusTitle, { color: theme.inkDeep }]}>{copy.title}</Text>
-          {copy.body ? <Text style={[styles.statusBody, { color: theme.inkSoft }]}>{copy.body}</Text> : null}
+        <View style={styles.flex}>
+          <Text style={[styles.statusTitle, { color: c.text, fontFamily: f.semibold }]}>{copy.title}</Text>
+          {copy.body ? <Text style={[styles.statusBody, { color: c.textSoft, fontFamily: f.regular }]}>{copy.body}</Text> : null}
         </View>
       </View>
 
@@ -108,61 +101,40 @@ export function AiProvisionCard({ theme, mode, busy = false }: Props) {
           <View
             accessibilityRole="progressbar"
             accessibilityValue={{ min: 0, max: 100, now: percent }}
-            style={[styles.track, { backgroundColor: theme.hairline }]}
+            style={[styles.track, { backgroundColor: c.surfaceStrong }]}
           >
-            <View
-              style={[
-                styles.fill,
-                { width: `${percent}%`, backgroundColor: phase === "downloading" || phase === "verifying" ? theme.teal : theme.mustard },
-              ]}
-            />
+            <View style={[styles.fill, { width: `${percent}%`, backgroundColor: accent }]} />
           </View>
-          <Text style={[styles.progressText, { color: theme.inkSoft }]}>
-            {provisionProgressText(provisioning, t, locale)}
-          </Text>
+          <Text style={[styles.progressText, { color: c.textMuted, fontFamily: f.regular }]}>{provisionProgressText(provisioning, t, locale)}</Text>
         </View>
       ) : null}
 
-      {usingInterim ? (
-        <Text style={[styles.note, { color: theme.inkMuted }]}>{t("aiTab.provision.usingPrevious")}</Text>
-      ) : null}
+      {usingInterim ? <Text style={[styles.note, { color: c.textMuted, fontFamily: f.regular }]}>{t("aiTab.provision.usingPrevious")}</Text> : null}
 
       <View style={styles.actions}>
         {phase === "waitingForWifi" ? (
-          <NomadButton
-            variant="teal"
-            theme={theme}
-            onPress={() => void provisioning.enableMobileData()}
-            icon={<Icon name="download" size={15} color="#fff" strokeWidth={2} />}
-          >
-            {t("aiTab.provision.useMobileData")}
-          </NomadButton>
+          <AuraButton label={t("aiTab.provision.useMobileData")} icon="download" size="md" onPress={() => void provisioning.enableMobileData()} />
         ) : null}
         {phase === "error" || phase === "insufficientStorage" ? (
-          <NomadButton variant="primary" theme={theme} onPress={() => void provisioning.retry()}>
-            {t("aiTab.provision.retry")}
-          </NomadButton>
+          <AuraButton label={t("aiTab.provision.retry")} size="md" onPress={() => void provisioning.retry()} />
         ) : null}
         {mode === "manage" && phase === "removed" && model ? (
-          <NomadButton
-            variant="primary"
-            theme={theme}
+          <AuraButton
+            label={t("aiTab.provision.downloadAgain", { size: formatBytes(model.sizeBytes, locale) })}
+            icon="download"
+            size="md"
             onPress={() => void provisioning.downloadAgain()}
-            icon={<Icon name="download" size={15} color={theme.paperSoft} strokeWidth={2} />}
-          >
-            {t("aiTab.provision.downloadAgain", { size: formatBytes(model.sizeBytes, locale) })}
-          </NomadButton>
+          />
         ) : null}
         {mode === "manage" && activeModel && phase !== "verifying" ? (
-          <NomadButton
-            variant="ghost"
-            theme={theme}
+          <AuraButton
+            label={t("aiTab.provision.remove", { size: formatBytes(activeModel.sizeBytes, locale) })}
+            icon="trash"
+            variant="secondary"
+            size="md"
             disabled={busy}
             onPress={confirmRemove}
-            icon={<Icon name="trash" size={15} color={theme.inkSoft} strokeWidth={2} />}
-          >
-            {t("aiTab.provision.remove", { size: formatBytes(activeModel.sizeBytes, locale) })}
-          </NomadButton>
+          />
         ) : null}
       </View>
     </View>
@@ -170,29 +142,19 @@ export function AiProvisionCard({ theme, mode, busy = false }: Props) {
 }
 
 const styles = StyleSheet.create({
-  card: { borderRadius: 16, borderWidth: 1, padding: 14, gap: 12 },
+  root: { gap: 12 },
+  flex: { flex: 1 },
   modelRow: { flexDirection: "row", alignItems: "center", gap: 12 },
-  modelIcon: { width: 34, height: 34, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-  nameRow: { flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" },
-  modelName: { fontSize: 15, fontFamily: NOMAD_FONTS.uiSemi },
-  modelMeta: { fontSize: 10.5, marginTop: 2, fontFamily: NOMAD_FONTS.mono, letterSpacing: 0.2 },
-  badge: { paddingVertical: 2, paddingHorizontal: 6, borderRadius: 999 },
-  badgeText: { fontSize: 8.5, letterSpacing: 0.4, fontFamily: NOMAD_FONTS.uiBold },
-  statusRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingVertical: 11,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  statusTitle: { fontSize: 13, fontFamily: NOMAD_FONTS.uiSemi },
-  statusBody: { fontSize: 11.5, marginTop: 2, lineHeight: 16, fontFamily: NOMAD_FONTS.ui },
+  modelIcon: { width: 40, height: 40, borderRadius: 13, alignItems: "center", justifyContent: "center" },
+  modelName: { fontSize: 16 },
+  modelMeta: { fontSize: 12.5, marginTop: 2 },
+  status: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 18, borderWidth: StyleSheet.hairlineWidth },
+  statusTitle: { fontSize: 14.5 },
+  statusBody: { fontSize: 13, marginTop: 2, lineHeight: 18 },
   progressWrap: { gap: 6 },
-  track: { height: 6, borderRadius: 999, overflow: "hidden" },
-  fill: { height: "100%", borderRadius: 999 },
-  progressText: { fontSize: 11, fontFamily: NOMAD_FONTS.mono },
-  note: { fontSize: 11, fontFamily: NOMAD_FONTS.ui },
+  track: { height: 6, borderRadius: 3, overflow: "hidden" },
+  fill: { height: "100%", borderRadius: 3 },
+  progressText: { fontSize: 12.5, fontVariant: ["tabular-nums"] },
+  note: { fontSize: 12.5 },
   actions: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
 });

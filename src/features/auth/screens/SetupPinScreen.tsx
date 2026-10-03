@@ -1,38 +1,38 @@
-import React, { useCallback, useRef, useState } from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import React, { useRef, useState } from "react";
+import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSequence,
-  withTiming,
-} from "react-native-reanimated";
-import { NOMAD_FONTS } from "@/constants/nomadTokens";
-import { useTheme } from "@/hooks/useTheme";
+import Animated, { FadeIn, FadeInDown, FadeOut } from "react-native-reanimated";
+import { AuraButton } from "@/components/aura/AuraButton";
+import { AuraOrb } from "@/components/aura/AuraOrb";
+import { useAura } from "@/components/aura/useAura";
+import { Icon } from "@/components/nomad/Icon";
 import {
   localAuth,
   secureStorage,
   useAuthStore,
   useBiometricPresentation,
 } from "@/features/auth";
+import { PinDots } from "@/features/auth/components/PinDots";
+import { PinPad } from "@/features/auth/components/PinPad";
 import { hashPin } from "@/features/auth/utils/crypto";
+import { ONBOARDING_LOCK_STEP } from "@/features/onboarding/steps";
 import { useSettingsStore } from "@/features/settings";
-import { lightImpact, errorNotification } from "@/utils/haptics";
-import { Icon } from "@/components/nomad/Icon";
+import { errorNotification } from "@/utils/haptics";
 import { useLocalization } from "@/localization";
+import { logger } from "@/services/logger";
 
 const PIN_LENGTH = 6;
-const NUMPAD = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "delete"];
+const DANGER = "#FF4D5E";
 
 export default function SetupPinScreen() {
   const router = useRouter();
   const { from } = useLocalSearchParams<{ from?: string }>();
   const fromOnboarding = from === "onboarding";
-  const { isDark, nomad } = useTheme();
+  const { c, f, isDark } = useAura();
   const { t } = useLocalization();
-  const theme = nomad.colors;
+  const { height } = useWindowDimensions();
   const { setPinSet, setBiometricEnabled, setUnlocked } = useAuthStore();
   const setOnboardingStep = useSettingsStore((s) => s.setOnboardingStep);
   const biometric = useBiometricPresentation();
@@ -41,7 +41,9 @@ export default function SetupPinScreen() {
   const [pin, setPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
   const [error, setError] = useState("");
-  const shakeX = useSharedValue(0);
+  const [shakeKey, setShakeKey] = useState(0);
+  const [saved, setSaved] = useState(false);
+  const compact = height < 720;
 
   // Refs hold the live value so rapid taps between renders never drop a digit.
   const pinRef = useRef("");
@@ -53,19 +55,8 @@ export default function SetupPinScreen() {
     (step === "create" ? setPin : setConfirmPin)(value);
   };
 
-  const shakeStyle = useAnimatedStyle(() => ({ transform: [{ translateX: shakeX.value }] }));
-
-  const shake = useCallback(() => {
-    shakeX.set(withSequence(
-      withTiming(-10, { duration: 50 }),
-      withTiming(10, { duration: 50 }),
-      withTiming(-10, { duration: 50 }),
-      withTiming(10, { duration: 50 }),
-      withTiming(0, { duration: 50 }),
-    ));
-  }, [shakeX]);
-
   const handleComplete = async (finalPin: string) => {
+    setSaved(true);
     const hashed = await hashPin(finalPin);
     await secureStorage.setPin(hashed);
     setPinSet(true);
@@ -74,9 +65,9 @@ export default function SetupPinScreen() {
     if (available) setBiometricEnabled(true);
 
     if (fromOnboarding) {
-      // Return to onboarding and advance to the final (Ready) step. Auth is
+      // Back to onboarding's lock step, which now shows the recap. Auth is
       // finalized later, after sign-in.
-      setOnboardingStep(5);
+      setOnboardingStep(ONBOARDING_LOCK_STEP);
       if (router.canGoBack()) router.back();
       else router.replace("/(onboarding)/welcome");
       return;
@@ -87,15 +78,12 @@ export default function SetupPinScreen() {
     else router.replace("/(tabs)");
   };
 
-  const handleKeyPress = (key: string) => {
-    if (key === "delete") {
-      setCurrentPin(currentRef.current.slice(0, -1));
-      setError("");
-      return;
-    }
-    if (key === "") return;
+  const handleDelete = () => {
+    setCurrentPin(currentRef.current.slice(0, -1));
+    setError("");
+  };
 
-    lightImpact();
+  const handleDigit = (key: string) => {
     if (currentRef.current.length >= PIN_LENGTH) return;
 
     const next = currentRef.current + key;
@@ -105,10 +93,13 @@ export default function SetupPinScreen() {
       if (step === "create") {
         setTimeout(() => setStep("confirm"), 280);
       } else if (next === pinRef.current) {
-        handleComplete(next);
+        handleComplete(next).catch((err) => {
+          logger.error("auth", "pin setup failed", err);
+          setSaved(false);
+        });
       } else {
         errorNotification();
-        shake();
+        setShakeKey((k) => k + 1);
         setError(t("auth.pinMismatch"));
         setTimeout(() => {
           confirmRef.current = "";
@@ -119,107 +110,66 @@ export default function SetupPinScreen() {
     }
   };
 
+  const startOver = () => {
+    setStep("create");
+    pinRef.current = "";
+    confirmRef.current = "";
+    setPin("");
+    setConfirmPin("");
+    setError("");
+  };
+
+  const orbSize = compact ? 92 : 120;
+
   return (
-    <View style={{ flex: 1, backgroundColor: theme.paper }}>
+    <View style={[styles.root, { backgroundColor: c.bg }]}>
       <StatusBar style={isDark ? "light" : "dark"} />
       <SafeAreaView style={styles.safe} edges={["top", "bottom", "left", "right"]}>
         <View style={styles.body}>
-          {/* Lock mark */}
-          <View style={[styles.mark, { backgroundColor: theme.inkDeep, shadowColor: theme.shadow }]}>
-            <Icon name="lock" size={26} color={theme.mustard} strokeWidth={2} />
+          <View style={{ width: orbSize, height: orbSize }}>
+            <AuraOrb
+              size={orbSize}
+              mode={saved ? "done" : step === "confirm" ? "listening" : "idle"}
+              level={step === "confirm" ? currentPin.length + 1 : 0}
+              isDark={isDark}
+              core={false}
+            />
+            <View style={styles.orbIcon} pointerEvents="none">
+              <Icon name={saved ? "check" : "lock"} size={orbSize * 0.24} color={isDark ? "#FFFFFF" : c.text} strokeWidth={2.2} />
+            </View>
           </View>
 
-          <Text style={[styles.eyebrow, { color: theme.sky }]}>
-            {step === "create" ? t("auth.secureVault") : t("auth.confirm")}
-          </Text>
-          <Text style={[styles.headline, { color: theme.inkDeep }]}>
-            {step === "create" ? (
-              <>
-                {t("auth.createPinPrefix")}{" "}
-                <Text style={[styles.italic, { color: theme.sky }]}>
-                  {t("auth.sixDigit")}
-                </Text>{" "}
-                {t("auth.pin")}.
-              </>
-            ) : (
-              <>
-                {t("auth.reenterYour")}{" "}
-                <Text style={[styles.italic, { color: theme.sky }]}>{t("auth.pin")}</Text>.
-              </>
-            )}
-          </Text>
-          <Text style={[styles.sub, { color: theme.inkSoft }]}>
-            {step === "create"
-              ? t("auth.createPinSub", { biometricName: biometric.name })
-              : t("auth.confirmPinSub")}
-          </Text>
-
-          {/* Dots */}
-          <Animated.View style={[styles.dotsRow, shakeStyle]}>
-            {Array.from({ length: PIN_LENGTH }).map((_, i) => (
-              <View
-                key={i}
-                style={[
-                  styles.dot,
-                  {
-                    backgroundColor: i < currentPin.length ? theme.inkDeep : "transparent",
-                    borderColor: i < currentPin.length ? theme.inkDeep : theme.hairline,
-                  },
-                ]}
-              />
-            ))}
+          <Animated.View key={step} entering={FadeInDown.duration(320)} exiting={FadeOut.duration(120)} style={styles.copy}>
+            <Text style={[styles.title, { color: c.text, fontFamily: f.semibold }]}>
+              {step === "create" ? t("auth.createPinTitle") : t("auth.confirmPinTitle")}
+            </Text>
+            <Text style={[styles.sub, { color: c.textSoft, fontFamily: f.regular }]}>
+              {step === "create"
+                ? t("auth.createPinSub", { biometricName: biometric.name })
+                : t("auth.confirmPinSub")}
+            </Text>
           </Animated.View>
 
-          {error ? (
-            <Text style={[styles.error, { color: theme.stamp }]}>{error}</Text>
-          ) : (
-            <View style={{ height: 18 }} />
-          )}
-
-          <View style={styles.numpad}>
-            {NUMPAD.map((key, i) => (
-              <Pressable
-                key={i}
-                onPress={() => handleKeyPress(key)}
-                accessibilityRole="button"
-                accessibilityLabel={key === "delete" ? t("auth.deleteDigit") : key || undefined}
-                accessibilityElementsHidden={key === ""}
-                importantForAccessibility={key === "" ? "no-hide-descendants" : "auto"}
-                disabled={key === ""}
-                style={[
-                  styles.numKey,
-                  {
-                    backgroundColor: key === "" ? "transparent" : theme.paperSoft,
-                    borderColor: key === "" ? "transparent" : theme.hairline,
-                  },
-                ]}
-              >
-                {key === "delete" ? (
-                  <Icon name="chevronLeft" size={22} color={theme.inkDeep} />
-                ) : (
-                  <Text style={[styles.numKeyText, { color: theme.inkDeep }]}>{key}</Text>
-                )}
-              </Pressable>
-            ))}
+          <View style={styles.dots}>
+            <PinDots length={PIN_LENGTH} filled={currentPin.length} shakeKey={shakeKey} error={!!error} />
           </View>
+          <Text
+            accessibilityRole={error ? "alert" : undefined}
+            accessibilityLiveRegion="polite"
+            style={[styles.error, { color: DANGER, fontFamily: f.medium }]}
+          >
+            {error}
+          </Text>
 
-          {step === "confirm" && (
-            <Pressable
-              onPress={() => {
-                setStep("create");
-                pinRef.current = "";
-                confirmRef.current = "";
-                setPin("");
-                setConfirmPin("");
-                setError("");
-              }}
-              style={styles.startOver}
-            >
-              <Text style={[styles.startOverText, { color: theme.inkSoft }]}>
-                {t("auth.startOver")}
-              </Text>
-            </Pressable>
-          )}
+          <PinPad onDigit={handleDigit} onDelete={handleDelete} disabled={saved} keySize={compact ? 66 : 76} />
+
+          <View style={styles.footer}>
+            {step === "confirm" ? (
+              <Animated.View entering={FadeIn.duration(200)}>
+                <AuraButton label={t("auth.startOver")} variant="ghost" size="md" onPress={startOver} />
+              </Animated.View>
+            ) : null}
+          </View>
         </View>
       </SafeAreaView>
     </View>
@@ -227,71 +177,14 @@ export default function SetupPinScreen() {
 }
 
 const styles = StyleSheet.create({
+  root: { flex: 1 },
   safe: { flex: 1 },
-  body: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 26 },
-  mark: {
-    width: 60,
-    height: 60,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 22,
-    shadowOpacity: 0.22,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 8,
-  },
-  eyebrow: {
-    fontSize: 10.5,
-    letterSpacing: 1.8,
-    fontWeight: "700",
-    textTransform: "uppercase",
-    fontFamily: NOMAD_FONTS.uiBold,
-    textAlign: "center",
-  },
-  headline: {
-    fontFamily: NOMAD_FONTS.display,
-    fontWeight: "500",
-    fontSize: 34,
-    lineHeight: 34 * 1.04,
-    marginTop: 6,
-    letterSpacing: 0,
-    textAlign: "center",
-  },
-  italic: { fontFamily: NOMAD_FONTS.displayItalic, fontStyle: "italic" },
-  sub: {
-    fontSize: 14,
-    marginTop: 10,
-    lineHeight: 14 * 1.5,
-    fontFamily: NOMAD_FONTS.ui,
-    textAlign: "center",
-  },
-  dotsRow: { flexDirection: "row", gap: 16, marginTop: 36 },
-  dot: { width: 14, height: 14, borderRadius: 999, borderWidth: 1.5 },
-  error: {
-    fontSize: 13,
-    textAlign: "center",
-    fontFamily: NOMAD_FONTS.uiMedium,
-    marginTop: 14,
-    height: 18,
-  },
-  numpad: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    width: 280,
-    marginTop: 24,
-    gap: 16,
-  },
-  numKey: {
-    width: 72,
-    height: 72,
-    borderRadius: 999,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  numKeyText: { fontSize: 26, fontFamily: NOMAD_FONTS.display, fontWeight: "500" },
-  startOver: { marginTop: 28 },
-  startOverText: { fontSize: 13, fontFamily: NOMAD_FONTS.uiSemi, fontWeight: "600" },
+  body: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 24 },
+  orbIcon: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0, alignItems: "center", justifyContent: "center" },
+  copy: { alignItems: "center", marginTop: 14 },
+  title: { fontSize: 28, letterSpacing: -0.9, lineHeight: 33, textAlign: "center" },
+  sub: { fontSize: 15, lineHeight: 21, marginTop: 8, textAlign: "center", maxWidth: 320 },
+  dots: { marginTop: 28 },
+  error: { fontSize: 13, textAlign: "center", minHeight: 18, marginTop: 12, marginBottom: 18 },
+  footer: { height: 44, marginTop: 14, justifyContent: "center" },
 });

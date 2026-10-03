@@ -1,255 +1,107 @@
 import React, { useState } from "react";
-import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  StatusBar as RNStatusBar,
-} from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { NOMAD_FONTS } from "@/constants/nomadTokens";
-import { useTheme } from "@/hooks/useTheme";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { AuraButton } from "@/components/aura/AuraButton";
+import { useAura } from "@/components/aura/useAura";
+import { Icon } from "@/components/nomad/Icon";
+import { LiveDot } from "@/components/motion/LiveDot";
+import { PressableScale } from "@/components/motion/PressableScale";
+import { auraStatusAccent } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { useSettingsStore } from "@/features/settings";
-import { Icon } from "@/components/nomad/Icon";
-import { AiModelManager } from "../components/AiModelManager";
-import { AiDashboard } from "../components/AiDashboard";
 import { AiChat } from "../components/AiChat";
+import { AiModelsSheet } from "../components/AiModelsSheet";
 import { useAiProvisioning } from "../hooks/useAiProvisioning";
 import { findModel } from "../services/aiModelService";
 import { provisionPercent } from "../utils/provisionCopy";
 
-type Tab = "dashboard" | "chat" | "models";
+const READY = "#3DDC97";
 
+/** AI tab: a chat with the on-device model, with model status in the header. */
 export default function AiScreen() {
-  const { isDark, nomad } = useTheme();
+  const { c, f, isDark, accent } = useAura();
   const { t } = useLocalization();
   const router = useRouter();
-  const theme = nomad.colors;
+  const insets = useSafeAreaInsets();
   const localAiEnabled = useSettingsStore((s) => s.localAiEnabled);
   const provisioning = useAiProvisioning();
-  const [tab, setTab] = useState<Tab>("dashboard");
+  const [modelsOpen, setModelsOpen] = useState(false);
 
   const activeModel = findModel(provisioning.activeModelId);
   const anyDownloaded = activeModel !== null;
   const downloading = provisioning.phase === "downloading" || provisioning.phase === "verifying";
-  const pillText =
-    provisioning.phase === "ready" || (anyDownloaded && !downloading)
-      ? t("aiTab.offlineReady")
-      : downloading
-        ? t("aiTab.provision.pillDownloading", { percent: provisionPercent(provisioning) })
-        : provisioning.phase === "waitingForWifi"
-          ? t("aiTab.provision.waitingForWifiTitle")
-          : t("aiTab.noModel");
-
-  if (!localAiEnabled) {
-    return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: theme.paper }} edges={["top", "left", "right"]}>
-        <StatusBar style={isDark ? "light" : "dark"} />
-        <RNStatusBar barStyle={isDark ? "light-content" : "dark-content"} />
-
-        <View style={styles.header}>
-          <View>
-            <Text style={[styles.eyebrow, { color: theme.inkMuted }]}>{t("aiTab.onDevice")}</Text>
-            <Text style={[styles.title, { color: theme.inkDeep }]}>{t("tabs.ai")}</Text>
-          </View>
-        </View>
-
-        <View style={styles.disabledWrap}>
-          <View style={[styles.disabledIcon, { backgroundColor: theme.paperSoft }]}>
-            <Icon name="sparkle" size={28} color={theme.inkMuted} strokeWidth={2} />
-          </View>
-          <Text style={[styles.disabledTitle, { color: theme.inkDeep }]}>{t("aiTab.disabledTitle")}</Text>
-          <Text style={[styles.disabledBody, { color: theme.inkSoft }]}>{t("aiTab.disabledBody")}</Text>
-          <Pressable
-            onPress={() => router.push("/settings")}
-            style={({ pressed }) => [
-              styles.disabledButton,
-              { backgroundColor: theme.teal, opacity: pressed ? 0.9 : 1 },
-            ]}
-          >
-            <Text style={[styles.disabledButtonText, { color: theme.inverse }]}>
-              {t("aiTab.disabledAction")}
-            </Text>
-          </Pressable>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const ready = provisioning.phase === "ready" || (anyDownloaded && !downloading);
+  const waiting = provisioning.phase === "waitingForWifi";
+  const pillText = ready
+    ? t("aiTab.offlineReady")
+    : downloading
+      ? t("aiTab.provision.pillDownloading", { percent: provisionPercent(provisioning) })
+      : waiting
+        ? t("aiTab.provision.waitingForWifiTitle")
+        : t("aiTab.noModel");
+  const dotColor = ready ? READY : downloading ? accent : waiting ? auraStatusAccent.live : c.textMuted;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.paper }} edges={["top", "left", "right"]}>
+    <View style={[styles.root, { backgroundColor: c.bg }]}>
       <StatusBar style={isDark ? "light" : "dark"} />
-      <RNStatusBar barStyle={isDark ? "light-content" : "dark-content"} />
-
-      <View style={styles.header}>
-        <View>
-          <Text style={[styles.eyebrow, { color: theme.inkMuted }]}>
-            {t("aiTab.onDevice")}
-          </Text>
-          <Text style={[styles.title, { color: theme.inkDeep }]}>{t("tabs.ai")}</Text>
-        </View>
-        <View
-          style={[
-            styles.statusPill,
-            {
-              backgroundColor: anyDownloaded ? theme.tealSoft : theme.paperSoft,
-              borderColor: anyDownloaded ? theme.teal : theme.hairline,
-            },
-          ]}
-        >
-          <View
-            style={[
-              styles.statusDot,
-              { backgroundColor: anyDownloaded ? theme.teal : theme.inkMuted },
-            ]}
-          />
-          <Text
-            style={[
-              styles.statusText,
-              { color: anyDownloaded ? theme.teal : theme.inkMuted },
-            ]}
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <Text style={[styles.title, { color: c.text, fontFamily: f.semibold }]}>{t("tabs.ai")}</Text>
+        {localAiEnabled ? (
+          <PressableScale
+            onPress={() => setModelsOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel={pillText}
+            accessibilityHint={t("aiTab.modelTab")}
+            style={[styles.chip, { backgroundColor: c.surfaceStrong, borderColor: c.hairline }]}
           >
-            {pillText}
-          </Text>
+            <LiveDot color={dotColor} size={7} active={downloading} />
+            <Text numberOfLines={1} style={[styles.chipText, { color: c.text, fontFamily: f.medium }]}>
+              {pillText}
+            </Text>
+            <Icon name="chevronDown" size={13} color={c.textMuted} strokeWidth={2} />
+          </PressableScale>
+        ) : null}
+      </View>
+
+      {localAiEnabled ? (
+        <>
+          <AiChat activeModelName={activeModel?.name ?? null} />
+          <AiModelsSheet visible={modelsOpen} onClose={() => setModelsOpen(false)} />
+        </>
+      ) : (
+        <View style={styles.disabled}>
+          <View style={[styles.disabledIcon, { backgroundColor: c.surfaceStrong }]}>
+            <Icon name="sparkle" size={24} color={c.textSoft} strokeWidth={2} />
+          </View>
+          <Text style={[styles.disabledTitle, { color: c.text, fontFamily: f.semibold }]}>{t("aiTab.disabledTitle")}</Text>
+          <Text style={[styles.disabledBody, { color: c.textSoft, fontFamily: f.regular }]}>{t("aiTab.disabledBody")}</Text>
+          <AuraButton label={t("aiTab.disabledAction")} icon="settings" size="md" onPress={() => router.push("/settings")} style={styles.disabledButton} />
         </View>
-      </View>
-
-      <View style={styles.tabBar}>
-        {[
-          { id: "dashboard" as Tab, label: t("aiTab.dashboard"), icon: "trendUp" as const },
-          { id: "chat" as Tab, label: t("aiTab.chat"), icon: "sparkle" as const },
-          { id: "models" as Tab, label: t("aiTab.modelTab"), icon: "cpu" as const },
-        ].map((tItem) => {
-          const active = tab === tItem.id;
-          return (
-            <Pressable
-              key={tItem.id}
-              onPress={() => setTab(tItem.id)}
-              style={({ pressed }) => [
-                styles.tab,
-                {
-                  backgroundColor: active ? theme.inkDeep : "transparent",
-                  opacity: pressed ? 0.9 : 1,
-                },
-              ]}
-            >
-              <Icon
-                name={tItem.icon}
-                size={14}
-                color={active ? theme.paperSoft : theme.inkSoft}
-                strokeWidth={2}
-              />
-              <Text style={[styles.tabLabel, { color: active ? theme.paperSoft : theme.inkSoft }]}>
-                {tItem.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-
-      <View style={{ flex: 1 }}>
-        {tab === "dashboard" ? (
-          <AiDashboard theme={theme} />
-        ) : tab === "chat" ? (
-          <AiChat theme={theme} activeModelName={activeModel?.name ?? null} />
-        ) : (
-          <AiModelManager theme={theme} />
-        )}
-      </View>
-    </SafeAreaView>
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 10,
-  },
-  eyebrow: {
-    fontFamily: NOMAD_FONTS.uiBold,
-    fontSize: 10.5,
-    letterSpacing: 1.4,
-    textTransform: "uppercase",
-  },
-  title: {
-    fontFamily: NOMAD_FONTS.display,
-    fontSize: 38,
-    letterSpacing: -0.5,
-    lineHeight: 42,
-  },
-  statusPill: {
+  root: { flex: 1 },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, paddingHorizontal: 20, paddingBottom: 12 },
+  title: { fontSize: 34, letterSpacing: -1.2 },
+  chip: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 999,
-    borderWidth: 1,
+    gap: 7,
+    height: 34,
+    paddingHorizontal: 12,
+    borderRadius: 17,
+    borderWidth: StyleSheet.hairlineWidth,
+    flexShrink: 1,
   },
-  statusDot: { width: 6, height: 6, borderRadius: 999 },
-  statusText: { fontFamily: NOMAD_FONTS.uiSemi, fontSize: 11, letterSpacing: 0.3 },
-  tabBar: {
-    flexDirection: "row",
-    backgroundColor: "transparent",
-    marginHorizontal: 16,
-    marginBottom: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0)",
-    gap: 4,
-  },
-  tab: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 10,
-  },
-  tabLabel: { fontFamily: NOMAD_FONTS.uiSemi, fontSize: 13 },
-  disabledWrap: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 32,
-    gap: 12,
-  },
-  disabledIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 4,
-  },
-  disabledTitle: {
-    fontFamily: NOMAD_FONTS.display,
-    fontSize: 24,
-    textAlign: "center",
-    lineHeight: 28,
-  },
-  disabledBody: {
-    fontFamily: NOMAD_FONTS.ui,
-    fontSize: 14,
-    textAlign: "center",
-    lineHeight: 20,
-  },
-  disabledButton: {
-    marginTop: 8,
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 28,
-  },
-  disabledButtonText: {
-    fontFamily: NOMAD_FONTS.uiSemi,
-    fontSize: 15,
-  },
+  chipText: { fontSize: 13.5, flexShrink: 1, fontVariant: ["tabular-nums"] },
+  disabled: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 36, paddingBottom: 120, gap: 10 },
+  disabledIcon: { width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center", marginBottom: 6 },
+  disabledTitle: { fontSize: 22, letterSpacing: -0.6, textAlign: "center" },
+  disabledBody: { fontSize: 14.5, lineHeight: 21, textAlign: "center" },
+  disabledButton: { marginTop: 10 },
 });

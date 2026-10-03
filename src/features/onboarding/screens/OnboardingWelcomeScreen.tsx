@@ -1,88 +1,86 @@
-import React, { useCallback, useState, useRef, useEffect } from "react";
-import {
-  View,
-  Text,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Platform,
-  Alert,
-  BackHandler,
-  Linking,
-} from "react-native";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Alert, BackHandler, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useRouter } from "expo-router";
 import Animated, {
-  FadeInRight,
   FadeInLeft,
+  FadeInRight,
+  ReduceMotion,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  type SharedValue,
 } from "react-native-reanimated";
-import { NOMAD_FONTS } from "@/constants/nomadTokens";
-import { LEGAL_URLS } from "@/constants/legal";
-import { useTheme } from "@/hooks/useTheme";
-import { useSettingsStore } from "@/features/settings";
-import { NomadButton } from "@/components/nomad/Button";
+import { AuraButton } from "@/components/aura/AuraButton";
+import { useAura } from "@/components/aura/useAura";
 import { Icon } from "@/components/nomad/Icon";
-import { WelcomeStep } from "@/features/onboarding/components/WelcomeStep";
-import { SafetyStep, type ContactsSummary } from "@/features/onboarding/components/SafetyStep";
-import { LedgerStep } from "@/features/onboarding/components/LedgerStep";
-import { AIStep } from "@/features/onboarding/components/AIStep";
+import { PressableScale } from "@/components/motion/PressableScale";
+import { springs } from "@/components/motion/springs";
+import { LEGAL_URLS } from "@/constants/legal";
 import { ensureProvisioned, useProvisioningStore } from "@/features/ai";
-import { SecureStep } from "@/features/onboarding/components/SecureStep";
-import { ReadyStep } from "@/features/onboarding/components/ReadyStep";
-import { emergencyContactsStorage } from "@/features/onboarding/services/emergencyContactsStorage";
-import { useBiometricPresentation, useAuthStore } from "@/features/auth";
+import { useAuthStore, useBiometricPresentation } from "@/features/auth";
+import { useSettingsStore } from "@/features/settings";
+import type { TrustedContactsSummary } from "@/features/settings/components/TrustedContactsEditor";
 import { isValidPhone } from "@/features/safety/utils/phone";
+import { emergencyContactsStorage } from "@/features/onboarding/services/emergencyContactsStorage";
+import { ONBOARDING_LOCK_STEP, ONBOARDING_STEPS, type OnboardingStepId } from "@/features/onboarding/steps";
+import { WelcomeStep } from "@/features/onboarding/components/WelcomeStep";
+import { SafetyStep } from "@/features/onboarding/components/SafetyStep";
+import { OnDeviceStep } from "@/features/onboarding/components/OnDeviceStep";
+import { LockStep } from "@/features/onboarding/components/LockStep";
 import { useLocalization } from "@/localization";
 import { track } from "@/services/analytics";
 
-const STEP_IDS = ["welcome", "safety", "ledger", "ai", "secure", "ready"] as const;
+const LAST_STEP = ONBOARDING_STEPS.length - 1;
+const NUMBERED_TOTAL = ONBOARDING_STEPS.length - 1;
+const BACKGROUND_PHASES = new Set(["queued", "downloading", "verifying", "waitingForWifi"]);
 
-// The four numbered setup steps shown with a "Step X of N" eyebrow.
-// Welcome (intro) and Ready (summary) are not numbered.
-const NUMBERED_TOTAL = 4;
+/** Maps a persisted step into range; indices past the end come from the old 6-step flow and resume at the lock step. */
+function clampStep(value: number) {
+  if (value > LAST_STEP) return ONBOARDING_LOCK_STEP;
+  return Math.max(0, value);
+}
 
-const clampStep = (value: number) => Math.min(Math.max(value, 0), STEP_IDS.length - 1);
-
-function readContactsSummary(): ContactsSummary {
+function readContactsSummary(): TrustedContactsSummary {
   const contacts = emergencyContactsStorage.get();
-  return {
-    count: contacts.length,
-    withPhone: contacts.filter((c) => isValidPhone(c.phone)).length,
-  };
+  return { count: contacts.length, withPhone: contacts.filter((contact) => isValidPhone(contact.phone)).length };
 }
 
 export default function OnboardingWelcomeScreen() {
   const router = useRouter();
-  const { t } = useLocalization();
+  const { t, isRTL } = useLocalization();
+  const { c, f, isDark, accent } = useAura();
+  const insets = useSafeAreaInsets();
   const setOnboardingCompleted = useSettingsStore((s) => s.setOnboardingCompleted);
   const persistedStep = useSettingsStore((s) => s.onboardingStep);
   const setOnboardingStep = useSettingsStore((s) => s.setOnboardingStep);
-  const { isDark, nomad } = useTheme();
-  const theme = nomad.colors;
   const biometric = useBiometricPresentation();
   const isPinSet = useAuthStore((s) => s.isPinSet);
+  const aiPhase = useProvisioningStore((s) => s.phase);
 
   const [step, setStep] = useState(() => clampStep(persistedStep));
   const [direction, setDirection] = useState<1 | -1>(1);
-  const [contacts, setContacts] = useState<ContactsSummary>(readContactsSummary);
-  const aiPhase = useProvisioningStore((s) => s.phase);
+  const [contacts, setContacts] = useState<TrustedContactsSummary>(readContactsSummary);
+  const [globeTouched, setGlobeTouched] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
+  const progress = useSharedValue(step);
 
-  const last = step === STEP_IDS.length - 1;
+  const stepId: OnboardingStepId = ONBOARDING_STEPS[step];
+  const last = step === LAST_STEP;
 
   // Start the model download as early as possible; onboarding never waits on it.
   useEffect(() => {
     void ensureProvisioned();
   }, []);
 
-  // Persist progress so a killed/relaunched session resumes where it left off.
   useEffect(() => {
     setOnboardingStep(step);
-  }, [step, setOnboardingStep]);
+    progress.set(withSpring(step, springs.snappy));
+  }, [step, setOnboardingStep, progress]);
 
-  // SetupPin writes the next step to the store; pick it up when we regain focus.
+  // SetupPin writes the lock step to the store; pick it up when we regain focus.
   useFocusEffect(
     useCallback(() => {
       setDirection(1);
@@ -90,19 +88,27 @@ export default function OnboardingWelcomeScreen() {
     }, []),
   );
 
+  const goTo = useCallback((next: number, dir: 1 | -1) => {
+    setDirection(dir);
+    setGlobeTouched(false);
+    setStep(Math.min(Math.max(next, 0), LAST_STEP));
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+  }, []);
+
   // Android hardware back walks to the previous step instead of leaving onboarding.
   useFocusEffect(
     useCallback(() => {
       if (Platform.OS !== "android" || step === 0) return;
       const sub = BackHandler.addEventListener("hardwareBackPress", () => {
-        setDirection(-1);
-        setStep((s) => Math.max(s - 1, 0));
-        scrollRef.current?.scrollTo({ y: 0, animated: false });
+        goTo(step - 1, -1);
         return true;
       });
       return () => sub.remove();
-    }, [step]),
+    }, [step, goTo]),
   );
+
+  const advance = () => goTo(step + 1, 1);
+  const back = () => goTo(step - 1, -1);
 
   const onDone = () => {
     setOnboardingCompleted(true);
@@ -110,13 +116,6 @@ export default function OnboardingWelcomeScreen() {
     router.replace("/(auth)/sign-in");
   };
 
-  const advance = () => {
-    setDirection(1);
-    setStep((s) => Math.min(s + 1, STEP_IDS.length - 1));
-    scrollRef.current?.scrollTo({ y: 0, animated: false });
-  };
-
-  // Contacts are optional, but SOS can't text anyone without a phone number.
   const confirmSafetyContinue = () => {
     if (contacts.withPhone > 0) {
       advance();
@@ -124,9 +123,7 @@ export default function OnboardingWelcomeScreen() {
     }
     Alert.alert(
       t("onboarding.noContactsTitle"),
-      contacts.count === 0
-        ? t("onboarding.noContactsWarning")
-        : t("emergencyContacts.noneWithPhone"),
+      contacts.count === 0 ? t("onboarding.noContactsWarning") : t("emergencyContacts.noneWithPhone"),
       [
         { text: t("onboarding.addContactAction"), style: "cancel" },
         { text: t("onboarding.skipForNow"), onPress: advance },
@@ -135,236 +132,140 @@ export default function OnboardingWelcomeScreen() {
   };
 
   const handleCta = () => {
-    if (last) {
-      onDone();
-      return;
+    switch (stepId) {
+      case "safety":
+        confirmSafetyContinue();
+        return;
+      case "lock":
+        if (isPinSet) onDone();
+        else router.push("/(auth)/setup-pin?from=onboarding");
+        return;
+      default:
+        advance();
     }
-    if (step === 1) {
-      confirmSafetyContinue();
-      return;
-    }
-    // On the security step, route to the PIN setup screen unless a PIN already
-    // exists. SetupPin returns to the next onboarding step (Ready) when done.
-    if (step === 4 && !isPinSet) {
-      router.push("/(auth)/setup-pin?from=onboarding");
-      return;
-    }
-    advance();
   };
 
-  const back = () => {
-    if (step === 0) return;
-    setDirection(-1);
-    setStep((s) => Math.max(s - 1, 0));
-    scrollRef.current?.scrollTo({ y: 0, animated: false });
-  };
+  const ctaLabel = (() => {
+    switch (stepId) {
+      case "welcome":
+        return t("onboarding.beginSetup");
+      case "safety":
+        return contacts.count > 0 ? t("onboarding.enableSafetyNet", { count: contacts.count }) : t("onboarding.skipForNow");
+      case "onDevice":
+        return BACKGROUND_PHASES.has(aiPhase) ? t("onboarding.continueInBackground") : t("common.continue");
+      case "lock":
+        return isPinSet ? t("onboarding.startMyTrip") : t("onboarding.setBackupPin");
+    }
+  })();
 
   const openPrivacyPolicy = () => {
     Linking.openURL(LEGAL_URLS.privacy).catch(() => {});
   };
 
-  const entering = direction > 0 ? FadeInRight.duration(420) : FadeInLeft.duration(420);
-
-  const renderStep = () => {
-    switch (step) {
-      case 0:
-        return <WelcomeStep theme={theme} />;
-      case 1:
-        return (
-          <SafetyStep
-            theme={theme}
-            dark={isDark}
-            totalSteps={NUMBERED_TOTAL}
-            onContactsChange={setContacts}
-          />
-        );
-      case 2:
-        return <LedgerStep theme={theme} totalSteps={NUMBERED_TOTAL} />;
-      case 3:
-        return <AIStep theme={theme} totalSteps={NUMBERED_TOTAL} />;
-      case 4:
-        return <SecureStep theme={theme} totalSteps={NUMBERED_TOTAL} biometric={biometric} />;
-      default:
-        return <ReadyStep theme={theme} biometric={biometric} />;
-    }
-  };
-
-  const aiCtaLabel = () =>
-    aiPhase === "queued" || aiPhase === "downloading" || aiPhase === "verifying" || aiPhase === "waitingForWifi"
-      ? t("onboarding.continueInBackground")
-      : t("common.continue");
-
-  const ctaLabel =
-    step === 0
-      ? t("onboarding.beginSetup")
-      : step === 1
-        ? contacts.count > 0
-          ? t("onboarding.enableSafetyNet", { count: contacts.count })
-          : t("onboarding.skipForNow")
-        : step === 2
-          ? t("common.continue")
-          : step === 3
-            ? aiCtaLabel()
-            : step === 4
-              ? isPinSet ? t("common.continue") : t("onboarding.setBackupPin")
-              : t("onboarding.startMyTrip");
+  const forward = direction > 0 !== isRTL;
+  const entering = (forward ? FadeInRight : FadeInLeft).springify().damping(22).stiffness(220).reduceMotion(ReduceMotion.System);
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.paper }}>
+    <View style={[styles.root, { backgroundColor: c.bg }]}>
       <StatusBar style={isDark ? "light" : "dark"} />
-      <SafeAreaView style={{ flex: 1 }} edges={["top", "left", "right"]}>
-        {/* Top bar: back + progress + skip */}
-        <View style={styles.topBar}>
-          <Pressable
-            onPress={back}
-            disabled={step === 0}
-            accessibilityRole="button"
-            accessibilityLabel={t("common.back")}
-            accessibilityState={{ disabled: step === 0 }}
-            hitSlop={8}
-            style={[
-              styles.backBtn,
-              {
-                backgroundColor: step === 0 ? "transparent" : theme.paperSoft,
-                borderColor: step === 0 ? "transparent" : theme.hairline,
-                opacity: step === 0 ? 0.3 : 1,
-              },
-            ]}
-          >
-            <Icon name="chevronLeft" size={16} color={theme.inkSoft} />
-          </Pressable>
 
-          <View
-            style={styles.progressRow}
-            accessible
-            accessibilityRole="progressbar"
-            accessibilityValue={{ min: 0, max: NUMBERED_TOTAL, now: Math.min(step, NUMBERED_TOTAL) }}
-          >
-            {/* One segment per numbered step, so it matches "Step X of N". */}
-            {Array.from({ length: NUMBERED_TOTAL }, (_, i) => (
-              <View
-                key={i}
-                style={[
-                  styles.progressBar,
-                  {
-                    backgroundColor: i < step ? theme.inkDeep : theme.hairline,
-                  },
-                ]}
-              />
-            ))}
-          </View>
+      <ScrollView
+        ref={scrollRef}
+        style={styles.root}
+        scrollEnabled={!globeTouched}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingTop: insets.top + 58, paddingBottom: insets.bottom + 170 }}
+      >
+        <Animated.View key={step} entering={entering}>
+          {stepId === "welcome" ? (
+            <WelcomeStep onGlobeTouch={setGlobeTouched} />
+          ) : stepId === "safety" ? (
+            <SafetyStep onContactsChange={setContacts} />
+          ) : stepId === "onDevice" ? (
+            <OnDeviceStep />
+          ) : (
+            <LockStep biometric={biometric} />
+          )}
+        </Animated.View>
+      </ScrollView>
 
-          {/* Spacer keeps the progress bar centred. */}
-          <View style={{ width: 34 }} />
-        </View>
-
-        {/* Content */}
-        <ScrollView
-          ref={scrollRef}
-          style={{ flex: 1 }}
-          contentContainerStyle={{ paddingBottom: 160 }}
-          showsVerticalScrollIndicator={false}
+      <View pointerEvents="box-none" style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
+        <LinearGradient pointerEvents="none" colors={[c.bg, `${c.bg}00`]} locations={[0.55, 1]} style={StyleSheet.absoluteFill} />
+        <PressableScale
+          onPress={back}
+          disabled={step === 0}
+          accessibilityRole="button"
+          accessibilityLabel={t("common.back")}
+          accessibilityState={{ disabled: step === 0 }}
+          hitSlop={8}
+          style={[styles.backBtn, { backgroundColor: c.surfaceStrong, opacity: step === 0 ? 0 : 1 }]}
         >
-          <Animated.View key={step} entering={entering}>
-            {renderStep()}
-          </Animated.View>
-        </ScrollView>
+          <Icon name="chevronLeft" size={17} color={c.text} />
+        </PressableScale>
+        <View
+          style={styles.progressRow}
+          accessible
+          accessibilityRole="progressbar"
+          accessibilityLabel={t("onboarding.progressA11y", { step, total: NUMBERED_TOTAL })}
+          accessibilityValue={{ min: 0, max: NUMBERED_TOTAL, now: step }}
+        >
+          {Array.from({ length: NUMBERED_TOTAL }, (_, index) => (
+            <ProgressSegment key={index} index={index} progress={progress} track={c.surfaceStrong} fill={accent} />
+          ))}
+        </View>
+        <View style={styles.backBtn} />
+      </View>
 
-        {/* Bottom CTA */}
-        <View pointerEvents="box-none" style={styles.ctaWrap}>
-          <LinearGradient
-            colors={["transparent", theme.paper]}
-            locations={[0, 0.28]}
-            style={StyleSheet.absoluteFill}
-            pointerEvents="none"
-          />
-          <View style={styles.ctaInner}>
-            <NomadButton
-              theme={theme}
-              full
-              variant={last ? "teal" : "primary"}
-              onPress={handleCta}
-              icon={
-                last ? (
-                  <Icon name="check" size={18} color={theme.inverse} strokeWidth={2.4} />
-                ) : null
-              }
-            >
-              {ctaLabel}
-            </NomadButton>
-            <View style={styles.footerRow}>
-              <Text style={[styles.ctaHint, { color: theme.inkMuted }]}>
-                {t("onboarding.footerLocal")}
-              </Text>
-              <Pressable
-                onPress={openPrivacyPolicy}
-                accessibilityRole="link"
-                hitSlop={8}
-              >
-                <Text style={[styles.ctaHint, styles.link, { color: theme.inkSoft }]}>
-                  {t("onboarding.privacyPolicy")}
-                </Text>
-              </Pressable>
-            </View>
+      <View pointerEvents="box-none" style={styles.ctaWrap}>
+        <LinearGradient pointerEvents="none" colors={[`${c.bg}00`, c.bg]} locations={[0, 0.3]} style={StyleSheet.absoluteFill} />
+        <View style={[styles.ctaInner, { paddingBottom: insets.bottom + 14 }]}>
+          <AuraButton label={ctaLabel} onPress={handleCta} icon={last && isPinSet ? "check" : undefined} />
+          <View style={styles.footerRow}>
+            <Icon name="lock" size={12} color={c.textMuted} />
+            <Text style={[styles.hint, { color: c.textMuted, fontFamily: f.regular }]}>{t("onboarding.footerLocal")}</Text>
+            <Pressable onPress={openPrivacyPolicy} accessibilityRole="link" hitSlop={8}>
+              <Text style={[styles.hint, styles.link, { color: c.textSoft, fontFamily: f.medium }]}>{t("onboarding.privacyPolicy")}</Text>
+            </Pressable>
           </View>
         </View>
-      </SafeAreaView>
+      </View>
+    </View>
+  );
+}
+
+/** One progress segment; fills as the animated step value passes its index. */
+function ProgressSegment({ index, progress, track, fill }: { index: number; progress: SharedValue<number>; track: string; fill: string }) {
+  const fillStyle = useAnimatedStyle(() => ({
+    width: `${Math.min(1, Math.max(0, progress.get() - index)) * 100}%`,
+  }));
+  return (
+    <View style={[styles.segment, { backgroundColor: track }]}>
+      <Animated.View style={[styles.segmentFill, { backgroundColor: fill }, fillStyle]} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: { flex: 1 },
   topBar: {
-    paddingHorizontal: 18,
-    paddingVertical: 8,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  backBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 999,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  progressRow: {
-    flex: 1,
-    flexDirection: "row",
-    gap: 4,
-  },
-  progressBar: {
-    flex: 1,
-    height: 3,
-    borderRadius: 999,
-  },
-  ctaWrap: {
     position: "absolute",
-    start: 0,
-    end: 0,
-    bottom: 0,
-  },
-  ctaInner: {
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: Platform.OS === "ios" ? 38 : 24,
-  },
-  footerRow: {
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
     alignItems: "center",
-    columnGap: 8,
-    marginTop: 10,
+    gap: 14,
+    paddingHorizontal: 20,
+    paddingBottom: 14,
   },
-  ctaHint: {
-    textAlign: "center",
-    fontSize: 11,
-    fontFamily: NOMAD_FONTS.mono,
-    letterSpacing: 0.3,
-  },
-  link: {
-    textDecorationLine: "underline",
-  },
+  backBtn: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center" },
+  progressRow: { flex: 1, flexDirection: "row", gap: 6 },
+  segment: { flex: 1, height: 4, borderRadius: 2, overflow: "hidden" },
+  segmentFill: { height: "100%", borderRadius: 2 },
+  ctaWrap: { position: "absolute", left: 0, right: 0, bottom: 0 },
+  ctaInner: { paddingHorizontal: 20, paddingTop: 30 },
+  footerRow: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", alignItems: "center", gap: 6, marginTop: 12 },
+  hint: { fontSize: 12, textAlign: "center" },
+  link: { textDecorationLine: "underline" },
 });

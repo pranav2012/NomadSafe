@@ -1,6 +1,6 @@
 import React from "react";
 import { FlexWidget, SvgWidget, TextWidget } from "react-native-android-widget";
-import { nomadDarkColors, nomadLightColors } from "@/constants/theme";
+import { auraDark, auraLight, type AuraPalette } from "@/constants/aura";
 import { voiceCaptureUrl } from "@/features/widget/widgetTrip";
 
 export const VOICE_WIDGET_NAME = "VoiceExpenseWidget";
@@ -17,16 +17,16 @@ const micSvg = (color: string) =>
 
 /** Android home-screen widget (RemoteViews): trip row opens the picker, Speak starts listening. */
 export function VoiceExpenseWidget({ tripId, tripName, labels, dark }: VoiceExpenseWidgetProps) {
-  const colors = dark ? nomadDarkColors : nomadLightColors;
-  const background = dark ? "#1F2529" : "#FBF6EC";
+  // Aura palettes are plain strings; RemoteViews styles want hex/rgba literal types.
+  const c = (dark ? auraDark : auraLight) as unknown as Record<keyof AuraPalette, `#${string}`>;
 
   return (
     <FlexWidget
       style={{
         height: "match_parent",
         width: "match_parent",
-        backgroundColor: background,
-        borderRadius: 22,
+        backgroundColor: c.card,
+        borderRadius: 24,
         padding: 14,
         flexDirection: "column",
         justifyContent: "space-between",
@@ -39,17 +39,17 @@ export function VoiceExpenseWidget({ tripId, tripName, labels, dark }: VoiceExpe
         style={{ width: "match_parent", flexDirection: "column" }}
       >
         <TextWidget
-          text={labels.eyebrow.toUpperCase()}
-          style={{ fontSize: 10, color: colors.inkMuted, fontWeight: "700", letterSpacing: 0.12 }}
+          text={labels.eyebrow}
+          style={{ fontSize: 12, color: c.textMuted, fontWeight: "500" }}
         />
         <FlexWidget style={{ flexDirection: "row", alignItems: "center", marginTop: 2 }}>
           <TextWidget
             text={tripName}
             maxLines={1}
             truncate="END"
-            style={{ fontSize: 16, color: colors.inkDeep, fontWeight: "600" }}
+            style={{ fontSize: 16, color: c.text, fontWeight: "600" }}
           />
-          <TextWidget text="  ▾" style={{ fontSize: 14, color: colors.inkSoft }} />
+          <TextWidget text="  ▾" style={{ fontSize: 14, color: c.textSoft }} />
         </FlexWidget>
       </FlexWidget>
 
@@ -61,15 +61,15 @@ export function VoiceExpenseWidget({ tripId, tripName, labels, dark }: VoiceExpe
           width: "match_parent",
           height: 48,
           borderRadius: 24,
-          backgroundColor: colors.teal,
+          backgroundColor: c.inverse,
           flexDirection: "row",
           alignItems: "center",
           justifyContent: "center",
           flexGap: 8,
         }}
       >
-        <SvgWidget svg={micSvg("#FFFFFF")} style={{ height: 20, width: 20 }} />
-        <TextWidget text={labels.speak} style={{ fontSize: 15, color: "#FFFFFF", fontWeight: "600" }} />
+        <SvgWidget svg={micSvg(c.onInverse)} style={{ height: 20, width: 20 }} />
+        <TextWidget text={labels.speak} style={{ fontSize: 15, color: c.onInverse, fontWeight: "600" }} />
       </FlexWidget>
     </FlexWidget>
   );
