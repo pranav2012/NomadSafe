@@ -61,7 +61,8 @@
     "upNext": "次の予定",
     "yourStay": "宿泊先",
     "globeHint": "地球儀。ピンチで地図までズーム",
-    "backToGlobe": "地球儀に戻る"
+    "backToGlobe": "地球儀に戻る",
+    "refine": "整理"
   },
   "settings": {
     "title": "設定",
@@ -605,7 +606,9 @@
     "defaultNameMulti": "{{first}}ほか",
     "noBudgetSet": "予算未設定",
     "creatingAction": "作成中…",
-    "savingAction": "保存中…"
+    "savingAction": "保存中…",
+    "daysCount_one": "{{count}}日",
+    "daysCount_other": "{{count}}日"
   },
   "aiTab": {
     "onDevice": "オンデバイス",

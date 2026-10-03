@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Linking,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,9 +10,10 @@ import {
 import { useAction } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Icon } from "@/components/nomad/Icon";
-import { useTheme } from "@/hooks/useTheme";
-import { useThemedStyles } from "@/hooks/useThemedStyles";
-import type { NomadTheme } from "@/constants/theme";
+import { useAura } from "@/components/aura/useAura";
+import { AuraSection } from "@/components/aura/AuraSection";
+import { AuraButton } from "@/components/aura/AuraButton";
+import { PressableScale } from "@/components/motion/PressableScale";
 import { useLocalization } from "@/localization";
 import type { NearbyPlace } from "@/features/places/services/nearbyPlaces";
 import { logger } from "@/services/logger";
@@ -69,9 +69,7 @@ function formatRatingCount(count: number, locale: string) {
 }
 
 export function NearbyPlaces({ userLocation }: { userLocation: UserLocation | null }) {
-  const styles = useThemedStyles(createStyles);
-  const { nomad } = useTheme();
-  const theme = nomad.colors;
+  const { c, f } = useAura();
   const { t, locale } = useLocalization();
   const latitude = userLocation?.latitude;
   const longitude = userLocation?.longitude;
@@ -82,9 +80,7 @@ export function NearbyPlaces({ userLocation }: { userLocation: UserLocation | nu
 
   useEffect(() => {
     if (latitude == null || longitude == null) return;
-
     let cancelled = false;
-
     searchNearby({ latitude, longitude })
       .then((places) => {
         if (!cancelled) setState({ status: "ready", places });
@@ -93,7 +89,6 @@ export function NearbyPlaces({ userLocation }: { userLocation: UserLocation | nu
         logger.warn("nearby-places", "failed", error);
         if (!cancelled) setState({ status: "unavailable" });
       });
-
     return () => {
       cancelled = true;
     };
@@ -101,102 +96,76 @@ export function NearbyPlaces({ userLocation }: { userLocation: UserLocation | nu
 
   const placeDistances = useMemo(() => {
     if (latitude == null || longitude == null || state.status !== "ready") return [];
-    return state.places.map((place) => ({
-      place,
-      distance: distanceInMeters({ latitude, longitude }, place),
-    }));
+    return state.places.map((place) => ({ place, distance: distanceInMeters({ latitude, longitude }, place) }));
   }, [latitude, longitude, state]);
 
   if (!hasLocation) return null;
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <View>
-          <Text style={[styles.eyebrow, { color: theme.inkMuted }]}>
-            {userLocation?.city
-              ? t("places.nearYouIn", { city: userLocation.city })
-              : t("places.nearYou")}
-          </Text>
-          <Text style={[styles.title, { color: theme.inkDeep }]}>{t("places.title")}</Text>
-        </View>
-        <View style={[styles.radius, { backgroundColor: theme.tealSoft }]}>
-          <Icon name="mapPin" size={14} color={theme.teal} />
-          <Text style={[styles.radiusText, { color: theme.teal }]}>{formatDistance(SEARCH_RADIUS_KM * 1_000, locale)}</Text>
-        </View>
-      </View>
+    <View>
+      <AuraSection
+        title={userLocation?.city ? t("places.nearYouIn", { city: userLocation.city }) : t("places.title")}
+        action={
+          <View style={[styles.radius, { backgroundColor: c.surfaceStrong }]}>
+            <Icon name="mapPin" size={13} color={c.textSoft} />
+            <Text style={[styles.radiusText, { color: c.textSoft, fontFamily: f.medium }]}>{formatDistance(SEARCH_RADIUS_KM * 1_000, locale)}</Text>
+          </View>
+        }
+      />
 
       {state.status === "loading" ? (
-        <View style={[styles.status, { backgroundColor: theme.paperSoft, borderColor: theme.hairline }]}>
-          <ActivityIndicator size="small" color={theme.teal} />
-          <Text style={[styles.statusText, { color: theme.inkSoft }]}>{t("places.loading")}</Text>
+        <View style={[styles.status, { backgroundColor: c.surface, borderColor: c.hairline }]}>
+          <ActivityIndicator size="small" color={c.textSoft} />
+          <Text style={[styles.statusText, { color: c.textSoft, fontFamily: f.regular }]}>{t("places.loading")}</Text>
         </View>
       ) : state.status === "unavailable" || placeDistances.length === 0 ? (
-        <View style={[styles.status, { backgroundColor: theme.paperSoft, borderColor: theme.hairline }]}>
-          <Icon name="utensils" size={18} color={theme.inkMuted} />
-          <View style={styles.statusBody}>
-            <Text style={[styles.statusText, { color: theme.inkSoft }]}>
-              {state.status === "unavailable" ? t("places.unavailable") : t("places.empty")}
-            </Text>
-            <Pressable
-              onPress={() => {
-                setState({ status: "loading" });
-                setRetryCount((count) => count + 1);
-              }}
-              style={({ pressed }) => [styles.retry, { backgroundColor: theme.tealSoft, opacity: pressed ? 0.7 : 1 }]}
-            >
-              <Text style={[styles.retryText, { color: theme.teal }]}>{t("places.retry")}</Text>
-            </Pressable>
-          </View>
+        <View style={[styles.status, { backgroundColor: c.surface, borderColor: c.hairline }]}>
+          <Icon name="utensils" size={18} color={c.textMuted} />
+          <Text style={[styles.statusText, { color: c.textSoft, fontFamily: f.regular }]}>
+            {state.status === "unavailable" ? t("places.unavailable") : t("places.empty")}
+          </Text>
+          <AuraButton
+            label={t("places.retry")}
+            variant="secondary"
+            size="md"
+            onPress={() => {
+              setState({ status: "loading" });
+              setRetryCount((count) => count + 1);
+            }}
+          />
         </View>
       ) : (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.cards}
-        >
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cards} style={styles.bleed} snapToInterval={CARD_WIDTH + 12} decelerationRate="fast">
           {placeDistances.map(({ place, distance }) => (
-            <Pressable
+            <PressableScale
               key={`${place.name}-${place.latitude}-${place.longitude}`}
               disabled={!place.mapsUrl}
-              onPress={() => place.mapsUrl && Linking.openURL(place.mapsUrl)}
-              style={({ pressed }) => [
-                styles.card,
-                {
-                  backgroundColor: theme.paperSoft,
-                  borderColor: theme.hairline,
-                  opacity: pressed ? 0.74 : 1,
-                },
-              ]}
+              onPress={() => {
+                if (place.mapsUrl) void Linking.openURL(place.mapsUrl);
+              }}
+              pressedScale={0.97}
+              style={[styles.card, { backgroundColor: c.card, borderColor: c.hairline }]}
             >
-              <View style={[styles.iconTile, { backgroundColor: theme.stampSoft }]}>
-                <Icon name="utensils" size={24} color={theme.stamp} />
+              <View style={[styles.cardHighlight, { backgroundColor: c.highlight }]} />
+              <View style={styles.cardTop}>
+                <View style={[styles.iconTile, { backgroundColor: `${WARM}22` }]}>
+                  <Icon name="utensils" size={18} color={WARM} />
+                </View>
+                <View style={styles.ratingRow}>
+                  <Icon name="star" size={12} color={WARM} />
+                  <Text style={[styles.rating, { color: c.text, fontFamily: f.semibold }]}>
+                    {new Intl.NumberFormat(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(place.rating)}
+                  </Text>
+                  <Text style={[styles.ratingCount, { color: c.textMuted, fontFamily: f.regular }]}>({formatRatingCount(place.ratingCount, locale)})</Text>
+                </View>
               </View>
-              <View style={styles.ratingRow}>
-                <Icon name="star" size={13} color={theme.mustard} />
-                <Text style={[styles.rating, { color: theme.inkDeep }]}>
-                  {new Intl.NumberFormat(locale, {
-                    minimumFractionDigits: 1,
-                    maximumFractionDigits: 1,
-                  }).format(place.rating)}
-                </Text>
-                <Text style={[styles.ratingCount, { color: theme.inkMuted }]}>
-                  ({formatRatingCount(place.ratingCount, locale)})
-                </Text>
-              </View>
-              <Text style={[styles.placeName, { color: theme.inkDeep }]} numberOfLines={2}>
+              <Text style={[styles.placeName, { color: c.text, fontFamily: f.semibold }]} numberOfLines={2}>
                 {place.name}
               </Text>
-              <Text style={[styles.category, { color: theme.inkSoft }]} numberOfLines={1}>
-                {place.category}
+              <Text style={[styles.category, { color: c.textSoft, fontFamily: f.regular }]} numberOfLines={1}>
+                {place.category} · {formatDistance(distance, locale)}
               </Text>
-              <View style={styles.distanceRow}>
-                <Icon name="mapPin" size={13} color={theme.inkMuted} />
-                <Text style={[styles.distance, { color: theme.inkMuted }]}>
-                  {t("places.distanceAway", { distance: formatDistance(distance, locale) })}
-                </Text>
-              </View>
-            </Pressable>
+            </PressableScale>
           ))}
         </ScrollView>
       )}
@@ -204,27 +173,23 @@ export function NearbyPlaces({ userLocation }: { userLocation: UserLocation | nu
   );
 }
 
-const createStyles = (NOMAD_FONTS: NomadTheme["fonts"]) =>
-  StyleSheet.create({
-  container: { gap: 12 },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 16 },
-  eyebrow: { fontFamily: NOMAD_FONTS.uiSemi, fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase" },
-  title: { fontFamily: NOMAD_FONTS.displayBold, fontSize: 20, marginTop: 3 },
-  radius: { flexDirection: "row", alignItems: "center", gap: 5, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 7 },
-  radiusText: { fontFamily: NOMAD_FONTS.uiBold, fontSize: 12 },
-  status: { minHeight: 76, borderWidth: 1, borderRadius: 18, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, padding: 16 },
-  statusBody: { flex: 1, gap: 8 },
-  statusText: { fontFamily: NOMAD_FONTS.uiMedium, fontSize: 13, lineHeight: 19 },
-  retry: { alignSelf: "flex-start", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
-  retryText: { fontFamily: NOMAD_FONTS.uiBold, fontSize: 12 },
-  cards: { gap: 12, paddingEnd: 20 },
-  card: { width: 188, minHeight: 206, borderWidth: 1, borderRadius: 20, padding: 14, gap: 6 },
-  iconTile: { width: 42, height: 42, borderRadius: 14, alignItems: "center", justifyContent: "center", marginBottom: 5 },
-  ratingRow: { flexDirection: "row", alignItems: "center", gap: 4 },
-  rating: { fontFamily: NOMAD_FONTS.uiBold, fontSize: 13 },
-  ratingCount: { fontFamily: NOMAD_FONTS.uiMedium, fontSize: 11 },
-  placeName: { fontFamily: NOMAD_FONTS.displayBold, fontSize: 17, lineHeight: 21, marginTop: 2 },
-  category: { fontFamily: NOMAD_FONTS.uiMedium, fontSize: 12 },
-  distanceRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: "auto" },
-  distance: { fontFamily: NOMAD_FONTS.uiMedium, fontSize: 12 },
+const CARD_WIDTH = 196;
+const WARM = "#FFB547";
+
+const styles = StyleSheet.create({
+  radius: { flexDirection: "row", alignItems: "center", gap: 5, height: 30, paddingHorizontal: 11, borderRadius: 15 },
+  radiusText: { fontSize: 12.5 },
+  status: { flexDirection: "row", alignItems: "center", gap: 12, padding: 16, borderRadius: 22, borderWidth: StyleSheet.hairlineWidth },
+  statusText: { flex: 1, fontSize: 14, lineHeight: 20 },
+  bleed: { marginHorizontal: -20 },
+  cards: { paddingHorizontal: 20, gap: 12 },
+  card: { width: CARD_WIDTH, borderRadius: 22, borderWidth: StyleSheet.hairlineWidth, padding: 14, gap: 6, overflow: "hidden" },
+  cardHighlight: { position: "absolute", top: 0, left: 22, right: 22, height: StyleSheet.hairlineWidth },
+  cardTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 },
+  iconTile: { width: 36, height: 36, borderRadius: 11, alignItems: "center", justifyContent: "center" },
+  ratingRow: { flexDirection: "row", alignItems: "center", gap: 3 },
+  rating: { fontSize: 13 },
+  ratingCount: { fontSize: 12 },
+  placeName: { fontSize: 15, lineHeight: 20 },
+  category: { fontSize: 12.5 },
 });

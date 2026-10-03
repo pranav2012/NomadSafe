@@ -61,7 +61,8 @@
     "upNext": "ಮುಂದಿನದು",
     "yourStay": "ನಿಮ್ಮ ವಾಸ್ತವ್ಯ",
     "globeHint": "ಗ್ಲೋಬ್. ನಕ್ಷೆಗೆ ಜೂಮ್ ಮಾಡಲು ಪಿಂಚ್ ಮಾಡಿ",
-    "backToGlobe": "ಗ್ಲೋಬ್‌ಗೆ ಹಿಂತಿರುಗಿ"
+    "backToGlobe": "ಗ್ಲೋಬ್‌ಗೆ ಹಿಂತಿರುಗಿ",
+    "refine": "ಪರಿಷ್ಕರಿಸಿ"
   },
   "settings": {
     "title": "ಸೆಟ್ಟಿಂಗ್ಗಳು",
@@ -605,7 +606,9 @@
     "defaultNameMulti": "{{first}} ಮತ್ತು ಇತರೆ",
     "noBudgetSet": "ಬಜೆಟ್ ಹೊಂದಿಸಿಲ್ಲ",
     "creatingAction": "ರಚಿಸಲಾಗುತ್ತಿದೆ…",
-    "savingAction": "ಉಳಿಸಲಾಗುತ್ತಿದೆ…"
+    "savingAction": "ಉಳಿಸಲಾಗುತ್ತಿದೆ…",
+    "daysCount_one": "{{count}} ದಿನ",
+    "daysCount_other": "{{count}} ದಿನಗಳು"
   },
   "aiTab": {
     "onDevice": "ಡಿವೈಸ್‌ನಲ್ಲಿ",

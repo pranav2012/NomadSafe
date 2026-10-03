@@ -61,7 +61,8 @@
     "upNext": "അടുത്തത്",
     "yourStay": "നിങ്ങളുടെ താമസം",
     "globeHint": "ഗ്ലോബ്. മാപ്പിലേക്ക് സൂം ചെയ്യാൻ പിഞ്ച് ചെയ്യുക",
-    "backToGlobe": "ഗ്ലോബിലേക്ക് മടങ്ങുക"
+    "backToGlobe": "ഗ്ലോബിലേക്ക് മടങ്ങുക",
+    "refine": "പരിഷ്കരിക്കുക"
   },
   "settings": {
     "title": "ക്രമീകരണങ്ങൾ",
@@ -605,7 +606,9 @@
     "defaultNameMulti": "{{first}} & മറ്റുള്ളവ",
     "noBudgetSet": "ബജറ്റ് സെറ്റ് ചെയ്തിട്ടില്ല",
     "creatingAction": "സൃഷ്ടിക്കുന്നു…",
-    "savingAction": "സേവ് ചെയ്യുന്നു…"
+    "savingAction": "സേവ് ചെയ്യുന്നു…",
+    "daysCount_one": "{{count}} ദിവസം",
+    "daysCount_other": "{{count}} ദിവസം"
   },
   "aiTab": {
     "onDevice": "ഉപകരണത്തിൽ",

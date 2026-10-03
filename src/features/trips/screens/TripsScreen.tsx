@@ -1,34 +1,25 @@
 import React, { useMemo, useState } from "react";
-import {
-  Alert,
-  KeyboardAvoidingView,
-  Modal,
-  Pressable,
-  SectionList,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, { FadeIn, FadeInDown, FadeOut, LinearTransition } from "react-native-reanimated";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { Icon } from "@/components/nomad/Icon";
-import { NOMAD_FONTS } from "@/constants/nomadTokens";
-import { useTheme } from "@/hooks/useTheme";
+import { PressableScale } from "@/components/motion/PressableScale";
+import { AuraButton } from "@/components/aura/AuraButton";
+import { AuraField } from "@/components/aura/AuraField";
+import { AuraSheet } from "@/components/aura/AuraSheet";
+import { useAura } from "@/components/aura/useAura";
+import { auraStatusColors } from "@/constants/aura";
 import { useLocalization } from "@/localization";
-import { TripForm } from "@/features/trips/components/TripForm";
+import { TripFormSheet } from "@/features/trips/components/TripForm";
 import { selectActiveTrip, type Trip, useTripsStore } from "@/features/trips/store/tripsStore";
-import {
-  countInclusiveDays,
-  fromDateKey,
-  getTripStatus,
-  startOfLocalDay,
-} from "@/features/trips/utils/dates";
+import { countInclusiveDays, fromDateKey, getTripStatus, startOfLocalDay } from "@/features/trips/utils/dates";
 import { useChatStore } from "@/features/ai/store/chatStore";
 import { useEventsStore } from "@/features/itinerary/store/eventsStore";
 import { clearItinerarySyncCheckpoint } from "@/features/itinerary/services/itinerarySyncStore";
 import { useExpensesStore } from "@/features/expenses/store/expensesStore";
+import { selectionChanged } from "@/utils/haptics";
 
 type SectionKey = "current" | "upcoming" | "past";
 
@@ -68,67 +59,58 @@ function matchesConfirmWord(input: string, localizedWord: string, locale: string
   return typed === localizedWord.trim().toLocaleLowerCase(locale) || typed === "confirm";
 }
 
+const OVERLAP = 104;
+
+function code(name: string | undefined) {
+  return (name ?? "").replace(/[^A-Za-z]/g, "").slice(0, 3).toUpperCase() || "—";
+}
+
+/** Day progress of a running trip (0..1), 0 before it starts and 1 after it ends. */
+function tripProgress(trip: Trip) {
+  const status = getTripStatus(trip);
+  if (status === "upcoming") return 0;
+  if (status === "complete") return 1;
+  const total = countDays(trip);
+  const elapsed = countInclusiveDays(fromDateKey(trip.startDate), startOfLocalDay(new Date()));
+  return Math.min(1, elapsed / Math.max(1, total));
+}
+
+/**
+ * Trips as a Wallet-style stack of passes. The active trip sits on top, open; other trips overlap
+ * by section (now, upcoming, past) and spring open on tap to reveal Switch, Edit and Delete.
+ */
 export default function TripsScreen() {
-  const { nomad } = useTheme();
-  const theme = nomad.colors;
+  const { c, f } = useAura();
   const { t, locale } = useLocalization();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const trips = useTripsStore((state) => state.trips);
   const activeTrip = useTripsStore(selectActiveTrip);
   const setActiveTrip = useTripsStore((state) => state.setActiveTrip);
   const deleteTrip = useTripsStore((state) => state.deleteTrip);
 
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingTrip, setEditingTrip] = useState<Trip | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [form, setForm] = useState<{ trip: Trip | null } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Trip | null>(null);
   const [confirmText, setConfirmText] = useState("");
 
   const sections = useMemo<TripSection[]>(() => {
     const remaining = trips.filter((trip) => trip.id !== activeTrip?.id);
     const grouped: TripSection[] = [
-      {
-        key: "current",
-        data: remaining.filter((trip) => getTripStatus(trip) === "active").sort(byStartDate),
-      },
-      {
-        key: "upcoming",
-        data: remaining.filter((trip) => getTripStatus(trip) === "upcoming").sort(byStartDate),
-      },
-      {
-        key: "past",
-        data: remaining
-          .filter((trip) => getTripStatus(trip) === "complete")
-          .sort((a, b) => byStartDate(b, a)),
-      },
+      { key: "current", data: remaining.filter((trip) => getTripStatus(trip) === "active").sort(byStartDate) },
+      { key: "upcoming", data: remaining.filter((trip) => getTripStatus(trip) === "upcoming").sort(byStartDate) },
+      { key: "past", data: remaining.filter((trip) => getTripStatus(trip) === "complete").sort((a, b) => byStartDate(b, a)) },
     ];
     return grouped.filter((section) => section.data.length > 0);
   }, [trips, activeTrip]);
 
-  const handleOpenCreate = () => {
-    setEditingTrip(null);
-    setIsFormOpen(true);
+  const sectionLabels: Record<SectionKey, string> = {
+    current: t("trip.happeningNow"),
+    upcoming: t("trip.upcoming"),
+    past: t("trip.past"),
   };
 
-  const handleOpenEdit = (trip: Trip) => {
-    setEditingTrip(trip);
-    setIsFormOpen(true);
-  };
-
-  const handleCloseForm = () => {
-    setIsFormOpen(false);
-    setEditingTrip(null);
-  };
-
-  const handleSwitchActive = (tripId: string) => {
-    setActiveTrip(tripId);
-  };
-
-  const handleInitiateDelete = (trip: Trip) => {
-    setDeleteTarget(trip);
-    setConfirmText("");
-  };
-
-  const handleConfirmDelete = () => {
+  const confirmDelete = () => {
     if (!deleteTarget) return;
     if (!matchesConfirmWord(confirmText, t("trip.deletePlaceholder"), locale)) {
       Alert.alert(t("trip.deleteConfirmErrorTitle"), t("trip.deleteConfirmErrorBody"));
@@ -144,764 +126,240 @@ export default function TripsScreen() {
     setConfirmText("");
   };
 
-  const handleCancelDelete = () => {
-    setDeleteTarget(null);
-    setConfirmText("");
-  };
-
-  const totalTrips = trips.length;
-  const sectionLabels: Record<SectionKey, string> = {
-    current: t("trip.happeningNow"),
-    upcoming: t("trip.upcoming"),
-    past: t("trip.past"),
-  };
-
-  const listHeader = (
-    <>
-      <View style={styles.header}>
-        <View>
-          <Text style={[styles.eyebrow, { color: theme.inkMuted }]}>
-            {t("trip.tripsCount", { count: totalTrips })}
-          </Text>
-          <Text style={[styles.heroTitle, { color: theme.inkDeep }]}>
-            {t("trip.tripsTitle")}
-          </Text>
-        </View>
-        <Pressable
-          onPress={() => router.back()}
-          accessibilityRole="button"
-          accessibilityLabel={t("trip.close")}
-          style={({ pressed }) => [
-            styles.closeButton,
-            {
-              backgroundColor: theme.paperSoft,
-              borderColor: theme.hairline,
-              opacity: pressed ? 0.8 : 1,
-            },
-          ]}
-        >
-          <Icon name="close" size={18} color={theme.inkSoft} />
-        </Pressable>
-      </View>
-
-      {activeTrip ? (
-        <View style={styles.section}>
-          <Text style={[styles.sectionLabel, { color: theme.teal }]}>
-            {t("trip.activeNow")}
-          </Text>
-          <ActiveTripCard
-            trip={activeTrip}
-            locale={locale}
-            theme={theme}
-            t={t}
-            onPress={() => router.back()}
-            onEdit={() => handleOpenEdit(activeTrip)}
-            onDelete={() => handleInitiateDelete(activeTrip)}
-          />
-        </View>
-      ) : null}
-
-      {!activeTrip && sections.length === 0 ? (
-        <View
-          style={[
-            styles.emptyCard,
-            styles.section,
-            { backgroundColor: theme.paperSoft, borderColor: theme.hairline },
-          ]}
-        >
-          <Icon name="compass" size={28} color={theme.inkMuted} />
-          <Text style={[styles.emptyTitle, { color: theme.inkDeep }]}>
-            {t("trip.noTripsTitle")}
-          </Text>
-          <Text style={[styles.emptyBody, { color: theme.inkSoft }]}>
-            {t("trip.noTripsBody")}
-          </Text>
-        </View>
-      ) : null}
-    </>
-  );
-
-  const listFooter = (
-    <Pressable
-      onPress={handleOpenCreate}
-      style={({ pressed }) => [
-        styles.addTripButton,
-        {
-          borderColor: theme.teal,
-          opacity: pressed ? 0.85 : 1,
-        },
-      ]}
-    >
-      <Icon name="plus" size={18} color={theme.teal} />
-      <Text style={[styles.addTripText, { color: theme.teal }]}>
-        {t("trip.addTrip")}
-      </Text>
-    </Pressable>
+  const renderPass = (trip: Trip, opts: { active: boolean; overlap: boolean; index: number }) => (
+    <TripPass
+      key={trip.id}
+      trip={trip}
+      active={opts.active}
+      expanded={opts.active || expandedId === trip.id}
+      overlap={opts.overlap}
+      index={opts.index}
+      onPress={() => {
+        if (opts.active) {
+          router.back();
+          return;
+        }
+        selectionChanged();
+        setExpandedId((current) => (current === trip.id ? null : trip.id));
+      }}
+      onSwitch={() => {
+        setActiveTrip(trip.id);
+        router.back();
+      }}
+      onEdit={() => setForm({ trip })}
+      onDelete={() => {
+        setDeleteTarget(trip);
+        setConfirmText("");
+      }}
+    />
   );
 
   return (
-    <SafeAreaView
-      edges={["top"]}
-      style={[styles.root, { backgroundColor: theme.paper }]}
-    >
-      <SectionList
-        sections={sections}
-        keyExtractor={(trip) => trip.id}
-        contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        stickySectionHeadersEnabled={false}
-        ListHeaderComponent={listHeader}
-        ListFooterComponent={listFooter}
-        renderSectionHeader={({ section }) => (
-          <Text style={[styles.sectionLabel, styles.sectionHeader, { color: theme.inkMuted }]}>
-            {sectionLabels[section.key]}
-          </Text>
-        )}
-        renderSectionFooter={() => <View style={styles.sectionFooter} />}
-        ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
-        renderItem={({ item, index }) => (
-          <Animated.View entering={FadeInDown.duration(220).delay(Math.min(index, 8) * 40)}>
-            <TripRow
-              trip={item}
-              locale={locale}
-              theme={theme}
-              t={t}
-              onPress={() => handleSwitchActive(item.id)}
-              onEdit={() => handleOpenEdit(item)}
-              onDelete={() => handleInitiateDelete(item)}
-            />
+    <View style={[styles.root, { backgroundColor: c.bg }]}>
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+        <View style={styles.header}>
+          <View style={styles.flex}>
+            <Text style={[styles.count, { color: c.textMuted, fontFamily: f.medium }]}>{t("trip.tripsCount", { count: trips.length })}</Text>
+            <Text style={[styles.title, { color: c.text, fontFamily: f.semibold }]}>{t("trip.tripsTitle")}</Text>
+          </View>
+          <PressableScale onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={t("trip.close")} style={[styles.close, { backgroundColor: c.surfaceStrong }]}>
+            <Icon name="x" size={16} color={c.text} />
+          </PressableScale>
+        </View>
+
+        {trips.length === 0 ? (
+          <Animated.View entering={FadeIn.duration(300)} style={[styles.empty, { backgroundColor: c.surface, borderColor: c.hairline }]}>
+            <Icon name="compass" size={22} color={c.textSoft} />
+            <Text style={[styles.emptyTitle, { color: c.text, fontFamily: f.semibold }]}>{t("trip.noTripsTitle")}</Text>
+            <Text style={[styles.emptyBody, { color: c.textSoft, fontFamily: f.regular }]}>{t("trip.noTripsBody")}</Text>
           </Animated.View>
-        )}
-      />
+        ) : null}
 
-      <Modal
-        visible={isFormOpen}
-        animationType="slide"
-        presentationStyle="fullScreen"
-        onRequestClose={handleCloseForm}
-      >
-        <SafeAreaView
-          edges={["top"]}
-          style={[styles.formRoot, { backgroundColor: theme.paper }]}
-        >
-          <View style={styles.formHeader}>
-            <Pressable
-              onPress={handleCloseForm}
-              hitSlop={12}
-              accessibilityRole="button"
-              accessibilityLabel={t("trip.close")}
-            >
-              <Icon name="x" size={24} color={theme.inkDeep} />
-            </Pressable>
+        {activeTrip ? (
+          <>
+            <Text style={[styles.section, { color: c.textSoft, fontFamily: f.medium }]}>{t("trip.activeNow")}</Text>
+            {renderPass(activeTrip, { active: true, overlap: false, index: 0 })}
+          </>
+        ) : null}
+
+        {sections.map((section) => (
+          <View key={section.key}>
+            <Text style={[styles.section, { color: c.textSoft, fontFamily: f.medium }]}>{sectionLabels[section.key]}</Text>
+            {section.data.map((trip, index) => renderPass(trip, { active: false, overlap: index > 0, index }))}
           </View>
-          <TripForm
-            editingTrip={editingTrip}
-            onSave={handleCloseForm}
-            onCancel={handleCloseForm}
-          />
-        </SafeAreaView>
-      </Modal>
+        ))}
 
-      <Modal
+        <AuraButton label={t("trip.addTrip")} icon="plus" variant="secondary" onPress={() => setForm({ trip: null })} style={styles.add} />
+      </ScrollView>
+
+      <TripFormSheet visible={form !== null} editingTrip={form?.trip ?? null} onClose={() => setForm(null)} />
+
+      <AuraSheet
         visible={deleteTarget !== null}
-        transparent
-        animationType="fade"
-        statusBarTranslucent
-        navigationBarTranslucent
-        onRequestClose={handleCancelDelete}
-      >
-        <KeyboardAvoidingView behavior="padding" style={styles.keyboardRoot}>
-          <Pressable
-            style={[styles.deleteBackdrop, { backgroundColor: "rgba(0,0,0,0.5)" }]}
-            onPress={handleCancelDelete}
-          >
-            <View
-              style={[
-                styles.deleteSheet,
-                { backgroundColor: theme.paperSoft, borderColor: theme.hairline },
-              ]}
-              onStartShouldSetResponder={() => true}
-            >
-              <View style={[styles.deleteIcon, { backgroundColor: theme.stampSoft }]}>
-                <Icon name="trash" size={22} color={theme.stamp} />
-              </View>
-              <Text style={[styles.deleteTitle, { color: theme.inkDeep }]}>
-                {t("trip.deleteTitle")}
-              </Text>
-              <Text style={[styles.deleteBody, { color: theme.inkSoft }]}>
-                {t("trip.deleteBody", { name: deleteTarget?.name ?? "" })}
-              </Text>
-
-              <Text style={[styles.deletePrompt, { color: theme.inkMuted }]}>
-                {t("trip.deletePrompt")}
-              </Text>
-              <TextInput
-                value={confirmText}
-                onChangeText={setConfirmText}
-                autoCapitalize="none"
-                autoCorrect={false}
-                placeholder={t("trip.deletePlaceholder")}
-                placeholderTextColor={theme.inkMuted}
-                onSubmitEditing={handleConfirmDelete}
-                style={[
-                  styles.confirmInput,
-                  {
-                    color: theme.inkDeep,
-                    backgroundColor: theme.paper,
-                    borderColor: theme.hairline,
-                  },
-                ]}
-              />
-
-              <View style={styles.deleteActions}>
-                <Pressable
-                  onPress={handleCancelDelete}
-                  style={[
-                    styles.deleteAction,
-                    {
-                      backgroundColor: theme.paper,
-                      borderColor: theme.hairline,
-                      borderWidth: 1,
-                    },
-                  ]}
-                >
-                  <Text style={[styles.deleteActionText, { color: theme.inkDeep }]}>
-                    {t("common.cancel")}
-                  </Text>
-                </Pressable>
-                <Pressable
-                  onPress={handleConfirmDelete}
-                  style={[styles.deleteAction, { backgroundColor: theme.stamp }]}
-                >
-                  <Text style={[styles.deleteActionText, { color: theme.inverse }]}>
-                    {t("trip.deleteConfirm")}
-                  </Text>
-                </Pressable>
-              </View>
-            </View>
-          </Pressable>
-        </KeyboardAvoidingView>
-      </Modal>
-    </SafeAreaView>
-  );
-}
-
-function ActiveTripCard({
-  trip,
-  locale,
-  theme,
-  t,
-  onPress,
-  onEdit,
-  onDelete,
-}: {
-  trip: Trip;
-  locale: string;
-  theme: ReturnType<typeof useTheme>["nomad"]["colors"];
-  t: ReturnType<typeof useLocalization>["t"];
-  onPress: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
-}) {
-  const progress = getTripStatus(trip);
-  const duration = countDays(trip);
-  const today = startOfLocalDay(new Date());
-  const start = fromDateKey(trip.startDate);
-  const elapsedDays = Math.max(
-    1,
-    Math.round((today.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) + 1,
-  );
-  const day = progress === "upcoming" ? 0 : Math.min(elapsedDays, duration);
-  const percent = duration > 0 ? Math.min(100, (day / duration) * 100) : 0;
-
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.activeCard,
-        {
-          backgroundColor: theme.teal,
-          borderColor: theme.teal,
-          opacity: pressed ? 0.92 : 1,
-        },
-      ]}
-    >
-      <View style={styles.activeCardTop}>
-        <View style={styles.activeCardHeaderRow}>
-          <View style={[styles.activeCardIcon, { backgroundColor: theme.whiteOverlay }]}>
-            <Icon name="mapPin" size={21} color={theme.inverse} />
+        onClose={() => setDeleteTarget(null)}
+        title={t("trip.deleteTitle")}
+        footer={
+          <View style={styles.actions}>
+            <AuraButton label={t("common.cancel")} variant="secondary" onPress={() => setDeleteTarget(null)} style={styles.flex} />
+            <AuraButton
+              label={t("trip.deleteConfirm")}
+              icon="trash"
+              variant="danger"
+              disabled={!matchesConfirmWord(confirmText, t("trip.deletePlaceholder"), locale)}
+              onPress={confirmDelete}
+              style={styles.flex}
+            />
           </View>
-          <Text style={[styles.currentLabel, { color: theme.whiteText }]}>
-            {t("trip.currentTrip")}
+        }
+      >
+        <View style={styles.deleteBody}>
+          <Text style={[styles.deleteText, { color: c.textSoft, fontFamily: f.regular }]}>
+            {deleteTarget ? t("trip.deleteBody", { name: deleteTarget.name }) : ""}
           </Text>
+          <AuraField
+            label={t("trip.deletePrompt")}
+            value={confirmText}
+            onChangeText={setConfirmText}
+            placeholder={t("trip.deletePlaceholder")}
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoFocus
+          />
         </View>
-        <View style={[styles.openBadge, { backgroundColor: theme.whiteOverlay }]}>
-          <Text style={[styles.openBadgeText, { color: theme.inverse }]}>
-            {t("trip.open")}
-          </Text>
-          <Icon name="chevronRight" size={12} color={theme.inverse} />
-        </View>
-      </View>
-
-      <Text style={[styles.activeCardName, { color: theme.inverse }]} numberOfLines={2}>
-        {trip.name}
-      </Text>
-      <Text style={[styles.activeCardSub, { color: theme.whiteTextMuted }]}>
-        {formatTripDates(trip, locale)} · {trip.destinations.join(" · ")}
-      </Text>
-
-      <View style={[styles.progressTrack, { backgroundColor: theme.whiteOverlay }]}>
-        <View
-          style={[
-            styles.progressFill,
-            {
-              width: `${percent}%`,
-              backgroundColor: theme.inverse,
-            },
-          ]}
-        />
-      </View>
-      <View style={styles.progressMeta}>
-        <Text style={[styles.progressText, { color: theme.whiteText }]}>
-          {t("trip.dayProgress", { day, total: duration })}
-        </Text>
-        <Text style={[styles.progressText, { color: theme.whiteText }]}>
-          {Math.round(percent)}%
-        </Text>
-      </View>
-
-      <View style={styles.activeCardActions}>
-        <Pressable
-          onPress={onEdit}
-          style={({ pressed }) => [
-            styles.activeActionButton,
-            {
-              backgroundColor: theme.whiteOverlay,
-              opacity: pressed ? 0.75 : 1,
-            },
-          ]}
-        >
-          <Icon name="edit" size={14} color={theme.inverse} />
-          <Text style={[styles.activeActionButtonText, { color: theme.inverse }]}>
-            {t("trip.edit")}
-          </Text>
-        </Pressable>
-        <Pressable
-          onPress={onDelete}
-          style={({ pressed }) => [
-            styles.activeActionButton,
-            {
-              backgroundColor: theme.whiteOverlay,
-              opacity: pressed ? 0.75 : 1,
-            },
-          ]}
-        >
-          <Icon name="trash" size={14} color={theme.inverse} />
-          <Text style={[styles.activeActionButtonText, { color: theme.inverse }]}>
-            {t("trip.delete")}
-          </Text>
-        </Pressable>
-      </View>
-    </Pressable>
+      </AuraSheet>
+    </View>
   );
 }
 
-function TripRow({
+function TripPass({
   trip,
-  locale,
-  theme,
-  t,
+  active,
+  expanded,
+  overlap,
+  index,
   onPress,
+  onSwitch,
   onEdit,
   onDelete,
 }: {
   trip: Trip;
-  locale: string;
-  theme: ReturnType<typeof useTheme>["nomad"]["colors"];
-  t: ReturnType<typeof useLocalization>["t"];
+  active: boolean;
+  expanded: boolean;
+  overlap: boolean;
+  index: number;
   onPress: () => void;
+  onSwitch: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
-  const progress = getTripStatus(trip);
-  const statusLabel =
-    progress === "active"
-      ? t("trip.activeNow")
-      : progress === "upcoming"
-        ? t("trip.upcoming")
-        : t("trip.completed");
+  const { c, f, isDark } = useAura();
+  const { t, locale } = useLocalization();
+  const status = getTripStatus(trip);
+  const tint = active ? auraStatusColors.calm : status === "complete" ? ["#5A6072", "#3A3F4D", "#2A2E39"] : ["#9B7BFF", "#5B6CFF", "#22C7B8"];
+  const progress = tripProgress(trip);
+  const from = trip.destinations[0];
+  const to = trip.destinations[trip.destinations.length - 1];
+  const many = trip.destinations.length > 1;
 
   return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.tripRow,
-        {
-          backgroundColor: theme.paperSoft,
-          borderColor: theme.hairline,
-          opacity: pressed ? 0.9 : 1,
-        },
-      ]}
+    <Animated.View
+      entering={FadeInDown.duration(260).delay(Math.min(index, 6) * 50)}
+      layout={LinearTransition.springify().damping(18).stiffness(180)}
+      style={[styles.passWrap, { marginTop: overlap && !expanded ? -OVERLAP : 12, zIndex: index }]}
     >
-      <View style={styles.tripRowTop}>
-        <View style={styles.tripRowMeta}>
-          <Text style={[styles.tripRowName, { color: theme.inkDeep }]} numberOfLines={1}>
-            {trip.name}
-          </Text>
-          <Text style={[styles.tripRowSub, { color: theme.inkSoft }]} numberOfLines={1}>
-            {formatTripDates(trip, locale)} · {trip.destinations.join(" · ")}
-          </Text>
+      <PressableScale onPress={onPress} pressedScale={0.985} accessibilityRole="button" accessibilityLabel={trip.name} accessibilityState={{ expanded }} style={[styles.pass, { backgroundColor: c.card, borderColor: c.highlight }]}>
+        <LinearGradient
+          colors={[`${tint[0]}${isDark ? "40" : "30"}`, `${tint[1]}${isDark ? "26" : "1C"}`, `${tint[2]}${isDark ? "1A" : "12"}`]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={styles.passTop}>
+          <View style={styles.flex}>
+            <Text numberOfLines={1} style={[styles.passName, { color: c.text, fontFamily: f.semibold }]}>
+              {trip.name}
+            </Text>
+            <Text numberOfLines={1} style={[styles.passDates, { color: c.textSoft, fontFamily: f.regular }]}>
+              {formatTripDates(trip, locale)} · {t("trip.daysCount", { count: countDays(trip) })}
+            </Text>
+          </View>
+          {active ? (
+            <View style={[styles.badge, { backgroundColor: c.inverse }]}>
+              <Text style={[styles.badgeText, { color: c.onInverse, fontFamily: f.semibold }]}>{t("trip.currentTrip")}</Text>
+            </View>
+          ) : (
+            <Icon name={expanded ? "chevronDown" : "chevronRight"} size={14} color={c.textMuted} />
+          )}
         </View>
-        <View style={[styles.statusBadge, { backgroundColor: theme.tealSoft }]}>
-          <Text style={[styles.statusBadgeText, { color: theme.teal }]}>{statusLabel}</Text>
-        </View>
-      </View>
 
-      <View style={styles.tripRowActions}>
-        <Pressable
-          onPress={onEdit}
-          style={({ pressed }) => [
-            styles.actionButton,
-            {
-              backgroundColor: theme.paper,
-              borderColor: theme.hairline,
-              opacity: pressed ? 0.75 : 1,
-            },
-          ]}
-        >
-          <Icon name="edit" size={14} color={theme.inkSoft} />
-          <Text style={[styles.actionButtonText, { color: theme.inkSoft }]}>{t("trip.edit")}</Text>
-        </Pressable>
-        <Pressable
-          onPress={onDelete}
-          style={({ pressed }) => [
-            styles.actionButton,
-            {
-              backgroundColor: theme.stampSoft,
-              borderColor: "transparent",
-              opacity: pressed ? 0.75 : 1,
-            },
-          ]}
-        >
-          <Icon name="trash" size={14} color={theme.stamp} />
-          <Text style={[styles.actionButtonText, { color: theme.stamp }]}>{t("trip.delete")}</Text>
-        </Pressable>
-      </View>
-    </Pressable>
+        <View style={styles.route}>
+          <Text style={[styles.code, { color: c.text, fontFamily: f.semibold }]}>{code(from)}</Text>
+          {many ? (
+            <>
+              <View style={styles.line}>
+                <View style={[styles.dash, { borderColor: c.textMuted }]} />
+                <Icon name="send" size={13} color={c.textSoft} />
+                <View style={[styles.dash, { borderColor: c.textMuted }]} />
+              </View>
+              <Text style={[styles.code, { color: c.text, fontFamily: f.semibold }]}>{code(to)}</Text>
+            </>
+          ) : (
+            <Text numberOfLines={1} style={[styles.city, { color: c.textSoft, fontFamily: f.regular }]}>
+              {from}
+            </Text>
+          )}
+        </View>
+        <View style={[styles.track, { backgroundColor: c.hairline }]}>
+          <View style={[styles.fill, { width: `${progress * 100}%`, backgroundColor: c.text }]} />
+        </View>
+
+        {expanded && !active ? (
+          <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(120)} style={styles.passActions}>
+            <AuraButton label={t("trip.open")} size="md" onPress={onSwitch} style={styles.flex} />
+            <AuraButton label={t("trip.edit")} icon="edit" variant="secondary" size="md" onPress={onEdit} />
+            <AuraButton label={t("trip.delete")} icon="trash" variant="secondary" size="md" onPress={onDelete} />
+          </Animated.View>
+        ) : null}
+        {active ? (
+          <View style={styles.passActions}>
+            <AuraButton label={t("trip.edit")} icon="edit" variant="secondary" size="md" onPress={onEdit} style={styles.flex} />
+            <AuraButton label={t("trip.delete")} icon="trash" variant="secondary" size="md" onPress={onDelete} style={styles.flex} />
+          </View>
+        ) : null}
+      </PressableScale>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 120,
-  },
-  header: {
-    paddingHorizontal: 6,
-    paddingTop: 8,
-    paddingBottom: 14,
-    flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-  },
-  eyebrow: {
-    fontFamily: NOMAD_FONTS.uiBold,
-    fontSize: 10.5,
-    letterSpacing: 1.4,
-    textTransform: "uppercase",
-  },
-  heroTitle: {
-    fontFamily: NOMAD_FONTS.display,
-    fontSize: 38,
-    lineHeight: 40,
-    letterSpacing: -0.6,
-    marginTop: 4,
-  },
-  closeButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 999,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  section: {
-    marginTop: 6,
-    marginBottom: 14,
-    gap: 8,
-  },
-  sectionLabel: {
-    fontFamily: NOMAD_FONTS.uiBold,
-    fontSize: 10.5,
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
-    paddingHorizontal: 6,
-  },
-  sectionHeader: {
-    marginTop: 6,
-    marginBottom: 8,
-  },
-  sectionFooter: {
-    height: 14,
-  },
-  itemSeparator: {
-    height: 8,
-  },
-  keyboardRoot: {
-    flex: 1,
-  },
-  activeCard: {
-    borderWidth: 1,
-    borderRadius: 20,
-    overflow: "hidden",
-    padding: 18,
-    gap: 12,
-  },
-  activeCardTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  activeCardHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  activeCardIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  currentLabel: {
-    fontFamily: NOMAD_FONTS.ui,
-    fontSize: 12,
-  },
-  openBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-  },
-  openBadgeText: {
-    fontFamily: NOMAD_FONTS.uiBold,
-    fontSize: 9,
-    letterSpacing: 0.6,
-  },
-  activeCardName: {
-    fontFamily: NOMAD_FONTS.display,
-    fontSize: 27,
-    lineHeight: 31,
-    letterSpacing: -0.4,
-  },
-  activeCardSub: {
-    fontFamily: NOMAD_FONTS.ui,
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  progressTrack: {
-    height: 7,
-    borderRadius: 999,
-    overflow: "hidden",
-    marginTop: 4,
-  },
-  progressFill: {
-    height: "100%",
-    borderRadius: 999,
-  },
-  progressMeta: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  progressText: {
-    fontFamily: NOMAD_FONTS.mono,
-    fontSize: 11,
-    letterSpacing: 0.3,
-  },
-  tripRow: {
-    borderWidth: 1,
-    borderRadius: 16,
-    padding: 14,
-    gap: 12,
-  },
-  tripRowTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  tripRowMeta: {
-    flex: 1,
-    gap: 2,
-  },
-  tripRowName: {
-    fontFamily: NOMAD_FONTS.uiSemi,
-    fontSize: 15,
-  },
-  tripRowSub: {
-    fontFamily: NOMAD_FONTS.ui,
-    fontSize: 12.5,
-    lineHeight: 17,
-  },
-  statusBadge: {
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  statusBadgeText: {
-    fontFamily: NOMAD_FONTS.uiBold,
-    fontSize: 9.5,
-    letterSpacing: 0.4,
-  },
-  activeCardActions: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 2,
-  },
-  activeActionButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    borderRadius: 12,
-    paddingVertical: 9,
-  },
-  activeActionButtonText: {
-    fontFamily: NOMAD_FONTS.uiSemi,
-    fontSize: 13,
-  },
-  tripRowActions: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  actionButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingVertical: 9,
-  },
-  actionButtonText: {
-    fontFamily: NOMAD_FONTS.uiSemi,
-    fontSize: 13,
-  },
-  addTripButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    borderWidth: 1.5,
-    borderStyle: "dashed",
-    borderRadius: 16,
-    paddingVertical: 16,
-    marginTop: 4,
-  },
-  addTripText: {
-    fontFamily: NOMAD_FONTS.uiSemi,
-    fontSize: 15,
-  },
-  emptyCard: {
-    alignItems: "center",
-    borderWidth: 1,
-    borderRadius: 18,
-    padding: 24,
-    gap: 10,
-  },
-  emptyTitle: {
-    fontFamily: NOMAD_FONTS.uiSemi,
-    fontSize: 16,
-  },
-  emptyBody: {
-    fontFamily: NOMAD_FONTS.ui,
-    fontSize: 13,
-    lineHeight: 19,
-    textAlign: "center",
-  },
-  formRoot: {
-    flex: 1,
-  },
-  formHeader: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 4,
-    alignItems: "flex-start",
-  },
-  deleteBackdrop: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-  deleteSheet: {
-    width: "100%",
-    maxWidth: 400,
-    borderWidth: 1,
-    borderRadius: 20,
-    padding: 20,
-    alignItems: "center",
-  },
-  deleteIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 12,
-  },
-  deleteTitle: {
-    fontFamily: NOMAD_FONTS.uiSemi,
-    fontSize: 18,
-    textAlign: "center",
-  },
-  deleteBody: {
-    fontFamily: NOMAD_FONTS.ui,
-    fontSize: 13,
-    lineHeight: 19,
-    textAlign: "center",
-    marginTop: 6,
-  },
-  deletePrompt: {
-    fontFamily: NOMAD_FONTS.uiBold,
-    fontSize: 11,
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
-    marginTop: 18,
-    marginBottom: 6,
-  },
-  confirmInput: {
-    width: "100%",
-    height: 48,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    fontFamily: NOMAD_FONTS.ui,
-    fontSize: 15,
-  },
-  deleteActions: {
-    flexDirection: "row",
-    gap: 12,
-    width: "100%",
-    marginTop: 18,
-  },
-  deleteAction: {
-    flex: 1,
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-  deleteActionText: {
-    fontFamily: NOMAD_FONTS.uiSemi,
-    fontSize: 14,
-  },
+  root: { flex: 1 },
+  flex: { flex: 1 },
+  scroll: { paddingHorizontal: 20 },
+  header: { flexDirection: "row", alignItems: "flex-start", gap: 12, marginBottom: 8 },
+  count: { fontSize: 13.5 },
+  title: { fontSize: 34, letterSpacing: -1.2 },
+  close: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center", marginTop: 4 },
+  section: { fontSize: 13.5, marginTop: 22 },
+  empty: { borderRadius: 24, borderWidth: StyleSheet.hairlineWidth, padding: 20, gap: 8, marginTop: 16 },
+  emptyTitle: { fontSize: 18 },
+  emptyBody: { fontSize: 14.5, lineHeight: 21 },
+  passWrap: {},
+  pass: { borderRadius: 24, borderWidth: StyleSheet.hairlineWidth, padding: 16, gap: 12, overflow: "hidden" },
+  passTop: { flexDirection: "row", alignItems: "center", gap: 10 },
+  passName: { fontSize: 17, letterSpacing: -0.2 },
+  passDates: { fontSize: 13, marginTop: 2 },
+  badge: { paddingHorizontal: 10, height: 24, borderRadius: 12, justifyContent: "center" },
+  badgeText: { fontSize: 11.5 },
+  route: { flexDirection: "row", alignItems: "center", gap: 10 },
+  code: { fontSize: 28, letterSpacing: 0.8 },
+  city: { fontSize: 14, flexShrink: 1 },
+  line: { flex: 1, flexDirection: "row", alignItems: "center", gap: 6 },
+  dash: { flex: 1, borderTopWidth: 1, borderStyle: "dashed" },
+  track: { height: 3, borderRadius: 2, overflow: "hidden" },
+  fill: { height: 3, borderRadius: 2 },
+  passActions: { flexDirection: "row", gap: 8 },
+  add: { marginTop: 24 },
+  actions: { flexDirection: "row", gap: 10 },
+  deleteBody: { paddingHorizontal: 20, paddingBottom: 8, gap: 14 },
+  deleteText: { fontSize: 15, lineHeight: 22 },
 });

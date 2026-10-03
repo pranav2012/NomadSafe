@@ -61,7 +61,8 @@
     "upNext": "다음 일정",
     "yourStay": "숙소",
     "globeHint": "지구본. 핀치하여 지도로 확대",
-    "backToGlobe": "지구본으로 돌아가기"
+    "backToGlobe": "지구본으로 돌아가기",
+    "refine": "정리"
   },
   "settings": {
     "title": "설정",
@@ -605,7 +606,9 @@
     "defaultNameMulti": "{{first}} 외",
     "noBudgetSet": "예산 미설정",
     "creatingAction": "만드는 중…",
-    "savingAction": "저장 중…"
+    "savingAction": "저장 중…",
+    "daysCount_one": "{{count}}일",
+    "daysCount_other": "{{count}}일"
   },
   "aiTab": {
     "onDevice": "기기 내부 구동",

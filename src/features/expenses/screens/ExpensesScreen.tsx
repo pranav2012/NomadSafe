@@ -458,19 +458,16 @@ export default function ExpensesScreen() {
         ) : null}
       </ScrollView>
 
-      <Modal visible={formOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setFormOpen(false)}>
-        <SafeAreaView edges={["top"]} style={[styles.modalRoot, { backgroundColor: theme.paper }]}>
-          <ExpenseForm
-            editingExpense={editing}
-            tripId={activeTrip?.id ?? null}
-            tripCurrency={currency}
-            companions={activeTrip?.companions}
-            onSave={() => setFormOpen(false)}
-            onCancel={() => setFormOpen(false)}
-            onSpeak={openVoice}
-          />
-        </SafeAreaView>
-      </Modal>
+      <ExpenseForm
+        visible={formOpen}
+        editingExpense={editing}
+        tripId={activeTrip?.id ?? null}
+        tripCurrency={currency}
+        companions={activeTrip?.companions}
+        onSave={() => setFormOpen(false)}
+        onCancel={() => setFormOpen(false)}
+        onSpeak={openVoice}
+      />
 
       <Modal visible={importOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setImportOpen(false)}>
         <SafeAreaView edges={["top"]} style={[styles.modalRoot, { backgroundColor: theme.paper }]}>

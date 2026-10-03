@@ -61,7 +61,8 @@
     "upNext": "A seguir",
     "yourStay": "Sua hospedagem",
     "globeHint": "Globo. Faça pinça para ampliar até o mapa",
-    "backToGlobe": "Voltar ao globo"
+    "backToGlobe": "Voltar ao globo",
+    "refine": "Refinar"
   },
   "settings": {
     "title": "Configurações",
@@ -605,7 +606,9 @@
     "defaultNameMulti": "{{first}} e mais",
     "noBudgetSet": "Nenhum orçamento definido",
     "creatingAction": "Criando…",
-    "savingAction": "Salvando…"
+    "savingAction": "Salvando…",
+    "daysCount_one": "{{count}} dia",
+    "daysCount_other": "{{count}} dias"
   },
   "aiTab": {
     "onDevice": "NO DISPOSITIVO",

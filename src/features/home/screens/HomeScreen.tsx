@@ -1,10 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Modal, Pressable, StyleSheet, Text } from "react-native";
 import { useRouter } from "expo-router";
 import * as Location from "expo-location";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Icon } from "@/components/nomad/Icon";
-import { NOMAD_FONTS } from "@/constants/nomadTokens";
 import type { AuraStatus } from "@/constants/aura";
 import { ExpenseForm } from "@/features/expenses/components/ExpenseForm";
 import { TripHome, type UserLocation } from "@/features/home/components/TripHome";
@@ -13,10 +9,9 @@ import { useItineraryAutoSync } from "@/features/itinerary";
 import { BackgroundLocationDisclosure } from "@/features/location-sharing/components/BackgroundLocationDisclosure";
 import { useBroadcastToggle } from "@/features/location-sharing/hooks/useBroadcastToggle";
 import { cancelCheckInNotifications, useSafetyStore } from "@/features/safety";
-import { TripForm } from "@/features/trips/components/TripForm";
+import { EmptyHome } from "@/features/home/components/EmptyHome";
 import { selectActiveTrip, useTripsStore } from "@/features/trips/store/tripsStore";
 import { useTheme } from "@/hooks/useTheme";
-import { useLocalization } from "@/localization";
 import { track } from "@/services/analytics";
 import { heavyImpact, successNotification } from "@/utils/haptics";
 
@@ -61,9 +56,7 @@ async function resolveUserLocation(): Promise<UserLocation | null> {
 }
 
 export default function HomeScreen() {
-  const { nomad, isDark } = useTheme();
-  const theme = nomad.colors;
-  const { t } = useLocalization();
+  const { isDark } = useTheme();
   const router = useRouter();
   const tripCount = useTripsStore((state) => state.trips.length);
   const activeTrip = useTripsStore(selectActiveTrip);
@@ -90,24 +83,7 @@ export default function HomeScreen() {
   }, []);
 
   if (!activeTrip || !data) {
-    return (
-      <SafeAreaView edges={["top"]} style={[styles.root, { backgroundColor: theme.paper }]}>
-        <TripForm
-          onSave={() => undefined}
-          header={
-            tripCount > 0 ? (
-              <Pressable
-                onPress={() => router.push("/trips")}
-                style={({ pressed }) => [styles.switchPill, { backgroundColor: theme.tealSoft, opacity: pressed ? 0.75 : 1 }]}
-              >
-                <Icon name="swap" size={12} color={theme.teal} />
-                <Text style={[styles.switchPillText, { color: theme.teal }]}>{t("trip.viewExistingTrips", { count: tripCount })}</Text>
-              </Pressable>
-            ) : null
-          }
-        />
-      </SafeAreaView>
-    );
+    return <EmptyHome tripCount={tripCount} onViewTrips={() => router.push("/trips")} />;
   }
 
   const status: AuraStatus = safetyStatus === "emergency" ? "alert" : share.isBroadcasting ? "live" : "calm";
@@ -147,38 +123,20 @@ export default function HomeScreen() {
       />
 
 
-      <Modal visible={formOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setFormOpen(false)}>
-        <SafeAreaView edges={["top"]} style={[styles.root, { backgroundColor: theme.paper }]}>
-          <ExpenseForm
-            tripId={activeTrip.id}
-            tripCurrency={activeTrip.currency}
-            companions={activeTrip.companions}
-            onSave={() => setFormOpen(false)}
-            onCancel={() => setFormOpen(false)}
-            onSpeak={() => {
-              setFormOpen(false);
-              router.push({ pathname: "/voice-expense", params: { tripId: activeTrip.id } });
-            }}
-          />
-        </SafeAreaView>
-      </Modal>
+      <ExpenseForm
+        visible={formOpen}
+        tripId={activeTrip.id}
+        tripCurrency={activeTrip.currency}
+        companions={activeTrip.companions}
+        onSave={() => setFormOpen(false)}
+        onCancel={() => setFormOpen(false)}
+        onSpeak={() => {
+          setFormOpen(false);
+          router.push({ pathname: "/voice-expense", params: { tripId: activeTrip.id } });
+        }}
+      />
 
       <BackgroundLocationDisclosure visible={share.disclosureVisible} onAccept={share.onDisclosureAccept} onDecline={share.onDisclosureDecline} />
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { flex: 1 },
-  switchPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-    borderRadius: 999,
-    alignSelf: "flex-start",
-    marginStart: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  switchPillText: { fontFamily: NOMAD_FONTS.uiBold, fontSize: 9, letterSpacing: 0.4 },
-});

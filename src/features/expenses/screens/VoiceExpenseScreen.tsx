@@ -382,42 +382,34 @@ export default function VoiceExpenseScreen() {
         </View>
       </Modal>
 
-      <Modal
-        visible={editing && draft?.kind === "expense"}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setEditing(false)}
-      >
-        {draft?.kind === "expense" ? (
-          <SafeAreaView edges={["top"]} style={[styles.flex, { backgroundColor: theme.paper }]}>
-            <ExpenseForm
-              initialDraft={{
-                amount: draft.amount,
-                currency: draft.currency,
-                merchant: draft.merchant,
-                category: draft.category,
-                date: draft.date,
-                paidBy: draft.paidBy,
-                shares: shares?.ok ? shares.shares : undefined,
-                rawText: draft.transcript,
-              }}
-              source="voice"
-              tripId={trip?.id ?? null}
-              tripCurrency={tripCurrency}
-              companions={companions}
-              onCancel={() => setEditing(false)}
-              onSave={() => {
-                setEditing(false);
-                track("voice_draft_saved", { kind: "expense", split: Boolean(shares?.ok), edited: true, auto: false });
-                setPhase({
-                  name: "saved",
-                  summary: t("voiceExpense.savedEdited"),
-                });
-              }}
-            />
-          </SafeAreaView>
-        ) : null}
-      </Modal>
+      {draft?.kind === "expense" ? (
+        <ExpenseForm
+          visible={editing}
+          initialDraft={{
+            amount: draft.amount,
+            currency: draft.currency,
+            merchant: draft.merchant,
+            category: draft.category,
+            date: draft.date,
+            paidBy: draft.paidBy,
+            shares: shares?.ok ? shares.shares : undefined,
+            rawText: draft.transcript,
+          }}
+          source="voice"
+          tripId={trip?.id ?? null}
+          tripCurrency={tripCurrency}
+          companions={companions}
+          onCancel={() => setEditing(false)}
+          onSave={() => {
+            setEditing(false);
+            track("voice_draft_saved", { kind: "expense", split: Boolean(shares?.ok), edited: true, auto: false });
+            setPhase({
+              name: "saved",
+              summary: t("voiceExpense.savedEdited"),
+            });
+          }}
+        />
+      ) : null}
     </SafeAreaView>
   );
 }

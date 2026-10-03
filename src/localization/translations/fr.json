@@ -61,7 +61,8 @@
     "upNext": "À venir",
     "yourStay": "Votre hébergement",
     "globeHint": "Globe. Pincez pour zoomer sur la carte",
-    "backToGlobe": "Retour au globe"
+    "backToGlobe": "Retour au globe",
+    "refine": "Affiner"
   },
   "settings": {
     "title": "Paramètres",
@@ -605,7 +606,9 @@
     "defaultNameMulti": "{{first}} et plus",
     "noBudgetSet": "Aucun budget défini",
     "creatingAction": "Création…",
-    "savingAction": "Enregistrement…"
+    "savingAction": "Enregistrement…",
+    "daysCount_one": "{{count}} jour",
+    "daysCount_other": "{{count}} jours"
   },
   "aiTab": {
     "onDevice": "SUR L'APPAREIL",

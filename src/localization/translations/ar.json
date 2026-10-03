@@ -61,7 +61,8 @@
     "upNext": "التالي",
     "yourStay": "مكان إقامتك",
     "globeHint": "الكرة الأرضية. قرّب بإصبعين للوصول إلى الخريطة",
-    "backToGlobe": "العودة إلى الكرة الأرضية"
+    "backToGlobe": "العودة إلى الكرة الأرضية",
+    "refine": "تحسين"
   },
   "settings": {
     "title": "الإعدادات",
@@ -605,7 +606,9 @@
     "defaultNameMulti": "{{first}} والمزيد",
     "noBudgetSet": "لا توجد ميزانية محددة",
     "creatingAction": "جارٍ الإنشاء…",
-    "savingAction": "جارٍ الحفظ…"
+    "savingAction": "جارٍ الحفظ…",
+    "daysCount_one": "يوم واحد",
+    "daysCount_other": "{{count}} أيام"
   },
   "aiTab": {
     "onDevice": "على الجهاز",

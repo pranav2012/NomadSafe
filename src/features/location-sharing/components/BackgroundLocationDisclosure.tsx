@@ -1,10 +1,9 @@
 import React from "react";
-import { Modal, ScrollView, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { NomadButton } from "@/components/nomad/Button";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { AuraButton } from "@/components/aura/AuraButton";
+import { AuraSheet } from "@/components/aura/AuraSheet";
+import { useAura } from "@/components/aura/useAura";
 import { Icon, type IconName } from "@/components/nomad/Icon";
-import { NOMAD_FONTS } from "@/constants/nomadTokens";
-import { useTheme } from "@/hooks/useTheme";
 import { useLocalization } from "@/localization";
 import { storage } from "@/stores/storage";
 
@@ -30,9 +29,9 @@ interface Props {
  * closed, explain the feature, and require an explicit accept.
  */
 export function BackgroundLocationDisclosure({ visible, onAccept, onDecline }: Props) {
-  const { nomad } = useTheme();
-  const theme = nomad.colors;
+  const { c, f } = useAura();
   const { t } = useLocalization();
+  const tealish = "#22C7B8";
 
   const points: { icon: IconName; text: string }[] = [
     { icon: "mapPin", text: t("locationDisclosure.pointCollect") },
@@ -47,81 +46,46 @@ export function BackgroundLocationDisclosure({ visible, onAccept, onDecline }: P
   };
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onDecline} statusBarTranslucent>
-      <View style={[styles.root, { backgroundColor: theme.paper }]}>
-        <SafeAreaView style={styles.safe} edges={["top", "bottom", "left", "right"]}>
-          <ScrollView contentContainerStyle={styles.scroll}>
-            <View style={[styles.badge, { backgroundColor: theme.tealSoft }]}>
-              <Icon name="mapPin" size={28} color={theme.teal} strokeWidth={2} />
+    <AuraSheet
+      visible={visible}
+      onClose={onDecline}
+      footer={
+        <View style={styles.actions}>
+          <AuraButton label={t("locationDisclosure.accept")} onPress={accept} />
+          <AuraButton label={t("locationDisclosure.decline")} variant="ghost" onPress={onDecline} />
+        </View>
+      }
+    >
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <View style={[styles.badge, { backgroundColor: `${tealish}22` }]}>
+          <Icon name="mapPin" size={26} color={tealish} strokeWidth={2} />
+        </View>
+        <Text style={[styles.title, { color: c.text, fontFamily: f.semibold }]} accessibilityRole="header">
+          {t("locationDisclosure.title")}
+        </Text>
+        <Text style={[styles.lede, { color: c.textSoft, fontFamily: f.regular }]}>{t("locationDisclosure.lede")}</Text>
+        <View style={[styles.points, { backgroundColor: c.surface, borderColor: c.hairline }]}>
+          {points.map((point) => (
+            <View key={point.text} style={styles.point}>
+              <Icon name={point.icon} size={18} color={tealish} />
+              <Text style={[styles.pointText, { color: c.text, fontFamily: f.regular }]}>{point.text}</Text>
             </View>
-            <Text style={[styles.title, { color: theme.inkDeep }]} accessibilityRole="header">
-              {t("locationDisclosure.title")}
-            </Text>
-            <Text style={[styles.lede, { color: theme.inkSoft }]}>{t("locationDisclosure.lede")}</Text>
-
-            <View style={styles.points}>
-              {points.map((point) => (
-                <View key={point.text} style={styles.point}>
-                  <Icon name={point.icon} size={18} color={theme.teal} />
-                  <Text style={[styles.pointText, { color: theme.inkDeep }]}>{point.text}</Text>
-                </View>
-              ))}
-            </View>
-
-            <Text style={[styles.footnote, { color: theme.inkMuted }]}>{t("locationDisclosure.footnote")}</Text>
-          </ScrollView>
-
-          <View style={styles.actions}>
-            <NomadButton theme={theme} variant="teal" full onPress={accept}>
-              {t("locationDisclosure.accept")}
-            </NomadButton>
-            <NomadButton theme={theme} variant="ghost" full onPress={onDecline}>
-              {t("locationDisclosure.decline")}
-            </NomadButton>
-          </View>
-        </SafeAreaView>
-      </View>
-    </Modal>
+          ))}
+        </View>
+        <Text style={[styles.footnote, { color: c.textMuted, fontFamily: f.regular }]}>{t("locationDisclosure.footnote")}</Text>
+      </ScrollView>
+    </AuraSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
-  safe: { flex: 1 },
-  scroll: { paddingHorizontal: 24, paddingTop: 32, paddingBottom: 16 },
-  badge: {
-    width: 56,
-    height: 56,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 20,
-  },
-  title: {
-    fontFamily: NOMAD_FONTS.display,
-    fontSize: 30,
-    lineHeight: 34,
-    fontWeight: "500",
-  },
-  lede: {
-    fontFamily: NOMAD_FONTS.ui,
-    fontSize: 15.5,
-    lineHeight: 23,
-    marginTop: 12,
-  },
-  points: { gap: 16, marginTop: 24 },
+  scroll: { paddingHorizontal: 20, paddingBottom: 8, gap: 14 },
+  badge: { width: 56, height: 56, borderRadius: 18, alignItems: "center", justifyContent: "center" },
+  title: { fontSize: 26, letterSpacing: -0.6, lineHeight: 31 },
+  lede: { fontSize: 15, lineHeight: 22 },
+  points: { borderRadius: 20, borderWidth: StyleSheet.hairlineWidth, padding: 16, gap: 14 },
   point: { flexDirection: "row", gap: 12, alignItems: "flex-start" },
-  pointText: {
-    flex: 1,
-    fontFamily: NOMAD_FONTS.ui,
-    fontSize: 15,
-    lineHeight: 22,
-  },
-  footnote: {
-    fontFamily: NOMAD_FONTS.ui,
-    fontSize: 13,
-    lineHeight: 19,
-    marginTop: 24,
-  },
-  actions: { paddingHorizontal: 24, paddingBottom: 12, gap: 8 },
+  pointText: { flex: 1, fontSize: 14.5, lineHeight: 21 },
+  footnote: { fontSize: 12.5, lineHeight: 18 },
+  actions: { gap: 4 },
 });

@@ -61,7 +61,8 @@
     "upNext": "Als Nächstes",
     "yourStay": "Deine Unterkunft",
     "globeHint": "Globus. Zum Vergrößern auf die Karte zusammenziehen",
-    "backToGlobe": "Zurück zum Globus"
+    "backToGlobe": "Zurück zum Globus",
+    "refine": "Verfeinern"
   },
   "settings": {
     "title": "Einstellungen",
@@ -605,7 +606,9 @@
     "defaultNameMulti": "{{first}} & mehr",
     "noBudgetSet": "Kein Budget festgelegt",
     "creatingAction": "Wird erstellt…",
-    "savingAction": "Wird gespeichert…"
+    "savingAction": "Wird gespeichert…",
+    "daysCount_one": "{{count}} Tag",
+    "daysCount_other": "{{count}} Tage"
   },
   "aiTab": {
     "onDevice": "AUF DEM GERÄT",

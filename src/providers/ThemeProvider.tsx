@@ -43,9 +43,3 @@ export function useThemeContext() {
   return ctx;
 }
 
-/** Re-themes a subtree with a different Nomad theme (e.g. a redesigned screen hosting older sections). */
-export function ThemeScope({ nomad, children }: { nomad: NomadTheme; children: React.ReactNode }) {
-  const parent = useThemeContext();
-  const value = useMemo(() => ({ ...parent, nomad }), [nomad, parent]);
-  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
-}

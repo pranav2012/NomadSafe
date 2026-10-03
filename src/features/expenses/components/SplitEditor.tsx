@@ -1,8 +1,7 @@
 import React from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import { Icon } from "@/components/nomad/Icon";
-import { NOMAD_FONTS } from "@/constants/nomadTokens";
-import { useTheme } from "@/hooks/useTheme";
+import { StyleSheet, Text, TextInput, View } from "react-native";
+import { useAura } from "@/components/aura/useAura";
+import { AuraChip } from "@/components/aura/AuraChip";
 import { useLocalization } from "@/localization";
 import type { TranslateParams } from "@/localization/translate";
 import { parseAmountInput } from "@/features/expenses/utils/amountInput";
@@ -74,58 +73,39 @@ export function SplitEditor({
   currency: string;
   decimalSeparator: string;
 }) {
-  const { nomad } = useTheme();
-  const theme = nomad.colors;
+  const { c, f } = useAura();
   const { t, formatCurrency } = useLocalization();
 
-  const chip = (active: boolean) => [
-    styles.chip,
-    { backgroundColor: active ? theme.tealSoft : theme.paper, borderColor: active ? theme.teal : theme.hairline },
-  ];
-  const chipText = (active: boolean) => [styles.chipText, { color: active ? theme.inkDeep : theme.inkSoft }];
-
-  const resolution = Number.isFinite(amount) && amount > 0
-    ? splitValueToShares(value, amount, currency, decimalSeparator)
-    : null;
+  const resolution = Number.isFinite(amount) && amount > 0 ? splitValueToShares(value, amount, currency, decimalSeparator) : null;
   const assigned = Object.values(value.custom).reduce((sum, text) => {
     const parsed = parseAmountInput(text, decimalSeparator);
     return Number.isFinite(parsed) ? sum + parsed : sum;
   }, 0);
 
   const togglePerson = (person: string) => {
-    const people = value.people.includes(person)
-      ? value.people.filter((entry) => entry !== person)
-      : [...value.people, person];
+    const people = value.people.includes(person) ? value.people.filter((entry) => entry !== person) : [...value.people, person];
     onChange({ ...value, people });
   };
+
+  const label = (text: string) => <Text style={[styles.label, { color: c.textSoft, fontFamily: f.medium }]}>{text}</Text>;
 
   return (
     <View style={styles.root}>
       <View style={styles.group}>
-        <Text style={[styles.label, { color: theme.inkMuted }]}>{t("split.paidBy")}</Text>
+        {label(t("split.paidBy"))}
         <View style={styles.row}>
-          {everyone.map((person) => {
-            const active = value.paidBy === person;
-            return (
-              <Pressable key={person} onPress={() => onChange({ ...value, paidBy: person })} style={chip(active)}>
-                <Text style={chipText(active)}>{personLabel(person, t)}</Text>
-              </Pressable>
-            );
-          })}
+          {everyone.map((person) => (
+            <AuraChip key={person} label={personLabel(person, t)} selected={value.paidBy === person} onPress={() => onChange({ ...value, paidBy: person })} />
+          ))}
         </View>
       </View>
 
       <View style={styles.group}>
-        <Text style={[styles.label, { color: theme.inkMuted }]}>{t("split.title")}</Text>
+        {label(t("split.title"))}
         <View style={styles.row}>
-          {(["none", "equal", "custom"] as const).map((mode) => {
-            const active = value.mode === mode;
-            return (
-              <Pressable key={mode} onPress={() => onChange({ ...value, mode })} style={chip(active)}>
-                <Text style={chipText(active)}>{t(`split.mode.${mode}`)}</Text>
-              </Pressable>
-            );
-          })}
+          {(["none", "equal", "custom"] as const).map((mode) => (
+            <AuraChip key={mode} label={t(`split.mode.${mode}`)} selected={value.mode === mode} onPress={() => onChange({ ...value, mode })} />
+          ))}
         </View>
       </View>
 
@@ -135,15 +115,12 @@ export function SplitEditor({
             {everyone.map((person) => {
               const active = value.people.includes(person);
               return (
-                <Pressable key={person} onPress={() => togglePerson(person)} style={chip(active)}>
-                  {active ? <Icon name="check" size={13} color={theme.teal} strokeWidth={2.4} /> : null}
-                  <Text style={chipText(active)}>{personLabel(person, t)}</Text>
-                </Pressable>
+                <AuraChip key={person} label={personLabel(person, t)} icon={active ? "check" : undefined} selected={active} onPress={() => togglePerson(person)} />
               );
             })}
           </View>
           {resolution?.ok && resolution.shares.length > 0 ? (
-            <Text style={[styles.hint, { color: theme.inkSoft }]}>
+            <Text style={[styles.hint, { color: c.textSoft, fontFamily: f.regular }]}>
               {t("split.eachPays", {
                 amount: formatMoney(formatCurrency, resolution.shares[resolution.shares.length - 1].amount, currency),
                 count: resolution.shares.length,
@@ -156,27 +133,20 @@ export function SplitEditor({
       {value.mode === "custom" ? (
         <View style={styles.group}>
           {everyone.map((person) => (
-            <View key={person} style={[styles.customRow, { borderColor: theme.hairline, backgroundColor: theme.paper }]}>
-              <Text style={[styles.customName, { color: theme.inkDeep }]}>{personLabel(person, t)}</Text>
+            <View key={person} style={[styles.customRow, { borderColor: c.hairline, backgroundColor: c.surface }]}>
+              <Text style={[styles.customName, { color: c.text, fontFamily: f.medium }]}>{personLabel(person, t)}</Text>
               <TextInput
                 value={value.custom[person] ?? ""}
-                onChangeText={(text) =>
-                  onChange({ ...value, custom: { ...value.custom, [person]: text.replace(/[^0-9.,]/g, "") } })
-                }
+                onChangeText={(text) => onChange({ ...value, custom: { ...value.custom, [person]: text.replace(/[^0-9.,]/g, "") } })}
                 placeholder="0"
-                placeholderTextColor={theme.inkMuted}
+                placeholderTextColor={c.textMuted}
                 keyboardType="decimal-pad"
-                style={[styles.customInput, { color: theme.inkDeep }]}
+                style={[styles.customInput, { color: c.text, fontFamily: f.semibold }]}
               />
             </View>
           ))}
           {Number.isFinite(amount) && amount > 0 ? (
-            <Text
-              style={[
-                styles.hint,
-                { color: resolution && !resolution.ok ? theme.stamp : theme.inkSoft },
-              ]}
-            >
+            <Text style={[styles.hint, { color: resolution && !resolution.ok ? "#FF4D5E" : c.textSoft, fontFamily: f.regular }]}>
               {t("split.leftToAssign", { amount: formatMoney(formatCurrency, amount - assigned, currency) })}
             </Text>
           ) : null}
@@ -187,39 +157,12 @@ export function SplitEditor({
 }
 
 const styles = StyleSheet.create({
-  root: { gap: 14 },
+  root: { gap: 18 },
   group: { gap: 8 },
-  label: {
-    fontFamily: NOMAD_FONTS.uiBold,
-    fontSize: 10.5,
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
-  },
+  label: { fontSize: 13.5 },
   row: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  chip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  chipText: { fontFamily: NOMAD_FONTS.uiSemi, fontSize: 13 },
-  hint: { fontFamily: NOMAD_FONTS.ui, fontSize: 12.5 },
-  customRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-  },
-  customName: { flex: 1, fontFamily: NOMAD_FONTS.uiSemi, fontSize: 14 },
-  customInput: {
-    minWidth: 90,
-    minHeight: 44,
-    textAlign: "right",
-    fontFamily: NOMAD_FONTS.monoMedium,
-    fontSize: 15,
-  },
+  hint: { fontSize: 13 },
+  customRow: { flexDirection: "row", alignItems: "center", borderWidth: StyleSheet.hairlineWidth, borderRadius: 16, paddingHorizontal: 14 },
+  customName: { flex: 1, fontSize: 14.5 },
+  customInput: { minWidth: 90, minHeight: 48, textAlign: "right", fontSize: 16 },
 });

@@ -5,23 +5,32 @@ import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } fr
 import { scheduleOnRN } from "react-native-worklets";
 import { Icon } from "@/components/nomad/Icon";
 import { springs } from "@/components/motion/springs";
-import { getEventTypeMeta } from "@/features/itinerary";
+import { getEventTypeMeta, type EventType } from "@/features/itinerary/constants/eventTypes";
 import { lightImpact } from "@/utils/haptics";
-import type { HomeEvent } from "@/features/home/types";
-import { auraFonts, type AuraPalette } from "@/constants/aura";
+
+import { auraEventColors, auraFonts, type AuraPalette } from "@/constants/aura";
+
+export interface DeckEvent {
+  id: string;
+  type: EventType;
+  title: string;
+  detail?: string;
+  time: string;
+}
 
 const CARD_HEIGHT = 118;
 const PEEK = 10;
 const VISIBLE = 3;
 
 interface EventDeckProps {
-  events: HomeEvent[];
+  events: DeckEvent[];
   palette: AuraPalette;
   accent: string;
+  onPressEvent?: (id: string) => void;
 }
 
-/** Stacked cards: flick the front card away and it tucks in behind the others. */
-export function EventDeck({ events, palette, accent }: EventDeckProps) {
+/** Stacked cards: flick the front card away and it tucks in behind the others; tap to open it. */
+export function EventDeck({ events, palette, accent, onPressEvent }: EventDeckProps) {
   const [front, setFront] = useState(0);
   const count = events.length;
 
@@ -38,6 +47,7 @@ export function EventDeck({ events, palette, accent }: EventDeckProps) {
             palette={palette}
             accent={accent}
             onDismiss={() => setFront((value) => (value + 1) % count)}
+            onPress={onPressEvent ? () => onPressEvent(event.id) : undefined}
           />
         );
       })}
@@ -52,8 +62,10 @@ function DeckCard({
   palette,
   accent,
   onDismiss,
+  onPress,
 }: {
-  event: HomeEvent;
+  onPress?: () => void;
+  event: DeckEvent;
   position: number;
   count: number;
   palette: AuraPalette;
@@ -105,10 +117,16 @@ function DeckCard({
     };
   });
 
+  const tap = Gesture.Tap()
+    .enabled(isFront && Boolean(onPress))
+    .onEnd(() => {
+      if (onPress) scheduleOnRN(onPress);
+    });
+
   const meta = getEventTypeMeta(event.type);
 
   return (
-    <GestureDetector gesture={pan}>
+    <GestureDetector gesture={Gesture.Exclusive(pan, tap)}>
       <Animated.View
         style={[
           styles.card,
@@ -118,8 +136,8 @@ function DeckCard({
       >
         <View style={[styles.topHighlight, { backgroundColor: palette.highlight }]} />
         <View style={styles.row}>
-          <View style={[styles.iconChip, { backgroundColor: palette.surface, borderColor: palette.hairline }]}>
-            <Icon name={meta.icon} size={18} color={palette.text} />
+          <View style={[styles.iconChip, { backgroundColor: `${auraEventColors[event.type]}22`, borderColor: palette.hairline }]}>
+            <Icon name={meta.icon} size={18} color={auraEventColors[event.type]} />
           </View>
           <Text style={[styles.time, { color: accent }]}>{event.time}</Text>
         </View>

@@ -22,6 +22,7 @@ import { Easing, useDerivedValue, useReducedMotion, useSharedValue, withDecay, w
 import { scheduleOnRN } from "react-native-worklets";
 import { springs } from "@/components/motion/springs";
 import { selectionChanged } from "@/utils/haptics";
+import { CITY_LIGHTS } from "./cityLights";
 import { LAND_PATH } from "./landPath";
 
 const MIN_ZOOM = 1;
@@ -31,9 +32,10 @@ const TEX_W = 720;
 const TEX_H = 360;
 const DEG = Math.PI / 180;
 
-// Orthographic globe: per pixel, find the point on the sphere, rotate it back to world space,
-// look up land in an equirectangular mask, and draw land as a grid of dots on a lit ocean.
-// Outside the disc it paints the atmosphere halo.
+// Orthographic globe: per pixel, find the point on the sphere, rotate it back to world space and
+// sample an equirectangular texture (R = land, G = city lights). Land is a dot grid lit by the real
+// sun; the night side shows city lights, the day/night line glows, clouds drift, the ocean glints
+// toward the sun, and the limb carries a layered atmosphere. Outside the disc: halo and stars.
 const GLOBE = Skia.RuntimeEffect.Make(`
 uniform shader land;
 uniform float2 center;
@@ -46,46 +48,88 @@ uniform float3 dots;
 uniform float3 glow;
 uniform float3 bg;
 uniform float3 sun;
+uniform float time;
+uniform float isDark;
 
 const float PI = 3.14159265;
+
+float hash(float2 p) { return fract(sin(dot(p, float2(127.1, 311.7))) * 43758.5453); }
+
+float noise(float2 p) {
+  float2 i = floor(p);
+  float2 f = fract(p);
+  float2 u = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash(i), hash(i + float2(1.0, 0.0)), u.x), mix(hash(i + float2(0.0, 1.0)), hash(i + float2(1.0, 1.0)), u.x), u.y);
+}
+
+float fbm(float2 p) {
+  float v = 0.0;
+  float a = 0.5;
+  for (int i = 0; i < 3; i++) { v += a * noise(p); p *= 2.03; a *= 0.5; }
+  return v;
+}
 
 half4 main(float2 p) {
   float2 q = (p - center) / radius;
   float r = length(q);
-  if (r > 1.0) {
-    float halo = exp(-(r - 1.0) * 9.0) * 0.55;
-    return half4(half3(mix(bg, glow, halo)), 1.0);
-  }
-  float z = sqrt(max(0.0, 1.0 - r * r));
-  float3 v = float3(q.x, -q.y, z);
 
   float cl = cos(rotLat); float sl = sin(rotLat);
-  float3 a = float3(v.x, v.y * cl + v.z * sl, -v.y * sl + v.z * cl);
   float cg = cos(rotLng); float sg = sin(rotLng);
+  // Sun direction in view space (inverse of the view-to-world rotation below).
+  float3 sa = float3(sun.x * cg - sun.z * sg, sun.y, sun.x * sg + sun.z * cg);
+  float3 sunV = float3(sa.x, sa.y * cl - sa.z * sl, sa.y * sl + sa.z * cl);
+
+  float h = hash(floor(p / 2.5));
+  float dotShape = smoothstep(0.5, 0.1, length(fract(p / 2.5) - 0.5));
+  float star = step(0.997, h) * dotShape * (0.5 + 0.5 * sin(time * 1.6 + h * 90.0)) * isDark;
+  float facing = dot(normalize(float2(q.x, -q.y) + 0.0001), normalize(sunV.xy + 0.0001));
+  float haloLight = 0.45 + 0.55 * smoothstep(-0.6, 0.8, facing);
+  float halo = (exp(-(r - 1.0) * 6.0) * 0.45 + exp(-(r - 1.0) * 22.0) * 0.35) * haloLight;
+  float3 back = mix(bg + float3(star * (1.0 - smoothstep(1.0, 1.25, r) * 0.0)), glow, clamp(halo, 0.0, 1.0));
+  if (r > 1.0) return half4(half3(back), 1.0);
+
+  float z = sqrt(max(0.0, 1.0 - r * r));
+  float3 v = float3(q.x, -q.y, z);
+  float3 a = float3(v.x, v.y * cl + v.z * sl, -v.y * sl + v.z * cl);
   float3 w = float3(a.x * cg + a.z * sg, a.y, -a.x * sg + a.z * cg);
 
   float lat = asin(clamp(w.y, -1.0, 1.0));
   float lng = atan(w.x, w.z);
   float2 uv = float2((lng + PI) / (2.0 * PI) * ${TEX_W}.0, (PI * 0.5 - lat) / PI * ${TEX_H}.0);
-  float isLand = land.eval(uv).r;
+  half4 tex = land.eval(uv);
+  float isLand = tex.r;
+  float lights = tex.g;
 
-  float step = dotStep;
-  float2 cell = float2(fract(degrees(lng) / step) - 0.5, fract(degrees(lat) / step) - 0.5);
+  float2 cell = float2(fract(degrees(lng) / dotStep) - 0.5, fract(degrees(lat) / dotStep) - 0.5);
   float dotMask = smoothstep(0.34, 0.2, length(float2(cell.x * cos(lat), cell.y)));
 
-  float light = clamp(dot(v, normalize(float3(-0.45, 0.55, 0.7))), 0.0, 1.0);
   float sunDot = dot(w, sun);
-  float night = smoothstep(0.08, -0.14, sunDot);
-  float3 col = ocean * (0.45 + 0.55 * light) * (1.0 - night * 0.55);
-  float3 dayDots = dots * (0.35 + 0.65 * light);
-  float3 nightDots = float3(1.0, 0.74, 0.42) * (0.3 + 0.35 * light);
-  col = mix(col, mix(dayDots, nightDots, night), dotMask * isLand);
-  col += glow * exp(-abs(sunDot) * 28.0) * 0.18;
-  col += glow * pow(1.0 - z, 3.0) * 0.7;
+  float day = smoothstep(-0.1, 0.16, sunDot);
+  float shade = clamp(dot(v, sunV), 0.0, 1.0);
+
+  float3 col = ocean * (0.32 + 0.68 * day) * (0.75 + 0.25 * shade);
+  float3 dayDots = dots * (0.5 + 0.5 * shade);
+  float3 nightDots = dots * 0.22;
+  col = mix(col, mix(nightDots, dayDots, day), dotMask * isLand);
+
+  float night = 1.0 - day;
+  col += float3(1.0, 0.72, 0.38) * lights * night * (0.9 + 0.6 * dotMask);
+
+  // Clouds from two noise slices of the 3D surface point, so there is no seam at the antimeridian.
+  float c = 0.5 * (fbm(w.xy * 3.1 + float2(time * 0.012, 0.0)) + fbm(w.zy * 3.1 + float2(0.0, time * 0.009)));
+  float cloud = smoothstep(0.52, 0.8, c) * 0.55;
+  col = mix(col, float3(1.0) * (0.18 + 0.82 * day), cloud * (0.15 + 0.7 * day));
+
+  col += float3(1.0, 0.5, 0.28) * exp(-pow(sunDot / 0.09, 2.0)) * 0.22;
+
+  float3 refl = reflect(-sunV, v);
+  col += float3(1.0, 0.96, 0.88) * pow(max(refl.z, 0.0), 36.0) * (1.0 - isLand) * day * 0.45;
+
+  float fresnel = pow(1.0 - z, 2.2);
+  col = mix(col, glow, fresnel * 0.6 * (0.35 + 0.65 * smoothstep(-0.25, 0.35, sunDot)));
 
   float edge = smoothstep(1.0, 1.0 - 1.5 / radius, r);
-  float halo = exp(-(r - 1.0) * 9.0) * 0.55;
-  return half4(half3(mix(mix(bg, glow, halo), col, edge)), 1.0);
+  return half4(half3(mix(back, col, edge)), 1.0);
 }
 `)!;
 
@@ -112,6 +156,8 @@ interface GlobeProps {
   onZoomThrough?: (center: { latitude: number; longitude: number }, radiusPx: number) => void;
   /** Start zoomed in on a point (e.g. coming back out of the map) and ease out to the whole globe. */
   entry?: { latitude: number; longitude: number } | null;
+  /** Space at the top of the canvas kept for overlaid content; the globe centres below it. */
+  topInset?: number;
 }
 
 function rgb(hex: string): [number, number, number] {
@@ -161,18 +207,18 @@ function arcPoint(a: GlobeStop, b: GlobeStop, t: number) {
  * Dotted 3D globe drawn in one Skia shader, with the trip's flight arcs glowing between stops.
  * On mount it spins to the focused stop; drag to spin it (with momentum), tap to zoom through.
  */
-export function Globe({ stops, focusIndex, width, height, origin, contacts = [], sun, contactColor, accent, isDark, bg, onZoomThrough, entry }: GlobeProps) {
+export function Globe({ stops, focusIndex, width, height, origin, contacts = [], sun, contactColor, accent, isDark, bg, onZoomThrough, entry, topInset = 0 }: GlobeProps) {
   const [land, setLand] = useState<SkImage | null>(null);
   const reduceMotion = useReducedMotion();
   const clock = useClock();
-  const baseRadius = Math.min(width, height) * 0.45;
+  const baseRadius = Math.min(width, height - topInset) * 0.45;
   const zoom = useSharedValue(1);
   const zoomStart = useSharedValue(1);
   const radius = useDerivedValue(() => baseRadius * zoom.get());
   const handoffHinted = useSharedValue(false);
   const fade = useDerivedValue(() => 1 - Math.min(1, Math.max(0, (zoom.get() - HANDOFF_ZOOM) / (MAX_ZOOM - HANDOFF_ZOOM))) * 0.6);
   const cx = width / 2;
-  const cy = height / 2;
+  const cy = topInset + (height - topInset) / 2;
   const focus = stops[focusIndex] ?? { name: "", latitude: 20, longitude: 0 };
   const targetLng = focus.longitude * DEG;
   const targetLat = Math.max(-0.6, Math.min(0.6, focus.latitude * DEG * 0.8));
@@ -185,7 +231,20 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
     void drawAsImage(
       <Group>
         <Fill color="black" />
-        <Path path={LAND_PATH} color="white" transform={[{ scale: TEX_W / 360 }]} />
+        <Path path={LAND_PATH} color="#FF0000" transform={[{ scale: TEX_W / 360 }]} />
+        <Group blendMode="plus">
+          {CITY_LIGHTS.map(([lng, lat, pop], i) => (
+            <Circle
+              key={i}
+              cx={(lng + 180) * (TEX_W / 360)}
+              cy={(90 - lat) * (TEX_H / 180)}
+              r={0.5 + Math.max(0, pop - 4) * 0.9}
+              color={`rgba(0,255,0,${Math.min(1, 0.35 + (pop - 4) * 0.25)})`}
+            >
+              <BlurMask blur={1.6} style="normal" />
+            </Circle>
+          ))}
+        </Group>
       </Group>,
       { width: TEX_W, height: TEX_H },
     ).then((image) => {
@@ -225,6 +284,8 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
     glow: glowRgb,
     bg: bgRgb,
     sun,
+    time: clock.get() / 1000,
+    isDark: isDark ? 1 : 0,
   }));
 
   const currentLeg = Math.max(0, focusIndex - 1);
@@ -253,7 +314,7 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
   });
   const homeArc = usePathValue((builder) => {
     "worklet";
-    if (origin) traceArc(builder, origin, focus);
+    if (origin && stops.length > 0) traceArc(builder, origin, focus);
   });
 
   const cometEnd = useDerivedValue(() => (clock.get() % 2600) / 2600);
@@ -262,8 +323,11 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
 
   const pins = useMemo(() => stops.map((stop, i) => ({ stop, focused: i === focusIndex })), [focusIndex, stops]);
 
+  // Horizontal drags spin the globe; vertical ones fall through to the page scroll.
   const pan = Gesture.Pan()
     .averageTouches(true)
+    .activeOffsetX([-10, 10])
+    .failOffsetY([-12, 12])
     .onChange((event) => {
       const r = radius.get();
       rotLng.set(rotLng.get() - (event.changeX / r) * 0.9);

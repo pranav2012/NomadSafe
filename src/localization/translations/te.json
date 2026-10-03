@@ -61,7 +61,8 @@
     "upNext": "తదుపరి",
     "yourStay": "మీ బస",
     "globeHint": "గ్లోబ్. మ్యాప్‌కు జూమ్ చేయడానికి పించ్ చేయండి",
-    "backToGlobe": "గ్లోబ్‌కు తిరిగి వెళ్ళు"
+    "backToGlobe": "గ్లోబ్‌కు తిరిగి వెళ్ళు",
+    "refine": "మెరుగుపరచు"
   },
   "settings": {
     "title": "సెట్టింగ్‌లు",
@@ -605,7 +606,9 @@
     "defaultNameMulti": "{{first}} & మరిన్ని",
     "noBudgetSet": "బడ్జెట్ సెట్ చేయలేదు",
     "creatingAction": "సృష్టిస్తోంది…",
-    "savingAction": "సేవ్ చేస్తోంది…"
+    "savingAction": "సేవ్ చేస్తోంది…",
+    "daysCount_one": "{{count}} రోజు",
+    "daysCount_other": "{{count}} రోజులు"
   },
   "aiTab": {
     "onDevice": "ఆన్-డివైస్",

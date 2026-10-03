@@ -1,41 +1,21 @@
 import React, { useMemo, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
-import { DateTimePicker } from "@expo/ui/community/datetime-picker";
-import { DatePicker as SwiftDatePicker, Host } from "@expo/ui/swift-ui";
-import { datePickerStyle, environment, tint } from "@expo/ui/swift-ui/modifiers";
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from "react-native";
+import Animated, { FadeIn, FadeOut, LinearTransition } from "react-native-reanimated";
 import { Icon } from "@/components/nomad/Icon";
-import { NOMAD_FONTS } from "@/constants/nomadTokens";
-import { useTheme } from "@/hooks/useTheme";
+import { PressableScale } from "@/components/motion/PressableScale";
+import { AuraButton } from "@/components/aura/AuraButton";
+import { AuraChip } from "@/components/aura/AuraChip";
+import { AuraDateField } from "@/components/aura/AuraDateField";
+import { AuraField } from "@/components/aura/AuraField";
+import { AuraSheet } from "@/components/aura/AuraSheet";
+import { useAura } from "@/components/aura/useAura";
+import { auraCategoryColors } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { CURRENCY_OPTIONS } from "@/utils/currency";
-import {
-  EXPENSE_CATEGORIES,
-  type ExpenseCategory,
-} from "@/features/expenses/constants/categories";
-import {
-  type Expense,
-  type ExpenseLocation,
-  type ExpenseSource,
-  useExpensesStore,
-} from "@/features/expenses/store/expensesStore";
+import { EXPENSE_CATEGORIES, type ExpenseCategory } from "@/features/expenses/constants/categories";
+import { type Expense, type ExpenseLocation, type ExpenseSource, useExpensesStore } from "@/features/expenses/store/expensesStore";
 import { SELF_ID, type ExpenseShare } from "@/features/expenses/utils/split";
-import {
-  initialSplitValue,
-  SplitEditor,
-  splitValueToShares,
-  type SplitValue,
-} from "@/features/expenses/components/SplitEditor";
+import { initialSplitValue, SplitEditor, splitValueToShares, type SplitValue } from "@/features/expenses/components/SplitEditor";
 import { categorizeHeuristic } from "@/features/expenses/services/categorizer";
 import { getCurrentExpenseLocation } from "@/features/expenses/services/locationTagging";
 import { localeDecimalSeparator, parseAmountInput } from "@/features/expenses/utils/amountInput";
@@ -65,6 +45,10 @@ export interface ExpenseFormProps {
   onSpeak?: () => void;
 }
 
+interface ExpenseSheetProps extends ExpenseFormProps {
+  visible: boolean;
+}
+
 function getCurrencyAffix(locale: string, currency: string) {
   try {
     const formatted = new Intl.NumberFormat(locale, {
@@ -86,7 +70,67 @@ function getCurrencyAffix(locale: string, currency: string) {
   }
 }
 
-export function ExpenseForm({
+/**
+ * Add or edit a spend in an Aura sheet. The form body only mounts while the sheet is open, so each
+ * open starts from the given expense or draft.
+ */
+export function ExpenseForm({ visible, ...props }: ExpenseSheetProps) {
+  const { t } = useLocalization();
+  const { c } = useAura();
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const deleteExpense = useExpensesStore((state) => state.deleteExpense);
+  const editing = props.editingExpense;
+
+  return (
+    <>
+      <AuraSheet
+        visible={visible}
+        onClose={props.onCancel}
+        full
+        title={editing ? t("expenses.editTitle") : t("expenses.addTitle")}
+        headerAction={
+          props.onSpeak && !editing ? (
+            <PressableScale
+              onPress={props.onSpeak}
+              accessibilityRole="button"
+              accessibilityLabel={t("voiceExpense.speakToAdd")}
+              style={[styles.mic, { backgroundColor: c.surfaceStrong }]}
+            >
+              <Icon name="mic" size={16} color={c.text} />
+            </PressableScale>
+          ) : null
+        }
+      >
+        <ExpenseFormBody {...props} onDelete={() => setDeleteOpen(true)} />
+      </AuraSheet>
+      <AuraSheet
+        visible={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        title={t("expenses.deleteTitle")}
+        footer={
+          <View style={styles.actions}>
+            <AuraButton label={t("common.cancel")} variant="secondary" onPress={() => setDeleteOpen(false)} style={styles.flex} />
+            <AuraButton
+              label={t("common.delete")}
+              variant="danger"
+              icon="trash"
+              onPress={() => {
+                if (editing) deleteExpense(editing.id);
+                setDeleteOpen(false);
+                props.onSave();
+              }}
+              style={styles.flex}
+            />
+          </View>
+        }
+      >
+        <Text style={[styles.confirmBody, { color: c.textSoft }]}>{editing ? t("expenses.deleteBody", { merchant: editing.merchant }) : ""}</Text>
+      </AuraSheet>
+    </>
+  );
+}
+
+function ExpenseFormBody({
   editingExpense,
   initialDraft,
   source = "manual",
@@ -94,21 +138,16 @@ export function ExpenseForm({
   tripCurrency,
   companions = [],
   onSave,
-  onCancel,
-  onSpeak,
-}: ExpenseFormProps) {
-  const { nomad, isDark } = useTheme();
-  const theme = nomad.colors;
+  onDelete,
+}: ExpenseFormProps & { onDelete: () => void }) {
+  const { c, f } = useAura();
   const { t, locale } = useLocalization();
   const addExpense = useExpensesStore((state) => state.addExpense);
   const updateExpense = useExpensesStore((state) => state.updateExpense);
-  const deleteExpense = useExpensesStore((state) => state.deleteExpense);
 
   const decimalSeparator = useMemo(() => localeDecimalSeparator(locale), [locale]);
   const prefill = editingExpense ?? initialDraft;
-  const [amount, setAmount] = useState(
-    prefill ? String(prefill.amount).replace(".", decimalSeparator) : "",
-  );
+  const [amount, setAmount] = useState(prefill ? String(prefill.amount).replace(".", decimalSeparator) : "");
   const [merchant, setMerchant] = useState(prefill?.merchant ?? "");
   const [category, setCategory] = useState<ExpenseCategory>(prefill?.category ?? "other");
   const [categoryTouched, setCategoryTouched] = useState(Boolean(prefill));
@@ -118,26 +157,15 @@ export function ExpenseForm({
   // Companions removed from the trip still show if an existing split names them.
   const everyone = useMemo(
     () => [
-      ...new Set([
-        SELF_ID,
-        ...companions,
-        ...(prefill?.shares ?? []).map((share) => share.person),
-        ...(prefill?.paidBy ? [prefill.paidBy] : []),
-      ]),
+      ...new Set([SELF_ID, ...companions, ...(prefill?.shares ?? []).map((share) => share.person), ...(prefill?.paidBy ? [prefill.paidBy] : [])]),
     ],
     [companions, prefill],
   );
-  const [split, setSplit] = useState<SplitValue>(() =>
-    initialSplitValue(everyone, decimalSeparator, prefill ? { ...prefill } : undefined),
-  );
+  const [split, setSplit] = useState<SplitValue>(() => initialSplitValue(everyone, decimalSeparator, prefill ? { ...prefill } : undefined));
   const canSplit = everyone.length > 1;
-  const [location, setLocation] = useState<ExpenseLocation | null>(
-    editingExpense?.location ?? null,
-  );
+  const [location, setLocation] = useState<ExpenseLocation | null>(editingExpense?.location ?? null);
   const [isLocating, setIsLocating] = useState(false);
   const [isCurrencyOpen, setIsCurrencyOpen] = useState(false);
-  const [isPickerOpen, setIsPickerOpen] = useState(false);
-
   const affix = useMemo(() => getCurrencyAffix(locale, currency), [locale, currency]);
 
   // Auto-suggest a category from the merchant until the user picks one.
@@ -149,11 +177,6 @@ export function ExpenseForm({
     }
   };
 
-  const handleSelectCategory = (next: ExpenseCategory) => {
-    setCategory(next);
-    setCategoryTouched(true);
-  };
-
   const handleToggleLocation = async () => {
     if (location) {
       setLocation(null);
@@ -162,11 +185,8 @@ export function ExpenseForm({
     setIsLocating(true);
     const result = await getCurrentExpenseLocation();
     setIsLocating(false);
-    if (result) {
-      setLocation(result);
-    } else {
-      Alert.alert(t("expenses.tagLocation"), t("expenses.locationUnavailable"));
-    }
+    if (result) setLocation(result);
+    else Alert.alert(t("expenses.tagLocation"), t("expenses.locationUnavailable"));
   };
 
   const handleSave = () => {
@@ -182,7 +202,6 @@ export function ExpenseForm({
       return;
     }
     const shares = resolution?.ok ? resolution.shares.filter((share) => share.amount > 0) : undefined;
-
     const payload = {
       tripId,
       merchant: trimmedMerchant,
@@ -195,7 +214,6 @@ export function ExpenseForm({
       paidBy: shares ? split.paidBy : undefined,
       shares,
     };
-
     if (editingExpense) {
       updateExpense(editingExpense.id, payload);
     } else {
@@ -205,247 +223,90 @@ export function ExpenseForm({
     onSave();
   };
 
-  const handleDelete = () => {
-    if (!editingExpense) return;
-    Alert.alert(
-      t("expenses.deleteTitle"),
-      t("expenses.deleteBody", { merchant: editingExpense.merchant }),
-      [
-        { text: t("common.cancel"), style: "cancel" },
-        {
-          text: t("common.delete"),
-          style: "destructive",
-          onPress: () => {
-            deleteExpense(editingExpense.id);
-            onSave();
-          },
-        },
-      ],
-    );
-  };
-
-  const dateLabel = new Intl.DateTimeFormat(locale, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  }).format(date);
-  const isIOS = process.env.EXPO_OS === "ios";
-  const isAndroid = process.env.EXPO_OS === "android";
+  const affixText = (text: string) => <Text style={[styles.affix, { color: c.textSoft, fontFamily: f.semibold }]}>{text}</Text>;
 
   return (
-    <KeyboardAvoidingView style={styles.flex} behavior="padding">
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.headerRow}>
-          <View>
-            <Text style={[styles.eyebrow, { color: theme.inkMuted }]}>
-              {editingExpense ? t("expenses.editEyebrow") : t("expenses.addEyebrow")}
-            </Text>
-            <Text style={[styles.title, { color: theme.inkDeep }]}>
-              {editingExpense ? t("expenses.editTitle") : t("expenses.addTitle")}
-            </Text>
-          </View>
-          <View style={styles.headerActions}>
-            {onSpeak && !editingExpense ? (
-              <Pressable
-                onPress={onSpeak}
-                hitSlop={10}
-                accessibilityLabel={t("voiceExpense.speakToAdd")}
-                style={[styles.closeButton, { backgroundColor: theme.tealSoft, borderColor: theme.teal }]}
-              >
-                <Icon name="mic" size={18} color={theme.teal} />
-              </Pressable>
-            ) : null}
-            <Pressable
-              onPress={onCancel}
-              hitSlop={10}
-              style={[styles.closeButton, { backgroundColor: theme.paper, borderColor: theme.hairline }]}
-            >
-              <Icon name="x" size={18} color={theme.inkSoft} />
-            </Pressable>
-          </View>
-        </View>
-
-        <View style={[styles.card, { backgroundColor: theme.paperSoft, borderColor: theme.hairline }]}>
-          <View style={styles.group}>
-            <View style={styles.labelRow}>
-              <Text style={[styles.label, { color: theme.inkMuted }]}>{t("expenses.amount")}</Text>
-              <Pressable onPress={() => setIsCurrencyOpen((open) => !open)} hitSlop={8}>
-                <Text style={[styles.meta, { color: theme.teal }]}>{currency}</Text>
-              </Pressable>
-            </View>
-            <View style={[styles.inputShell, { backgroundColor: theme.paper, borderColor: theme.hairline }]}>
-              {affix.prefix ? (
-                <Text style={[styles.affix, { color: theme.inkDeep }]}>{affix.prefix}</Text>
-              ) : null}
-              <TextInput
-                value={amount}
-                onChangeText={(value) => setAmount(value.replace(/[^0-9.,]/g, ""))}
-                placeholder={`0${decimalSeparator}00`}
-                placeholderTextColor={theme.inkMuted}
-                keyboardType="decimal-pad"
-                style={[styles.amountInput, { color: theme.inkDeep }]}
-              />
-              {affix.suffix ? (
-                <Text style={[styles.affix, { color: theme.inkDeep }]}>{affix.suffix}</Text>
-              ) : null}
-            </View>
-            {isCurrencyOpen ? (
-              <View style={styles.currencyGrid}>
-                {CURRENCY_OPTIONS.map((option) => {
-                  const active = option.code === currency;
-                  return (
-                    <Pressable
-                      key={option.code}
-                      onPress={() => {
-                        setCurrency(option.code);
-                        setIsCurrencyOpen(false);
-                      }}
-                      style={[
-                        styles.currencyOption,
-                        {
-                          backgroundColor: active ? theme.tealSoft : theme.paper,
-                          borderColor: active ? theme.teal : theme.hairline,
-                        },
-                      ]}
-                    >
-                      <Text style={[styles.currencyCode, { color: theme.inkDeep }]}>{option.code}</Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            ) : null}
-          </View>
-
-          <View style={styles.group}>
-            <Text style={[styles.label, { color: theme.inkMuted }]}>{t("expenses.merchant")}</Text>
-            <View style={[styles.inputShell, { backgroundColor: theme.paper, borderColor: theme.hairline }]}>
-              <TextInput
-                value={merchant}
-                onChangeText={handleMerchantChange}
-                placeholder={t("expenses.merchantPlaceholder")}
-                placeholderTextColor={theme.inkMuted}
-                autoCapitalize="words"
-                style={[styles.input, { color: theme.inkDeep }]}
-              />
-            </View>
-          </View>
-
-          <View style={styles.group}>
-            <Text style={[styles.label, { color: theme.inkMuted }]}>{t("expenses.categoryLabel")}</Text>
-            <View style={styles.categoryRow}>
-              {EXPENSE_CATEGORIES.map((meta) => {
-                const active = meta.id === category;
-                const color = theme[meta.color];
-                return (
-                  <Pressable
-                    key={meta.id}
-                    onPress={() => handleSelectCategory(meta.id)}
-                    style={[
-                      styles.categoryChip,
-                      {
-                        backgroundColor: active ? theme[meta.soft] : theme.paper,
-                        borderColor: active ? color : theme.hairline,
-                      },
-                    ]}
-                  >
-                    <Icon name={meta.icon} size={15} color={active ? color : theme.inkSoft} />
-                    <Text
-                      style={[
-                        styles.categoryText,
-                        { color: active ? theme.inkDeep : theme.inkSoft },
-                      ]}
-                    >
-                      {t(`expenses.category.${meta.id}`)}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-
-          <View style={styles.group}>
-            <Text style={[styles.label, { color: theme.inkMuted }]}>{t("expenses.dateLabel")}</Text>
-            <Pressable
-              onPress={() => setIsPickerOpen(true)}
-              style={[styles.inputShell, { backgroundColor: theme.paper, borderColor: theme.hairline }]}
-            >
-              <Icon name="calendar" size={16} color={theme.inkSoft} />
-              <Text style={[styles.dateText, { color: theme.inkDeep }]}>{dateLabel}</Text>
-            </Pressable>
-            {isAndroid && isPickerOpen ? (
-              <DateTimePicker
-                value={date}
-                mode="date"
-                display="default"
-                presentation="dialog"
-                accentColor={theme.teal}
-                positiveButton={{ label: t("common.ok") }}
-                negativeButton={{ label: t("common.cancel") }}
-                onDismiss={() => setIsPickerOpen(false)}
-                onValueChange={(_, selected) => {
-                  setDate(selected);
-                  setIsPickerOpen(false);
+    <View style={styles.flex}>
+      <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+        <AuraField
+          large
+          label={t("expenses.amount")}
+          labelAction={
+            <PressableScale onPress={() => setIsCurrencyOpen((open) => !open)} hitSlop={8} style={[styles.currency, { backgroundColor: c.surfaceStrong }]}>
+              <Text style={[styles.currencyText, { color: c.text, fontFamily: f.semibold }]}>{currency}</Text>
+              <Icon name="chevronDown" size={12} color={c.textMuted} />
+            </PressableScale>
+          }
+          value={amount}
+          onChangeText={(value) => setAmount(value.replace(/[^0-9.,]/g, ""))}
+          placeholder={`0${decimalSeparator}00`}
+          keyboardType="decimal-pad"
+          autoFocus={!prefill}
+          prefix={affix.prefix ? affixText(affix.prefix) : undefined}
+          suffix={affix.suffix ? affixText(affix.suffix) : undefined}
+        />
+        {isCurrencyOpen ? (
+          <Animated.View entering={FadeIn.duration(160)} exiting={FadeOut.duration(120)} layout={LinearTransition} style={styles.wrap}>
+            {CURRENCY_OPTIONS.map((option) => (
+              <AuraChip
+                key={option.code}
+                label={option.code}
+                selected={option.code === currency}
+                onPress={() => {
+                  setCurrency(option.code);
+                  setIsCurrencyOpen(false);
                 }}
               />
-            ) : null}
-          </View>
+            ))}
+          </Animated.View>
+        ) : null}
 
-          <View style={styles.group}>
-            <Text style={[styles.label, { color: theme.inkMuted }]}>{t("expenses.noteLabel")}</Text>
-            <View style={[styles.inputShell, { backgroundColor: theme.paper, borderColor: theme.hairline }]}>
-              <TextInput
-                value={note}
-                onChangeText={setNote}
-                placeholder={t("expenses.notePlaceholder")}
-                placeholderTextColor={theme.inkMuted}
-                style={[styles.input, { color: theme.inkDeep }]}
+        <AuraField label={t("expenses.merchant")} value={merchant} onChangeText={handleMerchantChange} placeholder={t("expenses.merchantPlaceholder")} autoCapitalize="words" />
+
+        <View style={styles.group}>
+          <Text style={[styles.label, { color: c.textSoft, fontFamily: f.medium }]}>{t("expenses.categoryLabel")}</Text>
+          <View style={styles.wrap}>
+            {EXPENSE_CATEGORIES.map((meta) => (
+              <AuraChip
+                key={meta.id}
+                label={t(`expenses.category.${meta.id}`)}
+                icon={meta.icon}
+                dot={meta.id === category ? undefined : auraCategoryColors[meta.id]}
+                selected={meta.id === category}
+                onPress={() => {
+                  setCategory(meta.id);
+                  setCategoryTouched(true);
+                }}
               />
-            </View>
+            ))}
           </View>
-
-          <Pressable
-            onPress={handleToggleLocation}
-            style={[
-              styles.locationRow,
-              {
-                backgroundColor: location ? theme.tealSoft : theme.paper,
-                borderColor: location ? theme.teal : theme.hairline,
-              },
-            ]}
-          >
-            <Icon name="mapPin" size={16} color={location ? theme.teal : theme.inkSoft} />
-            <Text style={[styles.locationText, { color: theme.inkDeep }]}>
-              {isLocating
-                ? t("expenses.locating")
-                : location
-                  ? location.label ?? t("expenses.locationTagged")
-                  : t("expenses.tagLocation")}
-            </Text>
-            {isLocating ? (
-              <ActivityIndicator size="small" color={theme.teal} />
-            ) : (
-              <View
-                style={[
-                  styles.toggle,
-                  {
-                    backgroundColor: location ? theme.teal : "transparent",
-                    borderColor: location ? theme.teal : theme.hairline,
-                  },
-                ]}
-              >
-                {location ? <Icon name="check" size={12} color={theme.inverse} strokeWidth={3} /> : null}
-              </View>
-            )}
-          </Pressable>
-
         </View>
 
+        <AuraDateField label={t("expenses.dateLabel")} value={date} onChange={setDate} maximumDate={new Date()} />
+        <AuraField label={t("expenses.noteLabel")} value={note} onChangeText={setNote} placeholder={t("expenses.notePlaceholder")} />
+
+        <PressableScale
+          onPress={() => void handleToggleLocation()}
+          pressedScale={0.98}
+          accessibilityRole="switch"
+          accessibilityState={{ checked: Boolean(location) }}
+          style={[styles.locationRow, { backgroundColor: c.surface, borderColor: location ? "#22C7B8" : c.hairline }]}
+        >
+          <Icon name="mapPin" size={16} color={location ? "#22C7B8" : c.textSoft} />
+          <Text style={[styles.locationText, { color: c.text, fontFamily: f.medium }]}>
+            {isLocating ? t("expenses.locating") : location ? (location.label ?? t("expenses.locationTagged")) : t("expenses.tagLocation")}
+          </Text>
+          {isLocating ? (
+            <ActivityIndicator size="small" color={c.textSoft} />
+          ) : (
+            <View style={[styles.toggle, { backgroundColor: location ? "#22C7B8" : "transparent", borderColor: location ? "#22C7B8" : c.highlight }]}>
+              {location ? <Icon name="check" size={12} color="#FFFFFF" strokeWidth={3} /> : null}
+            </View>
+          )}
+        </PressableScale>
+
         {canSplit ? (
-          <View style={[styles.card, { backgroundColor: theme.paperSoft, borderColor: theme.hairline }]}>
+          <View style={[styles.splitCard, { backgroundColor: c.surface, borderColor: c.hairline }]}>
             <SplitEditor
               everyone={everyone}
               value={split}
@@ -456,184 +317,37 @@ export function ExpenseForm({
             />
           </View>
         ) : null}
-
-        <Pressable
-          onPress={handleSave}
-          style={({ pressed }) => [styles.saveButton, { backgroundColor: theme.teal, opacity: pressed ? 0.9 : 1 }]}
-        >
-          <Icon name="check" size={18} color={theme.inverse} />
-          <Text style={[styles.saveText, { color: theme.inverse }]}>
-            {editingExpense ? t("expenses.saveAction") : t("expenses.addAction")}
-          </Text>
-        </Pressable>
-
-        {editingExpense ? (
-          <Pressable onPress={handleDelete} style={styles.deleteButton}>
-            <Icon name="trash" size={15} color={theme.stamp} />
-            <Text style={[styles.deleteText, { color: theme.stamp }]}>{t("common.delete")}</Text>
-          </Pressable>
-        ) : null}
-
-        {isIOS ? (
-          <Modal visible={isPickerOpen} transparent animationType="slide" onRequestClose={() => setIsPickerOpen(false)}>
-            <Pressable style={styles.sheetBackdrop} onPress={() => setIsPickerOpen(false)} />
-            <View style={[styles.sheet, { backgroundColor: theme.paperSoft, borderColor: theme.hairline }]}>
-              <View style={[styles.grabber, { backgroundColor: theme.hairline }]} />
-              <View style={styles.sheetHeader}>
-                <Text style={[styles.sheetTitle, { color: theme.inkDeep }]}>{dateLabel}</Text>
-                <Pressable
-                  onPress={() => setIsPickerOpen(false)}
-                  style={[styles.doneButton, { backgroundColor: theme.tealSoft }]}
-                >
-                  <Text style={[styles.doneText, { color: theme.teal }]}>{t("common.ok")}</Text>
-                </Pressable>
-              </View>
-              <Host
-                matchContents={{ vertical: true }}
-                colorScheme={isDark ? "dark" : "light"}
-                ignoreSafeArea="all"
-                style={styles.host}
-              >
-                <SwiftDatePicker
-                  selection={date}
-                  displayedComponents={["date"]}
-                  onDateChange={setDate}
-                  modifiers={[
-                    datePickerStyle("graphical"),
-                    tint(theme.teal),
-                    environment("colorScheme", isDark ? "dark" : "light"),
-                  ]}
-                />
-              </Host>
-            </View>
-          </Modal>
-        ) : null}
       </ScrollView>
-    </KeyboardAvoidingView>
+
+      <View style={styles.footer}>
+        {editingExpense ? <AuraButton label={t("common.delete")} icon="trash" variant="secondary" onPress={onDelete} style={styles.deleteButton} /> : null}
+        <AuraButton
+          label={editingExpense ? t("expenses.saveAction") : t("expenses.addAction")}
+          icon="check"
+          onPress={handleSave}
+          style={styles.flex}
+        />
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  scroll: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 120, gap: 16 },
-  headerRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" },
-  headerActions: { flexDirection: "row", gap: 8 },
-  eyebrow: {
-    fontFamily: NOMAD_FONTS.uiBold,
-    fontSize: 10.5,
-    letterSpacing: 1.6,
-    textTransform: "uppercase",
-  },
-  title: { fontFamily: NOMAD_FONTS.display, fontSize: 30, lineHeight: 34, marginTop: 4 },
-  closeButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 999,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  card: { borderWidth: 1, borderRadius: 18, padding: 16, gap: 14 },
+  scroll: { paddingHorizontal: 20, paddingTop: 6, paddingBottom: 20, gap: 18 },
+  mic: { width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center" },
+  currency: { flexDirection: "row", alignItems: "center", gap: 4, height: 28, paddingHorizontal: 10, borderRadius: 14 },
+  currencyText: { fontSize: 13 },
+  affix: { fontSize: 26 },
+  wrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   group: { gap: 8 },
-  labelRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  label: {
-    fontFamily: NOMAD_FONTS.uiBold,
-    fontSize: 10.5,
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
-  },
-  meta: { fontFamily: NOMAD_FONTS.monoMedium, fontSize: 11, letterSpacing: 0.8 },
-  inputShell: {
-    minHeight: 50,
-    borderWidth: 1,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  affix: { fontFamily: NOMAD_FONTS.uiSemi, fontSize: 18 },
-  amountInput: { flex: 1, minHeight: 50, fontFamily: NOMAD_FONTS.uiSemi, fontSize: 22 },
-  input: { flex: 1, minHeight: 50, fontFamily: NOMAD_FONTS.ui, fontSize: 15 },
-  dateText: { flex: 1, fontFamily: NOMAD_FONTS.ui, fontSize: 15 },
-  currencyGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  currencyOption: {
-    minWidth: 64,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    alignItems: "center",
-  },
-  currencyCode: { fontFamily: NOMAD_FONTS.uiSemi, fontSize: 13 },
-  categoryRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  categoryChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-  },
-  categoryText: { fontFamily: NOMAD_FONTS.uiSemi, fontSize: 13 },
-  locationRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    borderWidth: 1,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
-  },
-  locationText: { flex: 1, fontFamily: NOMAD_FONTS.uiSemi, fontSize: 14 },
-  toggle: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 1.5,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  saveButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    borderRadius: 18,
-    paddingVertical: 16,
-  },
-  saveText: { fontFamily: NOMAD_FONTS.uiSemi, fontSize: 15 },
-  deleteButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 4,
-  },
-  deleteText: { fontFamily: NOMAD_FONTS.uiSemi, fontSize: 14 },
-  sheetBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.3)" },
-  sheet: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderTopWidth: 1,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 16,
-    paddingBottom: 34,
-    paddingTop: 12,
-  },
-  grabber: { width: 36, height: 4, borderRadius: 2, alignSelf: "center", marginBottom: 12 },
-  sheetHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 12,
-  },
-  sheetTitle: { fontFamily: NOMAD_FONTS.display, fontSize: 22 },
-  doneButton: { borderRadius: 12, paddingHorizontal: 16, paddingVertical: 8 },
-  doneText: { fontFamily: NOMAD_FONTS.uiSemi, fontSize: 14 },
-  host: { minHeight: 360 },
+  label: { fontSize: 13.5 },
+  locationRow: { flexDirection: "row", alignItems: "center", gap: 10, minHeight: 52, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 14 },
+  locationText: { flex: 1, fontSize: 14.5 },
+  toggle: { width: 24, height: 24, borderRadius: 12, borderWidth: 1.5, alignItems: "center", justifyContent: "center" },
+  splitCard: { borderRadius: 22, borderWidth: StyleSheet.hairlineWidth, padding: 16 },
+  footer: { flexDirection: "row", gap: 10, paddingHorizontal: 20, paddingTop: 10 },
+  deleteButton: { paddingHorizontal: 18 },
+  actions: { flexDirection: "row", gap: 10 },
+  confirmBody: { fontSize: 15, lineHeight: 22, paddingHorizontal: 20, paddingBottom: 8 },
 });

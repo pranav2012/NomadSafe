@@ -61,7 +61,8 @@
     "upNext": "Up next",
     "yourStay": "Your stay",
     "globeHint": "Globe. Pinch to zoom into the map",
-    "backToGlobe": "Back to globe"
+    "backToGlobe": "Back to globe",
+    "refine": "Refine"
   },
   "trip": {
     "createEyebrow": "New trip",
@@ -219,7 +220,9 @@
     "defaultNameMulti": "{{first}} & more",
     "noBudgetSet": "No budget set",
     "creatingAction": "Creating…",
-    "savingAction": "Saving…"
+    "savingAction": "Saving…",
+    "daysCount_one": "{{count}} day",
+    "daysCount_other": "{{count}} days"
   },
   "itinerary": {
     "title": "Trip events",

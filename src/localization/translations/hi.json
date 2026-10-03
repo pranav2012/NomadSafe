@@ -61,7 +61,8 @@
     "upNext": "आगे क्या है",
     "yourStay": "आपका ठहराव",
     "globeHint": "ग्लोब। मानचित्र तक ज़ूम करने के लिए पिंच करें",
-    "backToGlobe": "ग्लोब पर वापस जाएँ"
+    "backToGlobe": "ग्लोब पर वापस जाएँ",
+    "refine": "सुधारें"
   },
   "settings": {
     "title": "सेटिंग्स",
@@ -605,7 +606,9 @@
     "defaultNameMulti": "{{first}} और अधिक",
     "noBudgetSet": "कोई बजट सेट नहीं है",
     "creatingAction": "बन रहा है…",
-    "savingAction": "सेव हो रहा है…"
+    "savingAction": "सेव हो रहा है…",
+    "daysCount_one": "{{count}} दिन",
+    "daysCount_other": "{{count}} दिन"
   },
   "aiTab": {
     "onDevice": "डिवाइस पर",

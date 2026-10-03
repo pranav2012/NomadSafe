@@ -1,4 +1,3 @@
-import { createNomadTheme, type NomadColors, type NomadTheme } from "@/constants/theme";
 import { InstrumentSans_400Regular } from "@expo-google-fonts/instrument-sans/400Regular";
 import { InstrumentSans_500Medium } from "@expo-google-fonts/instrument-sans/500Medium";
 import { InstrumentSans_600SemiBold } from "@expo-google-fonts/instrument-sans/600SemiBold";
@@ -76,45 +75,9 @@ export const auraStatusAccent: Record<AuraStatus, string> = {
   alert: "#FF4D5E",
 };
 
-/**
- * The legacy Nomad theme re-pointed at Aura colours and Instrument Sans, so older sections
- * (weather, itinerary, nearby places) blend into the new Home until they are redesigned.
- */
-export function auraNomadTheme(isDark: boolean): NomadTheme {
-  const base = createNomadTheme(isDark);
-  const c = isDark ? auraDark : auraLight;
-  const soft = (hex: string) => `${hex}${isDark ? "26" : "1F"}`;
-  const colors = {
-    ...base.colors,
-    paper: c.bg,
-    paperDeep: isDark ? "#07090D" : "#E8EAEF",
-    paperSoft: c.card,
-    inkDeep: c.text,
-    ink: c.text,
-    inkSoft: c.textSoft,
-    inkMuted: c.textMuted,
-    hairline: c.hairline,
-    teal: "#22C7B8",
-    tealSoft: soft("#22C7B8"),
-    stamp: "#8B97FF",
-    stampSoft: soft("#8B97FF"),
-    mustard: "#FFB547",
-    mustardSoft: soft("#FFB547"),
-    sky: "#5B8CFF",
-    skySoft: soft("#5B8CFF"),
-  } as unknown as NomadColors;
-  return {
-    ...base,
-    colors,
-    fonts: {
-      ...base.fonts,
-      display: auraFonts.semibold,
-      displayItalic: auraFonts.medium,
-      displayBold: auraFonts.bold,
-      ui: auraFonts.regular,
-      uiMedium: auraFonts.medium,
-      uiSemi: auraFonts.semibold,
-      uiBold: auraFonts.bold,
-    } as unknown as NomadTheme["fonts"],
-  };
-}
+
+/** Itinerary event type colours in the Aura palette. */
+export const auraEventColors = { transit: "#FFB547", stay: "#22C7B8", activity: "#8B97FF" } as const;
+
+/** Expense category colours in the Aura palette. */
+export const auraCategoryColors = { food: "#FF7A6B", stays: "#22C7B8", travel: "#FFB547", shopping: "#5B8CFF", other: "#9AA0B4" } as const;

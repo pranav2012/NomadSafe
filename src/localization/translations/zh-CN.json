@@ -61,7 +61,8 @@
     "upNext": "接下来",
     "yourStay": "你的住宿",
     "globeHint": "地球仪。双指放大进入地图",
-    "backToGlobe": "返回地球仪"
+    "backToGlobe": "返回地球仪",
+    "refine": "优化"
   },
   "settings": {
     "title": "设置",
@@ -605,7 +606,9 @@
     "defaultNameMulti": "{{first}} 及其他",
     "noBudgetSet": "未设置预算",
     "creatingAction": "创建中…",
-    "savingAction": "保存中…"
+    "savingAction": "保存中…",
+    "daysCount_one": "{{count}} 天",
+    "daysCount_other": "{{count}} 天"
   },
   "aiTab": {
     "onDevice": "设备端",
