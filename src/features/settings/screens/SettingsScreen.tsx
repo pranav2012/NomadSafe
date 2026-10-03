@@ -15,6 +15,7 @@ import { auraStatusAccent, auraStatusColors } from "@/constants/aura";
 import { LEGAL_URLS } from "@/constants/legal";
 import { LANGUAGE_OPTIONS, useLocalization, type SupportedLocale } from "@/localization";
 import { confirmDeviceOwner, disconnectGmail, signOutAndCleanup } from "@/services/session";
+import { disableBackup, flushGroupSync, flushSync, hasBackupOwner } from "@/features/sync";
 import { localAuth, useAuthStore, useBiometricPresentation } from "@/features/auth";
 import { useProvisioningStore } from "@/features/ai";
 import { useTripsStore } from "@/features/trips/store/tripsStore";
@@ -90,6 +91,8 @@ export default function SettingsScreen() {
   const setLocalAiEnabled = useSettingsStore((s) => s.setLocalAiEnabled);
   const analyticsEnabled = useSettingsStore((s) => s.analyticsEnabled);
   const setAnalyticsEnabled = useSettingsStore((s) => s.setAnalyticsEnabled);
+  const cloudBackupEnabled = useSettingsStore((s) => s.cloudBackupEnabled);
+  const setCloudBackupEnabled = useSettingsStore((s) => s.setCloudBackupEnabled);
 
   const trips = useTripsStore((s) => s.trips);
   const aiDeviceSupported = useProvisioningStore((s) => s.deviceSupported);
@@ -102,6 +105,7 @@ export default function SettingsScreen() {
   const [exporting, setExporting] = useState(false);
   const [wiping, setWiping] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [backupBusy, setBackupBusy] = useState(false);
   const [sheet, setSheet] = useState<SheetId | null>(null);
   const closeSheet = () => setSheet(null);
 
@@ -220,15 +224,55 @@ export default function SettingsScreen() {
     ]);
   };
 
+  const signOutNow = async () => {
+    await signOutAndCleanup();
+    router.replace("/(auth)/sign-in");
+  };
+
+  // Backed-up and shared data leaves the phone on sign-out, so make sure pending changes reached the account first.
   const handleSignOut = () => {
-    Alert.alert(t("settings.signOutTitle"), t("settings.signOutBody"), [
+    const backedUp = hasBackupOwner();
+    Alert.alert(t("settings.signOutTitle"), t(backedUp ? "settings.signOutBodyBackedUp" : "settings.signOutBody"), [
       { text: t("common.cancel"), style: "cancel" },
       {
         text: t("settings.signOut"),
         style: "destructive",
         onPress: async () => {
-          await signOutAndCleanup();
-          router.replace("/(auth)/sign-in");
+          // Shared trips leave the phone on sign-out too, so their pending changes count as well.
+          const sent = (await flushGroupSync()) && (!backedUp || (await flushSync()));
+          if (!sent) {
+            Alert.alert(t("settings.signOutUnsyncedTitle"), t("settings.signOutUnsyncedBody"), [
+              { text: t("common.cancel"), style: "cancel" },
+              { text: t("settings.signOutAnyway"), style: "destructive", onPress: () => void signOutNow() },
+            ]);
+            return;
+          }
+          await signOutNow();
+        },
+      },
+    ]);
+  };
+
+  const handleBackupToggle = (next: boolean) => {
+    if (next) {
+      setCloudBackupEnabled(true);
+      return;
+    }
+    Alert.alert(t("settings.cloudBackupOffTitle"), t("settings.cloudBackupOffBody"), [
+      { text: t("common.cancel"), style: "cancel" },
+      {
+        text: t("settings.cloudBackupOffConfirm"),
+        style: "destructive",
+        onPress: async () => {
+          setBackupBusy(true);
+          try {
+            await disableBackup();
+            setCloudBackupEnabled(false);
+          } catch {
+            Alert.alert(t("settings.cloudBackupOffFailed"));
+          } finally {
+            setBackupBusy(false);
+          }
         },
       },
     ]);
@@ -415,7 +459,19 @@ export default function SettingsScreen() {
           />
         </AuraListGroup>
 
-        <AuraListGroup title={t("settings.dataSection")}>
+        <AuraListGroup title={t("settings.dataSection")} footer={t("settings.cloudBackupSub")}>
+          <AuraListRow
+            icon="globe"
+            tone={TEAL}
+            label={t("settings.cloudBackup")}
+            trailing={
+              backupBusy ? (
+                spinner(c.textMuted)
+              ) : (
+                <AuraSwitch value={cloudBackupEnabled} onValueChange={handleBackupToggle} accessibilityLabel={t("settings.cloudBackup")} />
+              )
+            }
+          />
           <AuraListRow
             icon="download"
             label={t("settings.exportEverything")}

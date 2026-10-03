@@ -8,6 +8,16 @@ import {
   stopLocationBroadcast,
 } from "@/features/location-sharing/services/locationBroadcastTask";
 import { useSharingStore } from "@/features/location-sharing/store/sharingStore";
+import {
+  clearSharedLocalData,
+  clearSyncedLocalData,
+  flushGroupSync,
+  flushSync,
+  hasBackupOwner,
+  stopGroupSync,
+  stopSync,
+  unregisterTripPush,
+} from "@/features/sync";
 
 /** Revokes the Google grant (best-effort) and forgets the local tokens. */
 export async function disconnectGmail() {
@@ -47,7 +57,8 @@ export async function confirmDeviceOwner(promptMessage: string, cancelLabel: str
 /**
  * Ends the account session: stops live location sharing (server shares are
  * marked inactive while the session is still valid), revokes Gmail access,
- * then signs out. On-device trips/expenses stay unless wiped.
+ * sends pending backup changes, then signs out. Backed-up trips and expenses are
+ * removed from the phone; with backup off they stay unless wiped.
  */
 export async function signOutAndCleanup() {
   try {
@@ -57,6 +68,17 @@ export async function signOutAndCleanup() {
   useSharingStore.getState().setBroadcasting(false);
 
   await disconnectGmail();
+
+  // Shared trips and backed-up data live on the account, so they leave the phone with it. Both
+  // engines stop before anything is cleared, or the clearing would be uploaded as deletions.
+  const backedUp = hasBackupOwner();
+  await flushGroupSync();
+  if (backedUp) await flushSync();
+  stopGroupSync();
+  stopSync();
+  clearSharedLocalData(useAuthStore.getState().user?.id ?? null);
+  if (backedUp) clearSyncedLocalData();
+  await unregisterTripPush();
 
   try {
     await authClient.signOut();

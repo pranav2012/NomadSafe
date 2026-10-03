@@ -11,6 +11,27 @@ export interface LatLng {
   longitude: number;
 }
 
+export interface TripMember {
+  memberId: string;
+  name: string;
+  role: "owner" | "member";
+  status: "active" | "left" | "removed";
+  /** False for name-only companions nobody has claimed yet. */
+  linked: boolean;
+}
+
+/** Present when the trip is shared through an invite link; kept in sync with the server. */
+export interface SharedTripInfo {
+  tripId: string;
+  /** Empty until the server's member list first arrives after sharing. */
+  myMemberId: string;
+  role: "owner" | "member";
+  inviteCode: string;
+  archived: boolean;
+  muted: boolean;
+  members: TripMember[];
+}
+
 export interface Trip {
   id: string;
   name: string;
@@ -25,6 +46,7 @@ export interface Trip {
   currency: string;
   companions: string[];
   createdAt: string;
+  shared?: SharedTripInfo;
 }
 
 export interface CreateTripInput {
@@ -59,7 +81,7 @@ export function selectActiveTrip(state: Pick<TripsState, "trips" | "activeTripId
 
 /** Earliest-starting running trip, else the soonest upcoming one, else null. */
 export function pickDefaultActiveTripId(trips: Trip[]): string | null {
-  const byStart = [...trips].sort(
+  const byStart = trips.filter((trip) => !trip.shared?.archived).sort(
     (a, b) => fromDateKey(a.startDate).getTime() - fromDateKey(b.startDate).getTime(),
   );
   return (

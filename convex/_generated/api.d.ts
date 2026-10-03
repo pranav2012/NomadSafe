@@ -11,10 +11,13 @@
 import type * as account from "../account.js";
 import type * as analytics from "../analytics.js";
 import type * as auth from "../auth.js";
+import type * as groupTrips from "../groupTrips.js";
 import type * as http from "../http.js";
 import type * as legalPages from "../legalPages.js";
 import type * as places from "../places.js";
 import type * as sharing from "../sharing.js";
+import type * as sync from "../sync.js";
+import type * as tripNotifications from "../tripNotifications.js";
 import type * as users from "../users.js";
 
 import type {
@@ -27,10 +30,13 @@ declare const fullApi: ApiFromModules<{
   account: typeof account;
   analytics: typeof analytics;
   auth: typeof auth;
+  groupTrips: typeof groupTrips;
   http: typeof http;
   legalPages: typeof legalPages;
   places: typeof places;
   sharing: typeof sharing;
+  sync: typeof sync;
+  tripNotifications: typeof tripNotifications;
   users: typeof users;
 }>;
 

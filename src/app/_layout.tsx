@@ -2,10 +2,12 @@ import React, { useEffect, useRef } from "react";
 import { AppState, Modal, Pressable, StyleSheet, Text, View, type AppStateStatus } from "react-native";
 import { Stack, usePathname, useRouter, useSegments, type ErrorBoundaryProps } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { ConvexReactClient, useConvexAuth, useMutation } from "convex/react";
+import { useConvexAuth, useMutation } from "convex/react";
 import { ConvexBetterAuthProvider } from "@convex-dev/better-auth/react";
 import { useFonts } from "expo-font";
 import { api } from "@convex/_generated/api";
+import { convex } from "@/services/convex";
+import { registerTripPush, startGroupSync, startSync, stopGroupSync, stopSync, useTripNotificationRouting } from "@/features/sync";
 import { AURA_FONT_FILES } from "@/constants/aura";
 import { authClient, useAuthStore, useSyncAuthSession } from "@/features/auth";
 import LockScreen from "@/features/auth/screens/LockScreen";
@@ -35,18 +37,6 @@ import {
   trackScreen,
 } from "@/services/analytics";
 import { logger } from "@/services/logger";
-
-const convexUrl = process.env.EXPO_PUBLIC_CONVEX_URL;
-
-if (!convexUrl) {
-  throw new Error(
-    "Missing EXPO_PUBLIC_CONVEX_URL. Add it to your .env.local file.",
-  );
-}
-
-const convex = new ConvexReactClient(convexUrl, {
-  unsavedChangesWarning: false,
-});
 
 export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
   useEffect(() => {
@@ -160,12 +150,36 @@ function LockGate() {
   );
 }
 
+/** Backs up trips while signed in with backup on, and keeps shared trips live while signed in. */
+function BackupEffects() {
+  const { isAuthenticated } = useConvexAuth();
+  const userId = useAuthStore((s) => s.user?.id);
+  const enabled = useSettingsStore((s) => s.cloudBackupEnabled);
+
+  useEffect(() => {
+    if (isAuthenticated && userId && enabled) startSync(userId);
+    else stopSync();
+  }, [enabled, isAuthenticated, userId]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !userId) {
+      stopGroupSync();
+      return;
+    }
+    startGroupSync(userId);
+    void registerTripPush(false);
+  }, [isAuthenticated, userId]);
+
+  return null;
+}
+
 function SessionEffects() {
   const { isAuthenticated } = useConvexAuth();
   const claimInvites = useMutation(api.sharing.claimInvites);
   const userId = useAuthStore((s) => s.user?.id);
 
   useSafetyNotificationRouting();
+  useTripNotificationRouting();
 
   useEffect(() => {
     if (!isAuthenticated || !userId) return;
@@ -232,6 +246,7 @@ function AppStack() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="settings" options={{ presentation: "modal" }} />
         <Stack.Screen name="trips" options={{ presentation: "modal" }} />
+        <Stack.Screen name="join/[code]" options={{ presentation: "modal" }} />
         <Stack.Screen name="emergency-contacts" />
         <Stack.Screen
           name="voice-expense"
@@ -264,6 +279,7 @@ function RootLayout() {
           <ThemeProvider>
             <AppStateLock />
             <SessionEffects />
+            <BackupEffects />
             <AnalyticsEffects />
             <WidgetSync />
             <AppStack />

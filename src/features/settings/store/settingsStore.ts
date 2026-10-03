@@ -20,6 +20,8 @@ interface SettingsState {
   localAiEnabled: boolean;
   analyticsEnabled: boolean;
   ambientSoundEnabled: boolean;
+  /** Back up trips, expenses and itinerary to the signed-in account. */
+  cloudBackupEnabled: boolean;
 
   setThemeMode: (mode: ThemeMode) => void;
   setOnboardingCompleted: (value: boolean) => void;
@@ -33,6 +35,7 @@ interface SettingsState {
   setLocalAiEnabled: (value: boolean) => void;
   setAnalyticsEnabled: (value: boolean) => void;
   setAmbientSoundEnabled: (value: boolean) => void;
+  setCloudBackupEnabled: (value: boolean) => void;
   reset: () => void;
 }
 
@@ -53,6 +56,7 @@ export const useSettingsStore = create<SettingsState>()(
       localAiEnabled: true,
       analyticsEnabled: true,
       ambientSoundEnabled: true,
+      cloudBackupEnabled: true,
 
       setThemeMode: (mode) => set({ themeMode: mode }),
       setOnboardingCompleted: (value) =>
@@ -76,6 +80,7 @@ export const useSettingsStore = create<SettingsState>()(
       setLocalAiEnabled: (value) => set({ localAiEnabled: value }),
       setAnalyticsEnabled: (value) => set({ analyticsEnabled: value }),
       setAmbientSoundEnabled: (value) => set({ ambientSoundEnabled: value }),
+      setCloudBackupEnabled: (value) => set({ cloudBackupEnabled: value }),
       reset: () =>
         set({
           themeMode: "system",
@@ -90,6 +95,7 @@ export const useSettingsStore = create<SettingsState>()(
           localAiEnabled: true,
       analyticsEnabled: true,
           ambientSoundEnabled: true,
+          cloudBackupEnabled: true,
         }),
     }),
     {

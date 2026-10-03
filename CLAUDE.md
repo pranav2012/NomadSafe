@@ -13,7 +13,7 @@ NomadSafe is a travel safety and planning app built with Expo (SDK 57), React Na
 - **Run on Android / iOS**: `pnpm android` / `pnpm ios`. These need a dev-client build; the app doesn't run in Expo Go.
 - **Lint**: `pnpm lint`
 - **Type-check**: `pnpm exec tsc --noEmit`
-- **Tests**: `pnpm test` (node:test + esbuild: expense import/parser, expense splits/voice parsing, trip utils, AI money facts)
+- **Tests**: `pnpm test` (node:test + esbuild: expense import/parser, expense splits/voice parsing, trip utils, AI money facts, sync hashing)
 - **i18n check**: `node scripts/check-i18n-keys.mjs`
 - **Backend**: `npx convex dev`
 - **Release**: see `docs/PLAY_RELEASE.md` (EAS profiles are in `eas.json`)
@@ -31,6 +31,10 @@ NomadSafe is a travel safety and planning app built with Expo (SDK 57), React Na
   - `convex/sharing.ts`: contact links, invites, location shares.
   - `convex/account.ts`: account deletion. It also schedules `convex/analytics.ts` to delete the user's PostHog data (needs `POSTHOG_PERSONAL_API_KEY` and `POSTHOG_PROJECT_ID` Convex env vars).
   - `convex/legalPages.ts`: `/privacy` and `/delete-account` pages.
+  - `convex/groupTrips.ts`: shared trips (`sharedTrips`, `tripMembers`, `tripRecords`), invite codes, membership checks; `convex/tripNotifications.ts` sends Expo pushes for money changes and stores `pushTokens`. `/join/<code>` (in `legalPages.ts`) opens `nomadsafe://join/<code>`.
+  - `convex/sync.ts`: trip backup (`syncRecords`, last-write-wins by `updatedAt`, per-user `serverSeq` pull cursor, tombstones for deletes).
+- **Trip backup**: `features/sync/services/syncEngine.ts` syncs trips, expenses, settlements and itinerary events to the account while signed in with `cloudBackupEnabled`. It diffs the stores against a per-user ledger in MMKV, so store actions don't need sync hooks. `rawText` never leaves the device. Sign-out clears backed-up data from the phone; data from another account is cleared on sign-in, unowned data is adopted. Stop the engine before resetting those stores, or the reset is pushed as deletions.
+- **Shared trips**: `features/sync/services/groupSync.ts` mirrors `groupTrips.myTrips` (a live Convex subscription) into the trips store (`Trip.shared`, local id `g-<serverId>`) and syncs each trip's group expenses (split, or paid by someone else), settlements and itinerary. Splits use member ids on the server and `SELF_ID`/member names locally; names are unique per trip and never renamed. Unsplit expenses on a shared trip stay in the personal backup. Invite links are held in `pendingJoinStore` until the user is in the app. Archiving is per member; owners can delete only after everyone who joined is removed; members leave only when settled up.
 - **Background location**: `features/location-sharing/services/locationBroadcastTask.ts` exchanges the Better Auth session cookie for a Convex JWT and calls `sharing.publishLocation` with `ConvexHttpClient`. Its state is kept under its own MMKV key, not the UI store.
 - **Local AI**: llama.rn, managed by `features/ai/services/localModelService.ts`. All completions go through its internal queue, and `release()` is safe to call at any time.
 - **Splits**: `Expense.paidBy` / `Expense.shares` (person ids: `SELF_ID` or a companion name) and `Settlement` records in the expenses store. Split math, balances and debt simplification are pure functions in `features/expenses/utils/split.ts`; amounts are handled in currency minor units.
@@ -46,7 +50,7 @@ NomadSafe is a travel safety and planning app built with Expo (SDK 57), React Na
 - Never add `READ_SMS`, `SEND_SMS` or other restricted permissions. They're listed in `android.blockedPermissions`, and SOS uses the SMS composer (`expo-sms`).
 - Show `BackgroundLocationDisclosure` before any `requestBackgroundPermissionsAsync()`.
 - `RECORD_AUDIO` is allowed only for on-device voice entry; never add a network speech fallback.
-- Keep privacy copy truthful. Account and live location go to Convex; everything else stays on the device. Don't claim end-to-end encryption.
+- Keep privacy copy truthful. Account, live location, the trip backup (trips, expenses, settlements, itinerary; not raw imported text), shared trips (visible to their members) and push tokens go to Convex; push notification text goes through Expo/FCM/APNs; everything else stays on the device. Don't claim end-to-end encryption. Update the Play data safety form when this changes.
 - Account deletion must keep working in the app (Settings) and on the web (`/delete-account`).
 
 ## Key Config

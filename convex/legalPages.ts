@@ -1,7 +1,7 @@
 import { internal } from "./_generated/api";
 import { httpAction } from "./_generated/server";
 
-const EFFECTIVE_DATE = "28 September 2026";
+const EFFECTIVE_DATE = "4 October 2026";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="120" fill="#072B40"/><path d="M80 300 C140 200 200 200 256 260 C320 330 360 320 400 260" fill="none" stroke="#22D3EE" stroke-width="5.5" stroke-linecap="round" stroke-dasharray="3 12" opacity="0.75"/><g transform="translate(400,260) rotate(-50)"><path d="M-14 -10 L14 0 L-14 10 L-6 0 Z" fill="#E6F6FF"/></g><path d="M196 184 L316 360" stroke="#E6F6FF" stroke-width="40" stroke-linecap="round" opacity="0.32"/><rect x="176" y="168" width="44" height="176" rx="22" fill="#E6F6FF"/><rect x="292" y="168" width="44" height="176" rx="22" fill="#E6F6FF"/><path d="M200 168 L320 344" stroke="#E6F6FF" stroke-width="40" stroke-linecap="round"/></svg>`;
 const FAVICON = `data:image/svg+xml,${encodeURIComponent(LOGO_SVG)}`;
@@ -49,22 +49,25 @@ export const privacyPolicy = httpAction(async () => {
     "Privacy Policy",
     `<h1>NomadSafe Privacy Policy</h1>
 <p class="muted">Effective ${EFFECTIVE_DATE}</p>
-<p>NomadSafe is a travel safety and planning app. This policy explains what data the app collects, why, where it goes, and how you can delete it. Most of your data stays on your device; the sections below list exactly what leaves it.</p>
+<p>NomadSafe is a travel safety and planning app. This policy explains what data the app collects, why, where it goes, and how you can delete it. The sections below list exactly what stays on your device and what is stored on our servers.</p>
 
 <h2>Data stored only on your device</h2>
 <ul>
-<li>Trips, itinerary events, expenses and budgets.</li>
+<li>The original text of messages you paste or import from Gmail to find expenses and bookings.</li>
 <li>Emergency contacts you pick, SMS templates and safety check-in history.</li>
 <li>AI chat history. The AI model runs entirely on your device; prompts and replies are never sent to us.</li>
 <li>Your app PIN (stored in the Android Keystore / iOS Keychain).</li>
 </ul>
-<p>This data is kept in encrypted app storage and is excluded from cloud backups. If you add the NomadSafe home-screen widget, your trip names are also kept in the widget's own storage on your device so it can show them. Uninstalling the app or using <em>Settings → Wipe device data</em> removes it.</p>
+<p>This data is kept in encrypted app storage and is excluded from cloud backups. Trips, expenses and itinerary are kept in the same encrypted storage on your device as well as in your account backup (below). If you add the NomadSafe home-screen widget, your trip names are also kept in the widget's own storage on your device so it can show them. Uninstalling the app or using <em>Settings → Wipe device data</em> removes it.</p>
 
 <h2>Data stored on our servers</h2>
 <ul>
 <li><strong>Account:</strong> when you sign in with Google we receive your name, email address and profile photo to create your account.</li>
 <li><strong>Live location sharing (optional):</strong> while you have sharing turned on, your precise location, battery level and sharing mode are sent to our server and shown only to contacts who accepted your request. This includes when the app is closed or not in use, which Android indicates with a persistent notification. We keep only your latest position per contact, not a location history. Turning sharing off marks it inactive immediately.</li>
 <li><strong>Sharing contacts:</strong> the name and email address of people you invite to receive your location, and the status of those requests.</li>
+<li><strong>Trip backup (on by default, can be turned off):</strong> your trips (names, destinations, dates, budget, companions), itinerary events, expenses (merchant, amount, category, notes, splits and the place you added) and settlements are saved to your account so they come back when you sign in on another phone. The original text of imported messages is never uploaded. Turning off <em>Settings → Back up to my account</em> deletes this copy from our servers; signing out removes it from your phone.</li>
+<li><strong>Shared trips (optional):</strong> when you create an invite link for a trip or join one, the trip details, itinerary, the expenses split with others (including where they were added), payments between members, and each member's display name are stored on our servers and shown to everyone on that trip. Anyone with the link or code can join. Expenses you don't split stay private to you. When you leave, your past shared expenses stay on the trip under your name.</li>
+<li><strong>Notifications for shared trips:</strong> a push token for your device and your app language. When someone changes a shared expense, the notification text (trip name, their name, the expense name and amount) goes through Expo's push service and Google Firebase Cloud Messaging or Apple Push Notification service to reach your phone. You can mute notifications per trip.</li>
 </ul>
 <p>Our backend is hosted by Convex (convex.dev). Data is encrypted in transit (HTTPS).</p>
 
@@ -137,9 +140,11 @@ export const deleteAccountPage = httpAction(async () => {
 </form>
 <h2>What gets deleted</h2>
 <ul><li>Your account profile (name, email, photo) and sign-in sessions.</li>
+<li>Your backed-up trips, itinerary, expenses and settlements, and your device's push tokens.</li>
+<li>Your membership of shared trips. Trips you organize pass to another member who joined; if no one else joined, the trip and its shared expenses are deleted. Expenses you added to a trip others still use stay on that trip under your display name.</li>
 <li>Live location shares, sharing links and invites, both sent and received.</li>
 <li>Usage analytics, crash reports and session recordings linked to your account in PostHog.</li></ul>
-<p>Data stored only on your phone (trips, expenses, contacts, chats) is removed when you uninstall the app or use <em>Settings → Wipe device data</em>. Diagnostic logs expire from PostHog within 14 days. Nothing is kept after deletion except where the law requires it.</p>
+<p>Data stored only on your phone (emergency contacts, chats, imported message text) is removed when you uninstall the app or use <em>Settings → Wipe device data</em>. Diagnostic logs expire from PostHog within 14 days. Nothing is kept after deletion except where the law requires it.</p>
 <p>Questions: ${contactLine()}.</p>`,
   );
 });
@@ -158,5 +163,24 @@ export const submitDeletionRequest = httpAction(async (ctx, req) => {
   return page(
     "Request received",
     `<h1>Request received</h1><p>We've recorded a deletion request for <strong>${escapeHtml(email)}</strong>. We'll confirm by email and complete it within 30 days.</p>`,
+  );
+});
+
+const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.pranav.nomadsafe";
+
+/** Invite link landing page: opens the app on the join screen, or points to the store. */
+export const joinTripPage = httpAction(async (_ctx, req) => {
+  const code = new URL(req.url).pathname.split("/").pop()?.replace(/[^A-Za-z0-9]/g, "").toUpperCase() ?? "";
+  const appLink = `nomadsafe://join/${code}`;
+  return page(
+    "Join a trip",
+    `<h1>You're invited to a trip</h1>
+<p>Open the invite in the NomadSafe app to see the trip and its shared expenses.</p>
+<div class="card">
+<p><a href="${escapeHtml(appLink)}"><button type="button">Open in NomadSafe</button></a></p>
+<p class="muted">Invite code: <strong>${escapeHtml(code)}</strong>. In the app, go to <em>Trips → Join with code</em> if the button doesn't open it.</p>
+</div>
+<p>Don't have the app yet? <a href="${PLAY_STORE_URL}">Get NomadSafe on Google Play</a>, sign in, then open this link again.</p>
+<script>location.href=${JSON.stringify(appLink)};</script>`,
   );
 });

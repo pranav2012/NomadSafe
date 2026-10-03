@@ -112,9 +112,10 @@ interface ExpensesState {
 }
 
 let idCounter = 0;
+// The random part keeps ids unique across phones, since shared trips mix records from several members.
 function nextId(): string {
   idCounter += 1;
-  return `${Date.now()}-${idCounter}`;
+  return `${Date.now()}-${idCounter}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 function buildExpense(input: CreateExpenseInput): Expense {

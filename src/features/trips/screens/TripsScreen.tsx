@@ -4,6 +4,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeIn, FadeInDown, FadeOut, LinearTransition } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import { useMutation } from "convex/react";
+import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
 import { Icon } from "@/components/nomad/Icon";
 import { PressableScale } from "@/components/motion/PressableScale";
 import { AuraButton } from "@/components/aura/AuraButton";
@@ -13,6 +16,7 @@ import { useAura } from "@/components/aura/useAura";
 import { auraStatusColors } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { TripFormSheet } from "@/features/trips/components/TripForm";
+import { isArchived, TripPeopleSheet } from "@/features/trips/components/TripPeopleSheet";
 import { selectActiveTrip, type Trip, useTripsStore } from "@/features/trips/store/tripsStore";
 import { countInclusiveDays, fromDateKey, getTripStatus, startOfLocalDay } from "@/features/trips/utils/dates";
 import { useChatStore } from "@/features/ai/store/chatStore";
@@ -21,7 +25,7 @@ import { clearItinerarySyncCheckpoint } from "@/features/itinerary/services/itin
 import { useExpensesStore } from "@/features/expenses/store/expensesStore";
 import { selectionChanged } from "@/utils/haptics";
 
-type SectionKey = "current" | "upcoming" | "past";
+type SectionKey = "current" | "upcoming" | "past" | "archived";
 
 interface TripSection {
   key: SectionKey;
@@ -93,13 +97,36 @@ export default function TripsScreen() {
   const [form, setForm] = useState<{ trip: Trip | null } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Trip | null>(null);
   const [confirmText, setConfirmText] = useState("");
+  const [peopleFor, setPeopleFor] = useState<string | null>(null);
+  const [joinOpen, setJoinOpen] = useState(false);
+  const [joinCode, setJoinCode] = useState("");
+  const setPreferences = useMutation(api.groupTrips.setPreferences);
+
+  // Archiving a shared trip only hides it from this user's list; it stays live for everyone else.
+  const toggleArchive = (trip: Trip) => {
+    if (!trip.shared) return;
+    const archived = !trip.shared.archived;
+    setPreferences({ tripId: trip.shared.tripId as Id<"sharedTrips">, archived }).catch(() =>
+      Alert.alert(t("groupTrip.actionFailed")),
+    );
+    if (archived && trip.id === activeTrip?.id) useTripsStore.getState().clearActiveTrip();
+  };
+
+  const submitJoinCode = () => {
+    const code = joinCode.trim().toUpperCase();
+    if (!code) return;
+    setJoinOpen(false);
+    setJoinCode("");
+    router.push({ pathname: "/join/[code]", params: { code } });
+  };
 
   const sections = useMemo<TripSection[]>(() => {
-    const remaining = trips.filter((trip) => trip.id !== activeTrip?.id);
+    const remaining = trips.filter((trip) => trip.id !== activeTrip?.id && !isArchived(trip));
     const grouped: TripSection[] = [
       { key: "current", data: remaining.filter((trip) => getTripStatus(trip) === "active").sort(byStartDate) },
       { key: "upcoming", data: remaining.filter((trip) => getTripStatus(trip) === "upcoming").sort(byStartDate) },
       { key: "past", data: remaining.filter((trip) => getTripStatus(trip) === "complete").sort((a, b) => byStartDate(b, a)) },
+      { key: "archived", data: trips.filter((trip) => isArchived(trip) && trip.id !== activeTrip?.id).sort((a, b) => byStartDate(b, a)) },
     ];
     return grouped.filter((section) => section.data.length > 0);
   }, [trips, activeTrip]);
@@ -108,6 +135,7 @@ export default function TripsScreen() {
     current: t("trip.happeningNow"),
     upcoming: t("trip.upcoming"),
     past: t("trip.past"),
+    archived: t("groupTrip.archivedSection"),
   };
 
   const confirmDelete = () => {
@@ -147,7 +175,12 @@ export default function TripsScreen() {
         router.back();
       }}
       onEdit={() => setForm({ trip })}
+      onPeople={() => setPeopleFor(trip.id)}
       onDelete={() => {
+        if (trip.shared) {
+          toggleArchive(trip);
+          return;
+        }
         setDeleteTarget(trip);
         setConfirmText("");
       }}
@@ -190,9 +223,32 @@ export default function TripsScreen() {
         ))}
 
         <AuraButton label={t("trip.addTrip")} icon="plus" variant="secondary" onPress={() => setForm({ trip: null })} style={styles.add} />
+        <AuraButton label={t("groupTrip.joinWithCode")} icon="users" variant="ghost" onPress={() => setJoinOpen(true)} style={styles.join} />
       </ScrollView>
 
       <TripFormSheet visible={form !== null} editingTrip={form?.trip ?? null} onClose={() => setForm(null)} />
+      <TripPeopleSheet tripId={peopleFor} onClose={() => setPeopleFor(null)} />
+
+      <AuraSheet
+        visible={joinOpen}
+        onClose={() => setJoinOpen(false)}
+        title={t("groupTrip.joinCodeTitle")}
+        subtitle={t("groupTrip.joinCodeBody")}
+        footer={<AuraButton label={t("groupTrip.joinButton")} onPress={submitJoinCode} disabled={!joinCode.trim()} />}
+      >
+        <View style={styles.deleteBody}>
+          <AuraField
+            value={joinCode}
+            onChangeText={setJoinCode}
+            placeholder={t("groupTrip.joinCodePlaceholder")}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            maxLength={16}
+            autoFocus
+            onSubmitEditing={submitJoinCode}
+          />
+        </View>
+      </AuraSheet>
 
       <AuraSheet
         visible={deleteTarget !== null}
@@ -240,6 +296,7 @@ function TripPass({
   onPress,
   onSwitch,
   onEdit,
+  onPeople,
   onDelete,
 }: {
   trip: Trip;
@@ -250,6 +307,7 @@ function TripPass({
   onPress: () => void;
   onSwitch: () => void;
   onEdit: () => void;
+  onPeople: () => void;
   onDelete: () => void;
 }) {
   const { c, f, isDark } = useAura();
@@ -260,6 +318,10 @@ function TripPass({
   const from = trip.destinations[0];
   const to = trip.destinations[trip.destinations.length - 1];
   const many = trip.destinations.length > 1;
+  const peopleLabel = trip.shared ? t("groupTrip.peopleButton") : t("groupTrip.shareButton");
+  // Shared trips are archived from your own list rather than deleted for everyone.
+  const removeLabel = trip.shared ? (trip.shared.archived ? t("groupTrip.unarchive") : t("groupTrip.archive")) : t("trip.delete");
+  const removeIcon = trip.shared ? "bookmark" : "trash";
 
   return (
     <Animated.View
@@ -317,13 +379,15 @@ function TripPass({
           <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(120)} style={styles.passActions}>
             <AuraButton label={t("trip.open")} size="md" onPress={onSwitch} style={styles.flex} />
             <AuraButton label={t("trip.edit")} icon="edit" variant="secondary" size="md" onPress={onEdit} />
-            <AuraButton label={t("trip.delete")} icon="trash" variant="secondary" size="md" onPress={onDelete} />
+            <AuraButton label={peopleLabel} icon="users" variant="secondary" size="md" onPress={onPeople} />
+            <AuraButton label={removeLabel} icon={removeIcon} variant="secondary" size="md" onPress={onDelete} />
           </Animated.View>
         ) : null}
         {active ? (
           <View style={styles.passActions}>
             <AuraButton label={t("trip.edit")} icon="edit" variant="secondary" size="md" onPress={onEdit} style={styles.flex} />
-            <AuraButton label={t("trip.delete")} icon="trash" variant="secondary" size="md" onPress={onDelete} style={styles.flex} />
+            <AuraButton label={peopleLabel} icon="users" variant="secondary" size="md" onPress={onPeople} style={styles.flex} />
+            <AuraButton label={removeLabel} icon={removeIcon} variant="secondary" size="md" onPress={onDelete} style={styles.flex} />
           </View>
         ) : null}
       </PressableScale>
@@ -357,8 +421,9 @@ const styles = StyleSheet.create({
   dash: { flex: 1, borderTopWidth: 1, borderStyle: "dashed" },
   track: { height: 3, borderRadius: 2, overflow: "hidden" },
   fill: { height: 3, borderRadius: 2 },
-  passActions: { flexDirection: "row", gap: 8 },
+  passActions: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   add: { marginTop: 24 },
+  join: { marginTop: 8 },
   actions: { flexDirection: "row", gap: 10 },
   deleteBody: { paddingHorizontal: 20, paddingBottom: 8, gap: 14 },
   deleteText: { fontSize: 15, lineHeight: 22 },

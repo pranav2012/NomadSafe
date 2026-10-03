@@ -128,7 +128,6 @@
       "expo-web-browser",
       "expo-status-bar",
       "expo-background-task",
-      "./plugins/withoutPushEntitlement",
       "./plugins/withGoogleMapsApiKey",
       [
         "expo-build-properties",

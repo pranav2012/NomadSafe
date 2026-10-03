@@ -269,6 +269,8 @@ export function TripForm({ editingTrip, onSave, onCancel, initialDestinations }:
     clearBudgetEstimate();
   };
 
+  const sharedMemberNames = new Set(editingTrip?.shared?.members.map((member) => member.name) ?? []);
+
   const handleRemoveTraveler = (traveler: string) => {
     setForm((current) => ({
       ...current,
@@ -501,7 +503,7 @@ export function TripForm({ editingTrip, onSave, onCancel, initialDestinations }:
         mode: form.mode,
         budget,
         currency: form.currency,
-        companions: form.mode === "group" ? form.companions : [],
+        companions: form.mode === "group" || editingTrip?.shared ? form.companions : [],
       };
 
       if (editingTrip) {
@@ -635,7 +637,7 @@ export function TripForm({ editingTrip, onSave, onCancel, initialDestinations }:
           onChangeText={(value) => setForm((current) => ({ ...current, name: value, nameSource: value.trim() ? "user" : "auto" }))}
         />
 
-        {tripModeEnabled ? (
+        {tripModeEnabled && !editingTrip?.shared ? (
           <View style={styles.modes}>
             <ModeCard active={form.mode === "solo"} icon="compass" title={t("trip.solo")} subtitle={t("trip.soloSub")} onPress={() => updateForm("mode", "solo")} />
             <ModeCard active={form.mode === "group"} icon="users" title={t("trip.group")} subtitle={t("trip.groupSub")} onPress={() => updateForm("mode", "group")} />
@@ -660,7 +662,13 @@ export function TripForm({ editingTrip, onSave, onCancel, initialDestinations }:
             {form.companions.length > 0 ? (
               <View style={styles.wrap}>
                 {form.companions.map((traveler) => (
-                  <AuraChip key={traveler} label={traveler} icon="users" onRemove={() => handleRemoveTraveler(traveler)} />
+                  <AuraChip
+                    key={traveler}
+                    label={traveler}
+                    icon="users"
+                    // People on a shared trip are removed from the trip's People sheet instead.
+                    onRemove={sharedMemberNames.has(traveler) ? undefined : () => handleRemoveTraveler(traveler)}
+                  />
                 ))}
               </View>
             ) : null}

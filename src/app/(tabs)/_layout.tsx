@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import { BlurTargetView } from "expo-blur";
+import { useRouter } from "expo-router";
 import { NativeTabs } from "expo-router/unstable-native-tabs";
 import { TabList, TabSlot, TabTrigger, Tabs, defaultTabsSlotRender, useTabTrigger, type TabsSlotRenderOptions } from "expo-router/ui";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
@@ -8,6 +9,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { GlassTabBar, type GlassTabItem } from "@/components/tabbar/GlassTabBar";
 import { TAB_BAR_GAP, TAB_BAR_HEIGHT, useKeyboardVisible } from "@/components/tabbar/tabBarInset";
 import { AURA_FONT_FILES, auraDark, auraLight } from "@/constants/aura";
+import { usePendingJoinStore } from "@/features/trips/store/pendingJoinStore";
 import { useTheme } from "@/hooks/useTheme";
 import { useLocalization } from "@/localization";
 
@@ -19,7 +21,19 @@ const TABS = [
 ] as const;
 
 export default function TabsLayout() {
+  usePendingInvite();
   return Platform.OS === "ios" ? <NativeTabsLayout /> : <GlassTabsLayout />;
+}
+
+/** Opens the join screen for an invite link that arrived before the user was in the app. */
+function usePendingInvite() {
+  const router = useRouter();
+  const code = usePendingJoinStore((s) => s.code);
+  useEffect(() => {
+    if (!code) return;
+    usePendingJoinStore.getState().setCode(null);
+    router.push({ pathname: "/join/[code]", params: { code } });
+  }, [code, router]);
 }
 
 /** The system UITabBar (Liquid Glass on iOS 26), minimizing while scrolling down. */
