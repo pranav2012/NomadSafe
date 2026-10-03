@@ -19,3 +19,7 @@ export function successNotification() {
 export function errorNotification() {
   Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
 }
+
+export function selectionChanged() {
+  Haptics.selectionAsync();
+}

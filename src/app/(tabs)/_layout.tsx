@@ -1,81 +1,85 @@
-import React from "react";
-import { NativeTabs } from "expo-router/unstable-native-tabs";
-import { NOMAD_FONTS } from "@/constants/nomadTokens";
+import React, { useEffect, useRef } from "react";
+import { StyleSheet, View } from "react-native";
+import { BlurTargetView } from "expo-blur";
+import { TabList, TabSlot, TabTrigger, Tabs, useTabTrigger } from "expo-router/ui";
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { GlassTabBar, type GlassTabItem } from "@/components/tabbar/GlassTabBar";
+import { TAB_BAR_GAP, TAB_BAR_HEIGHT, useKeyboardVisible } from "@/components/tabbar/tabBarInset";
+import { AURA_FONT_FILES, auraDark, auraLight } from "@/constants/aura";
 import { useTheme } from "@/hooks/useTheme";
 import { useLocalization } from "@/localization";
 
+const TABS = [
+  { name: "index", href: "/(tabs)", labelKey: "tabs.trip", icon: "compass" },
+  { name: "sos", href: "/(tabs)/sos", labelKey: "tabs.safety", icon: "shield" },
+  { name: "sharing", href: "/(tabs)/sharing", labelKey: "tabs.share", icon: "users" },
+  { name: "expenses", href: "/(tabs)/expenses", labelKey: "tabs.money", icon: "wallet" },
+  { name: "ai", href: "/(tabs)/ai", labelKey: "tabs.ai", icon: "sparkle" },
+] as const;
+
+/**
+ * Headless tabs so the screens can sit inside the Android blur target while the floating glass
+ * tab bar sits outside it (a blur view can't sample a target that contains itself).
+ */
 export default function TabsLayout() {
-  const { isDark, nomad } = useTheme();
-  const theme = nomad.colors;
-  const { t } = useLocalization();
-
+  const blurTarget = useRef<View>(null);
   return (
-    <NativeTabs
-      tintColor={theme.stamp}
-      iconColor={{ default: theme.inkMuted, selected: theme.stamp }}
-      labelStyle={{
-        default: {
-          color: theme.inkMuted,
-          fontFamily: NOMAD_FONTS.uiSemi,
-          fontSize: 11,
-        },
-        selected: {
-          color: theme.stamp,
-          fontFamily: NOMAD_FONTS.uiSemi,
-          fontSize: 11,
-        },
-      }}
-      backgroundColor={isDark ? "rgba(15,21,25,0.94)" : theme.paperSoft}
-      blurEffect={isDark ? "systemMaterialDark" : "systemMaterialLight"}
-      shadowColor={isDark ? "rgba(240,230,214,0.08)" : theme.hairline}
-      indicatorColor={isDark ? "rgba(224,96,68,0.18)" : theme.stampSoft}
-      rippleColor={isDark ? "rgba(224,96,68,0.18)" : theme.stampSoft}
-      labelVisibilityMode="labeled"
-      minimizeBehavior="automatic"
-      disableTransparentOnScrollEdge
-    >
-      <NativeTabs.Trigger name="index">
-        <NativeTabs.Trigger.Label>{t("tabs.trip")}</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          sf={{ default: "safari", selected: "safari.fill" }}
-          md={{ default: "explore", selected: "explore" }}
-        />
-      </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="sos">
-        <NativeTabs.Trigger.Label>{t("tabs.safety")}</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          sf={{ default: "shield", selected: "shield.fill" }}
-          md={{ default: "shield", selected: "shield" }}
-        />
-      </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="sharing">
-        <NativeTabs.Trigger.Label>{t("tabs.share")}</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          sf={{ default: "person.2", selected: "person.2.fill" }}
-          md={{ default: "groups", selected: "groups" }}
-        />
-      </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="expenses">
-        <NativeTabs.Trigger.Label>{t("tabs.money")}</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          sf={{ default: "wallet.pass", selected: "wallet.pass.fill" }}
-          md={{
-            default: "account_balance_wallet",
-            selected: "account_balance_wallet",
-          }}
-        />
-      </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="ai">
-        <NativeTabs.Trigger.Label>{t("tabs.ai")}</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon
-          sf={{ default: "sparkles", selected: "sparkles" }}
-          md={{ default: "auto_awesome", selected: "auto_awesome" }}
-        />
-      </NativeTabs.Trigger>
-    </NativeTabs>
+    <Tabs style={styles.root}>
+      <BlurTargetView ref={blurTarget} style={styles.root}>
+        <TabSlot />
+      </BlurTargetView>
+      <TabList style={styles.hidden}>
+        {TABS.map((tab) => (
+          <TabTrigger key={tab.name} name={tab.name} href={tab.href} />
+        ))}
+      </TabList>
+      <AppTabBar blurTarget={blurTarget} />
+    </Tabs>
   );
 }
+
+function AppTabBar({ blurTarget }: { blurTarget: React.RefObject<View | null> }) {
+  const { isDark } = useTheme();
+  const { t } = useLocalization();
+  const insets = useSafeAreaInsets();
+  const keyboardVisible = useKeyboardVisible();
+  const { getTrigger, switchTab } = useTabTrigger({ name: "index" });
+  const c = isDark ? auraDark : auraLight;
+
+  const hide = useSharedValue(0);
+  useEffect(() => {
+    hide.set(withTiming(keyboardVisible ? 1 : 0, { duration: 180 }));
+  }, [hide, keyboardVisible]);
+  const hideStyle = useAnimatedStyle(() => ({
+    opacity: 1 - hide.get(),
+    transform: [{ translateY: hide.get() * (TAB_BAR_HEIGHT + 40) }],
+  }));
+
+  const items: GlassTabItem[] = TABS.map((tab) => ({ key: tab.name, label: t(tab.labelKey), icon: tab.icon }));
+  const activeIndex = Math.max(0, TABS.findIndex((tab) => getTrigger(tab.name)?.isFocused));
+
+  return (
+    <Animated.View
+      pointerEvents={keyboardVisible ? "none" : "box-none"}
+      style={[styles.barWrap, { bottom: insets.bottom + TAB_BAR_GAP }, hideStyle]}
+    >
+      <GlassTabBar
+        items={items}
+        activeIndex={activeIndex}
+        onChange={(index) => switchTab(TABS[index].name, {})}
+        isDark={isDark}
+        activeColor={c.text}
+        inactiveColor={c.textSoft}
+        labelFontSource={AURA_FONT_FILES.InstrumentSans_500Medium}
+        blurTarget={blurTarget}
+      />
+    </Animated.View>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: { flex: 1 },
+  hidden: { display: "none" },
+  barWrap: { position: "absolute", left: 16, right: 16 },
+});

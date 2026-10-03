@@ -88,3 +88,119 @@ export const searchNearby = action({
     return places;
   },
 });
+
+type SafetyKind = "hospital" | "police" | "pharmacy";
+
+interface GoogleSafetyPlace {
+  displayName?: { text?: string };
+  googleMapsUri?: string;
+  location?: { latitude?: number; longitude?: number };
+  types?: string[];
+  shortFormattedAddress?: string;
+  nationalPhoneNumber?: string;
+}
+
+const SAFETY_KINDS: SafetyKind[] = ["hospital", "police", "pharmacy"];
+
+/** Hospitals, police and pharmacies within 2 km, nearest first, for the trip safety map. */
+export const searchSafetyPlaces = action({
+  args: {
+    latitude: v.number(),
+    longitude: v.number(),
+  },
+  handler: async (ctx, { latitude, longitude }) => {
+    const user = await authComponent.getAuthUser(ctx);
+    if (!user) throw new Error("Not authenticated");
+
+    const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+    if (!apiKey) throw new Error("Places search is unavailable");
+
+    const response = await fetch("https://places.googleapis.com/v1/places:searchNearby", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": apiKey,
+        "X-Goog-FieldMask": [
+          "places.displayName",
+          "places.googleMapsUri",
+          "places.location",
+          "places.types",
+          "places.shortFormattedAddress",
+          "places.nationalPhoneNumber",
+        ].join(","),
+      },
+      body: JSON.stringify({
+        includedTypes: SAFETY_KINDS,
+        locationRestriction: { circle: { center: { latitude, longitude }, radius: 2_000 } },
+        maxResultCount: 20,
+        rankPreference: "DISTANCE",
+      }),
+    });
+
+    if (!response.ok) {
+      console.warn("[places] Safety search failed", response.status, await response.text());
+      throw new Error(`Places API request failed (${response.status})`);
+    }
+
+    const body = (await response.json()) as { places?: GoogleSafetyPlace[] };
+    return (body.places ?? []).flatMap((place) => {
+      const kind = SAFETY_KINDS.find((k) => place.types?.includes(k));
+      const lat = place.location?.latitude;
+      const lng = place.location?.longitude;
+      if (!kind || !place.displayName?.text || typeof lat !== "number" || typeof lng !== "number") return [];
+      return [
+        {
+          kind,
+          name: place.displayName.text,
+          address: place.shortFormattedAddress ?? "",
+          phone: place.nationalPhoneNumber ?? null,
+          latitude: lat,
+          longitude: lng,
+          mapsUrl: place.googleMapsUri ?? null,
+        },
+      ];
+    });
+  },
+});
+
+/** Resolves a named place (e.g. a hotel from the itinerary) near a point to coordinates, or null. */
+export const findPlaceByName = action({
+  args: {
+    query: v.string(),
+    latitude: v.number(),
+    longitude: v.number(),
+  },
+  handler: async (ctx, { query, latitude, longitude }) => {
+    const user = await authComponent.getAuthUser(ctx);
+    if (!user) throw new Error("Not authenticated");
+
+    const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+    if (!apiKey) throw new Error("Places search is unavailable");
+
+    const response = await fetch("https://places.googleapis.com/v1/places:searchText", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": apiKey,
+        "X-Goog-FieldMask": "places.displayName,places.location",
+      },
+      body: JSON.stringify({
+        textQuery: query.slice(0, 120),
+        pageSize: 1,
+        locationBias: { circle: { center: { latitude, longitude }, radius: 50_000 } },
+      }),
+    });
+
+    if (!response.ok) {
+      console.warn("[places] Text search failed", response.status, await response.text());
+      return null;
+    }
+
+    const body = (await response.json()) as { places?: GooglePlace[] };
+    const place = body.places?.[0];
+    const lat = place?.location?.latitude;
+    const lng = place?.location?.longitude;
+    if (typeof lat !== "number" || typeof lng !== "number") return null;
+    return { name: place?.displayName?.text ?? query, latitude: lat, longitude: lng };
+  },
+});

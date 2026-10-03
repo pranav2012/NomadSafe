@@ -21,6 +21,7 @@ import {
   GeistMono_500Medium,
 } from "@expo-google-fonts/geist-mono";
 import { api } from "@convex/_generated/api";
+import { AURA_FONT_FILES } from "@/constants/aura";
 import { authClient, useAuthStore, useSyncAuthSession } from "@/features/auth";
 import LockScreen from "@/features/auth/screens/LockScreen";
 import {
@@ -254,6 +255,7 @@ function RootLayout() {
     Geist_700Bold,
     GeistMono_400Regular,
     GeistMono_500Medium,
+    ...AURA_FONT_FILES,
   });
 
   useSyncAuthSession();

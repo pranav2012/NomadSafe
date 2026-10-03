@@ -77,7 +77,7 @@ export const privacyPolicy = httpAction(async () => {
 
 <h2>Services that receive limited data</h2>
 <ul>
-<li><strong>Google Places</strong> (via our server): your approximate coordinates, to suggest nearby places.</li>
+<li><strong>Google Places</strong> (via our server): your approximate coordinates, to suggest nearby places and emergency services, and the names of places from your itinerary (such as your hotel), to show them on the map.</li>
 <li><strong>Google Maps</strong>: map tiles for locations shown in the app.</li>
 <li><strong>OpenStreetMap Nominatim</strong>: destination search text and coordinates, for geocoding.</li>
 <li><strong>Open-Meteo</strong>: trip coordinates, for weather forecasts.</li>

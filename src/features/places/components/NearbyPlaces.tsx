@@ -11,8 +11,9 @@ import {
 import { useAction } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Icon } from "@/components/nomad/Icon";
-import { NOMAD_FONTS } from "@/constants/nomadTokens";
 import { useTheme } from "@/hooks/useTheme";
+import { useThemedStyles } from "@/hooks/useThemedStyles";
+import type { NomadTheme } from "@/constants/theme";
 import { useLocalization } from "@/localization";
 import type { NearbyPlace } from "@/features/places/services/nearbyPlaces";
 import { logger } from "@/services/logger";
@@ -68,6 +69,7 @@ function formatRatingCount(count: number, locale: string) {
 }
 
 export function NearbyPlaces({ userLocation }: { userLocation: UserLocation | null }) {
+  const styles = useThemedStyles(createStyles);
   const { nomad } = useTheme();
   const theme = nomad.colors;
   const { t, locale } = useLocalization();
@@ -202,7 +204,8 @@ export function NearbyPlaces({ userLocation }: { userLocation: UserLocation | nu
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (NOMAD_FONTS: NomadTheme["fonts"]) =>
+  StyleSheet.create({
   container: { gap: 12 },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 16 },
   eyebrow: { fontFamily: NOMAD_FONTS.uiSemi, fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase" },

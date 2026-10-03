@@ -1,5 +1,11 @@
 nodeLinker: hoisted
 minimumReleaseAge: 2880 # 2 days
+# Skia v3 (Graphite) shipped 2026-10-02; drop this once it's past the release-age window.
+minimumReleaseAgeExclude:
+  - react-native-skia
+  - react-native-skia-graphite-android
+  - react-native-skia-graphite-apple-ios
+  - react-native-skia-graphite-apple-macos
 allowBuilds:
   '@posthog/cli': true
   '@prisma/engines': true

@@ -2,8 +2,9 @@ import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import * as Localization from "expo-localization";
 import { Icon } from "@/components/nomad/Icon";
-import { NOMAD_FONTS } from "@/constants/nomadTokens";
 import { useTheme } from "@/hooks/useTheme";
+import { useThemedStyles } from "@/hooks/useThemedStyles";
+import type { NomadTheme } from "@/constants/theme";
 import { useLocalization } from "@/localization";
 import { geocodeDestination } from "@/features/trips/services/geocoding";
 import {
@@ -149,6 +150,7 @@ export function TripWeather({
   trip: Trip;
   userLocation: UserLocation | null;
 }) {
+  const styles = useThemedStyles(createStyles);
   const { nomad } = useTheme();
   const theme = nomad.colors;
   const { t, locale } = useLocalization();
@@ -294,6 +296,7 @@ function WeatherBody({
   t: Translate;
   unit: TemperatureUnit;
 }) {
+  const styles = useThemedStyles(createStyles);
   const lead = days[0];
   const condition = describeWeather(lead.weatherCode);
   const outlook = buildOutlook(days, locale, t);
@@ -354,7 +357,8 @@ function WeatherBody({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (NOMAD_FONTS: NomadTheme["fonts"]) =>
+  StyleSheet.create({
   container: {
     gap: 10,
   },

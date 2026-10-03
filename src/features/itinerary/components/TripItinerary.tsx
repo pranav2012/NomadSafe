@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { Icon } from "@/components/nomad/Icon";
-import { NOMAD_FONTS } from "@/constants/nomadTokens";
 import { useTheme } from "@/hooks/useTheme";
+import { useThemedStyles } from "@/hooks/useThemedStyles";
+import type { NomadTheme } from "@/constants/theme";
 import { useLocalization } from "@/localization";
 import { localModelService, useAiReadyModelId } from "@/features/ai";
 import { useSettingsStore } from "@/features/settings";
@@ -42,6 +43,7 @@ function shiftEndAt(event: TripEvent, startAt: string): string | undefined {
 }
 
 export function TripItinerary({ trip }: { trip: Trip }) {
+  const styles = useThemedStyles(createStyles);
   const { nomad } = useTheme();
   const theme = nomad.colors;
   const { t, locale } = useLocalization();
@@ -256,6 +258,7 @@ function EventRow({
   t: Translate;
   onPress: () => void;
 }) {
+  const styles = useThemedStyles(createStyles);
   const meta = getEventTypeMeta(event.type);
   const date = new Date(event.startAt);
   const isToday = startOfDay(date) === startOfDay(new Date());
@@ -301,7 +304,8 @@ function EventRow({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (NOMAD_FONTS: NomadTheme["fonts"]) =>
+  StyleSheet.create({
   container: {
     gap: 10,
   },

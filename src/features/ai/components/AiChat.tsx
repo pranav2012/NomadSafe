@@ -7,11 +7,9 @@ import {
   ScrollView,
   StyleSheet,
   KeyboardAvoidingView,
-  Platform,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { NOMAD_FONTS, type NomadColors } from "@/constants/nomadTokens";
 import { useLocalization } from "@/localization";
 import { Icon } from "@/components/nomad/Icon";
@@ -23,6 +21,7 @@ import { useAiProvisioning } from "../hooks/useAiProvisioning";
 import { provisionUnavailableText } from "../utils/provisionCopy";
 import { useTripsStore } from "@/features/trips/store/tripsStore";
 import { track } from "@/services/analytics";
+import { useTabBarInset } from "@/components/tabbar/tabBarInset";
 
 interface Props {
   theme: NomadColors;
@@ -178,7 +177,7 @@ function DayDivider({ label, theme }: { label: string; theme: NomadColors }) {
 
 export function AiChat({ theme, activeModelName }: Props) {
   const { t, formatDate } = useLocalization();
-  const insets = useSafeAreaInsets();
+  const tabBarInset = useTabBarInset();
   const activeTripId = useTripsStore((state) => state.activeTripId);
   const conversationKey = activeTripId ?? GENERAL_CHAT_KEY;
   const conversation = useChatStore((state) => state.conversations[conversationKey] ?? EMPTY_CONVERSATION);
@@ -373,9 +372,8 @@ export function AiChat({ theme, activeModelName }: Props) {
               {
                 backgroundColor: theme.paper,
                 borderTopColor: theme.hairline,
-                // Android native tabs lay out content above the tab bar; iOS
-                // content extends under the translucent bar.
-                paddingBottom: (Platform.OS === "ios" ? insets.bottom : 0) + 10,
+                // The floating tab bar overlays content on both platforms (hidden while typing).
+                paddingBottom: tabBarInset + 10,
               },
             ]}
           >
