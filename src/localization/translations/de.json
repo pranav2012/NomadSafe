@@ -221,7 +221,6 @@
     "steps": {
       "onDeviceAi": "KI auf dem Gerät"
     },
-    "beginSetup": "Einrichtung starten",
     "startMyTrip": "Meine Reise starten",
     "autoLock": "Automatische Sperre",
     "location": "Standort",
@@ -287,14 +286,6 @@
     "aiOffValue": "In den Einstellungen deaktiviert",
     "aiErrorValue": "Download gestoppt – im KI-Tab erneut versuchen",
     "progressA11y": "Einrichtung: Schritt {{step}} von {{total}}",
-    "welcomeTitle": "Weit reisen, mit Sicherheitsnetz",
-    "welcomeBody": "Check-ins, SOS und vertrauenswürdige Kontakte für den Fall, dass auf einer Reise etwas schiefgeht — dazu Ausgaben und ein Assistent, die auf diesem Telefon laufen.",
-    "factSafetyTitle": "SOS ohne mobile Daten",
-    "factSafetyBody": "Öffnet eine SMS mit deinem Standort an deine vertrauenswürdigen Kontakte",
-    "factMoneyTitle": "Ausgaben, auf deinem Telefon ausgelesen",
-    "factMoneyBody": "Bankbenachrichtigungen und Belege werden hier verarbeitet, nicht auf einem Server",
-    "factAiTitle": "Ein Assistent, der offline funktioniert",
-    "factAiBody": "Wird einmal heruntergeladen und beantwortet dann Reisefragen auf dem Gerät",
     "safetyTitle": "Dein Sicherheitsnetz",
     "locationWhileUsingLabel": "Standort während der App-Nutzung",
     "smsFallbackTitle": "SMS-Rückfalllösung, ohne mobile Daten",

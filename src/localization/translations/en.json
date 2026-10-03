@@ -431,7 +431,6 @@
     "steps": {
       "onDeviceAi": "On-device AI"
     },
-    "beginSetup": "Begin setup",
     "enableSafetyNet": "Continue · {{count}} trusted",
     "startMyTrip": "Start my trip",
     "safetyLede": "Location, trusted contacts and an SMS fallback. Everything here is optional — you can change it later in Settings.",
@@ -497,14 +496,6 @@
     "aiOffValue": "Turned off in Settings",
     "aiErrorValue": "Download stopped — retry from the AI tab",
     "progressA11y": "Setup step {{step}} of {{total}}",
-    "welcomeTitle": "Travel far, with a safety net",
-    "welcomeBody": "Check-ins, SOS and trusted contacts for when a trip goes sideways, plus expenses and an assistant that run on this phone.",
-    "factSafetyTitle": "SOS without mobile data",
-    "factSafetyBody": "Opens a text to your trusted contacts with your location",
-    "factMoneyTitle": "Expenses read on your phone",
-    "factMoneyBody": "Bank alerts and receipts are parsed here, not on a server",
-    "factAiTitle": "An assistant that works offline",
-    "factAiBody": "Downloads once, then answers trip questions on-device",
     "safetyTitle": "Your safety net",
     "locationWhileUsingLabel": "Location while using the app",
     "smsFallbackTitle": "SMS fallback, no data needed",

@@ -221,7 +221,6 @@
     "steps": {
       "onDeviceAi": "기기 내 AI"
     },
-    "beginSetup": "설정 시작",
     "startMyTrip": "내 여행 시작",
     "autoLock": "자동 잠금",
     "location": "위치",
@@ -287,14 +286,6 @@
     "aiOffValue": "설정에서 꺼짐",
     "aiErrorValue": "다운로드 중단됨 — AI 탭에서 다시 시도하세요",
     "progressA11y": "설정 {{step}}/{{total}}단계",
-    "welcomeTitle": "멀리 떠나도, 안전망과 함께",
-    "welcomeBody": "여행 중 문제가 생길 때를 위한 체크인, SOS, 신뢰할 수 있는 연락처. 여기에 이 휴대폰에서 실행되는 지출 관리와 어시스턴트까지.",
-    "factSafetyTitle": "모바일 데이터 없이 SOS",
-    "factSafetyBody": "신뢰할 수 있는 연락처에게 보낼 내 위치가 담긴 문자를 열어줘요",
-    "factMoneyTitle": "지출은 휴대폰에서 읽어요",
-    "factMoneyBody": "은행 알림과 영수증은 서버가 아닌 이 휴대폰에서 분석돼요",
-    "factAiTitle": "오프라인에서도 작동하는 어시스턴트",
-    "factAiBody": "한 번만 다운로드하면 기기 내에서 여행 질문에 답해요",
     "safetyTitle": "나의 안전망",
     "locationWhileUsingLabel": "앱 사용 중 위치",
     "smsFallbackTitle": "SMS 대체 수단, 데이터 불필요",

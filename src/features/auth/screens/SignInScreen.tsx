@@ -50,6 +50,7 @@ export default function SignInScreen() {
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const { isSignedIn, isPinSet, setUnlocked } = useAuthStore();
+  const onboardingCompleted = useSettingsStore((s) => s.onboardingCompleted);
 
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -61,16 +62,18 @@ export default function SignInScreen() {
 
   const heroHeight = Math.round(height * 0.74);
 
-  // Once the session listener confirms we are signed in, route forward.
+  // Once the session listener confirms we are signed in, route forward: first-time setup, then the app.
   useEffect(() => {
     if (!isSignedIn) return;
-    if (!isPinSet) {
+    if (!onboardingCompleted) {
+      router.replace("/(onboarding)/welcome");
+    } else if (!isPinSet) {
       router.replace("/(auth)/setup-pin");
     } else {
       setUnlocked(true);
       router.replace("/(tabs)");
     }
-  }, [isSignedIn, isPinSet, router, setUnlocked]);
+  }, [isSignedIn, isPinSet, onboardingCompleted, router, setUnlocked]);
 
   const handleGoogleSignIn = async () => {
     if (loading) return;

@@ -224,7 +224,7 @@ function AppStack() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
-      <Stack.Protected guard={!onboardingCompleted}>
+      <Stack.Protected guard={isSignedIn && !onboardingCompleted}>
         <Stack.Screen name="(onboarding)" />
       </Stack.Protected>
       <Stack.Screen name="(auth)" />

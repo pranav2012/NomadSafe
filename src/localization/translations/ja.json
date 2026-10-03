@@ -221,7 +221,6 @@
     "steps": {
       "onDeviceAi": "端末内AI"
     },
-    "beginSetup": "設定を始める",
     "startMyTrip": "旅を始める",
     "autoLock": "自動ロック",
     "location": "位置情報",
@@ -287,14 +286,6 @@
     "aiOffValue": "設定でオフになっています",
     "aiErrorValue": "ダウンロードが停止しました — AIタブから再試行してください",
     "progressA11y": "セットアップ：ステップ {{step}}/{{total}}",
-    "welcomeTitle": "遠くへ旅しても、セーフティネットがある",
-    "welcomeBody": "旅先でのトラブルに備えるチェックイン、SOS、信頼できる連絡先。さらに、このスマートフォン上で動く支出管理とアシスタント。",
-    "factSafetyTitle": "モバイルデータなしでSOS",
-    "factSafetyBody": "信頼できる連絡先宛てに、位置情報付きのSMSを開きます",
-    "factMoneyTitle": "支出はスマートフォン上で読み取り",
-    "factMoneyBody": "銀行の通知やレシートは、サーバーではなくこの端末で解析されます",
-    "factAiTitle": "オフラインで使えるアシスタント",
-    "factAiBody": "一度ダウンロードすれば、旅の質問に端末上で答えます",
     "safetyTitle": "あなたのセーフティネット",
     "locationWhileUsingLabel": "アプリ使用中の位置情報",
     "smsFallbackTitle": "SMSフォールバック（データ通信不要）",

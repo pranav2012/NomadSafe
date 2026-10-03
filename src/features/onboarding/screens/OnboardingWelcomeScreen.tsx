@@ -26,7 +26,6 @@ import type { TrustedContactsSummary } from "@/features/settings/components/Trus
 import { isValidPhone } from "@/features/safety/utils/phone";
 import { emergencyContactsStorage } from "@/features/onboarding/services/emergencyContactsStorage";
 import { ONBOARDING_LOCK_STEP, ONBOARDING_STEPS, type OnboardingStepId } from "@/features/onboarding/steps";
-import { WelcomeStep } from "@/features/onboarding/components/WelcomeStep";
 import { SafetyStep } from "@/features/onboarding/components/SafetyStep";
 import { OnDeviceStep } from "@/features/onboarding/components/OnDeviceStep";
 import { LockStep } from "@/features/onboarding/components/LockStep";
@@ -34,10 +33,10 @@ import { useLocalization } from "@/localization";
 import { track } from "@/services/analytics";
 
 const LAST_STEP = ONBOARDING_STEPS.length - 1;
-const NUMBERED_TOTAL = ONBOARDING_STEPS.length - 1;
+const TOTAL = ONBOARDING_STEPS.length;
 const BACKGROUND_PHASES = new Set(["queued", "downloading", "verifying", "waitingForWifi"]);
 
-/** Maps a persisted step into range; indices past the end come from the old 6-step flow and resume at the lock step. */
+/** Maps a persisted step into range; indices past the end come from older, longer flows and resume at the lock step. */
 function clampStep(value: number) {
   if (value > LAST_STEP) return ONBOARDING_LOCK_STEP;
   return Math.max(0, value);
@@ -58,13 +57,15 @@ export default function OnboardingWelcomeScreen() {
   const setOnboardingStep = useSettingsStore((s) => s.setOnboardingStep);
   const biometric = useBiometricPresentation();
   const isPinSet = useAuthStore((s) => s.isPinSet);
+  const setUnlocked = useAuthStore((s) => s.setUnlocked);
   const aiPhase = useProvisioningStore((s) => s.phase);
 
   const [step, setStep] = useState(() => clampStep(persistedStep));
   const [direction, setDirection] = useState<1 | -1>(1);
   const [contacts, setContacts] = useState<TrustedContactsSummary>(readContactsSummary);
   const scrollRef = useRef<ScrollView>(null);
-  const progress = useSharedValue(step);
+  // Segments count steps from 1, so the current step's segment is already filled.
+  const progress = useSharedValue(step + 1);
 
   const stepId: OnboardingStepId = ONBOARDING_STEPS[step];
   const last = step === LAST_STEP;
@@ -76,7 +77,7 @@ export default function OnboardingWelcomeScreen() {
 
   useEffect(() => {
     setOnboardingStep(step);
-    progress.set(withSpring(step, springs.snappy));
+    progress.set(withSpring(step + 1, springs.snappy));
   }, [step, setOnboardingStep, progress]);
 
   // SetupPin writes the lock step to the store; pick it up when we regain focus.
@@ -108,10 +109,12 @@ export default function OnboardingWelcomeScreen() {
   const advance = () => goTo(step + 1, 1);
   const back = () => goTo(step - 1, -1);
 
+  // Onboarding runs after sign-in, so finishing it opens the app; unlock first so the PIN gate doesn't appear.
   const onDone = () => {
+    setUnlocked(true);
     setOnboardingCompleted(true);
     track("onboarding_completed");
-    router.replace("/(auth)/sign-in");
+    router.replace("/(tabs)");
   };
 
   const confirmSafetyContinue = () => {
@@ -145,8 +148,6 @@ export default function OnboardingWelcomeScreen() {
 
   const ctaLabel = (() => {
     switch (stepId) {
-      case "welcome":
-        return t("onboarding.beginSetup");
       case "safety":
         return contacts.count > 0 ? t("onboarding.enableSafetyNet", { count: contacts.count }) : t("onboarding.skipForNow");
       case "onDevice":
@@ -175,9 +176,7 @@ export default function OnboardingWelcomeScreen() {
         contentContainerStyle={{ paddingTop: insets.top + 58, paddingBottom: insets.bottom + 170 }}
       >
         <Animated.View key={step} entering={entering}>
-          {stepId === "welcome" ? (
-            <WelcomeStep />
-          ) : stepId === "safety" ? (
+          {stepId === "safety" ? (
             <SafetyStep onContactsChange={setContacts} />
           ) : stepId === "onDevice" ? (
             <OnDeviceStep />
@@ -204,10 +203,10 @@ export default function OnboardingWelcomeScreen() {
           style={styles.progressRow}
           accessible
           accessibilityRole="progressbar"
-          accessibilityLabel={t("onboarding.progressA11y", { step, total: NUMBERED_TOTAL })}
-          accessibilityValue={{ min: 0, max: NUMBERED_TOTAL, now: step }}
+          accessibilityLabel={t("onboarding.progressA11y", { step: step + 1, total: TOTAL })}
+          accessibilityValue={{ min: 1, max: TOTAL, now: step + 1 }}
         >
-          {Array.from({ length: NUMBERED_TOTAL }, (_, index) => (
+          {Array.from({ length: TOTAL }, (_, index) => (
             <ProgressSegment key={index} index={index} progress={progress} track={c.surfaceStrong} fill={accent} />
           ))}
         </View>

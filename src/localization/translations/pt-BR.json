@@ -221,7 +221,6 @@
     "steps": {
       "onDeviceAi": "IA no dispositivo"
     },
-    "beginSetup": "Iniciar configuração",
     "startMyTrip": "Começar minha viagem",
     "autoLock": "Bloqueio automático",
     "location": "Localização",
@@ -287,14 +286,6 @@
     "aiOffValue": "Desativada nas Configurações",
     "aiErrorValue": "Download interrompido — tente de novo na aba IA",
     "progressA11y": "Configuração: etapa {{step}} de {{total}}",
-    "welcomeTitle": "Viaje longe, com uma rede de segurança",
-    "welcomeBody": "Check-ins, SOS e contatos de confiança para quando a viagem sair do roteiro, além de despesas e um assistente que funcionam neste celular.",
-    "factSafetyTitle": "SOS sem dados móveis",
-    "factSafetyBody": "Abre um SMS para seus contatos de confiança com sua localização",
-    "factMoneyTitle": "Despesas lidas no seu celular",
-    "factMoneyBody": "Alertas do banco e recibos são processados aqui, não em um servidor",
-    "factAiTitle": "Um assistente que funciona offline",
-    "factAiBody": "Baixado uma vez, depois responde perguntas sobre a viagem no dispositivo",
     "safetyTitle": "Sua rede de segurança",
     "locationWhileUsingLabel": "Localização durante o uso do app",
     "smsFallbackTitle": "SMS de reserva, sem precisar de dados",

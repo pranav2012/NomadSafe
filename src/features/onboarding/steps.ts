@@ -1,4 +1,4 @@
-export const ONBOARDING_STEPS = ["welcome", "safety", "onDevice", "lock"] as const;
+export const ONBOARDING_STEPS = ["safety", "onDevice", "lock"] as const;
 
 export type OnboardingStepId = (typeof ONBOARDING_STEPS)[number];
 

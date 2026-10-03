@@ -65,8 +65,8 @@ export default function SetupPinScreen() {
     if (available) setBiometricEnabled(true);
 
     if (fromOnboarding) {
-      // Back to onboarding's lock step, which now shows the recap. Auth is
-      // finalized later, after sign-in.
+      // Back to onboarding's lock step, which now shows the recap; finishing
+      // onboarding unlocks the app.
       setOnboardingStep(ONBOARDING_LOCK_STEP);
       if (router.canGoBack()) router.back();
       else router.replace("/(onboarding)/welcome");

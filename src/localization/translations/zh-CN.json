@@ -221,7 +221,6 @@
     "steps": {
       "onDeviceAi": "设备端 AI"
     },
-    "beginSetup": "开始设置",
     "startMyTrip": "开始我的行程",
     "autoLock": "自动锁定",
     "location": "位置",
@@ -287,14 +286,6 @@
     "aiOffValue": "已在设置中关闭",
     "aiErrorValue": "下载已停止——请在 AI 标签页重试",
     "progressA11y": "设置步骤 {{step}}/{{total}}",
-    "welcomeTitle": "走得再远，也有安全网",
-    "welcomeBody": "签到、SOS 和可信联系人，帮你应对旅途中的意外；还有在这台手机上运行的支出记录和助手。",
-    "factSafetyTitle": "无需移动数据的 SOS",
-    "factSafetyBody": "打开一条发给可信联系人的短信，附带你的位置",
-    "factMoneyTitle": "在手机上读取支出",
-    "factMoneyBody": "银行通知和收据在本机解析，而不是在服务器上",
-    "factAiTitle": "可离线使用的助手",
-    "factAiBody": "只需下载一次，之后在设备上回答行程问题",
     "safetyTitle": "你的安全网",
     "locationWhileUsingLabel": "使用应用期间的位置",
     "smsFallbackTitle": "短信备用方案，无需数据",

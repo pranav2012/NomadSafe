@@ -221,7 +221,6 @@
     "steps": {
       "onDeviceAi": "IA sur l’appareil"
     },
-    "beginSetup": "Commencer la configuration",
     "startMyTrip": "Commencer mon voyage",
     "autoLock": "Verrouillage auto",
     "location": "Localisation",
@@ -287,14 +286,6 @@
     "aiOffValue": "Désactivée dans les paramètres",
     "aiErrorValue": "Téléchargement interrompu — réessayez depuis l'onglet IA",
     "progressA11y": "Configuration : étape {{step}} sur {{total}}",
-    "welcomeTitle": "Voyagez loin, avec un filet de sécurité",
-    "welcomeBody": "Check-ins, SOS et contacts de confiance pour quand un voyage tourne mal, ainsi que des dépenses et un assistant qui fonctionnent sur ce téléphone.",
-    "factSafetyTitle": "SOS sans données mobiles",
-    "factSafetyBody": "Ouvre un SMS à vos contacts de confiance avec votre position",
-    "factMoneyTitle": "Dépenses lues sur votre téléphone",
-    "factMoneyBody": "Les alertes bancaires et les reçus sont analysés ici, pas sur un serveur",
-    "factAiTitle": "Un assistant qui fonctionne hors ligne",
-    "factAiBody": "Téléchargé une fois, il répond ensuite à vos questions de voyage sur l'appareil",
     "safetyTitle": "Votre filet de sécurité",
     "locationWhileUsingLabel": "Localisation pendant l'utilisation de l'application",
     "smsFallbackTitle": "Repli par SMS, sans données mobiles",

@@ -209,7 +209,7 @@ export default function SettingsScreen() {
           setWiping(true);
           try {
             await wipeAllDeviceData();
-            router.replace("/(onboarding)/welcome");
+            router.replace("/(auth)/sign-in");
           } catch {
             Alert.alert(t("settings.wipeFailedTitle"), t("settings.wipeFailedBody"));
           } finally {
@@ -257,7 +257,7 @@ export default function SettingsScreen() {
           } catch {}
           setDeleting(false);
           Alert.alert(t("settings.deleteAccountDoneTitle"), t("settings.deleteAccountDoneBody"));
-          router.replace("/(onboarding)/welcome");
+          router.replace("/(auth)/sign-in");
         },
       },
     ]);

@@ -6,7 +6,7 @@ export default function Index() {
   const onboardingCompleted = useSettingsStore((s) => s.onboardingCompleted);
   const isSignedIn = useAuthStore((s) => s.isSignedIn);
 
-  if (!onboardingCompleted) return <Redirect href="/(onboarding)/welcome" />;
   if (!isSignedIn) return <Redirect href="/(auth)/sign-in" />;
+  if (!onboardingCompleted) return <Redirect href="/(onboarding)/welcome" />;
   return <Redirect href="/(tabs)" />;
 }
