@@ -165,6 +165,9 @@
     "versionLabel": "الإصدار {{version}}"
   },
   "auth": {
+    "sceneLocation": "النرويج القطبية",
+    "sceneTitle": "الشفق القطبي",
+    "ambientSound": "الصوت المحيط",
     "continueWithGoogle": "المتابعة مع Google",
     "connecting": "جارٍ الاتصال…",
     "createPinSub": "يفتح التطبيق عندما لا تكون {{biometricName}} متاحة.",
@@ -187,7 +190,7 @@
     "lockedFor": "محاولات كثيرة جدًا. حاول مرة أخرى خلال {{duration}}.",
     "biometricError": "فشل فتح القفل. أدخل رمز PIN بدلاً من ذلك.",
     "deleteDigit": "حذف الرقم",
-    "tagline": "خطّط لرحلاتك، وقسّم التكاليف، وأبقِ من يهمّك أمرهم على اطلاع.",
+    "tagline": "طارِد الشفق القطبي. سنبقيك آمنًا ومنظّمًا وعلى تواصل طوال الطريق.",
     "locked": "مقفل",
     "createPinTitle": "أنشئ رمز PIN من 6 أرقام",
     "confirmPinTitle": "أكّد رمز PIN",

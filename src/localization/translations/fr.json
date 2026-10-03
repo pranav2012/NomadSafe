@@ -165,6 +165,9 @@
     "versionLabel": "Version {{version}}"
   },
   "auth": {
+    "sceneLocation": "Norvège arctique",
+    "sceneTitle": "Aurore boréale",
+    "ambientSound": "Son d’ambiance",
     "continueWithGoogle": "Continuer avec Google",
     "connecting": "Connexion…",
     "createPinSub": "Déverrouille l’application lorsque {{biometricName}} n’est pas disponible.",
@@ -187,7 +190,7 @@
     "lockedFor": "Trop de tentatives. Réessayez dans {{duration}}.",
     "biometricError": "Échec du déverrouillage. Saisissez plutôt votre code PIN.",
     "deleteDigit": "Supprimer le chiffre",
-    "tagline": "Planifiez vos voyages, partagez les frais et tenez informées les personnes qui comptent.",
+    "tagline": "Partez à la poursuite des aurores boréales. Nous veillons à votre sécurité, votre organisation et vos liens en chemin.",
     "locked": "Verrouillé",
     "createPinTitle": "Créez un code PIN à 6 chiffres",
     "confirmPinTitle": "Confirmez votre code PIN",

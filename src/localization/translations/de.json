@@ -165,6 +165,9 @@
     "versionLabel": "Version {{version}}"
   },
   "auth": {
+    "sceneLocation": "Arktisches Norwegen",
+    "sceneTitle": "Polarlicht",
+    "ambientSound": "Hintergrundklang",
     "continueWithGoogle": "Mit Google fortfahren",
     "connecting": "Verbindung wird hergestellt…",
     "createPinSub": "Entsperrt die App, wenn {{biometricName}} nicht verfügbar ist.",
@@ -187,7 +190,7 @@
     "lockedFor": "Zu viele Versuche. Versuche es in {{duration}} erneut.",
     "biometricError": "Entsperrung fehlgeschlagen. Gib stattdessen deine PIN ein.",
     "deleteDigit": "Ziffer löschen",
-    "tagline": "Reisen planen, Kosten teilen und die Menschen, die dir wichtig sind, auf dem Laufenden halten.",
+    "tagline": "Jag die Polarlichter. Wir sorgen unterwegs dafür, dass du sicher, organisiert und in Kontakt bleibst.",
     "locked": "Gesperrt",
     "createPinTitle": "6-stellige PIN erstellen",
     "confirmPinTitle": "PIN bestätigen",

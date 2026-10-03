@@ -165,6 +165,9 @@
     "versionLabel": "Versión {{version}}"
   },
   "auth": {
+    "sceneLocation": "Noruega ártica",
+    "sceneTitle": "Aurora boreal",
+    "ambientSound": "Sonido ambiental",
     "continueWithGoogle": "Continuar con Google",
     "connecting": "Conectando…",
     "createPinSub": "Desbloquea la app cuando {{biometricName}} no esté disponible.",
@@ -187,7 +190,7 @@
     "lockedFor": "Demasiados intentos. Inténtalo de nuevo en {{duration}}.",
     "biometricError": "Error al desbloquear. Introduce tu PIN en su lugar.",
     "deleteDigit": "Borrar dígito",
-    "tagline": "Planifica viajes, divide gastos y mantén al tanto a las personas que importan.",
+    "tagline": "Persigue la aurora boreal. Nosotros te mantenemos seguro, organizado y en contacto por el camino.",
     "locked": "Bloqueado",
     "createPinTitle": "Crea un PIN de 6 dígitos",
     "confirmPinTitle": "Confirma tu PIN",

@@ -165,6 +165,9 @@
     "versionLabel": "版本 {{version}}"
   },
   "auth": {
+    "sceneLocation": "北极圈挪威",
+    "sceneTitle": "北极光",
+    "ambientSound": "环境音",
     "continueWithGoogle": "继续使用 Google",
     "connecting": "正在连接…",
     "createPinSub": "当 {{biometricName}} 不可用时用于解锁应用。",
@@ -187,7 +190,7 @@
     "lockedFor": "尝试次数过多，请在 {{duration}} 后重试。",
     "biometricError": "解锁失败，请改用 PIN 输入。",
     "deleteDigit": "删除数字",
-    "tagline": "规划行程、分摊费用，让重要的人随时了解你的近况。",
+    "tagline": "去追逐北极光吧。一路上，我们帮你保持安全、井井有条、随时联络。",
     "locked": "已锁定",
     "createPinTitle": "创建 6 位 PIN 码",
     "confirmPinTitle": "确认你的 PIN 码",

@@ -165,6 +165,9 @@
     "versionLabel": "バージョン {{version}}"
   },
   "auth": {
+    "sceneLocation": "北極圏ノルウェー",
+    "sceneTitle": "オーロラ",
+    "ambientSound": "環境音",
     "continueWithGoogle": "Googleで続ける",
     "connecting": "接続中…",
     "createPinSub": "{{biometricName}}が利用できない場合にアプリを解除します。",
@@ -187,7 +190,7 @@
     "lockedFor": "試行回数が多すぎます。{{duration}}後にもう一度お試しください。",
     "biometricError": "ロック解除に失敗しました。PINを入力してください。",
     "deleteDigit": "数字を削除",
-    "tagline": "旅行を計画し、費用を割り勘して、大切な人と状況を共有しましょう。",
+    "tagline": "オーロラを追いかけよう。旅の間の安全も、準備も、連絡も私たちにお任せください。",
     "locked": "ロック中",
     "createPinTitle": "6桁のPINを作成",
     "confirmPinTitle": "PINを確認",

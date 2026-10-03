@@ -19,6 +19,7 @@ interface SettingsState {
   defaultCheckInDuration: number; // seconds
   localAiEnabled: boolean;
   analyticsEnabled: boolean;
+  ambientSoundEnabled: boolean;
 
   setThemeMode: (mode: ThemeMode) => void;
   setOnboardingCompleted: (value: boolean) => void;
@@ -31,6 +32,7 @@ interface SettingsState {
   setDefaultCheckInDuration: (seconds: number) => void;
   setLocalAiEnabled: (value: boolean) => void;
   setAnalyticsEnabled: (value: boolean) => void;
+  setAmbientSoundEnabled: (value: boolean) => void;
   reset: () => void;
 }
 
@@ -50,6 +52,7 @@ export const useSettingsStore = create<SettingsState>()(
       defaultCheckInDuration: 2 * 60 * 60,
       localAiEnabled: true,
       analyticsEnabled: true,
+      ambientSoundEnabled: true,
 
       setThemeMode: (mode) => set({ themeMode: mode }),
       setOnboardingCompleted: (value) =>
@@ -72,6 +75,7 @@ export const useSettingsStore = create<SettingsState>()(
       setDefaultCheckInDuration: (seconds) => set({ defaultCheckInDuration: seconds }),
       setLocalAiEnabled: (value) => set({ localAiEnabled: value }),
       setAnalyticsEnabled: (value) => set({ analyticsEnabled: value }),
+      setAmbientSoundEnabled: (value) => set({ ambientSoundEnabled: value }),
       reset: () =>
         set({
           themeMode: "system",
@@ -85,6 +89,7 @@ export const useSettingsStore = create<SettingsState>()(
           defaultCheckInDuration: 2 * 60 * 60,
           localAiEnabled: true,
       analyticsEnabled: true,
+          ambientSoundEnabled: true,
         }),
     }),
     {

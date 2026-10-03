@@ -55,6 +55,8 @@ export type IconName =
   | "minus"
   | "cpu"
   | "mic"
+  | "volume"
+  | "volumeOff"
   | "logout";
 
 const DIRECTIONAL: ReadonlySet<IconName> = new Set(["chevronRight", "chevronLeft", "send", "logout"]);
@@ -89,6 +91,22 @@ export function Icon({
         <G {...p}>
           <Rect x="9" y="3" width="6" height="11" rx="3" />
           <Path d="M5 11a7 7 0 0014 0M12 18v3" />
+        </G>
+      );
+      break;
+    case "volume":
+      body = (
+        <G {...p}>
+          <Path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" />
+          <Path d="M15.5 9a4 4 0 010 6M18 6.5a7.5 7.5 0 010 11" />
+        </G>
+      );
+      break;
+    case "volumeOff":
+      body = (
+        <G {...p}>
+          <Path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" />
+          <Path d="M16 9.5l5 5M21 9.5l-5 5" />
         </G>
       );
       break;

@@ -165,6 +165,9 @@
     "versionLabel": "वर्शन {{version}}"
   },
   "auth": {
+    "sceneLocation": "आर्कटिक नॉर्वे",
+    "sceneTitle": "उत्तरी ध्रुवीय ज्योति",
+    "ambientSound": "पृष्ठभूमि ध्वनि",
     "continueWithGoogle": "Google के साथ जारी रखें",
     "connecting": "कनेक्ट हो रहा है…",
     "createPinSub": "जब {{biometricName}} उपलब्ध न हो, तब ऐप अनलॉक करेगा।",
@@ -187,7 +190,7 @@
     "lockedFor": "बहुत सारे प्रयास हो गए। {{duration}} में फिर कोशिश करें।",
     "biometricError": "अनलॉक विफल रहा। इसके बजाय अपना PIN डालें।",
     "deleteDigit": "अंक हटाएं",
-    "tagline": "ट्रिप प्लान करें, खर्च बांटें और अपने खास लोगों को अपडेट रखें।",
+    "tagline": "नॉर्दर्न लाइट्स का पीछा कीजिए। रास्ते भर हम आपको सुरक्षित, व्यवस्थित और जुड़े हुए रखेंगे।",
     "locked": "लॉक है",
     "createPinTitle": "6 अंकों का PIN बनाएं",
     "confirmPinTitle": "अपना PIN कन्फ़र्म करें",

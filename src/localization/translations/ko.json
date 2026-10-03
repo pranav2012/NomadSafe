@@ -165,6 +165,9 @@
     "versionLabel": "버전 {{version}}"
   },
   "auth": {
+    "sceneLocation": "북극권 노르웨이",
+    "sceneTitle": "오로라",
+    "ambientSound": "배경 사운드",
     "continueWithGoogle": "Google로 계속",
     "connecting": "연결 중…",
     "createPinSub": "{{biometricName}}를 사용할 수 없을 때 앱 잠금을 해제합니다.",
@@ -187,7 +190,7 @@
     "lockedFor": "시도 횟수가 너무 많아요. {{duration}} 후에 다시 시도해 주세요.",
     "biometricError": "잠금 해제에 실패했어요. 대신 PIN을 입력하세요.",
     "deleteDigit": "숫자 삭제",
-    "tagline": "여행을 계획하고, 비용을 나누고, 소중한 사람들에게 소식을 전하세요.",
+    "tagline": "오로라를 쫓아 떠나세요. 가는 길 내내 안전하고, 정리되고, 연결된 상태를 지켜 드릴게요.",
     "locked": "잠김",
     "createPinTitle": "6자리 PIN 만들기",
     "confirmPinTitle": "PIN 확인",

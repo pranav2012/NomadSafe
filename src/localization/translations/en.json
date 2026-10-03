@@ -375,6 +375,9 @@
     "versionLabel": "Version {{version}}"
   },
   "auth": {
+    "sceneLocation": "Arctic Norway",
+    "sceneTitle": "Aurora borealis",
+    "ambientSound": "Ambient sound",
     "continueWithGoogle": "Continue with Google",
     "connecting": "Connecting…",
     "createPinSub": "Unlocks the app when {{biometricName}} isn't available.",
@@ -397,7 +400,7 @@
     "lockedFor": "Too many attempts. Try again in {{duration}}.",
     "biometricError": "Unlock failed. Enter your PIN instead.",
     "deleteDigit": "Delete digit",
-    "tagline": "Plan trips, split costs and keep the people who matter in the loop.",
+    "tagline": "Chase the northern lights. We'll keep you safe, sorted and in touch on the way.",
     "locked": "Locked",
     "createPinTitle": "Create a 6-digit PIN",
     "confirmPinTitle": "Confirm your PIN",

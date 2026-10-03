@@ -6,16 +6,19 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import Svg, { Path } from "react-native-svg";
+import { AuraSkyHero, SKY_INTRO_MS, consumeSkyIntro } from "@/components/aura/AuraSkyHero";
 import { useAura } from "@/components/aura/useAura";
 import { PressableScale } from "@/components/motion/PressableScale";
-import { auraStatusAccent } from "@/constants/aura";
+import { Icon } from "@/components/nomad/Icon";
 import { LEGAL_URLS } from "@/constants/legal";
 import { authClient, useAuthStore } from "@/features/auth";
-import { Globe } from "@/features/home/components/aura/globe/Globe";
+import { useAmbientLoop } from "@/features/auth/hooks/useAmbientLoop";
+import { useSettingsStore } from "@/features/settings/store/settingsStore";
 import { useLocalization } from "@/localization";
 import { track } from "@/services/analytics";
 
 const DANGER = "#FF4D5E";
+const AMBIENCE = require("../../../../assets/audio/aurora-ambience.m4a");
 
 function GoogleGlyph() {
   return (
@@ -50,8 +53,13 @@ export default function SignInScreen() {
 
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [intro] = useState(consumeSkyIntro);
+  const contentDelay = intro ? SKY_INTRO_MS - 900 : 200;
+  const soundOn = useSettingsStore((s) => s.ambientSoundEnabled);
+  const setSoundOn = useSettingsStore((s) => s.setAmbientSoundEnabled);
+  useAmbientLoop(AMBIENCE, soundOn, intro ? SKY_INTRO_MS + 1500 : 3000);
 
-  const globeHeight = Math.round(Math.min(width * 1.05, height * 0.56)) + insets.top;
+  const heroHeight = Math.round(height * 0.74);
 
   // Once the session listener confirms we are signed in, route forward.
   useEffect(() => {
@@ -91,33 +99,46 @@ export default function SignInScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: c.bg }]}>
-      <StatusBar style={isDark ? "light" : "dark"} />
+      <StatusBar style="light" />
 
-      <View style={{ height: globeHeight }}>
-        <Animated.View entering={FadeIn.duration(900)}>
-          <Globe
-            stops={[]}
-            focusIndex={0}
-            width={width}
-            height={globeHeight}
-            topInset={insets.top}
-            contacts={[]}
-            contactColor="#3DDC97"
-            accent={auraStatusAccent.calm}
-            isDark={isDark}
-            overview
-          />
+      <View style={{ height: heroHeight }}>
+        <Animated.View entering={FadeIn.duration(intro ? 300 : 900)}>
+          <AuraSkyHero width={width} height={heroHeight} topInset={insets.top} isDark={isDark} intro={intro} />
         </Animated.View>
-        <LinearGradient pointerEvents="none" colors={[`${c.bg}00`, c.bg]} style={styles.globeFade} />
+        <LinearGradient pointerEvents="none" colors={[`${c.bg}00`, c.bg]} style={[styles.heroFade, { height: heroHeight * 0.16 }]} />
+        <Animated.View
+          entering={FadeIn.delay(contentDelay).duration(600)}
+          accessible
+          accessibilityLabel={`${t("auth.sceneTitle")}, ${t("auth.sceneLocation")}`}
+          style={[styles.caption, { top: insets.top + 8 }]}
+        >
+          <Icon name="mapPin" size={14} color="rgba(255,255,255,0.85)" />
+          <View>
+            <Text style={[styles.captionTitle, { fontFamily: f.semibold }]}>{t("auth.sceneTitle")}</Text>
+            <Text style={[styles.captionPlace, { fontFamily: f.regular }]}>{t("auth.sceneLocation")}</Text>
+          </View>
+        </Animated.View>
+        <Animated.View entering={FadeIn.delay(contentDelay).duration(600)} style={[styles.sound, { top: insets.top + 8 }]}>
+          <PressableScale
+            onPress={() => setSoundOn(!soundOn)}
+            hitSlop={10}
+            accessibilityRole="switch"
+            accessibilityLabel={t("auth.ambientSound")}
+            accessibilityState={{ checked: soundOn }}
+            style={styles.soundButton}
+          >
+            <Icon name={soundOn ? "volume" : "volumeOff"} size={18} color="rgba(255,255,255,0.9)" />
+          </PressableScale>
+        </Animated.View>
       </View>
 
       <View style={[styles.body, { paddingBottom: insets.bottom + 16 }]}>
-        <Animated.View entering={FadeInDown.delay(200).duration(480)}>
+        <Animated.View entering={FadeInDown.delay(contentDelay).duration(600)}>
           <Text style={[styles.title, { color: c.text, fontFamily: f.bold }]}>{t("common.appName")}</Text>
           <Text style={[styles.tagline, { color: c.textSoft, fontFamily: f.regular }]}>{t("auth.tagline")}</Text>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(340).duration(480)} style={styles.actions}>
+        <Animated.View entering={FadeInDown.delay(contentDelay + 180).duration(600)} style={styles.actions}>
           <PressableScale
             onPress={handleGoogleSignIn}
             disabled={busy}
@@ -163,8 +184,35 @@ export default function SignInScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  globeFade: { position: "absolute", left: 0, right: 0, bottom: 0, height: 96 },
-  body: { flex: 1, paddingHorizontal: 24, justifyContent: "space-between", marginTop: -12 },
+  heroFade: { position: "absolute", left: 0, right: 0, bottom: 0 },
+  caption: {
+    position: "absolute",
+    left: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    height: 40,
+    paddingLeft: 12,
+    paddingRight: 14,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.2)",
+  },
+  captionTitle: { color: "rgba(255,255,255,0.95)", fontSize: 12, lineHeight: 15 },
+  captionPlace: { color: "rgba(255,255,255,0.65)", fontSize: 11, lineHeight: 14 },
+  sound: { position: "absolute", right: 16 },
+  soundButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.12)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.22)",
+  },
+  body: { flex: 1, paddingHorizontal: 24, justifyContent: "space-between", marginTop: -24 },
   title: { fontSize: 40, letterSpacing: -1.6, lineHeight: 44 },
   tagline: { fontSize: 16, lineHeight: 23, marginTop: 8, maxWidth: 340 },
   actions: { gap: 14 },

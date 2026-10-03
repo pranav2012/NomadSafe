@@ -191,7 +191,14 @@
           ]
         }
       ],
-      "@bacons/apple-targets"
+      "@bacons/apple-targets",
+      [
+        "expo-audio",
+        {
+          "enableBackgroundPlayback": false,
+          "recordAudioAndroid": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

@@ -63,7 +63,6 @@ export default function OnboardingWelcomeScreen() {
   const [step, setStep] = useState(() => clampStep(persistedStep));
   const [direction, setDirection] = useState<1 | -1>(1);
   const [contacts, setContacts] = useState<TrustedContactsSummary>(readContactsSummary);
-  const [globeTouched, setGlobeTouched] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const progress = useSharedValue(step);
 
@@ -90,7 +89,6 @@ export default function OnboardingWelcomeScreen() {
 
   const goTo = useCallback((next: number, dir: 1 | -1) => {
     setDirection(dir);
-    setGlobeTouched(false);
     setStep(Math.min(Math.max(next, 0), LAST_STEP));
     scrollRef.current?.scrollTo({ y: 0, animated: false });
   }, []);
@@ -172,14 +170,13 @@ export default function OnboardingWelcomeScreen() {
       <ScrollView
         ref={scrollRef}
         style={styles.root}
-        scrollEnabled={!globeTouched}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingTop: insets.top + 58, paddingBottom: insets.bottom + 170 }}
       >
         <Animated.View key={step} entering={entering}>
           {stepId === "welcome" ? (
-            <WelcomeStep onGlobeTouch={setGlobeTouched} />
+            <WelcomeStep />
           ) : stepId === "safety" ? (
             <SafetyStep onContactsChange={setContacts} />
           ) : stepId === "onDevice" ? (
