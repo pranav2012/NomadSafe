@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1069805762606",
+    "project_id": "nomadsafe-453e4",
+    "storage_bucket": "nomadsafe-453e4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1069805762606:android:54a4b6c39f3c24002a07bf",
+        "android_client_info": {
+          "package_name": "com.pranav.nomadsafe"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC2cK4vH1U7ybjoN597zkLLxXd1DeKnD1U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

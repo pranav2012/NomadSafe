@@ -57,6 +57,7 @@ NomadSafe is a travel safety and planning app built with Expo (SDK 57), React Na
 
 - New Architecture only; the React Compiler is enabled; typed routes are enabled.
 - Package / bundle IDs: Android `com.pranav.nomadsafe`, iOS `com.pranav.NomadSafe`.
+- Push: Android uses FCM via `google-services.json` (FCM v1 key in EAS). iOS push is stripped by `plugins/withoutPushEntitlement.js` unless `IOS_PUSH_ENABLED=1` (needs a paid Apple team + APNs key in EAS).
 - `android.allowBackup: false`. R8 minify and resource shrinking are on (keep rules for llama.rn and Nitro are in `app.json`).
 - Production builds strip `console.log/info/debug` (`babel.config.js`).
 - ESLint uses a flat config extending `eslint-config-expo`.

@@ -34,8 +34,9 @@ export async function registerTripPush(ask: boolean): Promise<void> {
     storage.set(TOKEN_KEY, token);
     await convex.mutation(api.tripNotifications.savePushToken, { token, locale: getCurrentLocale() });
   } catch (err) {
-    // Push isn't configured in every build (e.g. missing FCM credentials); live sync still works.
-    logger.warn("trip-push", "registration failed", err);
+    // Push isn't configured in every build (iOS without IOS_PUSH_ENABLED, missing FCM credentials);
+    // live sync still works. iOS failing is expected until push is enabled, so don't report it.
+    if (Platform.OS !== "ios") logger.warn("trip-push", "registration failed", err);
   }
 }
 

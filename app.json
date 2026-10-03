@@ -38,6 +38,7 @@
       }
     },
     "android": {
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#072B40",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -128,6 +129,7 @@
       "expo-web-browser",
       "expo-status-bar",
       "expo-background-task",
+      "./plugins/withoutPushEntitlement",
       "./plugins/withGoogleMapsApiKey",
       [
         "expo-build-properties",
