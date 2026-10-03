@@ -143,6 +143,7 @@
     "exportEverythingSub": "ನಿಮ್ಮ ಡೇಟಾದ ಪ್ರತಿಯನ್ನು JSON ಫೈಲ್ ಆಗಿ ಉಳಿಸಿ",
     "wipeDeviceDataSub": "ಹಿಂಪಡೆಯಲಾಗದು · ಇದು ನೀವೇ ಎಂದು ಖಚಿತಪಡಿಸಲು ಕೇಳುತ್ತದೆ",
     "footerTagline": "ಹಗುರವಾಗಿ ಪ್ರಯಾಣಿಸಿ. ಸಂಪರ್ಕದಲ್ಲಿ ಇರಿ.",
+    "imageCredits": "ಗ್ಲೋಬ್ ಚಿತ್ರಗಳು: NASA · ಕ್ಷೀರಪಥ: ESO/S. Brunier (CC BY 4.0)",
     "biometricNotSetUpBody": "ಮೊದಲು ನಿಮ್ಮ ಫೋನ್‌ನ ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ ಫಿಂಗರ್‌ಪ್ರಿಂಟ್ ಅಥವಾ ಫೇಸ್ ಅನ್‌ಲಾಕ್ ಅನ್ನು ಸೆಟಪ್ ಮಾಡಿ.",
     "autoLockSub": "ಹಿನ್ನೆಲೆಯಲ್ಲಿ {{duration}} ನಂತರ ಲಾಕ್ ಮಾಡಿ",
     "autoLockImmediately": "ತಕ್ಷಣವೇ",
@@ -933,7 +934,18 @@
     "eventSafeMessageSent_one": "{{count}} ಸಂಪರ್ಕಕ್ಕೆ “ನಾನು ಸುರಕ್ಷಿತ” ಸಂದೇಶ ಕಳುಹಿಸಲಾಗಿದೆ",
     "eventSafeMessageSent_other": "{{count}} ಸಂಪರ್ಕಗಳಿಗೆ “ನಾನು ಸುರಕ್ಷಿತ” ಸಂದೇಶ ಕಳುಹಿಸಲಾಗಿದೆ",
     "eventSafeMessageOpened_one": "{{count}} ಸಂಪರ್ಕಕ್ಕಾಗಿ “ನಾನು ಸುರಕ್ಷಿತ” ಸಂದೇಶವನ್ನು SMS ನಲ್ಲಿ ತೆರೆಯಲಾಗಿದೆ",
-    "eventSafeMessageOpened_other": "{{count}} ಸಂಪರ್ಕಗಳಿಗಾಗಿ “ನಾನು ಸುರಕ್ಷಿತ” ಸಂದೇಶವನ್ನು SMS ನಲ್ಲಿ ತೆರೆಯಲಾಗಿದೆ"
+    "eventSafeMessageOpened_other": "{{count}} ಸಂಪರ್ಕಗಳಿಗಾಗಿ “ನಾನು ಸುರಕ್ಷಿತ” ಸಂದೇಶವನ್ನು SMS ನಲ್ಲಿ ತೆರೆಯಲಾಗಿದೆ",
+    "people": "ಜನರು",
+    "recenterMap": "ಎಲ್ಲರನ್ನೂ ನಕ್ಷೆಯಲ್ಲಿ ತೋರಿಸಿ",
+    "adviceChip": "UK ಸಲಹೆ · {{level}}",
+    "adviceUnknown": "ಪ್ರಯಾಣ ಸಲಹೆ ನೋಡಲು ಪ್ರವಾಸದ ಗಮ್ಯಸ್ಥಾನ ಸೇರಿಸಿ ಅಥವಾ ಸ್ಥಳಕ್ಕೆ ಅನುಮತಿ ನೀಡಿ.",
+    "adviceUnreachable": "UK FCDO ಪ್ರಯಾಣ ಸಲಹೆಯನ್ನು ತಲುಪಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.",
+    "adviceNoCountry": "ಇದು ಯಾವ ದೇಶ ಎಂದು ತಿಳಿಯಲಿಲ್ಲ, ಆದ್ದರಿಂದ ಯಾವುದೇ ಪ್ರಯಾಣ ಸಲಹೆ ತೋರಿಸಲಾಗುತ್ತಿಲ್ಲ.",
+    "adviceNotCovered": "UK FCDO {{country}} ಗಾಗಿ ಪ್ರಯಾಣ ಸಲಹೆ ಪ್ರಕಟಿಸುವುದಿಲ್ಲ.",
+    "holdSos": "SOS ಒತ್ತಿ ಹಿಡಿಯಿರಿ",
+    "keepHolding": "ಹಿಡಿದಿರಿ",
+    "imSafeShort": "ನಾನು ಸುರಕ್ಷಿತ",
+    "callShort": "{{number}} ಗೆ ಕರೆ ಮಾಡಿ"
   },
   "sos": {
     "codeRed": "SOS · ಕೋಡ್ ರೆಡ್",
@@ -1059,7 +1071,9 @@
     "nameRequired": "ಹೆಸರು ನಮೂದಿಸಿ.",
     "emailInvalid": "ಮಾನ್ಯ ಇಮೇಲ್ ವಿಳಾಸ ನಮೂದಿಸಿ.",
     "minutesShort": "{{count}}ನಿ",
-    "hoursShort": "{{count}}ಗಂ"
+    "hoursShort": "{{count}}ಗಂ",
+    "addShort": "ಸೇರಿಸಿ",
+    "removeHint": "ಯಾರೊಂದಿಗಾದರೂ ಹಂಚಿಕೆ ನಿಲ್ಲಿಸಲು ಅವರನ್ನು ದೀರ್ಘವಾಗಿ ಒತ್ತಿ."
   },
   "expenses": {
     "eyebrow": "ಪ್ರವಾಸದ ಹಣ",

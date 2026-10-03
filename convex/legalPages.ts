@@ -80,7 +80,8 @@ export const privacyPolicy = httpAction(async () => {
 <li><strong>Google Places</strong> (via our server): your approximate coordinates, to suggest nearby places and emergency services, and the names of places from your itinerary (such as your hotel), to show them on the map.</li>
 <li><strong>Google Maps</strong>: map tiles for locations shown in the app.</li>
 <li><strong>OpenStreetMap Nominatim</strong>: destination search text and coordinates, for geocoding.</li>
-<li><strong>Open-Meteo</strong>: trip coordinates, for weather forecasts.</li>
+<li><strong>Open-Meteo</strong>: trip coordinates, for weather forecasts and current conditions, and a fixed worldwide grid of points, for the globe's live cloud cover.</li>
+<li><strong>NASA GIBS</strong>: a rough rectangle around your trip's destinations, to download satellite imagery for the home globe.</li>
 <li><strong>Frankfurter</strong>: currency pairs and dates, for exchange rates.</li>
 <li><strong>Hugging Face</strong>: model download requests (your IP address), if you download an AI model.</li>
 <li><strong>PostHog</strong> (EU hosting): usage analytics, feature flags, session recordings, crash reports and diagnostic logs, described below.</li>

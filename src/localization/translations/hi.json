@@ -143,6 +143,7 @@
     "exportEverythingSub": "अपने डेटा की एक कॉपी JSON फ़ाइल के रूप में सेव करें",
     "wipeDeviceDataSub": "अपरिवर्तनीय · आपसे पुष्टि करने को कहा जाएगा कि यह आप ही हैं",
     "footerTagline": "हल्का यात्रा करें। संपर्क में रहें।",
+    "imageCredits": "ग्लोब की तस्वीरें: NASA · आकाशगंगा: ESO/S. Brunier (CC BY 4.0)",
     "biometricNotSetUpBody": "पहले अपने फ़ोन की सेटिंग्स में फ़िंगरप्रिंट या फेस अनलॉक सेट करें।",
     "autoLockSub": "बैकग्राउंड में {{duration}} बाद लॉक करें",
     "autoLockImmediately": "तुरंत",
@@ -933,7 +934,18 @@
     "eventSafeMessageSent_one": "“मैं सुरक्षित हूं” मैसेज {{count}} संपर्क को भेजा गया",
     "eventSafeMessageSent_other": "“मैं सुरक्षित हूं” मैसेज {{count}} संपर्कों को भेजा गया",
     "eventSafeMessageOpened_one": "{{count}} संपर्क के लिए SMS में “मैं सुरक्षित हूं” मैसेज खुला",
-    "eventSafeMessageOpened_other": "{{count}} संपर्कों के लिए SMS में “मैं सुरक्षित हूं” मैसेज खुला"
+    "eventSafeMessageOpened_other": "{{count}} संपर्कों के लिए SMS में “मैं सुरक्षित हूं” मैसेज खुला",
+    "people": "लोग",
+    "recenterMap": "सभी को मैप पर दिखाएँ",
+    "adviceChip": "UK सलाह · {{level}}",
+    "adviceUnknown": "यात्रा सलाह देखने के लिए ट्रिप में गंतव्य जोड़ें या लोकेशन की अनुमति दें।",
+    "adviceUnreachable": "UK FCDO की यात्रा सलाह तक नहीं पहुँच सके।",
+    "adviceNoCountry": "यह पता नहीं चल सका कि यह कौन-सा देश है, इसलिए कोई यात्रा सलाह नहीं दिखाई जा रही है।",
+    "adviceNotCovered": "UK FCDO {{country}} के लिए यात्रा सलाह प्रकाशित नहीं करता।",
+    "holdSos": "SOS दबाए रखें",
+    "keepHolding": "दबाए रखें",
+    "imSafeShort": "मैं सुरक्षित हूँ",
+    "callShort": "{{number}} पर कॉल करें"
   },
   "sos": {
     "codeRed": "SOS · कोड रेड",
@@ -1059,7 +1071,9 @@
     "nameRequired": "एक नाम दर्ज करें।",
     "emailInvalid": "एक वैध ईमेल पता दर्ज करें।",
     "minutesShort": "{{count}}मि",
-    "hoursShort": "{{count}}घं"
+    "hoursShort": "{{count}}घं",
+    "addShort": "जोड़ें",
+    "removeHint": "किसी के साथ शेयर करना बंद करने के लिए उन्हें देर तक दबाएँ।"
   },
   "expenses": {
     "eyebrow": "यात्रा का पैसा",

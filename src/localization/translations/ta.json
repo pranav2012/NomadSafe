@@ -143,6 +143,7 @@
     "exportEverythingSub": "உங்கள் தரவின் நகலை JSON கோப்பாக சேமிக்கவும்",
     "wipeDeviceDataSub": "மீட்க முடியாதது · நீங்கள்தான் என்பதை உறுதிப்படுத்த கேட்கும்",
     "footerTagline": "லேசாகப் பயணியுங்கள். தொடர்பில் இருங்கள்.",
+    "imageCredits": "குளோப் படங்கள்: NASA · பால்வெளி: ESO/S. Brunier (CC BY 4.0)",
     "biometricNotSetUpBody": "முதலில் உங்கள் ஃபோன் அமைப்புகளில் கைரேகை அல்லது முக அன்லாக்கை அமைக்கவும்.",
     "autoLockSub": "பின்னணியில் {{duration}} கழித்து பூட்டு",
     "autoLockImmediately": "உடனடியாக",
@@ -933,7 +934,18 @@
     "eventSafeMessageSent_one": "“நான் பாதுகாப்பாக இருக்கிறேன்” செய்தி {{count}} தொடர்புக்கு அனுப்பப்பட்டது",
     "eventSafeMessageSent_other": "“நான் பாதுகாப்பாக இருக்கிறேன்” செய்தி {{count}} தொடர்புகளுக்கு அனுப்பப்பட்டது",
     "eventSafeMessageOpened_one": "“நான் பாதுகாப்பாக இருக்கிறேன்” செய்தி {{count}} தொடர்புக்காக SMS-இல் திறக்கப்பட்டது",
-    "eventSafeMessageOpened_other": "“நான் பாதுகாப்பாக இருக்கிறேன்” செய்தி {{count}} தொடர்புகளுக்காக SMS-இல் திறக்கப்பட்டது"
+    "eventSafeMessageOpened_other": "“நான் பாதுகாப்பாக இருக்கிறேன்” செய்தி {{count}} தொடர்புகளுக்காக SMS-இல் திறக்கப்பட்டது",
+    "people": "நபர்கள்",
+    "recenterMap": "அனைவரையும் வரைபடத்தில் காட்டு",
+    "adviceChip": "UK அறிவுரை · {{level}}",
+    "adviceUnknown": "பயண அறிவுரையைப் பார்க்க பயண இலக்கைச் சேர்க்கவும் அல்லது இருப்பிட அனுமதியை வழங்கவும்.",
+    "adviceUnreachable": "UK FCDO பயண அறிவுரையை அணுக முடியவில்லை.",
+    "adviceNoCountry": "இது எந்த நாடு என்று கண்டறிய முடியவில்லை, எனவே பயண அறிவுரை காட்டப்படவில்லை.",
+    "adviceNotCovered": "UK FCDO {{country}}க்கான பயண அறிவுரையை வெளியிடுவதில்லை.",
+    "holdSos": "SOS-ஐ அழுத்திப் பிடி",
+    "keepHolding": "பிடித்திருங்கள்",
+    "imSafeShort": "நான் பாதுகாப்பாக உள்ளேன்",
+    "callShort": "{{number}} அழை"
   },
   "sos": {
     "codeRed": "SOS · ரெட் அலர்ட்",
@@ -1059,7 +1071,9 @@
     "nameRequired": "ஒரு பெயரை உள்ளிடவும்.",
     "emailInvalid": "சரியான மின்னஞ்சல் முகவரியை உள்ளிடவும்.",
     "minutesShort": "{{count}}நி",
-    "hoursShort": "{{count}}ம"
+    "hoursShort": "{{count}}ம",
+    "addShort": "சேர்",
+    "removeHint": "ஒருவருடன் பகிர்வதை நிறுத்த அவரை நீண்ட நேரம் அழுத்தவும்."
   },
   "expenses": {
     "eyebrow": "பயணப் பணம்",

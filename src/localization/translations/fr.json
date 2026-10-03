@@ -143,6 +143,7 @@
     "exportEverythingSub": "Enregistrer une copie de vos données au format JSON",
     "wipeDeviceDataSub": "Irréversible · vous demandera de confirmer votre identité",
     "footerTagline": "Voyagez léger. Restez joignable.",
+    "imageCredits": "Images du globe : NASA · Voie lactée : ESO/S. Brunier (CC BY 4.0)",
     "biometricNotSetUpBody": "Configurez d'abord le déverrouillage par empreinte ou par visage dans les réglages de votre téléphone.",
     "autoLockSub": "Se verrouille après {{duration}} en arrière-plan",
     "autoLockImmediately": "Immédiatement",
@@ -933,7 +934,18 @@
     "eventSafeMessageSent_one": "Message « je suis en sécurité » envoyé à {{count}} contact",
     "eventSafeMessageSent_other": "Message « je suis en sécurité » envoyé à {{count}} contacts",
     "eventSafeMessageOpened_one": "Message « je suis en sécurité » ouvert par SMS pour {{count}} contact",
-    "eventSafeMessageOpened_other": "Message « je suis en sécurité » ouvert par SMS pour {{count}} contacts"
+    "eventSafeMessageOpened_other": "Message « je suis en sécurité » ouvert par SMS pour {{count}} contacts",
+    "people": "Personnes",
+    "recenterMap": "Afficher tout le monde sur la carte",
+    "adviceChip": "Conseils UK · {{level}}",
+    "adviceUnknown": "Ajoutez une destination ou autorisez la localisation pour voir les conseils aux voyageurs.",
+    "adviceUnreachable": "Impossible d'accéder aux conseils aux voyageurs du FCDO britannique.",
+    "adviceNoCountry": "Impossible de déterminer le pays : aucun conseil aux voyageurs n'est affiché.",
+    "adviceNotCovered": "Le FCDO britannique ne publie pas de conseils aux voyageurs pour {{country}}.",
+    "holdSos": "Maintenir SOS",
+    "keepHolding": "Maintenez",
+    "imSafeShort": "Je vais bien",
+    "callShort": "Appeler le {{number}}"
   },
   "sos": {
     "codeRed": "SOS · Code rouge",
@@ -1059,7 +1071,9 @@
     "nameRequired": "Saisissez un nom.",
     "emailInvalid": "Saisissez une adresse e-mail valide.",
     "minutesShort": "{{count}} min",
-    "hoursShort": "{{count}} h"
+    "hoursShort": "{{count}} h",
+    "addShort": "Ajouter",
+    "removeHint": "Appuyez longuement sur une personne pour arrêter le partage avec elle."
   },
   "expenses": {
     "eyebrow": "Budget voyage",

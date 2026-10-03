@@ -143,6 +143,7 @@
     "exportEverythingSub": "データのコピーをJSONファイルとして保存",
     "wipeDeviceDataSub": "元に戻せません・本人確認が必要です",
     "footerTagline": "身軽に旅して、連絡は途切れさせない。",
+    "imageCredits": "地球の画像: NASA · 天の川: ESO/S. Brunier (CC BY 4.0)",
     "biometricNotSetUpBody": "まず端末の設定で指紋認証または顔認証を設定してください。",
     "autoLockSub": "バックグラウンドで{{duration}}経過後にロック",
     "autoLockImmediately": "すぐに",
@@ -933,7 +934,18 @@
     "eventSafeMessageSent_one": "「安全です」メッセージを{{count}}人の連絡先へ送信しました",
     "eventSafeMessageSent_other": "「安全です」メッセージを{{count}}人の連絡先へ送信しました",
     "eventSafeMessageOpened_one": "「安全です」メッセージを{{count}}人の連絡先向けにSMSで開きました",
-    "eventSafeMessageOpened_other": "「安全です」メッセージを{{count}}人の連絡先向けにSMSで開きました"
+    "eventSafeMessageOpened_other": "「安全です」メッセージを{{count}}人の連絡先向けにSMSで開きました",
+    "people": "メンバー",
+    "recenterMap": "全員を地図に表示",
+    "adviceChip": "英国の渡航情報 · {{level}}",
+    "adviceUnknown": "渡航情報を見るには、旅行の目的地を追加するか位置情報を許可してください。",
+    "adviceUnreachable": "英国FCDOの渡航情報に接続できませんでした。",
+    "adviceNoCountry": "国を特定できないため、渡航情報は表示されません。",
+    "adviceNotCovered": "英国FCDOは{{country}}の渡航情報を公開していません。",
+    "holdSos": "長押しでSOS",
+    "keepHolding": "そのまま長押し",
+    "imSafeShort": "無事です",
+    "callShort": "{{number}}に電話"
   },
   "sos": {
     "codeRed": "SOS · コードレッド",
@@ -1059,7 +1071,9 @@
     "nameRequired": "名前を入力してください。",
     "emailInvalid": "有効なメールアドレスを入力してください。",
     "minutesShort": "{{count}}分",
-    "hoursShort": "{{count}}時間"
+    "hoursShort": "{{count}}時間",
+    "addShort": "追加",
+    "removeHint": "共有を停止するには、その人を長押ししてください。"
   },
   "expenses": {
     "eyebrow": "旅行の資金",

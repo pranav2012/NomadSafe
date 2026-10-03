@@ -143,6 +143,7 @@
     "exportEverythingSub": "将你的数据副本保存为 JSON 文件",
     "wipeDeviceDataSub": "不可撤销 · 会要求你确认身份",
     "footerTagline": "轻装出行，保持联络。",
+    "imageCredits": "地球图像：NASA · 银河：ESO/S. Brunier（CC BY 4.0）",
     "biometricNotSetUpBody": "请先在手机设置中启用指纹或面容解锁。",
     "autoLockSub": "应用在后台运行 {{duration}} 后锁定",
     "autoLockImmediately": "立即",
@@ -933,7 +934,18 @@
     "eventSafeMessageSent_one": "“我很安全”消息已发送给 {{count}} 位联系人",
     "eventSafeMessageSent_other": "“我很安全”消息已发送给 {{count}} 位联系人",
     "eventSafeMessageOpened_one": "“我很安全”消息已在短信中为 {{count}} 位联系人打开",
-    "eventSafeMessageOpened_other": "“我很安全”消息已在短信中为 {{count}} 位联系人打开"
+    "eventSafeMessageOpened_other": "“我很安全”消息已在短信中为 {{count}} 位联系人打开",
+    "people": "联系人",
+    "recenterMap": "在地图上显示所有人",
+    "adviceChip": "英国旅行建议 · {{level}}",
+    "adviceUnknown": "添加行程目的地或允许定位，即可查看旅行建议。",
+    "adviceUnreachable": "无法获取英国 FCDO 旅行建议。",
+    "adviceNoCountry": "无法确定所在国家，因此不显示旅行建议。",
+    "adviceNotCovered": "英国 FCDO 未发布{{country}}的旅行建议。",
+    "holdSos": "长按 SOS",
+    "keepHolding": "继续按住",
+    "imSafeShort": "我很安全",
+    "callShort": "拨打 {{number}}"
   },
   "sos": {
     "codeRed": "SOS · 紧急警报",
@@ -1059,7 +1071,9 @@
     "nameRequired": "请输入姓名。",
     "emailInvalid": "请输入有效的邮箱地址。",
     "minutesShort": "{{count}}分钟",
-    "hoursShort": "{{count}}小时"
+    "hoursShort": "{{count}}小时",
+    "addShort": "添加",
+    "removeHint": "长按某人即可停止与其共享。"
   },
   "expenses": {
     "eyebrow": "旅费",

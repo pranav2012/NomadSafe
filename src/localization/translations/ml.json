@@ -143,6 +143,7 @@
     "exportEverythingSub": "നിങ്ങളുടെ ഡാറ്റയുടെ ഒരു കോപ്പി JSON ഫയലായി സേവ് ചെയ്യുക",
     "wipeDeviceDataSub": "തിരിച്ചെടുക്കാനാവാത്തത് · നിങ്ങൾ തന്നെയാണെന്ന് സ്ഥിരീകരിക്കാൻ ആവശ്യപ്പെടും",
     "footerTagline": "ലഘുവായി യാത്ര ചെയ്യുക. ബന്ധപ്പെടാവുന്നവരായി തുടരുക.",
+    "imageCredits": "ഗ്ലോബ് ചിത്രങ്ങൾ: NASA · ക്ഷീരപഥം: ESO/S. Brunier (CC BY 4.0)",
     "biometricNotSetUpBody": "ആദ്യം നിങ്ങളുടെ ഫോണിന്റെ സെറ്റിംഗ്സിൽ ഫിംഗർപ്രിന്റ് അല്ലെങ്കിൽ ഫേസ് അൺലോക്ക് സജ്ജമാക്കുക.",
     "autoLockSub": "ബാക്ക്ഗ്രൗണ്ടിൽ {{duration}} കഴിഞ്ഞാൽ ലോക്ക് ചെയ്യുക",
     "autoLockImmediately": "ഉടനടി",
@@ -933,7 +934,18 @@
     "eventSafeMessageSent_one": "“ഞാൻ സുരക്ഷിതനാണ്” സന്ദേശം {{count}} കോൺടാക്റ്റിന് അയച്ചു",
     "eventSafeMessageSent_other": "“ഞാൻ സുരക്ഷിതനാണ്” സന്ദേശം {{count}} കോൺടാക്റ്റുകൾക്ക് അയച്ചു",
     "eventSafeMessageOpened_one": "“ഞാൻ സുരക്ഷിതനാണ്” സന്ദേശം {{count}} കോൺടാക്റ്റിനായി SMS-ൽ തുറന്നു",
-    "eventSafeMessageOpened_other": "“ഞാൻ സുരക്ഷിതനാണ്” സന്ദേശം {{count}} കോൺടാക്റ്റുകൾക്കായി SMS-ൽ തുറന്നു"
+    "eventSafeMessageOpened_other": "“ഞാൻ സുരക്ഷിതനാണ്” സന്ദേശം {{count}} കോൺടാക്റ്റുകൾക്കായി SMS-ൽ തുറന്നു",
+    "people": "ആളുകൾ",
+    "recenterMap": "എല്ലാവരെയും മാപ്പിൽ കാണിക്കുക",
+    "adviceChip": "UK ഉപദേശം · {{level}}",
+    "adviceUnknown": "യാത്രാ ഉപദേശം കാണാൻ ട്രിപ്പിന് ലക്ഷ്യസ്ഥാനം ചേർക്കുക അല്ലെങ്കിൽ ലൊക്കേഷൻ അനുവദിക്കുക.",
+    "adviceUnreachable": "UK FCDO യാത്രാ ഉപദേശം ലഭ്യമാക്കാനായില്ല.",
+    "adviceNoCountry": "ഇത് ഏത് രാജ്യമാണെന്ന് തിരിച്ചറിയാനായില്ല, അതിനാൽ യാത്രാ ഉപദേശം കാണിക്കുന്നില്ല.",
+    "adviceNotCovered": "UK FCDO {{country}} എന്ന രാജ്യത്തിന് യാത്രാ ഉപദേശം പ്രസിദ്ധീകരിക്കുന്നില്ല.",
+    "holdSos": "SOS അമർത്തിപ്പിടിക്കുക",
+    "keepHolding": "അമർത്തിപ്പിടിക്കുക",
+    "imSafeShort": "ഞാൻ സുരക്ഷിതൻ",
+    "callShort": "{{number}} വിളിക്കുക"
   },
   "sos": {
     "codeRed": "SOS · കോഡ് റെഡ്",
@@ -1059,7 +1071,9 @@
     "nameRequired": "ഒരു പേര് നൽകുക.",
     "emailInvalid": "സാധുവായ ഒരു ഇമെയിൽ വിലാസം നൽകുക.",
     "minutesShort": "{{count}}മി",
-    "hoursShort": "{{count}}മ"
+    "hoursShort": "{{count}}മ",
+    "addShort": "ചേർക്കുക",
+    "removeHint": "ഒരാളുമായി പങ്കിടൽ നിർത്താൻ അവരെ ദീർഘനേരം അമർത്തുക."
   },
   "expenses": {
     "eyebrow": "യാത്രാ പണം",

@@ -13,7 +13,6 @@ import { useLocalization } from "@/localization";
 const TABS = [
   { name: "index", href: "/(tabs)", labelKey: "tabs.trip", icon: "compass" },
   { name: "sos", href: "/(tabs)/sos", labelKey: "tabs.safety", icon: "shield" },
-  { name: "sharing", href: "/(tabs)/sharing", labelKey: "tabs.share", icon: "users" },
   { name: "expenses", href: "/(tabs)/expenses", labelKey: "tabs.money", icon: "wallet" },
   { name: "ai", href: "/(tabs)/ai", labelKey: "tabs.ai", icon: "sparkle" },
 ] as const;

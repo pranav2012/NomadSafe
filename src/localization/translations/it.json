@@ -143,6 +143,7 @@
     "exportEverythingSub": "Salva una copia dei tuoi dati come file JSON",
     "wipeDeviceDataSub": "Irreversibile · ti chiede di confermare la tua identità",
     "footerTagline": "Viaggia leggero. Resta raggiungibile.",
+    "imageCredits": "Immagini del globo: NASA · Via Lattea: ESO/S. Brunier (CC BY 4.0)",
     "biometricNotSetUpBody": "Configura prima lo sblocco tramite impronta o riconoscimento facciale nelle impostazioni del telefono.",
     "autoLockSub": "Si blocca dopo {{duration}} in background",
     "autoLockImmediately": "Immediatamente",
@@ -933,7 +934,18 @@
     "eventSafeMessageSent_one": "Messaggio “Sono al sicuro” inviato a {{count}} contatto",
     "eventSafeMessageSent_other": "Messaggio “Sono al sicuro” inviato a {{count}} contatti",
     "eventSafeMessageOpened_one": "Messaggio “Sono al sicuro” aperto in SMS per {{count}} contatto",
-    "eventSafeMessageOpened_other": "Messaggio “Sono al sicuro” aperto in SMS per {{count}} contatti"
+    "eventSafeMessageOpened_other": "Messaggio “Sono al sicuro” aperto in SMS per {{count}} contatti",
+    "people": "Persone",
+    "recenterMap": "Mostra tutti sulla mappa",
+    "adviceChip": "Avvisi UK · {{level}}",
+    "adviceUnknown": "Aggiungi una destinazione o consenti la posizione per vedere gli avvisi di viaggio.",
+    "adviceUnreachable": "Impossibile raggiungere gli avvisi di viaggio del FCDO britannico.",
+    "adviceNoCountry": "Impossibile capire di quale paese si tratti, quindi non vengono mostrati avvisi di viaggio.",
+    "adviceNotCovered": "Il FCDO britannico non pubblica avvisi di viaggio per {{country}}.",
+    "holdSos": "Tieni premuto SOS",
+    "keepHolding": "Continua a tenere",
+    "imSafeShort": "Sto bene",
+    "callShort": "Chiama il {{number}}"
   },
   "sos": {
     "codeRed": "SOS · Codice rosso",
@@ -1059,7 +1071,9 @@
     "nameRequired": "Inserisci un nome.",
     "emailInvalid": "Inserisci un indirizzo email valido.",
     "minutesShort": "{{count}}m",
-    "hoursShort": "{{count}}h"
+    "hoursShort": "{{count}}h",
+    "addShort": "Aggiungi",
+    "removeHint": "Tieni premuta una persona per smettere di condividere con lei."
   },
   "expenses": {
     "eyebrow": "Spese di viaggio",

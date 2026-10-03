@@ -143,6 +143,7 @@
     "exportEverythingSub": "Salve uma cópia dos seus dados como arquivo JSON",
     "wipeDeviceDataSub": "Irreversível · pede confirmação de que é você",
     "footerTagline": "Viaje leve. Fique acessível.",
+    "imageCredits": "Imagens do globo: NASA · Via Láctea: ESO/S. Brunier (CC BY 4.0)",
     "biometricNotSetUpBody": "Configure o desbloqueio por impressão digital ou reconhecimento facial nas configurações do seu celular primeiro.",
     "autoLockSub": "Bloquear após {{duration}} em segundo plano",
     "autoLockImmediately": "Imediatamente",
@@ -933,7 +934,18 @@
     "eventSafeMessageSent_one": "Mensagem “estou a salvo” enviada a {{count}} contato",
     "eventSafeMessageSent_other": "Mensagem “estou a salvo” enviada a {{count}} contatos",
     "eventSafeMessageOpened_one": "Mensagem “estou a salvo” aberta em SMS para {{count}} contato",
-    "eventSafeMessageOpened_other": "Mensagem “estou a salvo” aberta em SMS para {{count}} contatos"
+    "eventSafeMessageOpened_other": "Mensagem “estou a salvo” aberta em SMS para {{count}} contatos",
+    "people": "Pessoas",
+    "recenterMap": "Mostrar todos no mapa",
+    "adviceChip": "Alerta do Reino Unido · {{level}}",
+    "adviceUnknown": "Adicione um destino à viagem ou permita a localização para ver os alertas de viagem.",
+    "adviceUnreachable": "Não foi possível acessar os alertas de viagem do FCDO britânico.",
+    "adviceNoCountry": "Não foi possível identificar o país, então nenhum alerta de viagem é mostrado.",
+    "adviceNotCovered": "O FCDO britânico não publica alertas de viagem para {{country}}.",
+    "holdSos": "Segure SOS",
+    "keepHolding": "Continue segurando",
+    "imSafeShort": "Estou bem",
+    "callShort": "Ligar para {{number}}"
   },
   "sos": {
     "codeRed": "SOS · Código vermelho",
@@ -1059,7 +1071,9 @@
     "nameRequired": "Digite um nome.",
     "emailInvalid": "Digite um endereço de e-mail válido.",
     "minutesShort": "{{count}}min",
-    "hoursShort": "{{count}}h"
+    "hoursShort": "{{count}}h",
+    "addShort": "Adicionar",
+    "removeHint": "Toque e segure uma pessoa para parar de compartilhar com ela."
   },
   "expenses": {
     "eyebrow": "Dinheiro de viagem",

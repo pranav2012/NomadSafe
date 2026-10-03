@@ -740,6 +740,7 @@ export default function SettingsScreen() {
         <Text style={[styles.footerVersion, { color: theme.inkMuted, fontFamily: NOMAD_FONTS.monoMedium }]}>
           v{Constants.expoConfig?.version ?? "1.0.0"}
         </Text>
+        <Text style={[styles.footerCredits, { color: theme.inkMuted, fontFamily: NOMAD_FONTS.ui }]}>{t("settings.imageCredits")}</Text>
       </View>
 
       <Modal
@@ -960,6 +961,11 @@ const styles = StyleSheet.create({
   footerVersion: {
     fontSize: 11,
     marginTop: 8,
+  },
+  footerCredits: {
+    fontSize: 10.5,
+    marginTop: 6,
+    textAlign: "center",
   },
   smsTabs: {
     flexDirection: "row",

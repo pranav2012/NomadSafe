@@ -143,6 +143,7 @@
     "exportEverythingSub": "Eine Kopie deiner Daten als JSON-Datei speichern",
     "wipeDeviceDataSub": "Unwiderruflich · bestätige, dass du es bist",
     "footerTagline": "Reise leicht. Bleib erreichbar.",
+    "imageCredits": "Globusbilder: NASA · Milchstraße: ESO/S. Brunier (CC BY 4.0)",
     "biometricNotSetUpBody": "Richte zuerst Fingerabdruck- oder Gesichtserkennung in den Telefoneinstellungen ein.",
     "autoLockSub": "Sperren nach {{duration}} im Hintergrund",
     "autoLockImmediately": "Sofort",
@@ -933,7 +934,18 @@
     "eventSafeMessageSent_one": "„Ich bin sicher“-Nachricht an {{count}} Kontakt gesendet",
     "eventSafeMessageSent_other": "„Ich bin sicher“-Nachricht an {{count}} Kontakte gesendet",
     "eventSafeMessageOpened_one": "„Ich bin sicher“-Nachricht für {{count}} Kontakt in SMS geöffnet",
-    "eventSafeMessageOpened_other": "„Ich bin sicher“-Nachricht für {{count}} Kontakte in SMS geöffnet"
+    "eventSafeMessageOpened_other": "„Ich bin sicher“-Nachricht für {{count}} Kontakte in SMS geöffnet",
+    "people": "Personen",
+    "recenterMap": "Alle auf der Karte zeigen",
+    "adviceChip": "UK-Hinweise · {{level}}",
+    "adviceUnknown": "Füge ein Reiseziel hinzu oder erlaube den Standortzugriff, um Reisehinweise zu sehen.",
+    "adviceUnreachable": "Die Reisehinweise des UK FCDO sind nicht erreichbar.",
+    "adviceNoCountry": "Das Land konnte nicht ermittelt werden, daher werden keine Reisehinweise angezeigt.",
+    "adviceNotCovered": "Das UK FCDO veröffentlicht keine Reisehinweise für {{country}}.",
+    "holdSos": "SOS halten",
+    "keepHolding": "Weiter halten",
+    "imSafeShort": "Mir geht's gut",
+    "callShort": "{{number}} anrufen"
   },
   "sos": {
     "codeRed": "SOS · Code Rot",
@@ -1059,7 +1071,9 @@
     "nameRequired": "Gib einen Namen ein.",
     "emailInvalid": "Gib eine gültige E-Mail-Adresse ein.",
     "minutesShort": "{{count}}Min.",
-    "hoursShort": "{{count}}Std."
+    "hoursShort": "{{count}}Std.",
+    "addShort": "Hinzufügen",
+    "removeHint": "Halte eine Person gedrückt, um das Teilen mit ihr zu beenden."
   },
   "expenses": {
     "eyebrow": "Reisekasse",

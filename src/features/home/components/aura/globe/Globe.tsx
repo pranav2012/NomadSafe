@@ -1,57 +1,199 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { Image, StyleSheet, Text, View } from "react-native";
 import {
+  AlphaType,
   BlurMask,
   Canvas,
   DashPathEffect,
   Circle,
+  ColorType,
+  FilterMode,
   Fill,
   Group,
   ImageShader,
+  MipmapMode,
   Path,
   Shader,
   Skia,
-  drawAsImage,
   useClock,
   usePathValue,
   type SkImage,
   type SkPathBuilder,
 } from "react-native-skia";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import { Easing, useDerivedValue, useReducedMotion, useSharedValue, withDecay, withSpring, withTiming } from "react-native-reanimated";
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useDerivedValue,
+  useFrameCallback,
+  useReducedMotion,
+  useSharedValue,
+  withDecay,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import { springs } from "@/components/motion/springs";
+import { useAura } from "@/components/aura/useAura";
+import { useGlobeWeather } from "@/features/home/hooks/useGlobeWeather";
+import { detailBoxFor, getRegionImagery, type DetailBox } from "@/features/home/services/globeImagery";
+import { CLOUD_COLS, CLOUD_ROWS, CLOUD_STEP, type StopWeather } from "@/features/home/services/globeWeather";
+import { toUnit, useTemperatureUnit } from "@/features/trips/hooks/useTripForecast";
 import { selectionChanged } from "@/utils/haptics";
-import { CITY_LIGHTS } from "./cityLights";
-import { LAND_PATH } from "./landPath";
+import { moonIllumination, sunVector } from "./sun";
+
+// NASA Visible Earth (public domain): Blue Marble Next Generation (Sep 2004, least seasonal snow) and Black Marble 2016.
+const DAY_TEXTURE = require("../../../../../../assets/images/globe/earth-day.jpg");
+const NIGHT_TEXTURE = require("../../../../../../assets/images/globe/earth-night.jpg");
+// ESO/S. Brunier, CC BY 4.0 (credited in Settings): the whole Milky Way in galactic coordinates.
+const SKY_TEXTURE = require("../../../../../../assets/images/globe/milky-way.jpg");
 
 const MIN_ZOOM = 1;
-const MAX_ZOOM = 5;
-const HANDOFF_ZOOM = 3.2;
-const TEX_W = 720;
-const TEX_H = 360;
+const DEFAULT_SPAN_KM = 400;
+// Overview spin: one turn every 2.5 minutes, eastward like the real Earth.
+const SPIN_RAD_PER_MS = (2 * Math.PI) / 150_000;
+const SPIN_RESUME_MS = 2000;
+const EARTH_RADIUS_KM = 6371;
+// Below this zoom the bundled 2048px textures are sharp enough; above it, regional NASA imagery fades in.
+const DETAIL_ZOOM = 2.5;
+const MIN_HANDOFF_ZOOM = 3.2;
+const TEX_W = 2048;
+const TEX_H = 1024;
+const SKY_W = 2048;
+const SKY_H = 1024;
 const DEG = Math.PI / 180;
+const SMOOTH = { filter: FilterMode.Linear, mipmap: MipmapMode.Linear };
+
+interface GlobeTextures {
+  day: SkImage;
+  night: SkImage;
+  sky: SkImage;
+}
+
+let textureCache: GlobeTextures | null = null;
+let texturePromise: Promise<GlobeTextures> | null = null;
+
+async function decodeAsset(source: number) {
+  const data = await Skia.Data.fromURI(Image.resolveAssetSource(source).uri);
+  const image = Skia.Image.MakeImageFromEncoded(data);
+  if (!image) throw new Error("globe texture failed to decode");
+  return image;
+}
+
+/** Decodes the NASA textures once per app session, so remounting the globe (e.g. back from the map) is instant. */
+function useGlobeTextures() {
+  const [textures, setTextures] = useState(textureCache);
+  useEffect(() => {
+    if (textures) return;
+    let mounted = true;
+    texturePromise ??= Promise.all([decodeAsset(DAY_TEXTURE), decodeAsset(NIGHT_TEXTURE), decodeAsset(SKY_TEXTURE)]).then(([day, night, sky]) => {
+      textureCache = { day, night, sky };
+      return textureCache;
+    });
+    texturePromise.then(
+      (loaded) => {
+        if (mounted) setTextures(loaded);
+      },
+      () => {
+        texturePromise = null;
+      },
+    );
+    return () => {
+      mounted = false;
+    };
+  }, [textures]);
+  return textures;
+}
+
+interface RegionDetail {
+  box: DetailBox;
+  day: SkImage;
+  night: SkImage;
+}
+
+let detailCache: RegionDetail | null = null;
+
+/** Sharp NASA imagery around the fitted trip once zoomed in past the bundled textures' resolution. */
+function useRegionDetail(stops: GlobeStop[], frame: { lng: number; zoom: number }) {
+  const box = frame.zoom < DETAIL_ZOOM ? null : detailBoxFor(stops, frame.lng / DEG, Math.asin(Math.min(1, 1 / (0.9 * frame.zoom))) / DEG);
+  const key = box ? `${box.west},${box.south},${box.width},${box.height}` : null;
+  const sameBox = (d: RegionDetail | null) => (d && key === `${d.box.west},${d.box.south},${d.box.width},${d.box.height}` ? d : null);
+  const [detail, setDetail] = useState<RegionDetail | null>(() => sameBox(detailCache));
+
+  useEffect(() => {
+    if (!box || sameBox(detail)) return;
+    let mounted = true;
+    void getRegionImagery(box).then(async (imagery) => {
+      if (!imagery) return;
+      const [day, night] = await Promise.all([Skia.Data.fromURI(imagery.dayUri), Skia.Data.fromURI(imagery.nightUri)]);
+      const dayImage = Skia.Image.MakeImageFromEncoded(day);
+      const nightImage = Skia.Image.MakeImageFromEncoded(night);
+      if (!dayImage || !nightImage) return;
+      detailCache = { box: imagery.box, day: dayImage, night: nightImage };
+      if (mounted) setDetail(detailCache);
+    });
+    return () => {
+      mounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+
+  return sameBox(detail);
+}
+
+/**
+ * Default view: centred on the current stop, zoomed so about `DEFAULT_SPAN_KM` of ground spans the
+ * screen width. On the orthographic disc a point θ from the centre sits sin(θ)·R out, and the screen
+ * is ~1.25× the square box the radius is sized from.
+ */
+function frameFocus(focus: GlobeStop) {
+  const halfBoxAngle = DEFAULT_SPAN_KM / 2 / 1.25 / EARTH_RADIUS_KM;
+  return {
+    lat: Math.max(-1.3, Math.min(1.3, focus.latitude * DEG)),
+    lng: focus.longitude * DEG,
+    zoom: 1 / (0.9 * Math.sin(halfBoxAngle)),
+  };
+}
+
+/** Same angle shifted by whole turns to be closest to `from`, so the spin takes the short way round. */
+function nearestTurn(angle: number, from: number) {
+  return angle + Math.round((from - angle) / (2 * Math.PI)) * 2 * Math.PI;
+}
+
+// Clear skies until the live cloud grid loads.
+const NO_CLOUDS = Skia.Image.MakeImage(
+  { width: 1, height: 1, alphaType: AlphaType.Opaque, colorType: ColorType.RGBA_8888 },
+  Skia.Data.fromBytes(new Uint8Array([0, 0, 0, 255])),
+  4,
+)!;
 
 // Orthographic globe: per pixel, find the point on the sphere, rotate it back to world space and
-// sample an equirectangular texture (R = land, G = city lights). Land is a dot grid lit by the real
-// sun; the night side shows city lights, the day/night line glows, clouds drift, the ocean glints
-// toward the sun, and the limb carries a layered atmosphere. Outside the disc: halo and stars.
+// sample equirectangular NASA imagery: Blue Marble on the day side, Black Marble (moonlit land and
+// city lights) on the night side, split by the real sun. Clouds follow live cloud cover from a
+// coarse grid; noise only adds the fine structure inside each cell and drifts with the planet's
+// wind bands. At night clouds are lit by the real moon phase and live thunderstorm cells flash.
+// Outside the disc: a thin sunlit atmosphere over a real photograph of the Milky Way.
 const GLOBE = Skia.RuntimeEffect.Make(`
-uniform shader land;
+uniform shader day;
+uniform shader night;
+uniform shader clouds;
+uniform shader dayDetail;
+uniform shader nightDetail;
+uniform float4 detailBox;
+uniform float2 detailSize;
+uniform float detailOn;
+uniform shader sky;
+uniform float skyScale;
 uniform float2 center;
 uniform float radius;
-uniform float dotStep;
 uniform float rotLng;
 uniform float rotLat;
-uniform float3 ocean;
-uniform float3 dots;
-uniform float3 glow;
-uniform float3 bg;
 uniform float3 sun;
 uniform float time;
-uniform float isDark;
+uniform float moon;
 
 const float PI = 3.14159265;
+const float3 ATMO = float3(0.36, 0.6, 1.0);
 
 float hash(float2 p) { return fract(sin(dot(p, float2(127.1, 311.7))) * 43758.5453); }
 
@@ -62,11 +204,50 @@ float noise(float2 p) {
   return mix(mix(hash(i), hash(i + float2(1.0, 0.0)), u.x), mix(hash(i + float2(0.0, 1.0)), hash(i + float2(1.0, 1.0)), u.x), u.y);
 }
 
-float fbm(float2 p) {
+float fbm(float2 p, int octaves) {
   float v = 0.0;
   float a = 0.5;
-  for (int i = 0; i < 3; i++) { v += a * noise(p); p *= 2.03; a *= 0.5; }
+  for (int i = 0; i < 6; i++) {
+    if (i >= octaves) break;
+    v += a * noise(p);
+    p = p * 2.07 + float2(1.7, 9.2);
+    a *= 0.5;
+  }
   return v;
+}
+
+// Domain-warped fbm reads as streaky weather systems rather than round blobs.
+float cloudNoise(float2 p) {
+  return fbm(p + 1.8 * fbm(p * 0.5 + float2(time * 0.01, 0.0), 3), 5);
+}
+
+// Triplanar noise on the 3D surface point: no seam at the antimeridian and no pinching at the poles.
+float sphereNoise(float3 w) {
+  float3 k = pow(abs(w), float3(4.0));
+  k /= k.x + k.y + k.z;
+  float3 p = w * 9.0;
+  return cloudNoise(p.yz) * k.x + cloudNoise(p.xz + float2(3.1, 7.7)) * k.y + cloudNoise(p.xy + float2(8.3, 2.9)) * k.z;
+}
+
+// Spins a point about the polar axis; positive angles move it east.
+float3 rotY(float3 p, float a) {
+  float c = cos(a); float s = sin(a);
+  return float3(p.x * c + p.z * s, p.y, -p.x * s + p.z * c);
+}
+
+// Clouds ride the wind bands: trade winds blow west near the equator, westerlies east at mid
+// latitudes, polar easterlies west again. Two phases cross-fade so the shear never piles up.
+float driftingClouds(float3 w, float lat) {
+  const float PERIOD = 36.0;
+  float wind = -cos(4.0 * abs(lat)) * 0.009 * PERIOD;
+  float ph0 = fract(time / PERIOD);
+  float ph1 = fract(time / PERIOD + 0.5);
+  float n0 = sphereNoise(rotY(w, -wind * ph0));
+  float n1 = sphereNoise(rotY(w, -wind * ph1));
+  float k0 = 1.0 - abs(2.0 * ph0 - 1.0);
+  float k1 = 1.0 - k0;
+  // Variance-preserving blend keeps cloud edges crisp mid fade.
+  return (n0 * k0 + n1 * k1 - 0.5) / sqrt(k0 * k0 + k1 * k1) + 0.5;
 }
 
 half4 main(float2 p) {
@@ -79,13 +260,21 @@ half4 main(float2 p) {
   float3 sa = float3(sun.x * cg - sun.z * sg, sun.y, sun.x * sg + sun.z * cg);
   float3 sunV = float3(sa.x, sa.y * cl - sa.z * sl, sa.y * sl + sa.z * cl);
 
-  float h = hash(floor(p / 2.5));
-  float dotShape = smoothstep(0.5, 0.1, length(fract(p / 2.5) - 0.5));
-  float star = step(0.997, h) * dotShape * (0.5 + 0.5 * sin(time * 1.6 + h * 90.0)) * isDark;
   float facing = dot(normalize(float2(q.x, -q.y) + 0.0001), normalize(sunV.xy + 0.0001));
-  float haloLight = 0.45 + 0.55 * smoothstep(-0.6, 0.8, facing);
-  float halo = (exp(-(r - 1.0) * 6.0) * 0.45 + exp(-(r - 1.0) * 22.0) * 0.35) * haloLight;
-  float3 back = mix(bg + float3(star * (1.0 - smoothstep(1.0, 1.25, r) * 0.0)), glow, clamp(halo, 0.0, 1.0));
+  float haloLight = 0.25 + 0.75 * smoothstep(-0.5, 0.7, facing);
+  float halo = (exp(-(r - 1.0) * 30.0) * 0.55 + exp(-(r - 1.0) * 9.0) * 0.12) * haloLight;
+  // Sky: a ray behind the globe, drifting at a quarter of the globe's spin for depth, then tilted so
+  // the Milky Way crosses diagonally behind Earth.
+  float2 sp = (p - center) / skyScale;
+  float3 d = rotY(normalize(float3(sp.x, -sp.y, -1.8)), rotLng * 0.25 + 0.5);
+  float pt = rotLat * 0.25 - 0.3;
+  d = float3(d.x, d.y * cos(pt) - d.z * sin(pt), d.y * sin(pt) + d.z * cos(pt));
+  d = float3(d.x * 0.85 - d.y * 0.53, d.x * 0.53 + d.y * 0.85, d.z);
+  float glon = atan(d.x, -d.z);
+  float glat = asin(clamp(d.y, -1.0, 1.0));
+  float2 suv = float2((glon / (2.0 * PI) + 0.5) * ${SKY_W}.0, (0.5 - glat / PI) * ${SKY_H}.0);
+  float3 space = pow(float3(sky.eval(suv).rgb), float3(1.15)) * 0.9;
+  float3 back = mix(space, ATMO, clamp(halo, 0.0, 1.0));
   if (r > 1.0) return half4(half3(back), 1.0);
 
   float z = sqrt(max(0.0, 1.0 - r * r));
@@ -96,37 +285,67 @@ half4 main(float2 p) {
   float lat = asin(clamp(w.y, -1.0, 1.0));
   float lng = atan(w.x, w.z);
   float2 uv = float2((lng + PI) / (2.0 * PI) * ${TEX_W}.0, (PI * 0.5 - lat) / PI * ${TEX_H}.0);
-  half4 tex = land.eval(uv);
-  float isLand = tex.r;
-  float lights = tex.g;
+  float3 dayTex = float3(day.eval(uv).rgb);
+  float3 nightTex = float3(night.eval(uv).rgb);
 
-  float2 cell = float2(fract(degrees(lng) / dotStep) - 0.5, fract(degrees(lat) / dotStep) - 0.5);
-  float dotMask = smoothstep(0.34, 0.2, length(float2(cell.x * cos(lat), cell.y)));
+  // Regional high-res imagery (x = west, y = south, z = width, w = height, radians), feathered at its edges.
+  float du = mod(lng - detailBox.x, 2.0 * PI) / detailBox.z;
+  float dv = (detailBox.y + detailBox.w - lat) / detailBox.w;
+  float inBox = step(0.0, du) * step(du, 1.0) * step(0.0, dv) * step(dv, 1.0);
+  float feather = smoothstep(0.0, 0.08, min(min(du, 1.0 - du), min(dv, 1.0 - dv))) * inBox * detailOn;
+  if (feather > 0.0) {
+    float2 duv = float2(du, dv) * detailSize;
+    dayTex = mix(dayTex, float3(dayDetail.eval(duv).rgb), feather);
+    nightTex = mix(nightTex, float3(nightDetail.eval(duv).rgb), feather);
+  }
 
   float sunDot = dot(w, sun);
-  float day = smoothstep(-0.1, 0.16, sunDot);
-  float shade = clamp(dot(v, sunV), 0.0, 1.0);
+  float lit = smoothstep(-0.1, 0.1, sunDot);
+  float diffuse = smoothstep(-0.08, 0.7, sunDot);
 
-  float3 col = ocean * (0.32 + 0.68 * day) * (0.75 + 0.25 * shade);
-  float3 dayDots = dots * (0.5 + 0.5 * shade);
-  float3 nightDots = dots * 0.22;
-  col = mix(col, mix(nightDots, dayDots, day), dotMask * isLand);
+  float3 dayCol = pow(dayTex, float3(0.9)) * (0.2 + 1.0 * diffuse);
+  // Black Marble's city lights are warm, its moonlit land is blue: keep the land dim, boost the lights.
+  float warm = (nightTex.r + nightTex.g) * 0.5 - nightTex.b * 0.8;
+  float lights = smoothstep(0.02, 0.5, warm) * (0.35 + 0.65 * smoothstep(0.3, 0.9, warm));
+  float3 nightCol = min(nightTex, float3(0.35)) * (0.25 + 0.3 * moon) + float3(1.0, 0.74, 0.4) * lights * 1.15;
+  float3 col = mix(nightCol, dayCol, lit);
 
-  float night = 1.0 - day;
-  col += float3(1.0, 0.72, 0.38) * lights * night * (0.9 + 0.6 * dotMask);
+  // Grid cell centres sit at pixel centres; x wraps around the antimeridian.
+  float2 cuv = float2((degrees(lng) + 180.0) / ${CLOUD_STEP}.0 + 0.5, (82.5 - degrees(lat)) / ${CLOUD_STEP}.0 + 0.5);
+  half4 grid = clouds.eval(cuv);
+  float cover = float(grid.r);
+  float storm = float(grid.g);
+  float n = driftingClouds(w, lat);
+  float thresh = mix(0.78, 0.3, cover);
+  float density = smoothstep(thresh, thresh + 0.14, n) * smoothstep(0.04, 0.15, cover);
+  float cloud = density * 0.95;
+  float3 moonCloud = float3(0.5, 0.58, 0.75) * (0.06 + 0.16 * moon) * (0.7 + 0.3 * density);
+  float3 cloudCol = float3(0.78 + 0.22 * density) * diffuse + moonCloud * (1.0 - lit);
+  col = mix(col, cloudCol, cloud);
+  // City lights still glow faintly through cloud.
+  col += float3(1.0, 0.78, 0.45) * lights * cloud * (1.0 - lit) * 0.25;
 
-  // Clouds from two noise slices of the 3D surface point, so there is no seam at the antimeridian.
-  float c = 0.5 * (fbm(w.xy * 3.1 + float2(time * 0.012, 0.0)) + fbm(w.zy * 3.1 + float2(0.0, time * 0.009)));
-  float cloud = smoothstep(0.52, 0.8, c) * 0.55;
-  col = mix(col, float3(1.0) * (0.18 + 0.82 * day), cloud * (0.15 + 0.7 * day));
+  // Lightning: each 4° cell in a live thunderstorm area fires short, flickering flashes at random.
+  float2 lcell = float2(degrees(lng), degrees(lat)) / 4.0;
+  float2 lid = floor(lcell);
+  float seed = hash(lid);
+  float beat = time * 1.3 + seed * 17.0;
+  float strike = step(0.9, hash(lid + floor(beat) * 0.37));
+  float phase = fract(beat);
+  float flicker = exp(-phase * 10.0) * (0.55 + 0.45 * sin(phase * 70.0));
+  float2 spot = fract(lcell) - 0.5 - (float2(hash(lid + 3.1), hash(lid + 7.7)) - 0.5) * 0.5;
+  float bolt = storm * strike * flicker * smoothstep(0.45, 0.0, length(spot)) * smoothstep(0.2, 0.6, density);
+  col += float3(0.78, 0.84, 1.0) * bolt * (1.6 - 1.2 * lit);
 
-  col += float3(1.0, 0.5, 0.28) * exp(-pow(sunDot / 0.09, 2.0)) * 0.22;
-
+  float water = smoothstep(0.05, 0.15, dayTex.b - dayTex.r) * (1.0 - cloud);
   float3 refl = reflect(-sunV, v);
-  col += float3(1.0, 0.96, 0.88) * pow(max(refl.z, 0.0), 36.0) * (1.0 - isLand) * day * 0.45;
+  col += float3(1.0, 0.95, 0.85) * pow(max(refl.z, 0.0), 40.0) * water * lit * 0.4;
 
-  float fresnel = pow(1.0 - z, 2.2);
-  col = mix(col, glow, fresnel * 0.6 * (0.35 + 0.65 * smoothstep(-0.25, 0.35, sunDot)));
+  float twilight = exp(-pow((sunDot - 0.02) / 0.07, 2.0));
+  col *= mix(float3(1.0), float3(1.25, 0.86, 0.62), twilight * 0.6);
+
+  float fresnel = pow(1.0 - z, 3.0);
+  col += ATMO * fresnel * 0.75 * smoothstep(-0.25, 0.4, sunDot);
 
   float edge = smoothstep(1.0, 1.0 - 1.5 / radius, r);
   return half4(half3(mix(back, col, edge)), 1.0);
@@ -147,21 +366,19 @@ interface GlobeProps {
   /** Where the user is now; draws a softer arc from here to the focused stop. */
   origin?: GlobeStop | null;
   contacts?: GlobeStop[];
-  sun: [number, number, number];
   contactColor: string;
   accent: string;
   isDark: boolean;
-  bg: string;
   /** Pinch released past the hand-off zoom: the point under the centre (degrees) and the globe radius in px. */
   onZoomThrough?: (center: { latitude: number; longitude: number }, radiusPx: number) => void;
   /** Start zoomed in on a point (e.g. coming back out of the map) and ease out to the whole globe. */
   entry?: { latitude: number; longitude: number } | null;
   /** Space at the top of the canvas kept for overlaid content; the globe centres below it. */
   topInset?: number;
-}
-
-function rgb(hex: string): [number, number, number] {
-  return [parseInt(hex.slice(1, 3), 16) / 255, parseInt(hex.slice(3, 5), 16) / 255, parseInt(hex.slice(5, 7), 16) / 255];
+  /** A finger is on the globe; the page should stop scrolling so drags spin the globe instead. */
+  onTouchActive?: (active: boolean) => void;
+  /** No trip: show the whole globe, slowly spinning until a stop is picked, never zoomed in. */
+  overview?: boolean;
 }
 
 /** Projects a lat/lng onto the globe's disc; z < 0 means it is on the far side. */
@@ -204,88 +421,110 @@ function arcPoint(a: GlobeStop, b: GlobeStop, t: number) {
 }
 
 /**
- * Dotted 3D globe drawn in one Skia shader, with the trip's flight arcs glowing between stops.
- * On mount it spins to the focused stop; drag to spin it (with momentum), tap to zoom through.
+ * Photoreal 3D globe drawn in one Skia shader with live clouds, the trip's flight arcs glowing
+ * between stops and current weather at the focused stop.
+ * On mount it spins and zooms in on the current stop; drag to spin it, pinch out for the route and
+ * the whole globe or in to hand off to the map.
  */
-export function Globe({ stops, focusIndex, width, height, origin, contacts = [], sun, contactColor, accent, isDark, bg, onZoomThrough, entry, topInset = 0 }: GlobeProps) {
-  const [land, setLand] = useState<SkImage | null>(null);
+export function Globe({ stops, focusIndex, width, height, origin, contacts = [], contactColor, accent, isDark, onZoomThrough, entry, topInset = 0, onTouchActive, overview = false }: GlobeProps) {
+  const textures = useGlobeTextures();
+  const dayImage = textures?.day ?? null;
+  const nightImage = textures?.night ?? null;
+  const focusOnly = useMemo(() => (stops[focusIndex] ? [stops[focusIndex]] : []), [focusIndex, stops]);
+  const { clouds, stopWeather } = useGlobeWeather(focusOnly);
+  const [now, setNow] = useState(() => new Date());
+  const sun = sunVector(now);
+  const moon = 0.2 + 0.8 * moonIllumination(now);
   const reduceMotion = useReducedMotion();
   const clock = useClock();
   const baseRadius = Math.min(width, height - topInset) * 0.45;
-  const zoom = useSharedValue(1);
+  const focus = stops[focusIndex] ?? { name: "", latitude: 20, longitude: 0 };
+  const frame = useMemo(
+    () =>
+      overview
+        ? { lat: Math.max(-0.6, Math.min(0.6, focus.latitude * DEG * 0.8)), lng: focus.longitude * DEG, zoom: MIN_ZOOM }
+        : frameFocus(focus),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [overview, focus.latitude, focus.longitude],
+  );
+  const spinning = overview && stops.length === 0 && !reduceMotion;
+  const restZoom = frame.zoom;
+  const detail = useRegionDetail(focusOnly, frame);
+  const detailBox = detail
+    ? [detail.box.west * DEG, detail.box.south * DEG, detail.box.width * DEG, detail.box.height * DEG]
+    : [0, 0, 1, 1];
+  const detailSize = detail ? [detail.day.width(), detail.day.height()] : [1, 1];
+  // Hand-off and max zoom sit relative to the fitted view, so a tight trip still needs a real pinch.
+  const handoffZoom = Math.max(MIN_HANDOFF_ZOOM, restZoom * 2.2);
+  const maxZoom = handoffZoom * 1.4;
+  const zoom = useSharedValue(entry ? handoffZoom : reduceMotion ? restZoom : 1);
   const zoomStart = useSharedValue(1);
   const radius = useDerivedValue(() => baseRadius * zoom.get());
   const handoffHinted = useSharedValue(false);
-  const fade = useDerivedValue(() => 1 - Math.min(1, Math.max(0, (zoom.get() - HANDOFF_ZOOM) / (MAX_ZOOM - HANDOFF_ZOOM))) * 0.6);
+  const fade = useDerivedValue(() => 1 - Math.min(1, Math.max(0, (zoom.get() - handoffZoom) / (maxZoom - handoffZoom))) * 0.6);
   const cx = width / 2;
   const cy = topInset + (height - topInset) / 2;
-  const focus = stops[focusIndex] ?? { name: "", latitude: 20, longitude: 0 };
-  const targetLng = focus.longitude * DEG;
-  const targetLat = Math.max(-0.6, Math.min(0.6, focus.latitude * DEG * 0.8));
+  const targetLng = frame.lng;
+  const targetLat = frame.lat;
 
   const rotLng = useSharedValue(entry ? entry.longitude * DEG : targetLng - (reduceMotion ? 0 : 2.2));
-  const rotLat = useSharedValue(entry ? entry.latitude * DEG : reduceMotion ? targetLat : 0.1);
+  const rotLat = useSharedValue(entry ? entry.latitude * DEG : reduceMotion || spinning ? targetLat : 0.1);
+  const touching = useSharedValue(false);
+  const resumeAt = useSharedValue(0);
 
+  // Overview spin, paused while touched and for a moment after, so drags and momentum aren't fought.
+  const spin = useFrameCallback((info) => {
+    if (touching.get()) return;
+    if (resumeAt.get() < 0) resumeAt.set(info.timestamp + SPIN_RESUME_MS);
+    if (info.timestamp < resumeAt.get()) return;
+    rotLng.set(rotLng.get() - SPIN_RAD_PER_MS * (info.timeSincePreviousFrame ?? 16));
+  }, false);
   useEffect(() => {
-    let mounted = true;
-    void drawAsImage(
-      <Group>
-        <Fill color="black" />
-        <Path path={LAND_PATH} color="#FF0000" transform={[{ scale: TEX_W / 360 }]} />
-        <Group blendMode="plus">
-          {CITY_LIGHTS.map(([lng, lat, pop], i) => (
-            <Circle
-              key={i}
-              cx={(lng + 180) * (TEX_W / 360)}
-              cy={(90 - lat) * (TEX_H / 180)}
-              r={0.5 + Math.max(0, pop - 4) * 0.9}
-              color={`rgba(0,255,0,${Math.min(1, 0.35 + (pop - 4) * 0.25)})`}
-            >
-              <BlurMask blur={1.6} style="normal" />
-            </Circle>
-          ))}
-        </Group>
-      </Group>,
-      { width: TEX_W, height: TEX_H },
-    ).then((image) => {
-      if (mounted) setLand(image);
-    });
-    return () => {
-      mounted = false;
-    };
+    spin.setActive(spinning);
+  }, [spin, spinning]);
+
+  // The terminator follows the real sun, so keep the clock fresh.
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(id);
   }, []);
 
   useEffect(() => {
+    const ease = Easing.bezier(0.2, 0.8, 0.2, 1);
+    const lng = nearestTurn(targetLng, rotLng.get());
     if (entry) {
-      zoom.set(HANDOFF_ZOOM);
-      zoom.set(withSpring(1, springs.sheet));
+      zoom.set(withSpring(restZoom, springs.sheet));
+      rotLng.set(withTiming(lng, { duration: 700, easing: ease }));
+      rotLat.set(withTiming(targetLat, { duration: 700, easing: ease }));
       return;
     }
-    if (reduceMotion) return;
-    const ease = Easing.bezier(0.2, 0.8, 0.2, 1);
-    rotLng.set(withTiming(targetLng, { duration: 2600, easing: ease }));
+    if (spinning) {
+      zoom.set(restZoom);
+      return;
+    }
+    if (reduceMotion) {
+      zoom.set(restZoom);
+      rotLng.set(lng);
+      rotLat.set(targetLat);
+      return;
+    }
+    zoom.set(withTiming(restZoom, { duration: 2600, easing: ease }));
+    rotLng.set(withTiming(lng, { duration: 2600, easing: ease }));
     rotLat.set(withTiming(targetLat, { duration: 2600, easing: ease }));
-  }, [entry, reduceMotion, rotLat, rotLng, targetLat, targetLng, zoom]);
+  }, [entry, reduceMotion, restZoom, rotLat, rotLng, spinning, targetLat, targetLng, zoom]);
 
-  const palette = isDark
-    ? { ocean: rgb("#121624"), dots: rgb("#C9CEE0") }
-    : { ocean: rgb("#DCE1EC"), dots: rgb("#2A3047") };
-
-  const glowRgb = rgb(accent);
-  const bgRgb = rgb(bg);
   const uniforms = useDerivedValue(() => ({
     center: [cx, cy],
     radius: radius.get(),
-    dotStep: 1.7 / Math.sqrt(zoom.get()),
     rotLng: rotLng.get(),
     rotLat: rotLat.get(),
-    ocean: palette.ocean,
-    dots: palette.dots,
-    glow: glowRgb,
-    bg: bgRgb,
+    skyScale: Math.min(width, height - topInset) / 2,
     sun,
     time: clock.get() / 1000,
-    isDark: isDark ? 1 : 0,
+    moon,
+    detailBox,
+    detailSize,
+    detailOn: detail ? 1 : 0,
   }));
 
   const currentLeg = Math.max(0, focusIndex - 1);
@@ -323,11 +562,17 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
 
   const pins = useMemo(() => stops.map((stop, i) => ({ stop, focused: i === focusIndex })), [focusIndex, stops]);
 
-  // Horizontal drags spin the globe; vertical ones fall through to the page scroll.
+  // Drags in any direction spin the globe; the parent pauses its scroll while a finger is down.
   const pan = Gesture.Pan()
     .averageTouches(true)
-    .activeOffsetX([-10, 10])
-    .failOffsetY([-12, 12])
+    .minDistance(6)
+    .onBegin(() => {
+      touching.set(true);
+    })
+    .onFinalize(() => {
+      touching.set(false);
+      resumeAt.set(-1);
+    })
     .onChange((event) => {
       const r = radius.get();
       rotLng.set(rotLng.get() - (event.changeX / r) * 0.9);
@@ -340,34 +585,77 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
   const pinch = Gesture.Pinch()
     .onBegin(() => {
       zoomStart.set(zoom.get());
+      touching.set(true);
+    })
+    .onFinalize(() => {
+      touching.set(false);
+      resumeAt.set(-1);
     })
     .onUpdate((event) => {
-      const next = zoomStart.get() * event.scale;
-      if (next >= HANDOFF_ZOOM !== handoffHinted.get()) {
-        handoffHinted.set(next >= HANDOFF_ZOOM);
-        if (next >= HANDOFF_ZOOM) scheduleOnRN(selectionChanged);
+      // Pinches cover more ground the further in you are, so the whole globe is a pinch or two away.
+      const start = zoomStart.get();
+      const next = start * Math.pow(event.scale, 1 + 0.8 * Math.log10(Math.max(1, start)));
+      if (next >= handoffZoom !== handoffHinted.get()) {
+        handoffHinted.set(next >= handoffZoom);
+        if (next >= handoffZoom) scheduleOnRN(selectionChanged);
       }
-      zoom.set(next < MIN_ZOOM ? MIN_ZOOM - (MIN_ZOOM - next) * 0.3 : next > MAX_ZOOM ? MAX_ZOOM + (next - MAX_ZOOM) * 0.3 : next);
+      zoom.set(next < MIN_ZOOM ? MIN_ZOOM - (MIN_ZOOM - next) * 0.3 : next > maxZoom ? maxZoom + (next - maxZoom) * 0.3 : next);
     })
     .onEnd(() => {
-      if (onZoomThrough && zoom.get() >= HANDOFF_ZOOM) {
+      if (onZoomThrough && zoom.get() >= handoffZoom) {
         // The point under the view's centre is (rotLat, rotLng) by construction of the projection.
         const center = { latitude: rotLat.get() / DEG, longitude: (((rotLng.get() / DEG + 540) % 360) - 180) };
         scheduleOnRN(onZoomThrough, center, baseRadius * zoom.get());
         return;
       }
-      zoom.set(withSpring(Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom.get())), springs.sheet));
+      zoom.set(withSpring(Math.min(maxZoom, Math.max(MIN_ZOOM, zoom.get())), springs.sheet));
     });
 
   return (
     <GestureDetector gesture={Gesture.Simultaneous(pinch, pan)}>
-      <View style={{ width, height }}>
-        {land ? (
+      <View
+        style={{ width, height }}
+        onTouchStart={() => onTouchActive?.(true)}
+        onTouchEnd={() => onTouchActive?.(false)}
+        onTouchCancel={() => onTouchActive?.(false)}
+      >
+        {textures && dayImage && nightImage ? (
           <Canvas style={StyleSheet.absoluteFill}>
             <Group opacity={fade}>
             <Fill>
               <Shader source={GLOBE} uniforms={uniforms}>
-                <ImageShader image={land} fit="fill" x={0} y={0} width={TEX_W} height={TEX_H} />
+                <ImageShader image={dayImage} fit="fill" x={0} y={0} width={TEX_W} height={TEX_H} sampling={SMOOTH} />
+                <ImageShader image={nightImage} fit="fill" x={0} y={0} width={TEX_W} height={TEX_H} sampling={SMOOTH} />
+                <ImageShader
+                  image={clouds ?? NO_CLOUDS}
+                  fit="fill"
+                  x={0}
+                  y={0}
+                  width={CLOUD_COLS}
+                  height={CLOUD_ROWS}
+                  tx="repeat"
+                  ty="clamp"
+                  sampling={{ filter: FilterMode.Linear, mipmap: MipmapMode.None }}
+                />
+                <ImageShader
+                  image={detail?.day ?? NO_CLOUDS}
+                  fit="fill"
+                  x={0}
+                  y={0}
+                  width={detailSize[0]}
+                  height={detailSize[1]}
+                  sampling={SMOOTH}
+                />
+                <ImageShader
+                  image={detail?.night ?? NO_CLOUDS}
+                  fit="fill"
+                  x={0}
+                  y={0}
+                  width={detailSize[0]}
+                  height={detailSize[1]}
+                  sampling={SMOOTH}
+                />
+                <ImageShader image={textures.sky} fit="fill" x={0} y={0} width={SKY_W} height={SKY_H} tx="repeat" ty="clamp" sampling={SMOOTH} />
               </Shader>
             </Fill>
             <Path path={homeArc} style="stroke" strokeWidth={1.4} color={isDark ? "#EDEFF5" : "#0E1018"} opacity={0.55} strokeCap="round">
@@ -400,6 +688,19 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
             ))}
             </Group>
           </Canvas>
+        ) : null}
+        {dayImage && nightImage && focusOnly[0] && stopWeather[0] ? (
+          <WeatherBadge
+            key={`weather-${focusOnly[0].name}`}
+            stop={focusOnly[0]}
+            weather={stopWeather[0]}
+            rotLng={rotLng}
+            rotLat={rotLat}
+            cx={cx}
+            cy={cy}
+            radius={radius}
+            fade={fade}
+          />
         ) : null}
       </View>
     </GestureDetector>
@@ -444,3 +745,58 @@ function GlobePin({
     </Group>
   );
 }
+
+function WeatherBadge({
+  stop,
+  weather,
+  rotLng,
+  rotLat,
+  cx,
+  cy,
+  radius,
+  fade,
+}: {
+  stop: GlobeStop;
+  weather: StopWeather;
+  rotLng: ReturnType<typeof useSharedValue<number>>;
+  rotLat: ReturnType<typeof useSharedValue<number>>;
+  cx: number;
+  cy: number;
+  radius: ReturnType<typeof useDerivedValue<number>>;
+  fade: ReturnType<typeof useDerivedValue<number>>;
+}) {
+  const { c, f } = useAura();
+  const unit = useTemperatureUnit();
+  // Sits up and to the right of the pin; fades out as the stop turns toward the limb.
+  const style = useAnimatedStyle(() => {
+    const point = project(stop.latitude * DEG, stop.longitude * DEG, rotLng.get(), rotLat.get(), cx, cy, radius.get());
+    return {
+      opacity: Math.min(1, Math.max(0, (point.z - 0.15) / 0.2)) * (fade.get() - 0.4) / 0.6,
+      transform: [{ translateX: point.x + 9 }, { translateY: point.y - 30 }],
+    };
+  });
+
+  return (
+    <Animated.View pointerEvents="none" style={[styles.badge, { backgroundColor: c.surfaceStrong, borderColor: c.hairline }, style]}>
+      <Text style={styles.badgeEmoji}>{weather.emoji}</Text>
+      <Text style={[styles.badgeText, { color: c.text, fontFamily: f.semibold }]}>{`${toUnit(weather.temperature, unit)}°`}</Text>
+    </Animated.View>
+  );
+}
+
+const styles = StyleSheet.create({
+  badge: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  badgeEmoji: { fontSize: 11 },
+  badgeText: { fontSize: 12 },
+});

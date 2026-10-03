@@ -147,7 +147,9 @@ export function TripHome({
         radiusPx: number;
       }
   >({ mode: "globe", entry: null });
-  const [mapTouched, setMapTouched] = useState(false);
+  const [heroTouched, setHeroTouched] = useState(false);
+  // The header sits over the globe's dark space backdrop in globe mode, even in light mode.
+  const hc = hero.mode === "globe" ? auraDark : c;
 
   return (
     <View style={[styles.flex, { backgroundColor: c.bg }]}>
@@ -155,31 +157,31 @@ export function TripHome({
         style={{ backgroundColor: c.bg }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        scrollEnabled={!mapTouched}
+        scrollEnabled={!heroTouched}
         contentContainerStyle={{
           paddingBottom: tabBarInset + 24,
         }}
       >
         <View style={{ height: headerSpace + globeHeight }}>
         <View style={[styles.heroTop, { top: insets.top + 12 }]}>
-          <Text numberOfLines={1} style={[styles.greeting, { color: c.textSoft }]}>
+          <Text numberOfLines={1} style={[styles.greeting, { color: hc.textSoft }]}>
             {data.greeting}, {data.userName}
           </Text>
           <PressableScale
             onPress={onSwitchTrip}
             accessibilityRole="button"
             accessibilityLabel={t("home.switchTrip")}
-            style={[styles.round, { backgroundColor: c.surfaceStrong, borderColor: c.hairline }]}
+            style={[styles.round, { backgroundColor: hc.surfaceStrong, borderColor: hc.hairline }]}
           >
-            <Icon name="swap" size={16} color={c.text} />
+            <Icon name="swap" size={16} color={hc.text} />
           </PressableScale>
           <PressableScale
             onPress={onOpenSettings}
             accessibilityRole="button"
             accessibilityLabel={t("settings.title")}
-            style={[styles.round, { backgroundColor: c.surfaceStrong, borderColor: c.hairline }]}
+            style={[styles.round, { backgroundColor: hc.surfaceStrong, borderColor: hc.hairline }]}
           >
-            <Text style={[styles.avatarText, { color: c.text }]}>{data.userName.charAt(0).toUpperCase()}</Text>
+            <Text style={[styles.avatarText, { color: hc.text }]}>{data.userName.charAt(0).toUpperCase()}</Text>
           </PressableScale>
         </View>
 
@@ -200,12 +202,11 @@ export function TripHome({
                 topInset={headerSpace}
                 origin={globe.origin}
                 contacts={globe.contacts}
-                sun={globe.sun}
                 contactColor="#3DDC97"
                 accent={accent}
                 isDark={isDark}
-                bg={c.bg}
                 entry={hero.entry}
+                onTouchActive={setHeroTouched}
                 onZoomThrough={(center, radiusPx) => setHero({ mode: "map", center, radiusPx })}
               />
             </Animated.View>
@@ -215,6 +216,7 @@ export function TripHome({
                 height={globeHeight}
                 from={{ center: hero.center, radiusPx: hero.radiusPx }}
                 stop={focusStop}
+                stops={data.stops}
                 hotel={hotel}
                 places={safetyPlaces}
                 contacts={globe.contacts}
@@ -222,42 +224,46 @@ export function TripHome({
                 accent={accent}
                 isDark={isDark}
                 onBackToGlobe={(center) => {
-                  setMapTouched(false);
+                  setHeroTouched(false);
                   setHero({ mode: "globe", entry: center });
                 }}
-                onTouchActive={setMapTouched}
+                onTouchActive={setHeroTouched}
               />
             </Animated.View>
           )}
-          {hero.mode === "globe" && chips.length > 0 ? (
-            <Animated.View entering={FadeIn.delay(900).duration(400)} style={styles.chips} pointerEvents="box-none">
-              {chips.map((chip) => (
-                <PressableScale
-                  key={chip.label}
-                  disabled={!chip.onPress}
-                  onPress={chip.onPress}
-                  haptic={Boolean(chip.onPress)}
-                  accessibilityRole={chip.onPress ? "button" : undefined}
-                  accessibilityState={chip.onPress ? { expanded: !!chip.open } : undefined}
-                  style={[
-                    styles.chip,
-                    {
-                      backgroundColor: chip.open ? c.inverse : c.surfaceStrong,
-                      borderColor: c.hairline,
-                    },
-                  ]}
-                >
-                  {chip.icon ? <Icon name={chip.icon} size={13} color={chip.open ? c.onInverse : c.textSoft} /> : null}
-                  <Text numberOfLines={1} style={[styles.chipText, { color: chip.open ? c.onInverse : c.text }]}>
-                    {chip.label}
-                  </Text>
-                  {chip.onPress ? <Icon name="chevronDown" size={12} color={chip.open ? c.onInverse : c.textMuted} /> : null}
-                </PressableScale>
-              ))}
-            </Animated.View>
-          ) : null}
         </PostHogMaskView>
+        {hero.mode === "globe" ? (
+          <LinearGradient pointerEvents="none" colors={[`${c.bg}00`, c.bg]} style={styles.heroFade} />
+        ) : null}
         </View>
+
+        {chips.length > 0 ? (
+          <Animated.View entering={FadeIn.delay(900).duration(400)} style={styles.chips} pointerEvents="box-none">
+            {chips.map((chip) => (
+              <PressableScale
+                key={chip.label}
+                disabled={!chip.onPress}
+                onPress={chip.onPress}
+                haptic={Boolean(chip.onPress)}
+                accessibilityRole={chip.onPress ? "button" : undefined}
+                accessibilityState={chip.onPress ? { expanded: !!chip.open } : undefined}
+                style={[
+                  styles.chip,
+                  {
+                    backgroundColor: chip.open ? c.inverse : c.surfaceStrong,
+                    borderColor: c.hairline,
+                  },
+                ]}
+              >
+                {chip.icon ? <Icon name={chip.icon} size={13} color={chip.open ? c.onInverse : c.textSoft} /> : null}
+                <Text numberOfLines={1} style={[styles.chipText, { color: chip.open ? c.onInverse : c.text }]}>
+                  {chip.label}
+                </Text>
+                {chip.onPress ? <Icon name="chevronDown" size={12} color={chip.open ? c.onInverse : c.textMuted} /> : null}
+              </PressableScale>
+            ))}
+          </Animated.View>
+        ) : null}
 
         <PostHogMaskView style={styles.passWrap}>
           <BoardingPass data={data} palette={c} accent={accent} gradient={auraStatusColors[status]} isDark={isDark} emergency={emergency} />
@@ -348,6 +354,7 @@ export function TripHome({
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   topFade: { position: "absolute", top: 0, left: 0, right: 0 },
+  heroFade: { position: "absolute", left: 0, right: 0, bottom: 0, height: 72 },
   map: { position: "absolute", left: 0, right: 0, bottom: 0 },
   heroTop: {
     position: "absolute",
@@ -370,10 +377,8 @@ const styles = StyleSheet.create({
   },
   avatarText: { fontFamily: f.semibold, fontSize: 15 },
   chips: {
-    position: "absolute",
-    left: 16,
-    right: 16,
-    bottom: 52,
+    paddingHorizontal: 16,
+    marginTop: 4,
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "center",
@@ -389,7 +394,7 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
   },
   chipText: { fontFamily: f.medium, fontSize: 12.5 },
-  passWrap: { marginTop: -40, marginBottom: 8 },
+  passWrap: { marginTop: 16, marginBottom: 8 },
   body: { paddingHorizontal: 20 },
   railLabels: {
     flexDirection: "row",

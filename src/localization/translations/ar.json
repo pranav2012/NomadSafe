@@ -143,6 +143,7 @@
     "exportEverythingSub": "احفظ نسخة من بياناتك كملف JSON",
     "wipeDeviceDataSub": "لا يمكن التراجع عنه · يطلب منك تأكيد هويتك",
     "footerTagline": "سافر بخفة. ابقَ متاحًا.",
+    "imageCredits": "صور الكرة الأرضية: NASA · درب التبانة: ESO/S. Brunier (CC BY 4.0)",
     "biometricNotSetUpBody": "قم أولًا بإعداد بصمة الإصبع أو التعرف على الوجه في إعدادات هاتفك.",
     "autoLockSub": "القفل بعد {{duration}} في الخلفية",
     "autoLockImmediately": "فورًا",
@@ -933,7 +934,18 @@
     "eventSafeMessageSent_one": "تم إرسال رسالة “أنا بأمان” إلى جهة اتصال واحدة",
     "eventSafeMessageSent_other": "تم إرسال رسالة “أنا بأمان” إلى {{count}} جهات اتصال",
     "eventSafeMessageOpened_one": "تم فتح رسالة “أنا بأمان” في الرسائل النصية لجهة اتصال واحدة",
-    "eventSafeMessageOpened_other": "تم فتح رسالة “أنا بأمان” في الرسائل النصية لـ{{count}} جهات اتصال"
+    "eventSafeMessageOpened_other": "تم فتح رسالة “أنا بأمان” في الرسائل النصية لـ{{count}} جهات اتصال",
+    "people": "الأشخاص",
+    "recenterMap": "عرض الجميع على الخريطة",
+    "adviceChip": "نصائح المملكة المتحدة · {{level}}",
+    "adviceUnknown": "أضف وجهة للرحلة أو اسمح بالوصول إلى الموقع لعرض نصائح السفر.",
+    "adviceUnreachable": "تعذّر الوصول إلى نصائح السفر من FCDO البريطانية.",
+    "adviceNoCountry": "تعذّر تحديد البلد، لذلك لا تظهر نصائح سفر.",
+    "adviceNotCovered": "لا تنشر FCDO البريطانية نصائح سفر لـ {{country}}.",
+    "holdSos": "اضغط مطولًا للاستغاثة",
+    "keepHolding": "واصل الضغط",
+    "imSafeShort": "أنا بأمان",
+    "callShort": "اتصل بـ {{number}}"
   },
   "sos": {
     "codeRed": "نداء استغاثة · حالة طارئة",
@@ -1059,7 +1071,9 @@
     "nameRequired": "أدخل اسمًا.",
     "emailInvalid": "أدخل عنوان بريد إلكتروني صالحًا.",
     "minutesShort": "{{count}} د",
-    "hoursShort": "{{count}} س"
+    "hoursShort": "{{count}} س",
+    "addShort": "إضافة",
+    "removeHint": "اضغط مطولًا على شخص لإيقاف المشاركة معه."
   },
   "expenses": {
     "eyebrow": "أموال الرحلة",

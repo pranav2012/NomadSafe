@@ -12,10 +12,10 @@ import {
   startLocationBroadcast,
   stopLocationBroadcast,
 } from "../services/locationBroadcastTask";
-import { useSharingStore } from "../store/sharingStore";
+import { useSharingStore, type BroadcastMode } from "../store/sharingStore";
 
 /**
- * Start/stop live location sharing from anywhere, with the same rules as the Share tab: the
+ * Start/stop live location sharing from anywhere, with the same rules everywhere: the
  * background-location disclosure is shown before the first start (Play policy), permission
  * failures explain how to fix them, and the store is re-synced with the real OS task on error.
  * Render `BackgroundLocationDisclosure` with `disclosureVisible`, `onDisclosureAccept` and
@@ -26,6 +26,7 @@ export function useBroadcastToggle() {
   const isBroadcasting = useSharingStore((s) => s.isBroadcasting);
   const mode = useSharingStore((s) => s.mode);
   const setBroadcasting = useSharingStore((s) => s.setBroadcasting);
+  const setMode = useSharingStore((s) => s.setMode);
   const [busy, setBusy] = useState(false);
   const [disclosureVisible, setDisclosureVisible] = useState(false);
 
@@ -38,12 +39,12 @@ export function useBroadcastToggle() {
     (link) => link.status === "accepted" && !paused.has(link.linkedUserId),
   ).length;
 
-  const begin = useCallback(async () => {
+  const begin = useCallback(async (nextMode: BroadcastMode = mode) => {
     setBusy(true);
     try {
-      await startLocationBroadcast(mode);
+      await startLocationBroadcast(nextMode);
       setBroadcasting(true);
-      track("live_share_started", { mode, recipients: activeRecipientCount });
+      track("live_share_started", { mode: nextMode, recipients: activeRecipientCount });
       heavyImpact();
     } catch (err) {
       setBroadcasting(await isLocationBroadcastRunning());
@@ -81,10 +82,20 @@ export function useBroadcastToggle() {
     await begin();
   }, [begin, busy, isBroadcasting, setBroadcasting, t]);
 
+  // Restarts a running broadcast so the new update interval takes effect.
+  const changeMode = useCallback(async (next: BroadcastMode) => {
+    if (next === mode || busy) return;
+    setMode(next);
+    if (isBroadcasting) await begin(next);
+  }, [begin, busy, isBroadcasting, mode, setMode]);
+
   return {
     isBroadcasting,
     busy,
+    mode,
+    activeRecipientCount,
     toggle,
+    changeMode,
     disclosureVisible,
     onDisclosureAccept: () => {
       setDisclosureVisible(false);

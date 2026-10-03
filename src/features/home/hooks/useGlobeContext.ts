@@ -4,7 +4,7 @@ import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { useLocalization } from "@/localization";
 import type { HomeStop } from "@/features/home/types";
-import { daylightAt, distanceKm, sunVector } from "@/features/home/components/aura/globe/sun";
+import { daylightAt, distanceKm } from "@/features/home/components/aura/globe/sun";
 import { formatApproxDuration, formatDistance } from "@/features/home/utils/format";
 
 export interface GlobeContact {
@@ -15,7 +15,7 @@ export interface GlobeContact {
 
 /**
  * What the globe shows beyond the route: where you are (only if location is already granted —
- * this never prompts), people sharing their location with you, the sun's position, and short
+ * this never prompts), people sharing their location with you, and short
  * labels for distance and daylight at the focused stop.
  */
 export function useGlobeContext(focus: HomeStop | undefined) {
@@ -55,5 +55,5 @@ export function useGlobeContext(focus: HomeStop | undefined) {
         : t(light.isNight ? "home.nightAt" : "home.dayAt", { place, time: formatApproxDuration(light.hoursUntil, locale) });
   }
 
-  return { origin, contacts, sun: sunVector(now), distanceLabel, daylightLabel, isNightAtFocus: focus ? daylightAt(focus.latitude, focus.longitude, now).isNight : false };
+  return { origin, contacts, distanceLabel, daylightLabel, isNightAtFocus: focus ? daylightAt(focus.latitude, focus.longitude, now).isNight : false };
 }

@@ -47,3 +47,12 @@ export function distanceKm(a: { latitude: number; longitude: number }, b: { lati
   const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.latitude * DEG) * Math.cos(b.latitude * DEG) * Math.sin(dLng / 2) ** 2;
   return 6371 * 2 * Math.asin(Math.min(1, Math.sqrt(h)));
 }
+
+const SYNODIC_MONTH_DAYS = 29.530589;
+const KNOWN_NEW_MOON_MS = Date.UTC(2000, 0, 6, 18, 14);
+
+/** Fraction of the moon's disc that is lit (0 new .. 1 full), from the mean synodic month. */
+export function moonIllumination(date: Date) {
+  const age = (((date.getTime() - KNOWN_NEW_MOON_MS) / 86_400_000) % SYNODIC_MONTH_DAYS + SYNODIC_MONTH_DAYS) % SYNODIC_MONTH_DAYS;
+  return (1 - Math.cos((2 * Math.PI * age) / SYNODIC_MONTH_DAYS)) / 2;
+}

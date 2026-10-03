@@ -342,6 +342,7 @@
     "lockNowSub": "Require biometric to re-enter",
     "signOutAccountSub": "{{email}}",
     "footerTagline": "Travel light. Stay reachable.",
+    "imageCredits": "Globe imagery: NASA · Milky Way: ESO/S. Brunier (CC BY 4.0)",
     "biometricNotSetUpTitle": "Biometric not set up",
     "biometricNotSetUpBody": "Set up fingerprint or face unlock in your phone's settings first.",
     "biometricUnavailable": "No biometric hardware enrolled",
@@ -986,7 +987,18 @@
     "eventSafeMessageSent_one": "“I'm safe” message sent to {{count}} contact",
     "eventSafeMessageSent_other": "“I'm safe” message sent to {{count}} contacts",
     "eventSafeMessageOpened_one": "“I'm safe” message opened in SMS for {{count}} contact",
-    "eventSafeMessageOpened_other": "“I'm safe” message opened in SMS for {{count}} contacts"
+    "eventSafeMessageOpened_other": "“I'm safe” message opened in SMS for {{count}} contacts",
+    "people": "People",
+    "recenterMap": "Show everyone on the map",
+    "adviceChip": "UK advice · {{level}}",
+    "adviceUnknown": "Add a trip destination or allow location to see travel advice.",
+    "adviceUnreachable": "Couldn't reach UK FCDO travel advice.",
+    "adviceNoCountry": "Couldn't tell which country this is, so no travel advice is shown.",
+    "adviceNotCovered": "UK FCDO doesn't publish travel advice for {{country}}.",
+    "holdSos": "Hold SOS",
+    "keepHolding": "Keep holding",
+    "imSafeShort": "I'm safe",
+    "callShort": "Call {{number}}"
   },
   "sos": {
     "codeRed": "SOS · Code red",
@@ -1112,7 +1124,9 @@
     "nameRequired": "Enter a name.",
     "emailInvalid": "Enter a valid email address.",
     "minutesShort": "{{count}}m",
-    "hoursShort": "{{count}}h"
+    "hoursShort": "{{count}}h",
+    "addShort": "Add",
+    "removeHint": "Long-press someone to stop sharing with them."
   },
   "expenses": {
     "eyebrow": "Trip money",

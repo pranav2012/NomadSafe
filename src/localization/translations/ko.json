@@ -143,6 +143,7 @@
     "exportEverythingSub": "내 데이터를 JSON 파일로 저장",
     "wipeDeviceDataSub": "되돌릴 수 없음 · 본인 확인이 필요해요",
     "footerTagline": "가볍게 여행하고, 연락 가능한 상태를 유지하세요.",
+    "imageCredits": "지구본 이미지: NASA · 은하수: ESO/S. Brunier (CC BY 4.0)",
     "biometricNotSetUpBody": "먼저 휴대폰 설정에서 지문 또는 얼굴 인식 잠금 해제를 설정하세요.",
     "autoLockSub": "백그라운드 상태로 {{duration}} 후 잠금",
     "autoLockImmediately": "즉시",
@@ -933,7 +934,18 @@
     "eventSafeMessageSent_one": "“안전해요” 메시지가 연락처 {{count}}명에게 전송되었어요",
     "eventSafeMessageSent_other": "“안전해요” 메시지가 연락처 {{count}}명에게 전송되었어요",
     "eventSafeMessageOpened_one": "“안전해요” 메시지가 연락처 {{count}}명을 위해 SMS로 열렸어요",
-    "eventSafeMessageOpened_other": "“안전해요” 메시지가 연락처 {{count}}명을 위해 SMS로 열렸어요"
+    "eventSafeMessageOpened_other": "“안전해요” 메시지가 연락처 {{count}}명을 위해 SMS로 열렸어요",
+    "people": "사람들",
+    "recenterMap": "모두 지도에 표시",
+    "adviceChip": "영국 여행 권고 · {{level}}",
+    "adviceUnknown": "여행 권고를 보려면 여행 목적지를 추가하거나 위치 권한을 허용하세요.",
+    "adviceUnreachable": "영국 FCDO 여행 권고에 연결할 수 없습니다.",
+    "adviceNoCountry": "어느 나라인지 확인할 수 없어 여행 권고를 표시하지 않습니다.",
+    "adviceNotCovered": "영국 FCDO는 {{country}}에 대한 여행 권고를 발행하지 않습니다.",
+    "holdSos": "SOS 길게 누르기",
+    "keepHolding": "계속 누르세요",
+    "imSafeShort": "안전해요",
+    "callShort": "{{number}}에 전화"
   },
   "sos": {
     "codeRed": "SOS · 코드 레드",
@@ -1059,7 +1071,9 @@
     "nameRequired": "이름을 입력하세요.",
     "emailInvalid": "유효한 이메일 주소를 입력하세요.",
     "minutesShort": "{{count}}분",
-    "hoursShort": "{{count}}시간"
+    "hoursShort": "{{count}}시간",
+    "addShort": "추가",
+    "removeHint": "공유를 중지하려면 해당 사람을 길게 누르세요."
   },
   "expenses": {
     "eyebrow": "여행 경비",

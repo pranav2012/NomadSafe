@@ -3,6 +3,7 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View, use
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PostHogMaskView } from "posthog-react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { AuraButton } from "@/components/aura/AuraButton";
 import { useAura } from "@/components/aura/useAura";
 import { useTabBarInset } from "@/components/tabbar/tabBarInset";
@@ -30,6 +31,7 @@ export function EmptyHome({ tripCount, onViewTrips }: { tripCount: number; onVie
   const { width } = useWindowDimensions();
   const [picked, setPicked] = useState<HomeStop | null>(null);
   const [sheetFor, setSheetFor] = useState<string[] | null>(null);
+  const [globeTouched, setGlobeTouched] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const globe = useGlobeContext(picked ?? undefined);
   const globeHeight = Math.round(width * 0.78);
@@ -58,6 +60,7 @@ export function EmptyHome({ tripCount, onViewTrips }: { tripCount: number; onVie
         <ScrollView
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          scrollEnabled={!globeTouched}
           contentContainerStyle={{ paddingBottom: tabBarInset + 24 }}
         >
           <PostHogMaskView style={{ height: globeHeight + insets.top + 8 }}>
@@ -70,13 +73,14 @@ export function EmptyHome({ tripCount, onViewTrips }: { tripCount: number; onVie
                 topInset={insets.top + 8}
                 origin={globe.origin}
                 contacts={[]}
-                sun={globe.sun}
                 contactColor="#3DDC97"
                 accent={auraStatusAccent.calm}
                 isDark={isDark}
-                bg={c.bg}
+                onTouchActive={setGlobeTouched}
+                overview
               />
             </Animated.View>
+            <LinearGradient pointerEvents="none" colors={[`${c.bg}00`, c.bg]} style={styles.globeFade} />
           </PostHogMaskView>
 
           <Animated.View entering={FadeInDown.delay(250).duration(420)} style={styles.body}>
@@ -111,6 +115,7 @@ export function EmptyHome({ tripCount, onViewTrips }: { tripCount: number; onVie
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  globeFade: { position: "absolute", left: 0, right: 0, bottom: 0, height: 72 },
   body: { paddingHorizontal: 20, gap: 12, marginTop: -8 },
   title: { fontSize: 34, letterSpacing: -1.2, lineHeight: 38 },
   lede: { fontSize: 15, lineHeight: 22, marginBottom: 6 },

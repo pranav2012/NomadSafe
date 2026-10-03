@@ -1,14 +1,19 @@
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import { AuraCard } from "@/components/aura/AuraCard";
+import { AuraSection } from "@/components/aura/AuraSection";
+import { useAura } from "@/components/aura/useAura";
 import { Icon, type IconName } from "@/components/nomad/Icon";
-import { NomadCard } from "@/components/nomad/Card";
-import { NOMAD_FONTS, type NomadTheme } from "@/constants/nomadTokens";
+import { PressableScale } from "@/components/motion/PressableScale";
+import { auraStatusAccent } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { summarizeReadiness, type PermissionReadiness, type SafetyReadiness } from "../hooks/useSafetyReadiness";
 import type { EmergencyNumbers } from "../services/emergencyNumberService";
 
+const ALERT = auraStatusAccent.alert;
+const READY = "#3DDC97";
+
 interface Props {
-  theme: NomadTheme;
   readiness: SafetyReadiness;
   emergency: EmergencyNumbers | null;
   onFixForeground: () => void;
@@ -25,13 +30,12 @@ interface Row {
   title: string;
   sub: string;
   ready: boolean;
-  action?: { label: string; onPress: () => void };
-  tone: "teal" | "mustard" | "sky" | "stamp";
+  action?: { label: string; onPress: () => void; danger?: boolean };
+  tone: string;
 }
 
 /** Safety readiness rows with live status and a one-tap fix for each. */
 export function SafetyReadinessChecklist({
-  theme,
   readiness,
   emergency,
   onFixForeground,
@@ -41,6 +45,7 @@ export function SafetyReadinessChecklist({
   onFixBattery,
   onCallEmergency,
 }: Props) {
+  const { c, f } = useAura();
   const { t } = useLocalization();
   const { ready, total } = summarizeReadiness(readiness);
 
@@ -56,7 +61,7 @@ export function SafetyReadinessChecklist({
     {
       key: "location",
       icon: "mapPin",
-      tone: "teal",
+      tone: "#22C7B8",
       title: t("safety.readinessLocation"),
       sub: permissionSub(readiness.foreground, t("safety.readinessLocationOn"), t("safety.readinessLocationOff")),
       ready: readiness.foreground === "granted",
@@ -65,7 +70,7 @@ export function SafetyReadinessChecklist({
     {
       key: "background",
       icon: "users",
-      tone: "sky",
+      tone: "#8B97FF",
       title: t("safety.readinessBackground"),
       sub: readiness.background === "granted" ? t("safety.readinessBackgroundOn") : t("safety.readinessBackgroundOff"),
       ready: readiness.background === "granted",
@@ -76,7 +81,7 @@ export function SafetyReadinessChecklist({
     {
       key: "notifications",
       icon: "bell",
-      tone: "mustard",
+      tone: "#FFB547",
       title: t("safety.readinessNotifications"),
       sub: permissionSub(
         readiness.notifications,
@@ -89,7 +94,7 @@ export function SafetyReadinessChecklist({
     {
       key: "contacts",
       icon: "messageCircle",
-      tone: "stamp",
+      tone: "#FF7A6B",
       title: t("safety.readinessContacts"),
       sub: readiness.contactsWithPhone > 0
         ? t("safety.readinessContactsOn", { count: readiness.contactsWithPhone })
@@ -105,7 +110,7 @@ export function SafetyReadinessChecklist({
     rows.push({
       key: "battery",
       icon: "battery",
-      tone: "mustard",
+      tone: "#FFB547",
       title: t("safety.readinessBattery"),
       sub: readiness.batteryOptimized ? t("safety.readinessBatteryOff") : t("safety.readinessBatteryOn"),
       ready: !readiness.batteryOptimized,
@@ -116,143 +121,73 @@ export function SafetyReadinessChecklist({
   }
 
   const emergencyNumber = emergency?.general ?? "112";
-  const emergencySub = emergency?.countryCode
-    ? t("safety.readinessEmergencyCountry", {
-        number: emergencyNumber,
-        country: emergency.countryName ?? emergency.countryCode,
-      })
-    : t("safety.readinessEmergencyDefault", { number: emergencyNumber });
+  rows.push({
+    key: "emergency",
+    icon: "phone",
+    tone: ALERT,
+    title: t("safety.readinessEmergency"),
+    sub: emergency?.countryCode
+      ? t("safety.readinessEmergencyCountry", { number: emergencyNumber, country: emergency.countryName ?? emergency.countryCode })
+      : t("safety.readinessEmergencyDefault", { number: emergencyNumber }),
+    ready: false,
+    action: { label: t("safety.actionCall"), onPress: onCallEmergency, danger: true },
+  });
 
   return (
     <View>
-      <View style={styles.sectionRow}>
-        <Text style={[styles.sectionLabel, { color: theme.inkMuted }]}>{t("safety.readinessTitle")}</Text>
-        <View style={[styles.sectionLine, { backgroundColor: theme.hairline }]} />
-        <Text
-          style={[styles.summary, { color: ready === total ? theme.teal : theme.mustard }]}
-          accessibilityLiveRegion="polite"
-        >
-          {t("safety.readinessSummary", { ready, total })}
-        </Text>
-      </View>
-      <View style={styles.list}>
-        {rows.map((row) => (
-          <NomadCard key={row.key} theme={theme} style={styles.card}>
-            <View style={[styles.icon, { backgroundColor: theme[`${row.tone}Soft`] }]}>
-              <Icon name={row.icon} size={18} color={theme[row.tone]} strokeWidth={1.8} />
+      <AuraSection
+        title={t("safety.readinessTitle")}
+        action={
+          <Text style={[styles.summary, { color: ready === total ? READY : c.textMuted, fontFamily: f.medium }]} accessibilityLiveRegion="polite">
+            {t("safety.readinessSummary", { ready, total })}
+          </Text>
+        }
+      />
+      <AuraCard style={styles.list}>
+        {rows.map((row, i) => (
+          <View key={row.key} style={[styles.row, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.hairline }]}>
+            <View style={[styles.icon, { backgroundColor: `${row.tone}22` }]}>
+              <Icon name={row.icon} size={17} color={row.tone} strokeWidth={1.9} />
             </View>
             <View style={styles.body}>
-              <Text style={[styles.title, { color: theme.inkDeep }]}>{row.title}</Text>
-              <Text style={[styles.sub, { color: row.ready ? theme.inkSoft : theme.inkDeep }]}>{row.sub}</Text>
+              <Text style={[styles.title, { color: c.text, fontFamily: f.semibold }]}>{row.title}</Text>
+              <Text style={[styles.sub, { color: row.ready ? c.textMuted : c.textSoft, fontFamily: f.regular }]}>{row.sub}</Text>
             </View>
-            {row.ready || !row.action ? (
-              <View
-                style={[styles.check, { backgroundColor: theme.tealSoft }]}
-                accessible
-                accessibilityLabel={t("safety.readinessReadyA11y")}
-              >
-                <Icon name="check" size={14} color={theme.teal} strokeWidth={2.4} />
-              </View>
-            ) : (
-              <Pressable
+            {row.action && !row.ready ? (
+              <PressableScale
                 onPress={row.action.onPress}
                 accessibilityRole="button"
-                accessibilityLabel={`${row.action.label}: ${row.title}`}
+                accessibilityLabel={
+                  row.key === "emergency" ? t("sos.callEmergency", { number: emergencyNumber }) : `${row.action.label}: ${row.title}`
+                }
                 hitSlop={6}
-                style={({ pressed }) => [
-                  styles.action,
-                  { backgroundColor: theme.inkDeep },
-                  pressed && { opacity: 0.8 },
-                ]}
+                style={[styles.action, { backgroundColor: row.action.danger ? ALERT : c.inverse }]}
               >
-                <Text style={[styles.actionText, { color: theme.paperSoft }]}>{row.action.label}</Text>
-              </Pressable>
+                <Text style={[styles.actionText, { color: row.action.danger ? "#FFFFFF" : c.onInverse, fontFamily: f.semibold }]}>
+                  {row.action.label}
+                </Text>
+              </PressableScale>
+            ) : (
+              <View style={[styles.check, { backgroundColor: `${READY}22` }]} accessible accessibilityLabel={t("safety.readinessReadyA11y")}>
+                <Icon name="check" size={14} color={READY} strokeWidth={2.4} />
+              </View>
             )}
-          </NomadCard>
+          </View>
         ))}
-
-        <NomadCard theme={theme} style={styles.card}>
-          <View style={[styles.icon, { backgroundColor: theme.stampSoft }]}>
-            <Icon name="phone" size={18} color={theme.stamp} strokeWidth={1.8} />
-          </View>
-          <View style={styles.body}>
-            <Text style={[styles.title, { color: theme.inkDeep }]}>{t("safety.readinessEmergency")}</Text>
-            <Text style={[styles.sub, { color: theme.inkSoft }]}>{emergencySub}</Text>
-          </View>
-          <Pressable
-            onPress={onCallEmergency}
-            accessibilityRole="button"
-            accessibilityLabel={t("sos.callEmergency", { number: emergencyNumber })}
-            hitSlop={6}
-            style={({ pressed }) => [styles.action, { backgroundColor: theme.stamp }, pressed && { opacity: 0.8 }]}
-          >
-            <Text style={[styles.actionText, { color: "#fff" }]}>{t("safety.actionCall")}</Text>
-          </Pressable>
-        </NomadCard>
-      </View>
+      </AuraCard>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  sectionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginTop: 8,
-    marginBottom: 10,
-    paddingHorizontal: 6,
-  },
-  sectionLabel: {
-    fontFamily: NOMAD_FONTS.uiBold,
-    fontSize: 10.5,
-    letterSpacing: 1.4,
-    textTransform: "uppercase",
-  },
-  sectionLine: { flex: 1, height: 1 },
-  summary: {
-    fontFamily: NOMAD_FONTS.uiSemi,
-    fontSize: 11.5,
-    fontWeight: "600",
-  },
-  list: { gap: 8, marginBottom: 14 },
-  card: { flexDirection: "row", alignItems: "center", gap: 12 },
-  icon: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  body: { flex: 1 },
-  title: {
-    fontFamily: NOMAD_FONTS.uiSemi,
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  sub: {
-    fontFamily: NOMAD_FONTS.ui,
-    fontSize: 11.5,
-    lineHeight: 16,
-    marginTop: 1,
-  },
-  check: {
-    width: 26,
-    height: 26,
-    borderRadius: 999,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  action: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 999,
-    minHeight: 34,
-    justifyContent: "center",
-  },
-  actionText: {
-    fontFamily: NOMAD_FONTS.uiSemi,
-    fontSize: 12.5,
-    fontWeight: "600",
-  },
+  summary: { fontSize: 13 },
+  list: { paddingVertical: 4, paddingHorizontal: 14 },
+  row: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12 },
+  icon: { width: 34, height: 34, borderRadius: 11, alignItems: "center", justifyContent: "center" },
+  body: { flex: 1, gap: 2 },
+  title: { fontSize: 14.5 },
+  sub: { fontSize: 12.5, lineHeight: 17 },
+  check: { width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center" },
+  action: { height: 32, paddingHorizontal: 13, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  actionText: { fontSize: 12.5 },
 });

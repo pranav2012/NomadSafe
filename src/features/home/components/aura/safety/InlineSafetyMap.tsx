@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState } from "react";
 import { Linking, Platform, StyleSheet, Text, View } from "react-native";
-import MapView, { Marker, PROVIDER_DEFAULT, type Region } from "react-native-maps";
+import MapView, { Marker, Polyline, PROVIDER_DEFAULT, type Region } from "react-native-maps";
 import Animated, { FadeInDown, FadeOutDown } from "react-native-reanimated";
 import { Icon } from "@/components/nomad/Icon";
 import { PressableScale } from "@/components/motion/PressableScale";
@@ -8,6 +8,7 @@ import { auraFonts as f, type AuraPalette } from "@/constants/aura";
 import type { HomeStop } from "@/features/home/types";
 import type { PlacePin, SafetyPlace } from "@/features/home/hooks/useTripSafety";
 import { formatDistance } from "@/features/home/utils/format";
+import { isCompactFrame, regionForPoints } from "@/features/trips/utils/mapFraming";
 import { useLocalization } from "@/localization";
 import { distanceKm } from "../globe/sun";
 import { quietMapStyle } from "../mapStyles";
@@ -24,16 +25,41 @@ function altitudeForZoom(zoom: number, latitude: number, viewHeight: number) {
   return (metresPerPoint * viewHeight) / (2 * Math.tan((15 * Math.PI) / 180));
 }
 
-const STREET_ZOOM = 14.5;
-const NEAR_STOP_KM = 400;
 /** Wider than this many degrees of longitude and the user has zoomed back out to globe scale. */
-const BACK_TO_GLOBE_SPAN = 70;
+const BACK_TO_GLOBE_SPAN = 40;
+const EDGE_PADDING = { top: 70, right: 50, bottom: 70, left: 50 };
+
+/** Gently curved line through the stops (quadratic bend per leg), as on the old trip map. */
+function routePath(points: { latitude: number; longitude: number }[]) {
+  if (points.length < 2) return points;
+  const path: { latitude: number; longitude: number }[] = [];
+  for (let i = 0; i < points.length - 1; i += 1) {
+    const a = points[i];
+    const b = points[i + 1];
+    const mid = {
+      latitude: (a.latitude + b.latitude) / 2 + (b.longitude - a.longitude) * 0.12,
+      longitude: (a.longitude + b.longitude) / 2 - (a.latitude - b.latitude) * 0.12,
+    };
+    for (let s = 0; s < 16; s += 1) {
+      const t = s / 16;
+      const u = 1 - t;
+      path.push({
+        latitude: u * u * a.latitude + 2 * u * t * mid.latitude + t * t * b.latitude,
+        longitude: u * u * a.longitude + 2 * u * t * mid.longitude + t * t * b.longitude,
+      });
+    }
+  }
+  path.push(points[points.length - 1]);
+  return path;
+}
 
 interface InlineSafetyMapProps {
   height: number;
   /** Where the globe hand-off happened and how big the globe was, so the map starts matching it. */
   from: { center: { latitude: number; longitude: number }; radiusPx: number };
   stop: HomeStop | undefined;
+  /** Every stop of the trip; the map opens framed on all of them with the route drawn. */
+  stops: HomeStop[];
   hotel: PlacePin | null;
   places: SafetyPlace[] | null;
   contacts: PlacePin[];
@@ -46,13 +72,14 @@ interface InlineSafetyMapProps {
 
 /**
  * The real map the globe zooms into, in the same space. It starts at the globe's scale and glides
- * down to street level (onto the trip stop when that's nearby). Safety places are pins; tapping
- * one shows a card with call and directions. Zooming back out to continent scale returns to the globe.
+ * to frame the whole trip route. Safety places around the current stop are pins; tapping one shows
+ * a card with call and directions. Zooming back out past the trip returns to the globe.
  */
 export function InlineSafetyMap({
   height,
   from,
   stop,
+  stops,
   hotel,
   places,
   contacts,
@@ -77,18 +104,24 @@ export function InlineSafetyMap({
     heading: 0,
   };
 
+  const route = useMemo(() => routePath(stops), [stops]);
+  // A trip wider than the default threshold would bounce straight back to the globe.
+  const backSpan = Math.max(BACK_TO_GLOBE_SPAN, regionForPoints(stops).longitudeDelta * 2.5);
+
   const glideIn = () => {
-    const nearStop = stop && distanceKm(from.center, stop) < NEAR_STOP_KM;
-    const center = nearStop ? { latitude: stop.latitude, longitude: stop.longitude } : from.center;
-    mapRef.current?.animateCamera(
-      { center, zoom: STREET_ZOOM, altitude: altitudeForZoom(STREET_ZOOM, center.latitude, height) },
-      { duration: 1600 },
-    );
-    setTimeout(() => setSettled(true), 1700);
+    const map = mapRef.current;
+    if (!map) return;
+    if (stops.length > 1 && !isCompactFrame(stops)) {
+      map.fitToCoordinates(stops, { edgePadding: EDGE_PADDING, animated: true });
+    } else {
+      // A lone stop or tight cluster would max-zoom with fitToCoordinates; hold city level instead.
+      map.animateToRegion(regionForPoints(stops.length ? stops : stop ? [stop] : [from.center]), 900);
+    }
+    setTimeout(() => setSettled(true), 1200);
   };
 
   const onRegionChangeComplete = (region: Region) => {
-    if (settled && region.longitudeDelta > BACK_TO_GLOBE_SPAN) {
+    if (settled && region.longitudeDelta > backSpan) {
       onBackToGlobe({ latitude: region.latitude, longitude: region.longitude });
     }
   };
@@ -123,6 +156,16 @@ export function InlineSafetyMap({
         showsPointsOfInterests={false}
         moveOnMarkerPress={false}
       >
+        {route.length > 1 ? (
+          <Polyline coordinates={route} strokeColor={accent} strokeWidth={2.5} lineDashPattern={[6, 6]} zIndex={1} />
+        ) : null}
+        {stops.map((s, i) =>
+          stop && s.latitude === stop.latitude && s.longitude === stop.longitude ? null : (
+            <Marker key={`stop-${i}`} coordinate={s} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
+              <View style={[styles.otherStop, { borderColor: accent, backgroundColor: c.surfaceStrong }]} />
+            </Marker>
+          ),
+        )}
         {stop ? (
           <Marker coordinate={stop} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
             <View style={[styles.stopHalo, { backgroundColor: `${accent}33` }]}>
@@ -215,6 +258,7 @@ export function InlineSafetyMap({
 }
 
 const styles = StyleSheet.create({
+  otherStop: { width: 14, height: 14, borderRadius: 7, borderWidth: 3 },
   stopHalo: { width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center" },
   stopDot: { width: 14, height: 14, borderRadius: 7, borderWidth: 2.5, borderColor: "#FFFFFF" },
   pin: { width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: "#FFFFFF" },
