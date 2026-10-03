@@ -26,19 +26,43 @@ import {
 import {
   type Expense,
   type ExpenseLocation,
+  type ExpenseSource,
   useExpensesStore,
 } from "@/features/expenses/store/expensesStore";
+import { SELF_ID, type ExpenseShare } from "@/features/expenses/utils/split";
+import {
+  initialSplitValue,
+  SplitEditor,
+  splitValueToShares,
+  type SplitValue,
+} from "@/features/expenses/components/SplitEditor";
 import { categorizeHeuristic } from "@/features/expenses/services/categorizer";
 import { getCurrentExpenseLocation } from "@/features/expenses/services/locationTagging";
 import { localeDecimalSeparator, parseAmountInput } from "@/features/expenses/utils/amountInput";
 import { track } from "@/services/analytics";
 
+export interface ExpenseDraftValues {
+  amount: number;
+  currency: string;
+  merchant: string;
+  category: ExpenseCategory;
+  date: string;
+  paidBy?: string;
+  shares?: ExpenseShare[];
+  rawText?: string;
+}
+
 export interface ExpenseFormProps {
   editingExpense?: Expense | null;
+  /** Prefills a new spend (e.g. from voice). */
+  initialDraft?: ExpenseDraftValues;
+  source?: ExpenseSource;
   tripId: string | null;
   tripCurrency: string;
+  companions?: string[];
   onSave: () => void;
   onCancel: () => void;
+  onSpeak?: () => void;
 }
 
 function getCurrencyAffix(locale: string, currency: string) {
@@ -64,10 +88,14 @@ function getCurrencyAffix(locale: string, currency: string) {
 
 export function ExpenseForm({
   editingExpense,
+  initialDraft,
+  source = "manual",
   tripId,
   tripCurrency,
+  companions = [],
   onSave,
   onCancel,
+  onSpeak,
 }: ExpenseFormProps) {
   const { nomad, isDark } = useTheme();
   const theme = nomad.colors;
@@ -77,19 +105,32 @@ export function ExpenseForm({
   const deleteExpense = useExpensesStore((state) => state.deleteExpense);
 
   const decimalSeparator = useMemo(() => localeDecimalSeparator(locale), [locale]);
+  const prefill = editingExpense ?? initialDraft;
   const [amount, setAmount] = useState(
-    editingExpense ? String(editingExpense.amount).replace(".", decimalSeparator) : "",
+    prefill ? String(prefill.amount).replace(".", decimalSeparator) : "",
   );
-  const [merchant, setMerchant] = useState(editingExpense?.merchant ?? "");
-  const [category, setCategory] = useState<ExpenseCategory>(
-    editingExpense?.category ?? "other",
-  );
-  const [categoryTouched, setCategoryTouched] = useState(Boolean(editingExpense));
-  const [currency, setCurrency] = useState(editingExpense?.currency ?? tripCurrency);
+  const [merchant, setMerchant] = useState(prefill?.merchant ?? "");
+  const [category, setCategory] = useState<ExpenseCategory>(prefill?.category ?? "other");
+  const [categoryTouched, setCategoryTouched] = useState(Boolean(prefill));
+  const [currency, setCurrency] = useState(prefill?.currency ?? tripCurrency);
   const [note, setNote] = useState(editingExpense?.note ?? "");
-  const [date, setDate] = useState<Date>(
-    editingExpense ? new Date(editingExpense.date) : new Date(),
+  const [date, setDate] = useState<Date>(prefill ? new Date(prefill.date) : new Date());
+  // Companions removed from the trip still show if an existing split names them.
+  const everyone = useMemo(
+    () => [
+      ...new Set([
+        SELF_ID,
+        ...companions,
+        ...(prefill?.shares ?? []).map((share) => share.person),
+        ...(prefill?.paidBy ? [prefill.paidBy] : []),
+      ]),
+    ],
+    [companions, prefill],
   );
+  const [split, setSplit] = useState<SplitValue>(() =>
+    initialSplitValue(everyone, decimalSeparator, prefill ? { ...prefill } : undefined),
+  );
+  const canSplit = everyone.length > 1;
   const [location, setLocation] = useState<ExpenseLocation | null>(
     editingExpense?.location ?? null,
   );
@@ -135,6 +176,12 @@ export function ExpenseForm({
       Alert.alert(t("expenses.validationTitle"), t("expenses.validationBody"));
       return;
     }
+    const resolution = canSplit ? splitValueToShares(split, numericAmount, currency, decimalSeparator) : null;
+    if (resolution && !resolution.ok) {
+      Alert.alert(t("split.invalidTitle"), t(`split.invalid.${resolution.reason}`));
+      return;
+    }
+    const shares = resolution?.ok ? resolution.shares.filter((share) => share.amount > 0) : undefined;
 
     const payload = {
       tripId,
@@ -145,13 +192,15 @@ export function ExpenseForm({
       note: note.trim() || undefined,
       date: date.toISOString(),
       location,
+      paidBy: shares ? split.paidBy : undefined,
+      shares,
     };
 
     if (editingExpense) {
       updateExpense(editingExpense.id, payload);
     } else {
-      addExpense({ ...payload, source: "manual", autoCategorized: false });
-      track("expense_added", { source: "manual", count: 1 });
+      addExpense({ ...payload, source, rawText: initialDraft?.rawText, autoCategorized: false });
+      track("expense_added", { source: source === "voice" ? "voice" : "manual", count: 1 });
     }
     onSave();
   };
@@ -199,13 +248,25 @@ export function ExpenseForm({
               {editingExpense ? t("expenses.editTitle") : t("expenses.addTitle")}
             </Text>
           </View>
-          <Pressable
-            onPress={onCancel}
-            hitSlop={10}
-            style={[styles.closeButton, { backgroundColor: theme.paper, borderColor: theme.hairline }]}
-          >
-            <Icon name="x" size={18} color={theme.inkSoft} />
-          </Pressable>
+          <View style={styles.headerActions}>
+            {onSpeak && !editingExpense ? (
+              <Pressable
+                onPress={onSpeak}
+                hitSlop={10}
+                accessibilityLabel={t("voiceExpense.speakToAdd")}
+                style={[styles.closeButton, { backgroundColor: theme.tealSoft, borderColor: theme.teal }]}
+              >
+                <Icon name="mic" size={18} color={theme.teal} />
+              </Pressable>
+            ) : null}
+            <Pressable
+              onPress={onCancel}
+              hitSlop={10}
+              style={[styles.closeButton, { backgroundColor: theme.paper, borderColor: theme.hairline }]}
+            >
+              <Icon name="x" size={18} color={theme.inkSoft} />
+            </Pressable>
+          </View>
         </View>
 
         <View style={[styles.card, { backgroundColor: theme.paperSoft, borderColor: theme.hairline }]}>
@@ -383,6 +444,19 @@ export function ExpenseForm({
 
         </View>
 
+        {canSplit ? (
+          <View style={[styles.card, { backgroundColor: theme.paperSoft, borderColor: theme.hairline }]}>
+            <SplitEditor
+              everyone={everyone}
+              value={split}
+              onChange={setSplit}
+              amount={parseAmountInput(amount, decimalSeparator)}
+              currency={currency}
+              decimalSeparator={decimalSeparator}
+            />
+          </View>
+        ) : null}
+
         <Pressable
           onPress={handleSave}
           style={({ pressed }) => [styles.saveButton, { backgroundColor: theme.teal, opacity: pressed ? 0.9 : 1 }]}
@@ -443,6 +517,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   scroll: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 120, gap: 16 },
   headerRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" },
+  headerActions: { flexDirection: "row", gap: 8 },
   eyebrow: {
     fontFamily: NOMAD_FONTS.uiBold,
     fontSize: 10.5,

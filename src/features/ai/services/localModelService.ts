@@ -4,6 +4,11 @@ import { useSettingsStore } from "@/features/settings/store/settingsStore";
 import { storage } from "@/stores/storage";
 import { aiModelService, findModel, modelFileSize, type AiModel } from "./aiModelService";
 import { logger } from "@/services/logger";
+import {
+  VOICE_EXTRACTION_SCHEMA,
+  VOICE_EXTRACTION_SYSTEM_PROMPT,
+  voiceExtractionRequest,
+} from "@/features/expenses/services/voiceExpense";
 
 export type { AiModel };
 
@@ -770,6 +775,28 @@ export const localModelService = {
       logger.warn("localModelService", "expense categorization failed", err);
       return null;
     }
+  },
+
+  /** Extracts raw expense fields from a spoken sentence; throws when no model is ready. */
+  async extractVoiceExpense(transcript: string, companions: string[]): Promise<unknown> {
+    const model = await requireReadyModel();
+    const prompt =
+      VOICE_EXTRACTION_SYSTEM_PROMPT + "\n\n" + voiceExtractionRequest(transcript, companions);
+
+    const text = await runExclusive(async () => {
+      const context = await loadModelUnlocked(model, requiredContextTokens(prompt, 320));
+      const result = await context.completion({
+        prompt,
+        n_predict: 320,
+        temperature: 0,
+        response_format: {
+          type: "json_schema",
+          json_schema: { strict: true, schema: VOICE_EXTRACTION_SCHEMA },
+        },
+      });
+      return result.text;
+    });
+    return JSON.parse(extractJsonObject(text));
   },
 
   async suggestTripName(input: TripNameInput): Promise<TripNameSuggestion> {

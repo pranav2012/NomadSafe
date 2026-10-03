@@ -1,0 +1,28 @@
+diff --git a/android/src/main/java/com/reactnativeandroidwidget/RNWidget.java b/android/src/main/java/com/reactnativeandroidwidget/RNWidget.java
+index 5650d1e4b9abaa30a2e1ab2a5fddefc9057d4e25..df95b02a201ba75f76dc9eb1a20091ef58aa3482 100644
+--- a/android/src/main/java/com/reactnativeandroidwidget/RNWidget.java
++++ b/android/src/main/java/com/reactnativeandroidwidget/RNWidget.java
+@@ -200,6 +200,23 @@ public class RNWidget {
+     }
+ 
+     private void registerClickTask(int id, ClickableView clickableView, RemoteViews widgetView, Integer button) {
++        // NomadSafe patch: open URIs with an activity PendingIntent instead of a broadcast
++        // trampoline, which Android 14+ background-activity-launch rules can block.
++        if ("OPEN_URI".equals(clickableView.getClickAction()) && clickableView.getClickActionData() != null
++            && clickableView.getClickActionData().hasKey("uri")) {
++            String uri = clickableView.getClickActionData().getString("uri");
++            Intent viewIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
++            viewIntent.setPackage(appContext.getPackageName());
++            viewIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
++            PendingIntent activityIntent = PendingIntent.getActivity(
++                appContext,
++                (id + ":" + uri).hashCode(),
++                viewIntent,
++                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
++            );
++            widgetView.setOnClickPendingIntent(button, activityIntent);
++            return;
++        }
+         Intent intent = new Intent(appContext.getPackageName() + ".WIDGET_CLICK");
+         intent.setComponent(new ComponentName(appContext, RNWidgetUtil.getWidgetProviderClassName(appContext, widgetName)));
+         intent.putExtra("widgetId", id);

@@ -10,8 +10,14 @@ import {
 import { toLocalDayKey } from "@/features/expenses/utils/dateKey";
 import type { Trip } from "@/features/trips/store/tripsStore";
 
-export interface ConvertedExpense {
-  expense: Expense;
+export interface ConvertibleAmount {
+  amount: number;
+  currency: string;
+  date: string;
+}
+
+export interface ConvertedExpense<T extends ConvertibleAmount = Expense> {
+  expense: T;
   amount: number;
 }
 
@@ -21,7 +27,7 @@ export interface UnconvertedTotal {
   count: number;
 }
 
-function rateKey(expense: Expense, targetCurrency: string): string {
+function rateKey(expense: ConvertibleAmount, targetCurrency: string): string {
   return `${expense.currency}|${targetCurrency}|${toLocalDayKey(expense.date)}`;
 }
 
@@ -30,7 +36,7 @@ function rateKey(expense: Expense, targetCurrency: string): string {
  * of totals and reported in `unconvertedTotals`; failed fetches retry on focus
  * and app foreground.
  */
-export function useConvertedExpenses(expenses: Expense[], targetCurrency: string) {
+export function useConvertedExpenses<T extends ConvertibleAmount = Expense>(expenses: T[], targetCurrency: string) {
   const [failedRates, setFailedRates] = useState<Set<string>>(new Set());
   // Rates live in state (not just the module cache) so memoized renders — the
   // React Compiler is on — recompute when a rate arrives.
@@ -78,8 +84,8 @@ export function useConvertedExpenses(expenses: Expense[], targetCurrency: string
     };
   }, [expenses, targetCurrency, retryToken]);
 
-  const convertedExpenses: ConvertedExpense[] = [];
-  const unavailableExpenses: Expense[] = [];
+  const convertedExpenses: ConvertedExpense<T>[] = [];
+  const unavailableExpenses: T[] = [];
   for (const expense of expenses) {
     const rate = expense.currency === targetCurrency ? 1 : rates[rateKey(expense, targetCurrency)];
     if (rate === undefined) {

@@ -54,6 +54,7 @@ export type IconName =
   | "download"
   | "minus"
   | "cpu"
+  | "mic"
   | "logout";
 
 const DIRECTIONAL: ReadonlySet<IconName> = new Set(["chevronRight", "chevronLeft", "send", "logout"]);
@@ -83,6 +84,14 @@ export function Icon({
   let body: React.ReactNode = null;
 
   switch (name) {
+    case "mic":
+      body = (
+        <G {...p}>
+          <Rect x="9" y="3" width="6" height="11" rx="3" />
+          <Path d="M5 11a7 7 0 0014 0M12 18v3" />
+        </G>
+      );
+      break;
     case "home":
       body = (
         <G {...p}>

@@ -7,3 +7,5 @@ allowBuilds:
   llama.rn: true
   prisma: true
   unrs-resolver: true
+patchedDependencies:
+  react-native-android-widget@0.22.1: patches/react-native-android-widget@0.22.1.patch

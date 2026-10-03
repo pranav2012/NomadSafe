@@ -58,7 +58,7 @@ export const privacyPolicy = httpAction(async () => {
 <li>AI chat history. The AI model runs entirely on your device; prompts and replies are never sent to us.</li>
 <li>Your app PIN (stored in the Android Keystore / iOS Keychain).</li>
 </ul>
-<p>This data is kept in encrypted app storage and is excluded from cloud backups. Uninstalling the app or using <em>Settings → Wipe device data</em> removes it.</p>
+<p>This data is kept in encrypted app storage and is excluded from cloud backups. If you add the NomadSafe home-screen widget, your trip names are also kept in the widget's own storage on your device so it can show them. Uninstalling the app or using <em>Settings → Wipe device data</em> removes it.</p>
 
 <h2>Data stored on our servers</h2>
 <ul>
@@ -101,6 +101,7 @@ export const privacyPolicy = httpAction(async () => {
 <ul>
 <li><strong>Location, including background:</strong> live location sharing, SOS location and nearby places. Background location is used only while you have live sharing turned on.</li>
 <li><strong>Contacts:</strong> only to let you pick emergency contacts. We read the contact you pick; your address book is not uploaded.</li>
+<li><strong>Microphone and speech recognition:</strong> only when you tap Speak to add an expense by voice. Your phone's on-device speech recognizer turns speech into text, and the on-device AI reads the text; audio is not recorded, and neither audio nor text is sent to us or anyone else.</li>
 <li><strong>Notifications:</strong> check-in reminders, sharing status and download progress.</li>
 <li><strong>Biometrics:</strong> to unlock the app. Biometric data never leaves your device's secure hardware.</li>
 </ul>

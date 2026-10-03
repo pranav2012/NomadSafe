@@ -3,9 +3,10 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { mmkvStateStorage } from "@/stores/storage";
 import type { ExpenseCategory } from "@/features/expenses/constants/categories";
 import { toLocalDayKey } from "@/features/expenses/utils/dateKey";
+import type { ExpenseShare } from "@/features/expenses/utils/split";
 
 /** "sms" is legacy (device SMS import, removed); kept so stored expenses stay valid. */
-export type ExpenseSource = "manual" | "paste" | "sms" | "email";
+export type ExpenseSource = "manual" | "paste" | "sms" | "email" | "voice";
 
 export interface ExpenseLocation {
   latitude: number;
@@ -24,7 +25,10 @@ export interface Expense {
   date: string;
   source: ExpenseSource;
   location?: ExpenseLocation | null;
-  splitWith?: string[];
+  /** Person id (`SELF_ID` or a companion name); unset means the user paid. */
+  paidBy?: string;
+  /** Unset for personal spends; otherwise sums to `amount`. */
+  shares?: ExpenseShare[];
   autoCategorized?: boolean;
   rawText?: string;
   /** Stable id of the originating message (e.g. `gmail:<messageId>`) for dedupe. */
@@ -42,11 +46,27 @@ export interface CreateExpenseInput {
   date: string;
   source: ExpenseSource;
   location?: ExpenseLocation | null;
-  splitWith?: string[];
+  paidBy?: string;
+  shares?: ExpenseShare[];
   autoCategorized?: boolean;
   rawText?: string;
   externalId?: string;
 }
+
+/** A repayment between two people on a trip; `from` paid `to`. */
+export interface Settlement {
+  id: string;
+  tripId: string;
+  from: string;
+  to: string;
+  amount: number;
+  currency: string;
+  date: string;
+  source: "manual" | "voice";
+  createdAt: string;
+}
+
+export type CreateSettlementInput = Omit<Settlement, "id" | "createdAt">;
 
 export type UpdateExpenseInput = Partial<Omit<Expense, "id" | "createdAt">>;
 
@@ -80,11 +100,14 @@ export function buildDedupeIndex(expenses: Expense[]): DedupeIndex {
 
 interface ExpensesState {
   expenses: Expense[];
+  settlements: Settlement[];
   addExpense: (input: CreateExpenseInput) => Expense;
   addExpenses: (inputs: CreateExpenseInput[]) => Expense[];
   updateExpense: (id: string, input: UpdateExpenseInput) => Expense | null;
   deleteExpense: (id: string) => void;
   removeByTripId: (tripId: string) => void;
+  addSettlement: (input: CreateSettlementInput) => Settlement;
+  deleteSettlement: (id: string) => void;
   reset: () => void;
 }
 
@@ -106,6 +129,7 @@ export const useExpensesStore = create<ExpensesState>()(
   persist(
     (set, get) => ({
       expenses: [],
+      settlements: [],
       addExpense: (input) => {
         const expense = buildExpense(input);
         set((state) => ({ expenses: [expense, ...state.expenses] }));
@@ -144,8 +168,18 @@ export const useExpensesStore = create<ExpensesState>()(
       removeByTripId: (tripId) =>
         set((state) => ({
           expenses: state.expenses.filter((expense) => expense.tripId !== tripId),
+          settlements: state.settlements.filter((settlement) => settlement.tripId !== tripId),
         })),
-      reset: () => set({ expenses: [] }),
+      addSettlement: (input) => {
+        const settlement: Settlement = { ...input, id: nextId(), createdAt: new Date().toISOString() };
+        set((state) => ({ settlements: [settlement, ...state.settlements] }));
+        return settlement;
+      },
+      deleteSettlement: (id) =>
+        set((state) => ({
+          settlements: state.settlements.filter((settlement) => settlement.id !== id),
+        })),
+      reset: () => set({ expenses: [], settlements: [] }),
     }),
     {
       name: "expenses-store",

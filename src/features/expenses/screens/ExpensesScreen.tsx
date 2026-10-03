@@ -8,6 +8,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import Svg, {
   Circle,
@@ -43,6 +44,7 @@ import {
   useGmailConnectionStore,
 } from "@/features/expenses/store/gmailConnectionStore";
 import { formatMoney } from "@/features/expenses/utils/money";
+import { TripBalances } from "@/features/expenses/components/TripBalances";
 
 const CHART_DAYS = 14;
 const LEDGER_PREVIEW = 10;
@@ -68,6 +70,7 @@ export default function ExpensesScreen() {
   const heroBg = isDark ? theme.paperDeep : theme.inkDeep;
   const heroText = isDark ? theme.whiteText : theme.paperSoft;
   const { t, locale, currency: deviceCurrency, formatCurrency } = useLocalization();
+  const router = useRouter();
 
   const trips = useTripsStore((state) => state.trips);
   const activeTripId = useTripsStore((state) => state.activeTripId);
@@ -131,6 +134,10 @@ export default function ExpensesScreen() {
     setEditing(expense);
     setFormOpen(true);
   };
+  const openVoice = () => {
+    setFormOpen(false);
+    router.push({ pathname: "/voice-expense", params: activeTrip ? { tripId: activeTrip.id } : {} });
+  };
 
   return (
     <SafeAreaView edges={["top"]} style={[styles.root, { backgroundColor: theme.paper }]}>
@@ -144,15 +151,28 @@ export default function ExpensesScreen() {
             <Text style={[styles.eyebrow, { color: theme.inkMuted }]}>{t("expenses.eyebrow")}</Text>
             <Text style={[styles.heroTitle, { color: theme.inkDeep }]}>{t("expenses.title")}</Text>
           </View>
-          <Pressable
-            onPress={openAdd}
-            style={({ pressed }) => [
-              styles.addButton,
-              { backgroundColor: theme.inkDeep, opacity: pressed ? 0.85 : 1 },
-            ]}
-          >
-            <Icon name="plus" size={18} color={theme.paperSoft} />
-          </Pressable>
+          <View style={styles.headerActions}>
+            <Pressable
+              onPress={openVoice}
+              accessibilityLabel={t("voiceExpense.speakToAdd")}
+              style={({ pressed }) => [
+                styles.addButton,
+                { backgroundColor: theme.tealSoft, borderColor: theme.teal, borderWidth: 1, opacity: pressed ? 0.85 : 1 },
+              ]}
+            >
+              <Icon name="mic" size={18} color={theme.teal} />
+            </Pressable>
+            <Pressable
+              onPress={openAdd}
+              accessibilityLabel={t("expenses.addTitle")}
+              style={({ pressed }) => [
+                styles.addButton,
+                { backgroundColor: theme.inkDeep, opacity: pressed ? 0.85 : 1 },
+              ]}
+            >
+              <Icon name="plus" size={18} color={theme.paperSoft} />
+            </Pressable>
+          </View>
         </View>
 
         {autoSync.importedCount ? (
@@ -279,6 +299,8 @@ export default function ExpensesScreen() {
             </View>
           ) : null}
         </View>
+
+        {activeTrip ? <TripBalances trip={activeTrip} /> : null}
 
         {/* 14-day chart */}
         {data.scoped.length > 0 ? (
@@ -442,8 +464,10 @@ export default function ExpensesScreen() {
             editingExpense={editing}
             tripId={activeTrip?.id ?? null}
             tripCurrency={currency}
+            companions={activeTrip?.companions}
             onSave={() => setFormOpen(false)}
             onCancel={() => setFormOpen(false)}
+            onSpeak={openVoice}
           />
         </SafeAreaView>
       </Modal>
@@ -550,7 +574,9 @@ function ExpenseRow({
         ? t("expenses.sourcePasted")
         : expense.source === "email"
           ? t("expenses.sourceEmail")
-          : null;
+          : expense.source === "voice"
+            ? t("expenses.sourceVoice")
+            : null;
   const dateLabel = new Intl.DateTimeFormat(locale, {
     month: "short",
     day: "numeric",
@@ -586,6 +612,13 @@ function ExpenseRow({
               <Text style={[styles.sourceText, { color: theme.sky }]}>{sourceLabel}</Text>
             </View>
           ) : null}
+          {expense.shares?.length ? (
+            <View style={[styles.sourceBadge, { backgroundColor: theme.tealSoft }]}>
+              <Text style={[styles.sourceText, { color: theme.teal }]}>
+                {t("split.badge", { count: expense.shares.length })}
+              </Text>
+            </View>
+          ) : null}
         </View>
       </View>
       <Text style={[styles.rowAmount, { color: theme.inkDeep }]}>
@@ -612,6 +645,7 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   heroTitle: { fontFamily: NOMAD_FONTS.display, fontSize: 38, lineHeight: 40, marginTop: 4 },
+  headerActions: { flexDirection: "row", gap: 8 },
   addButton: {
     width: 36,
     height: 36,

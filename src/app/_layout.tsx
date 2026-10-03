@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { AppState, Modal, Pressable, StyleSheet, Text, View, type AppStateStatus } from "react-native";
-import { Stack, useRouter, useSegments, type ErrorBoundaryProps } from "expo-router";
+import { Stack, usePathname, useRouter, useSegments, type ErrorBoundaryProps } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ConvexReactClient, useConvexAuth, useMutation } from "convex/react";
 import { ConvexBetterAuthProvider } from "@convex-dev/better-auth/react";
@@ -33,6 +33,11 @@ import {
 import { isLocationBroadcastRunning, useSharingStore } from "@/features/location-sharing";
 import { useSafetyNotificationRouting } from "@/features/safety";
 import { useSettingsStore } from "@/features/settings";
+import {
+  isCaptureLinkRecent,
+  isVoiceCaptureRoute,
+} from "@/features/expenses/services/voiceCaptureSession";
+import { WidgetSync } from "@/features/widget/WidgetSync";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { LocalizationProvider } from "@/localization";
 import { translate } from "@/localization/translate";
@@ -75,6 +80,11 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
 
 function AppStateLock() {
   const router = useRouter();
+  const pathname = usePathname();
+  const pathnameRef = useRef(pathname);
+  useEffect(() => {
+    pathnameRef.current = pathname;
+  }, [pathname]);
   const appState = useRef(AppState.currentState);
   const backgroundedAt = useRef<number | null>(null);
 
@@ -111,7 +121,9 @@ function AppStateLock() {
         backgroundedAt.current = null;
         if (!since || !auth.isSignedIn || !auth.isPinSet) return;
         if (Date.now() - since > auth.autoLockTimeout) {
-          if (router.canDismiss()) router.dismissAll();
+          // A widget "Speak" tap opens the capture screen, which works while locked.
+          const capturing = isVoiceCaptureRoute(pathnameRef.current) || isCaptureLinkRecent();
+          if (router.canDismiss() && !capturing) router.dismissAll();
           auth.setUnlocked(false);
         }
       },
@@ -123,13 +135,18 @@ function AppStateLock() {
   return null;
 }
 
-/** Renders the lock screen above every route (including native modals). */
+/**
+ * Renders the lock screen above every route (including native modals). The
+ * voice capture screen is the exception: it only adds expenses, so it works locked.
+ */
 function LockGate() {
+  const pathname = usePathname();
   const onboardingCompleted = useSettingsStore((s) => s.onboardingCompleted);
   const isSignedIn = useAuthStore((s) => s.isSignedIn);
   const isPinSet = useAuthStore((s) => s.isPinSet);
   const isUnlocked = useAuthStore((s) => s.isUnlocked);
-  const locked = onboardingCompleted && isSignedIn && isPinSet && !isUnlocked;
+  const locked =
+    onboardingCompleted && isSignedIn && isPinSet && !isUnlocked && !isVoiceCaptureRoute(pathname);
 
   return (
     <Modal
@@ -177,7 +194,8 @@ function AnalyticsEffects() {
   const isPinSet = useAuthStore((s) => s.isPinSet);
   const isUnlocked = useAuthStore((s) => s.isUnlocked);
   const locked = onboardingCompleted && isSignedIn && isPinSet && !isUnlocked;
-  const pinScreen = locked || route.endsWith("/setup-pin");
+  // Replay stays off while locked, during PIN setup and on voice capture (spoken content).
+  const pinScreen = locked || route.endsWith("/setup-pin") || isVoiceCaptureRoute(route);
 
   useEffect(() => {
     setAnalyticsEnabled(analyticsEnabled);
@@ -216,6 +234,10 @@ function AppStack() {
         <Stack.Screen name="settings" options={{ presentation: "modal" }} />
         <Stack.Screen name="trips" options={{ presentation: "modal" }} />
         <Stack.Screen name="emergency-contacts" />
+        <Stack.Screen
+          name="voice-expense"
+          options={{ presentation: "fullScreenModal", animation: "slide_from_bottom" }}
+        />
       </Stack.Protected>
     </Stack>
   );
@@ -254,6 +276,7 @@ function RootLayout() {
             <AppStateLock />
             <SessionEffects />
             <AnalyticsEffects />
+            <WidgetSync />
             <AppStack />
             <LockGate />
           </ThemeProvider>

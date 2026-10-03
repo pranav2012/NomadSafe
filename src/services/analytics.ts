@@ -3,7 +3,8 @@ import Constants from "expo-constants";
 import PostHog, { type PostHogCustomStorage } from "posthog-react-native";
 import { storage } from "@/stores/storage";
 
-type ExpenseSourceKind = "manual" | "paste" | "gmail" | "gmail_auto";
+type ExpenseSourceKind = "manual" | "paste" | "gmail" | "gmail_auto" | "voice";
+type VoiceCaptureFailure = "no_model" | "speech_unavailable" | "unclear" | "model_error";
 type SmsResult = "sent" | "cancelled" | "opened" | "failed";
 
 /** Custom events. Properties are counts, enums and booleans only, never user content. */
@@ -21,6 +22,10 @@ export interface AnalyticsEvents {
   sos_sms_result: { outcome: SmsResult; has_location: boolean };
   sos_cancelled: undefined;
   ai_message_sent: { quick_question: boolean };
+  settlement_recorded: { source: "manual" | "voice" };
+  voice_capture_opened: { from_widget: boolean; locked: boolean };
+  voice_capture_failed: { reason: VoiceCaptureFailure };
+  voice_draft_saved: { kind: "expense" | "settlement"; split: boolean; edited: boolean; auto: boolean };
 }
 
 export interface FeatureFlags {

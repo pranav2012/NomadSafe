@@ -30,6 +30,11 @@
           "fetch",
           "remote-notification"
         ]
+      },
+      "entitlements": {
+        "com.apple.security.application-groups": [
+          "group.com.pranav.NomadSafe"
+        ]
       }
     },
     "android": {
@@ -65,7 +70,6 @@
         "android.permission.SYSTEM_ALERT_WINDOW",
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.RECORD_AUDIO",
         "android.permission.READ_PHONE_STATE"
       ]
     },
@@ -155,7 +159,38 @@
           "icon": "./assets/images/notification-icon.png",
           "color": "#072B40"
         }
-      ]
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "NomadSafe uses the microphone so you can add expenses by speaking. Audio is processed on your device.",
+          "speechRecognitionPermission": "NomadSafe turns what you say into an expense using on-device speech recognition.",
+          "androidSpeechServicePackages": [
+            "com.google.android.googlequicksearchbox",
+            "com.google.android.tts",
+            "com.google.android.as"
+          ]
+        }
+      ],
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "VoiceExpenseWidget",
+              "label": "NomadSafe · Speak to add",
+              "description": "Add a trip expense by speaking",
+              "minWidth": "180dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 3,
+              "targetCellHeight": 2,
+              "resizeMode": "horizontal|vertical",
+              "updatePeriodMillis": 0
+            }
+          ]
+        }
+      ],
+      "@bacons/apple-targets"
     ],
     "experiments": {
       "typedRoutes": true,
