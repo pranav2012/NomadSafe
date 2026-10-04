@@ -1,14 +1,17 @@
 import React, { useMemo, useState } from "react";
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn, FadeOut, LinearTransition } from "react-native-reanimated";
-import { Icon } from "@/components/nomad/Icon";
-import { PressableScale } from "@/components/motion/PressableScale";
-import { AuraButton } from "@/components/aura/AuraButton";
-import { AuraChip } from "@/components/aura/AuraChip";
-import { AuraDateField } from "@/components/aura/AuraDateField";
-import { AuraField } from "@/components/aura/AuraField";
-import { AuraSheet } from "@/components/aura/AuraSheet";
-import { useAura } from "@/components/aura/useAura";
+import {
+  AuraButton,
+  AuraChip,
+  AuraDateField,
+  AuraField,
+  AuraSheet,
+  Icon,
+  PressableScale,
+  showAlert,
+  useAura,
+} from "@/atoms";
 import { auraCategoryColors } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { CURRENCY_OPTIONS } from "@/utils/currency";
@@ -20,7 +23,7 @@ import { categorizeHeuristic } from "@/features/expenses/services/categorizer";
 import { getCurrentExpenseLocation } from "@/features/expenses/services/locationTagging";
 import { useGmailStatus } from "@/features/expenses/hooks/useGmailStatus";
 import { localeDecimalSeparator, parseAmountInput } from "@/features/expenses/utils/amountInput";
-import { track } from "@/services/analytics";
+import { track } from "@/modules/analytics";
 
 export interface ExpenseDraftValues {
   amount: number;
@@ -196,7 +199,7 @@ function ExpenseFormBody({
     const result = await getCurrentExpenseLocation();
     setIsLocating(false);
     if (result) setLocation(result);
-    else Alert.alert(t("expenses.tagLocation"), t("expenses.locationUnavailable"));
+    else showAlert(t("expenses.tagLocation"), t("expenses.locationUnavailable"));
   };
 
   const handleSave = () => {
@@ -204,12 +207,12 @@ function ExpenseFormBody({
     const numericAmount = Number.isFinite(parsedAmount) ? roundMoney(parsedAmount, currency) : parsedAmount;
     const trimmedMerchant = merchant.trim();
     if (!Number.isFinite(numericAmount) || numericAmount <= 0 || !trimmedMerchant) {
-      Alert.alert(t("expenses.validationTitle"), t("expenses.validationBody"));
+      showAlert(t("expenses.validationTitle"), t("expenses.validationBody"));
       return;
     }
     const resolution = canSplit ? splitValueToShares(split, numericAmount, currency, decimalSeparator) : null;
     if (resolution && !resolution.ok) {
-      Alert.alert(t("split.invalidTitle"), t(`split.invalid.${resolution.reason}`));
+      showAlert(t("split.invalidTitle"), t(`split.invalid.${resolution.reason}`));
       return;
     }
     const shares = resolution?.ok ? resolution.shares.filter((share) => share.amount > 0) : undefined;

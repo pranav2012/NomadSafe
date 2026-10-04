@@ -1,12 +1,9 @@
 import React, { useState } from "react";
-import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { useRouter } from "expo-router";
-import { AuraListGroup, AuraListRow } from "@/components/aura/AuraList";
-import { useAura } from "@/components/aura/useAura";
-import { Icon } from "@/components/nomad/Icon";
-import { PressableScale } from "@/components/motion/PressableScale";
+import { AuraListGroup, AuraListRow, Icon, PressableScale, showAlert, useAura } from "@/atoms";
 import { useLocalization } from "@/localization";
 import { emergencyContactsStorage } from "@/features/onboarding/services/emergencyContactsStorage";
 import { TrustedContactsEditor } from "@/features/settings/components/TrustedContactsEditor";
@@ -21,7 +18,7 @@ export default function EmergencyContactsScreen() {
   const [editorKey, setEditorKey] = useState(0);
 
   const clearAll = () => {
-    Alert.alert(t("settings.contactManageTitle"), t("emergencyContacts.confirmRemoveBody"), [
+    showAlert(t("settings.contactManageTitle"), t("emergencyContacts.confirmRemoveBody"), [
       { text: t("common.cancel"), style: "cancel" },
       {
         text: t("common.clear"),

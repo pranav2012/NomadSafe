@@ -3,7 +3,7 @@ import * as Localization from "expo-localization";
 import { I18nManager } from "react-native";
 import { reloadAppAsync } from "expo";
 import { useSettingsStore } from "@/features/settings";
-import { storage } from "@/stores/storage";
+import { storage } from "@/modules/storage";
 import { getEffectiveCurrency } from "@/utils/currency";
 import { LANGUAGE_OPTIONS, normalizeLocale, type SupportedLocale } from "./languages";
 import { translations } from "./resources";
@@ -171,6 +171,16 @@ export function useLocalization() {
   const value = useContext(LocalizationContext);
   if (!value) throw new Error("useLocalization must be used within LocalizationProvider");
   return value;
+}
+
+/** The user's default currency for new trips and budgets: their pick in Settings, else the phone's. */
+export function useDefaultCurrency(): string {
+  return useLocalization().currency;
+}
+
+/** `useDefaultCurrency()` outside React. */
+export function getDefaultCurrency(): string {
+  return getEffectiveCurrency(useSettingsStore.getState().currencyOverride, Localization.getLocales()[0]?.currencyCode);
 }
 
 export { LANGUAGE_OPTIONS };

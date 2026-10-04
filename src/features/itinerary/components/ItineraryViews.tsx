@@ -1,8 +1,6 @@
 import React, { useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { Icon } from "@/components/nomad/Icon";
-import { PressableScale } from "@/components/motion/PressableScale";
-import { useAura } from "@/components/aura/useAura";
+import { Icon, PressableScale, useAura } from "@/atoms";
 import { auraEventColors } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { getEventTypeMeta } from "@/features/itinerary/constants/eventTypes";

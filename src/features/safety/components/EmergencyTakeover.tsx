@@ -1,17 +1,12 @@
 import React, { useEffect, useMemo } from "react";
 import { Modal, ScrollView, StyleSheet, Text, View } from "react-native";
-import MapView, { Marker, PROVIDER_DEFAULT } from "react-native-maps";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
-import { PostHogMaskView } from "posthog-react-native";
-import { AuraButton } from "@/components/aura/AuraButton";
-import { AuraCard } from "@/components/aura/AuraCard";
-import { useAura } from "@/components/aura/useAura";
-import { Icon } from "@/components/nomad/Icon";
-import { LiveDot } from "@/components/motion/LiveDot";
-import { useTabBarInset } from "@/components/tabbar/tabBarInset";
+import { PrivateView } from "@/modules/analytics";
+import { MapView, Marker } from "@/modules/location";
+import { AuraButton, AuraCard, Icon, LiveDot, useAura, useTabBarInset } from "@/atoms";
 import { auraStatusAccent, auraStatusColors } from "@/constants/aura";
 import { quietMapStyle } from "@/features/home/components/aura/mapStyles";
 import { useLocalization } from "@/localization";
@@ -91,10 +86,9 @@ export function EmergencyTakeover({
 
         <View style={[styles.mapCard, { borderColor: c.hairline, backgroundColor: c.surface }]}>
           {location ? (
-            <PostHogMaskView style={StyleSheet.absoluteFill}>
+            <PrivateView style={StyleSheet.absoluteFill}>
               <MapView
                 style={StyleSheet.absoluteFill}
-                provider={PROVIDER_DEFAULT}
                 initialRegion={{ ...location, latitudeDelta: 0.01, longitudeDelta: 0.01 }}
                 customMapStyle={mapStyle}
                 userInterfaceStyle={isDark ? "dark" : "light"}
@@ -110,7 +104,7 @@ export function EmergencyTakeover({
                   </View>
                 </Marker>
               </MapView>
-            </PostHogMaskView>
+            </PrivateView>
           ) : (
             <View style={styles.mapFallback}>
               <Icon name="mapPin" size={26} color={c.textMuted} />

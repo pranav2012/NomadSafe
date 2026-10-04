@@ -1,9 +1,7 @@
 import React from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { AuraChip } from "@/components/aura/AuraChip";
-import { AuraSheet } from "@/components/aura/AuraSheet";
-import { useAura } from "@/components/aura/useAura";
+import { AuraChip, AuraSheet, useAura } from "@/atoms";
 import { describeWeather } from "@/features/trips/services/weatherService";
 import { buildOutlook, todayKey, toUnit, weekday, type DestinationForecast, type TemperatureUnit } from "@/features/trips/hooks/useTripForecast";
 import { useLocalization } from "@/localization";

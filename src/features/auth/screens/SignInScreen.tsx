@@ -6,16 +6,13 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import Svg, { Path } from "react-native-svg";
-import { AuraSkyHero, SKY_INTRO_MS, consumeSkyIntro } from "@/components/aura/AuraSkyHero";
-import { useAura } from "@/components/aura/useAura";
-import { PressableScale } from "@/components/motion/PressableScale";
-import { Icon } from "@/components/nomad/Icon";
+import { AuraSkyHero, consumeSkyIntro, Icon, PressableScale, SKY_INTRO_MS, useAura } from "@/atoms";
 import { LEGAL_URLS } from "@/constants/legal";
 import { authClient, useAuthStore } from "@/features/auth";
 import { useAmbientLoop } from "@/features/auth/hooks/useAmbientLoop";
 import { useSettingsStore } from "@/features/settings/store/settingsStore";
 import { useLocalization } from "@/localization";
-import { track } from "@/services/analytics";
+import { track } from "@/modules/analytics";
 
 const DANGER = "#FF4D5E";
 const AMBIENCE = require("../../../../assets/audio/aurora-ambience.m4a");

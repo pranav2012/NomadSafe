@@ -1,5 +1,5 @@
-import * as Location from "expo-location";
-import { storage } from "@/stores/storage";
+import { reverseGeocode } from "@/modules/location";
+import { storage } from "@/modules/storage";
 
 export interface ResolvedCountry {
   code: string;
@@ -52,7 +52,7 @@ export async function resolveCountry(
   coords: { latitude: number; longitude: number },
 ): Promise<ResolvedCountry | null> {
   try {
-    const [place] = await Location.reverseGeocodeAsync(coords);
+    const [place] = await reverseGeocode(coords);
     if (place?.isoCountryCode) {
       const resolved = { code: place.isoCountryCode.toUpperCase(), name: place.country ?? undefined };
       remember({ ...resolved, latitude: coords.latitude, longitude: coords.longitude, at: Date.now() });

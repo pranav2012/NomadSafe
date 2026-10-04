@@ -1,12 +1,8 @@
 import { secureStorage } from "@/features/auth/services/secureStorage";
 import { pinAttempts } from "@/features/auth/services/pinAttempts";
 import { useAuthStore } from "@/features/auth/store/authStore";
-import { localModelService } from "@/features/ai/services/localModelService";
-import { aiService } from "@/features/ai/services/aiService";
-import { clearByokConfig } from "@/features/ai/services/remote/byok";
-import { clearCloudExhaustion } from "@/features/ai/services/remote/cloud";
-import { usePlanStore } from "@/features/billing/store/planStore";
-import { wipeModels } from "@/features/ai/services/modelProvisioner";
+import { aiRuntime, aiService, clearByokConfig, clearCloudExhaustion, resetAiPreference } from "@/modules/ai";
+import { usePlanStore } from "@/modules/billing";
 import { useChatStore } from "@/features/ai/store/chatStore";
 import { useExpensesStore } from "@/features/expenses/store/expensesStore";
 import { clearLegacyGmailCheckpoints } from "@/features/expenses/services/legacyGmailCheckpoints";
@@ -18,9 +14,9 @@ import { useSettingsStore } from "@/features/settings/store/settingsStore";
 import { useSharingStore } from "@/features/location-sharing/store/sharingStore";
 import { useTripsStore } from "@/features/trips/store/tripsStore";
 import { syncWidgets } from "@/features/widget/syncWidgets";
-import { resetAnalytics } from "@/services/analytics";
-import { signOutAndCleanup } from "@/services/session";
-import { storage } from "@/stores/storage";
+import { resetAnalytics } from "@/modules/analytics";
+import { signOutAndCleanup } from "@/features/auth/services/session";
+import { storage } from "@/modules/storage";
 
 async function attempt(step: () => unknown) {
   try {
@@ -38,8 +34,8 @@ export async function wipeAllDeviceData({ keepModels = false }: { keepModels?: b
   await signOutAndCleanup();
 
   await attempt(() => aiService.stopChat());
-  await attempt(() => localModelService.release());
-  if (!keepModels) await attempt(wipeModels);
+  await attempt(() => aiRuntime.release());
+  if (!keepModels) await attempt(aiRuntime.wipeModels);
 
   useAuthStore.getState().setPinSet(false);
   useAuthStore.getState().setBiometricEnabled(false);
@@ -58,6 +54,7 @@ export async function wipeAllDeviceData({ keepModels = false }: { keepModels?: b
   await attempt(() => pinAttempts.reset());
   await attempt(clearByokConfig);
   clearCloudExhaustion();
+  resetAiPreference();
   usePlanStore.getState().reset();
 
   storage.clearAll();

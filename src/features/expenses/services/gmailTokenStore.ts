@@ -1,4 +1,4 @@
-import * as SecureStore from "expo-secure-store";
+import { secureStore } from "@/modules/storage";
 
 const KEY = "nomadsafe.gmail.tokens";
 
@@ -13,7 +13,7 @@ export interface StoredGmailTokens {
 
 export async function loadGmailTokens(): Promise<StoredGmailTokens | null> {
   try {
-    const raw = await SecureStore.getItemAsync(KEY);
+    const raw = await secureStore.get(KEY);
     return raw ? (JSON.parse(raw) as StoredGmailTokens) : null;
   } catch {
     return null;
@@ -22,7 +22,7 @@ export async function loadGmailTokens(): Promise<StoredGmailTokens | null> {
 
 export async function saveGmailTokens(tokens: StoredGmailTokens): Promise<void> {
   try {
-    await SecureStore.setItemAsync(KEY, JSON.stringify(tokens));
+    await secureStore.set(KEY, JSON.stringify(tokens));
   } catch {
     // best-effort; a failed persist just means the user reconnects next launch
   }
@@ -30,7 +30,7 @@ export async function saveGmailTokens(tokens: StoredGmailTokens): Promise<void> 
 
 export async function clearGmailTokens(): Promise<void> {
   try {
-    await SecureStore.deleteItemAsync(KEY);
+    await secureStore.remove(KEY);
   } catch {
     // ignore
   }

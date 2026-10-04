@@ -1,10 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn, FadeOut, LinearTransition } from "react-native-reanimated";
-import { Icon } from "@/components/nomad/Icon";
-import { PressableScale } from "@/components/motion/PressableScale";
-import { AuraField } from "@/components/aura/AuraField";
-import { useAura } from "@/components/aura/useAura";
+import { AuraField, Icon, PressableScale, useAura } from "@/atoms";
 import { useLocalization } from "@/localization";
 import { searchOfflineDestinations, type DestinationOption } from "@/features/trips/data/destinations";
 import { useWebDestinationSearch } from "@/features/trips/hooks/useWebDestinationSearch";

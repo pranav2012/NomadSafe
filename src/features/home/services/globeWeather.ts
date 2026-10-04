@@ -1,4 +1,4 @@
-import { storage } from "@/stores/storage";
+import { storage } from "@/modules/storage";
 import { describeWeather } from "@/features/trips/services/weatherService";
 
 const FORECAST_URL = "https://api.open-meteo.com/v1/forecast";

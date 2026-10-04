@@ -1,11 +1,6 @@
 import React, { useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { AuraButton } from "@/components/aura/AuraButton";
-import { AuraChip } from "@/components/aura/AuraChip";
-import { AuraField } from "@/components/aura/AuraField";
-import { AuraSheet } from "@/components/aura/AuraSheet";
-import { useAura } from "@/components/aura/useAura";
-import type { IconName } from "@/components/nomad/Icon";
+import { AuraButton, AuraChip, AuraField, AuraSheet, type IconName, useAura } from "@/atoms";
 import { useLocalization } from "@/localization";
 import { smsFallbackStorage, type SmsTemplatePurpose } from "@/features/safety/services/smsFallbackStorage";
 

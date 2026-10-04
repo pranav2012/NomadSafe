@@ -1,12 +1,10 @@
 import { AppState } from "react-native";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import { mmkvStateStorage } from "@/stores/storage";
-import { localModelService, type ChatTurn } from "../services/localModelService";
-import { aiService } from "../services/aiService";
-import { modelNotifications } from "../services/modelNotifications";
+import { mmkvStateStorage } from "@/modules/storage";
+import { aiRuntime, aiService, modelNotifications, type ChatTurn } from "@/modules/ai";
 import { loadTripMoneySnapshot } from "../services/chatContext";
-import { logger } from "@/services/logger";
+import { logger } from "@/modules/logger";
 
 export interface ChatMessage {
   from: "ai" | "you";
@@ -223,7 +221,7 @@ export const useChatStore = create<ChatState>()(
               set({ generatingConversationKey: null });
               if (AppState.currentState !== "active") {
                 modelNotifications.notifyAssistantReply();
-                localModelService.release();
+                aiRuntime.release();
               }
             });
           return true;

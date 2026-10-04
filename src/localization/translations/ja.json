@@ -124,6 +124,8 @@
     "privacyPolicy": "プライバシーポリシー",
     "usageAnalytics": "利用状況の分析を共有",
     "usageAnalyticsSub": "NomadSafe の改善に役立つ利用統計、クラッシュレポート、マスクされた画面録画です。旅行、支出、チャット、正確な位置情報は含まれません。",
+    "adPrivacyChoices": "広告のプライバシー設定",
+    "adPrivacyChoicesSub": "無料プランで表示される広告に Google がデータをどう使うかを変更します。",
     "gmailConnected": "Gmail連携済み",
     "gmailConnectedSub": "予約やレシートを見つけるための読み取り専用アクセス",
     "gmailConnectedAsSub": "{{email}} · 予約やレシートを見つけるための読み取り専用アクセス",
@@ -189,7 +191,27 @@
     "onlineAiCloud": "オンライン時は NomadSafe Cloud（Pro）を使用",
     "onlineAiNone": "使うには自分のキーを追加するか Pro にしてください",
     "aiKey": "自分のAPIキー",
-    "aiKeyNone": "未設定"
+    "aiKeyNone": "未設定",
+    "onlineAiLocalPicked": "オン（端末上のAIを選択中）",
+    "cloudAiUsageSub": "NomadSafe Cloudの利用枠、毎月リセット",
+    "manageSubscriptionSub": "ストアでプランを変更・解約",
+    "restoreSub": "このストアアカウントで購入したプランを復元",
+    "autoLockSub": "バックグラウンド後にNomadSafeをロック",
+    "changePinSub": "NomadSafeのロック解除用PIN",
+    "usageAnalyticsShort": "NomadSafeの改善に役立ちます。旅行は送信しません",
+    "privacyPolicySub": "NomadSafeが収集する情報とその理由",
+    "defaultCheckInSub": "新しいチェックインの長さ",
+    "appearanceSub": "ライト、ダーク、または端末に合わせる",
+    "languageSub": "NomadSafeで使う言語",
+    "currency": "既定の通貨",
+    "currencySub": "新しい旅行と予算に使用",
+    "currencyAutomatic": "自動",
+    "currencyAutomaticDetail": "端末の通貨: {{currency}}",
+    "currencyAutomaticValue": "自動 · {{currency}}",
+    "currencySheetSub": "新しい旅行と予算はこの通貨で始まります。",
+    "aiKeySub": "自分のOpenAI、Anthropic、Geminiキーを使う",
+    "cloudBackupShort": "新しい端末で旅行を復元",
+    "signOutSub": "この端末でNomadSafeからサインアウト"
   },
   "auth": {
     "sceneLocation": "北極圏ノルウェー",
@@ -1340,6 +1362,7 @@
     "featureEverything": "安全機能、支出、割り勘、共有旅行もすべて含まれます",
     "featureOfflineAi": "オフラインでも使えるデバイス上のAI",
     "featureOwnKey": "お持ちのAI APIキーも使えます",
+    "featureNoAds": "広告なし",
     "featureCloudAi": "チャット、予算、音声入力、旅程に使える高性能なオンラインAI",
     "featureOfflineFallback": "オフライン時はデバイス上のAIに切り替わります",
     "unavailable": "現在このデバイスでは購入できません。Google Play にサインインしているか確認し、しばらくしてからもう一度お試しください。",
@@ -1398,5 +1421,16 @@
     "invalidKey": "プロバイダーがこのAPIキーを拒否しました。",
     "invalidModel": "プロバイダーがこのモデルを認識しないか、リクエストが受け付けられませんでした。モデルIDを確認してください。",
     "rateLimited": "このキーはプロバイダーによって利用制限されているか、クレジットが不足しています。しばらくしてからお試しください。"
+  },
+  "aiSource": {
+    "cloudDetail": "Pro · より高性能、オンライン",
+    "byok": "あなたの{{provider}}キー",
+    "byokDetail": "{{model}} · オンライン",
+    "local": "端末上 · {{model}}",
+    "localDetail": "プライベート、オフラインで動作",
+    "pickerTitle": "回答の提供元",
+    "pickerSubtitle": "チャットとすべてのAI機能で使用します。",
+    "pickerFootnote": "オンラインの選択肢が応答できない場合、NomadSafeはもう一方、次にこの端末を試します。端末上を選ぶとすべて端末内に残ります。取り込んだメールやSMSは常に端末上で分類されます。",
+    "pickerHint": "回答するAIを選ぶ"
   }
 }

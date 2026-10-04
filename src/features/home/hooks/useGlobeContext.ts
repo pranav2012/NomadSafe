@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import * as Location from "expo-location";
-import { useQuery } from "convex/react";
-import { api } from "@convex/_generated/api";
+import { api, useQuery } from "@/modules/backend";
+import { getCurrentPosition, getForegroundPermission, getLastKnownPosition } from "@/modules/location";
 import { useLocalization } from "@/localization";
 import type { HomeStop } from "@/features/home/types";
 import { daylightAt, distanceKm } from "@/features/home/components/aura/globe/sun";
@@ -26,10 +25,10 @@ export function useGlobeContext(focus: HomeStop | undefined) {
   useEffect(() => {
     let mounted = true;
     (async () => {
-      const permission = await Location.getForegroundPermissionsAsync();
+      const permission = await getForegroundPermission();
       if (!permission.granted) return;
-      const position = (await Location.getLastKnownPositionAsync()) ?? (await Location.getCurrentPositionAsync({}));
-      if (mounted && position) setOrigin({ name: "", latitude: position.coords.latitude, longitude: position.coords.longitude });
+      const position = (await getLastKnownPosition()) ?? (await getCurrentPosition());
+      if (mounted && position) setOrigin({ name: "", latitude: position.latitude, longitude: position.longitude });
     })().catch(() => {});
     return () => {
       mounted = false;

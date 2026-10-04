@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
-import * as Location from "expo-location";
 import type { AuraStatus } from "@/constants/aura";
 import { ExpenseForm } from "@/features/expenses/components/ExpenseForm";
 import { ImportSheet } from "@/features/expenses/components/ImportSheet";
@@ -12,8 +11,9 @@ import { cancelCheckInNotifications, useSafetyStore } from "@/features/safety";
 import { EmptyHome } from "@/features/home/components/EmptyHome";
 import { selectActiveTrip, useTripsStore } from "@/features/trips/store/tripsStore";
 import { useTheme } from "@/hooks/useTheme";
-import { useStartNewTrip } from "@/features/billing";
-import { track } from "@/services/analytics";
+import { useStartNewTrip } from "@/modules/billing";
+import { getCurrentPosition, getLastKnownPosition, requestForegroundPermission, reverseGeocode } from "@/modules/location";
+import { track } from "@/modules/analytics";
 import { heavyImpact, successNotification } from "@/utils/haptics";
 
 /**
@@ -22,21 +22,21 @@ import { heavyImpact, successNotification } from "@/utils/haptics";
  */
 async function resolveUserLocation(): Promise<UserLocation | null> {
   try {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== Location.PermissionStatus.GRANTED) return null;
+    const { status } = await requestForegroundPermission();
+    if (status !== "granted") return null;
   } catch {
     return null;
   }
 
   let coords: { latitude: number; longitude: number } | null = null;
   try {
-    coords = (await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced })).coords;
+    coords = await getCurrentPosition("balanced");
   } catch {
     // Android throws when location services are off; try the cached fix.
   }
   if (!coords) {
     try {
-      coords = (await Location.getLastKnownPositionAsync())?.coords ?? null;
+      coords = await getLastKnownPosition();
     } catch {
       coords = null;
     }
@@ -45,7 +45,7 @@ async function resolveUserLocation(): Promise<UserLocation | null> {
 
   const location: UserLocation = { latitude: coords.latitude, longitude: coords.longitude };
   try {
-    const [reverse] = await Location.reverseGeocodeAsync(coords);
+    const [reverse] = await reverseGeocode(coords);
     if (reverse) {
       location.city = reverse.city ?? reverse.subregion ?? undefined;
       location.country = reverse.country ?? undefined;

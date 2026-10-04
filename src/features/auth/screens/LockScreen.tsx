@@ -1,14 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Alert, BackHandler, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { BackHandler, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import Animated, { FadeIn, FadeOut, LinearTransition, ZoomIn } from "react-native-reanimated";
-import { PostHogMaskView } from "posthog-react-native";
-import { AuraOrb, type AuraOrbMode } from "@/components/aura/AuraOrb";
-import { useAura } from "@/components/aura/useAura";
-import { PressableScale } from "@/components/motion/PressableScale";
-import { Icon } from "@/components/nomad/Icon";
+import { PrivateView } from "@/modules/analytics";
+import { AuraOrb, type AuraOrbMode, Icon, PressableScale, showAlert, useAura } from "@/atoms";
 import {
   localAuth,
   secureStorage,
@@ -20,7 +17,7 @@ import { PinDots } from "@/features/auth/components/PinDots";
 import { PinPad } from "@/features/auth/components/PinPad";
 import { hashPin, isLegacyPinHash, verifyPin } from "@/features/auth/utils/crypto";
 import { pinAttempts } from "@/features/auth/services/pinAttempts";
-import { flushBeforeSignOut } from "@/services/session";
+import { flushBeforeSignOut } from "@/features/auth/services/session";
 import { wipeAllDeviceData } from "@/features/settings/services/wipeService";
 import { errorNotification, successNotification } from "@/utils/haptics";
 import { useLocalization } from "@/localization";
@@ -160,7 +157,7 @@ export default function LockScreen() {
         if (!storedHash) {
           // PIN missing from the keystore (e.g. restored device): force re-auth.
           setPinSet(false);
-          Alert.alert(t("auth.pinMissingTitle"), t("auth.pinMissingBody"), [
+          showAlert(t("auth.pinMissingTitle"), t("auth.pinMissingBody"), [
             { text: t("common.ok"), onPress: () => void eraseAfterSync() },
           ]);
           return;
@@ -215,7 +212,7 @@ export default function LockScreen() {
       await eraseNow();
       return;
     }
-    Alert.alert(t("settings.signOutUnsyncedTitle"), t("settings.signOutUnsyncedBody"), [
+    showAlert(t("settings.signOutUnsyncedTitle"), t("settings.signOutUnsyncedBody"), [
       { text: t("common.cancel"), style: "cancel" },
       { text: t("auth.eraseConfirm"), style: "destructive", onPress: () => void eraseNow() },
     ]);
@@ -223,7 +220,7 @@ export default function LockScreen() {
 
   function handleForgotPin() {
     if (signingOut) return;
-    Alert.alert(t("auth.eraseTitle"), t("auth.eraseBody"), [
+    showAlert(t("auth.eraseTitle"), t("auth.eraseBody"), [
       { text: t("common.cancel"), style: "cancel" },
       { text: t("auth.eraseConfirm"), style: "destructive", onPress: () => void eraseAfterSync() },
     ]);
@@ -263,7 +260,7 @@ export default function LockScreen() {
                   <Icon name="check" size={avatarSize * 0.45} color="#0B0D12" strokeWidth={2.8} />
                 </Animated.View>
               ) : (
-                <PostHogMaskView>
+                <PrivateView>
                   <Animated.View
                     key="initial"
                     entering={FadeIn.duration(240)}
@@ -280,14 +277,14 @@ export default function LockScreen() {
                   >
                     <Text style={[styles.initial, { color: c.text, fontFamily: f.semibold, fontSize: avatarSize * 0.44 }]}>{initial}</Text>
                   </Animated.View>
-                </PostHogMaskView>
+                </PrivateView>
               )}
             </View>
           </PressableScale>
 
-          <PostHogMaskView>
+          <PrivateView>
             <Text numberOfLines={1} style={[styles.name, { color: c.text, fontFamily: f.semibold }]}>{name}</Text>
-          </PostHogMaskView>
+          </PrivateView>
           <View style={styles.statusRow}>
             <Icon name="lock" size={12} color={c.textMuted} strokeWidth={2.2} />
             <Text style={[styles.status, { color: c.textMuted, fontFamily: f.medium }]}>{t("auth.locked")}</Text>

@@ -1,7 +1,7 @@
-import * as Location from "expo-location";
 import * as Contacts from "expo-contacts";
-import * as Notifications from "expo-notifications";
-import { logger } from "@/services/logger";
+import { getForegroundPermission, requestForegroundPermission } from "@/modules/location";
+import { logger } from "@/modules/logger";
+import { notifications as notificationService } from "@/modules/notifications";
 
 export type PermissionKind = "location" | "contacts" | "notifications";
 
@@ -44,15 +44,15 @@ async function safely(
 export const permissionsService = {
   async checkAll(): Promise<Record<PermissionKind, PermissionStatus>> {
     const [location, contacts, notifications] = await Promise.all([
-      safely("location", () => Location.getForegroundPermissionsAsync()),
+      safely("location", () => getForegroundPermission()),
       safely("contacts", () => Contacts.getPermissionsAsync()),
-      safely("notifications", () => Notifications.getPermissionsAsync()),
+      safely("notifications", () => notificationService.getPermission()),
     ]);
     return { location, contacts, notifications };
   },
 
   requestLocation(): Promise<PermissionStatus> {
-    return safely("location", () => Location.requestForegroundPermissionsAsync());
+    return safely("location", () => requestForegroundPermission());
   },
 
   requestContacts(): Promise<PermissionStatus> {
@@ -61,9 +61,9 @@ export const permissionsService = {
 
   requestNotifications(): Promise<PermissionStatus> {
     return safely("notifications", async () => {
-      const current = await Notifications.getPermissionsAsync();
+      const current = await notificationService.getPermission();
       if (current.granted || !current.canAskAgain) return current;
-      return Notifications.requestPermissionsAsync();
+      return notificationService.requestPermission();
     });
   },
 };

@@ -2,19 +2,13 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Linking, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
-import { useAction } from "convex/react";
-import { api } from "@convex/_generated/api";
-import { Icon, type IconName } from "@/components/nomad/Icon";
-import { useAura } from "@/components/aura/useAura";
-import { AuraChip } from "@/components/aura/AuraChip";
-import { AuraSection } from "@/components/aura/AuraSection";
-import { AuraButton } from "@/components/aura/AuraButton";
-import { PressableScale } from "@/components/motion/PressableScale";
+import { api, useAction } from "@/modules/backend";
+import { AuraButton, AuraChip, AuraSection, Icon, type IconName, PressableScale, useAura } from "@/atoms";
 import { useLocalization } from "@/localization";
 import type { NearbyCategory, NearbyPlace } from "@/features/places/services/nearbyPlaces";
 import { areaKey, readPlacesCache, writePlacesCache } from "@/features/places/services/placesCache";
 import { isOpenAt } from "@/features/places/utils/openingHours";
-import { logger } from "@/services/logger";
+import { logger } from "@/modules/logger";
 
 interface UserLocation {
   city?: string;

@@ -1,16 +1,21 @@
 import React, { useState } from "react";
-import { Alert, StyleSheet, Text, View } from "react-native";
-import { AuraCard } from "@/components/aura/AuraCard";
-import { AuraListGroup, AuraListRow } from "@/components/aura/AuraList";
-import { AuraOrb, type AuraOrbMode } from "@/components/aura/AuraOrb";
-import { AuraSection } from "@/components/aura/AuraSection";
-import { AuraSwitch } from "@/components/aura/AuraSwitch";
-import { useAura } from "@/components/aura/useAura";
+import { StyleSheet, Text, View } from "react-native";
+import {
+  AuraCard,
+  AuraListGroup,
+  AuraListRow,
+  AuraOrb,
+  type AuraOrbMode,
+  AuraSection,
+  AuraSwitch,
+  showAlert,
+  useAura,
+} from "@/atoms";
 import { auraStatusAccent, auraStatusColors } from "@/constants/aura";
-import { modelNotifications, useAiProvisioning, type ProvisionPhase } from "@/features/ai";
-import { AiProvisionCard } from "@/features/ai/components/AiProvisionCard";
+import { AiProvisionCard } from "@/features/ai";
+import { modelNotifications, useAiProvisioning, type ProvisionPhase } from "@/modules/ai";
 import { useLocalization } from "@/localization";
-import { logger } from "@/services/logger";
+import { logger } from "@/modules/logger";
 import { StepHeader } from "./StepHeader";
 
 const ORB_SIZE = 168;
@@ -40,7 +45,7 @@ export function OnDeviceStep() {
     try {
       const next = await modelNotifications.setEnabled(wanted);
       setNotifyEnabled(next);
-      if (wanted && !next) Alert.alert(t("onboarding.notificationsOffTitle"), t("onboarding.notificationsOffBody"));
+      if (wanted && !next) showAlert(t("onboarding.notificationsOffTitle"), t("onboarding.notificationsOffBody"));
     } catch (err) {
       logger.warn("onboarding", "notification opt-in failed", err);
     }

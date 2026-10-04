@@ -1,11 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import { AuraButton } from "@/components/aura/AuraButton";
-import { AuraSegmented } from "@/components/aura/AuraSegmented";
-import { AuraSheet } from "@/components/aura/AuraSheet";
-import { useAura } from "@/components/aura/useAura";
-import { Icon } from "@/components/nomad/Icon";
-import { PressableScale } from "@/components/motion/PressableScale";
+import { AuraButton, AuraSegmented, AuraSheet, Icon, PressableScale, useAura } from "@/atoms";
 import { auraCategoryColors, auraStatusAccent } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { EXPENSE_CATEGORIES } from "@/features/expenses/constants/categories";
@@ -21,8 +16,8 @@ import { useGmailImport } from "@/features/expenses/hooks/useGmailImport";
 import { useGmailProgressLabel } from "@/features/expenses/hooks/useGmailStatus";
 import { syncTripGmail, type TripGmailSyncResult } from "@/features/expenses/services/tripGmailSync";
 import type { Trip } from "@/features/trips/store/tripsStore";
-import { track } from "@/services/analytics";
-import { logger } from "@/services/logger";
+import { track } from "@/modules/analytics";
+import { logger } from "@/modules/logger";
 
 type Tab = "paste" | "gmail";
 

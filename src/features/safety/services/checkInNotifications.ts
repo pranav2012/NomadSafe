@@ -1,6 +1,5 @@
-import * as Notifications from "expo-notifications";
-import { Platform } from "react-native";
-import { logger } from "@/services/logger";
+import { logger } from "@/modules/logger";
+import { notifications } from "@/modules/notifications";
 
 export const SAFETY_CHANNEL_ID = "safety-checkin-v2";
 export const SAFETY_NOTIFICATION_SOURCE = "nomadsafe-safety";
@@ -27,19 +26,18 @@ export type ScheduleResult = "scheduled" | "permission-denied" | "error" | "stal
 let generation = 0;
 
 async function ensureChannel(name: string) {
-  if (Platform.OS !== "android") return;
-  await Notifications.setNotificationChannelAsync(SAFETY_CHANNEL_ID, {
+  await notifications.setChannel(SAFETY_CHANNEL_ID, {
     name,
-    importance: Notifications.AndroidImportance.MAX,
+    importance: "max",
     vibrationPattern: [0, 400, 250, 400],
-    lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+    lockscreenVisibility: "public",
   });
 }
 
 /** Reads the current notification permission without prompting. */
 export async function getNotificationPermission(): Promise<NotificationPermission> {
   try {
-    const { status } = await Notifications.getPermissionsAsync();
+    const { status } = await notifications.getPermission();
     return status === "granted" ? "granted" : status === "denied" ? "denied" : "undetermined";
   } catch {
     return "undetermined";
@@ -49,7 +47,7 @@ export async function getNotificationPermission(): Promise<NotificationPermissio
 /** Permission status plus whether the OS will still show a prompt. */
 export async function getNotificationPermissionDetails(): Promise<{ granted: boolean; canAskAgain: boolean }> {
   try {
-    const { status, canAskAgain } = await Notifications.getPermissionsAsync();
+    const { status, canAskAgain } = await notifications.getPermission();
     return { granted: status === "granted", canAskAgain };
   } catch {
     return { granted: false, canAskAgain: false };
@@ -60,7 +58,7 @@ export async function getNotificationPermissionDetails(): Promise<{ granted: boo
 export async function requestNotificationPermission(channelName: string): Promise<boolean> {
   try {
     await ensureChannel(channelName);
-    const { status } = await Notifications.requestPermissionsAsync();
+    const { status } = await notifications.requestPermission();
     return status === "granted";
   } catch {
     return false;
@@ -68,10 +66,10 @@ export async function requestNotificationPermission(channelName: string): Promis
 }
 
 async function ensurePermission(): Promise<boolean> {
-  const current = await Notifications.getPermissionsAsync();
+  const current = await notifications.getPermission();
   if (current.status === "granted") return true;
   if (!current.canAskAgain) return false;
-  const next = await Notifications.requestPermissionsAsync();
+  const next = await notifications.requestPermission();
   return next.status === "granted";
 }
 
@@ -92,26 +90,18 @@ export async function scheduleCheckInNotifications(
     if (token !== generation) return "stale";
 
     const data = { source: SAFETY_NOTIFICATION_SOURCE, url: SOS_ROUTE, kind: "checkInDue" };
-    const android = Platform.OS === "android"
-      ? { priority: Notifications.AndroidNotificationPriority.MAX }
-      : {};
 
     const warningAt = endsAt - WARNING_LEAD_MS;
     if (warningAt - Date.now() > MIN_WARNING_GAP_MS) {
-      await Notifications.scheduleNotificationAsync({
-        identifier: WARNING_ID,
-        content: {
-          title: copy.warningTitle,
-          body: copy.warningBody,
-          data: { ...data, kind: "checkInWarning" },
-          sound: true,
-          ...android,
-        },
-        trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.DATE,
-          date: warningAt,
-          channelId: SAFETY_CHANNEL_ID,
-        },
+      await notifications.schedule({
+        id: WARNING_ID,
+        title: copy.warningTitle,
+        body: copy.warningBody,
+        data: { ...data, kind: "checkInWarning" },
+        sound: true,
+        priority: "max",
+        at: warningAt,
+        channelId: SAFETY_CHANNEL_ID,
       });
     }
     if (token !== generation) {
@@ -119,20 +109,15 @@ export async function scheduleCheckInNotifications(
       return "stale";
     }
 
-    await Notifications.scheduleNotificationAsync({
-      identifier: DUE_ID,
-      content: {
-        title: copy.dueTitle,
-        body: copy.dueBody,
-        data,
-        sound: true,
-        ...android,
-      },
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.DATE,
-        date: Math.max(endsAt, Date.now() + 1000),
-        channelId: SAFETY_CHANNEL_ID,
-      },
+    await notifications.schedule({
+      id: DUE_ID,
+      title: copy.dueTitle,
+      body: copy.dueBody,
+      data,
+      sound: true,
+      priority: "max",
+      at: Math.max(endsAt, Date.now() + 1000),
+      channelId: SAFETY_CHANNEL_ID,
     });
     if (token !== generation) {
       await cancelScheduled();
@@ -147,8 +132,8 @@ export async function scheduleCheckInNotifications(
 
 async function cancelScheduled() {
   await Promise.all([
-    Notifications.cancelScheduledNotificationAsync(DUE_ID).catch(() => {}),
-    Notifications.cancelScheduledNotificationAsync(WARNING_ID).catch(() => {}),
+    notifications.cancel(DUE_ID).catch(() => {}),
+    notifications.cancel(WARNING_ID).catch(() => {}),
   ]);
 }
 
@@ -157,7 +142,7 @@ export async function cancelCheckInNotifications(): Promise<void> {
   generation++;
   await cancelScheduled();
   await Promise.all([
-    Notifications.dismissNotificationAsync(DUE_ID).catch(() => {}),
-    Notifications.dismissNotificationAsync(WARNING_ID).catch(() => {}),
+    notifications.dismiss(DUE_ID).catch(() => {}),
+    notifications.dismiss(WARNING_ID).catch(() => {}),
   ]);
 }

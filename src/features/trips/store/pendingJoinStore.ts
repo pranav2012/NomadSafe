@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import { mmkvStateStorage } from "@/stores/storage";
+import { mmkvStateStorage } from "@/modules/storage";
 
 interface PendingJoinState {
   code: string | null;

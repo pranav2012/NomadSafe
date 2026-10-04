@@ -1,9 +1,8 @@
 import { useCallback, useState } from "react";
-import { Alert, Linking } from "react-native";
-import { useQuery } from "convex/react";
-import { api } from "@convex/_generated/api";
+import { Linking } from "react-native";
+import { api, useQuery } from "@/modules/backend";
 import { useLocalization } from "@/localization";
-import { track } from "@/services/analytics";
+import { track } from "@/modules/analytics";
 import { heavyImpact, successNotification } from "@/utils/haptics";
 import { hasAcceptedBackgroundDisclosure } from "../components/BackgroundLocationDisclosure";
 import {
@@ -14,6 +13,7 @@ import {
   stopLocationBroadcast,
 } from "../services/locationBroadcastTask";
 import { useSharingStore, type BroadcastMode } from "../store/sharingStore";
+import { showAlert } from "@/atoms";
 
 /**
  * Start/stop live location sharing from anywhere, with the same rules everywhere: the
@@ -58,7 +58,7 @@ export function useBroadcastToggle() {
     } catch (err) {
       setBroadcasting(await isLocationBroadcastRunning());
       const background = err instanceof BackgroundLocationDeniedError;
-      Alert.alert(t("sharing.permissionTitle"), background ? t("sharing.backgroundPermissionBody") : t("sharing.permissionBody"), [
+      showAlert(t("sharing.permissionTitle"), background ? t("sharing.backgroundPermissionBody") : t("sharing.permissionBody"), [
         { text: t("common.cancel"), style: "cancel" },
         { text: t("sharing.openSettings"), onPress: () => Linking.openSettings() },
       ]);
@@ -78,7 +78,7 @@ export function useBroadcastToggle() {
         successNotification();
       } catch {
         setBroadcasting(await isLocationBroadcastRunning());
-        Alert.alert(t("sharing.stopErrorTitle"), t("sharing.stopErrorBody"));
+        showAlert(t("sharing.stopErrorTitle"), t("sharing.stopErrorBody"));
       } finally {
         setBusy(false);
       }
@@ -86,7 +86,7 @@ export function useBroadcastToggle() {
     }
     // Sharing with nobody would keep location running for no one; contactLinks is undefined while loading.
     if (contactLinks && activeRecipientCount === 0) {
-      Alert.alert(t("sharing.noRecipientsTitle"), t("sharing.noRecipientsBody"));
+      showAlert(t("sharing.noRecipientsTitle"), t("sharing.noRecipientsBody"));
       return;
     }
     if (!hasAcceptedBackgroundDisclosure()) {

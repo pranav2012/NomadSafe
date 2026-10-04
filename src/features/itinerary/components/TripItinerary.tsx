@@ -1,21 +1,16 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { ActivityIndicator, Alert, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
-import { Icon } from "@/components/nomad/Icon";
-import { PressableScale } from "@/components/motion/PressableScale";
-import { AuraButton } from "@/components/aura/AuraButton";
-import { AuraSection } from "@/components/aura/AuraSection";
-import { AuraSheet } from "@/components/aura/AuraSheet";
-import { useAura } from "@/components/aura/useAura";
+import { AuraButton, AuraSection, AuraSheet, Icon, PressableScale, showAlert, showToast, useAura } from "@/atoms";
 import { useLocalization } from "@/localization";
-import { aiService, localModelService, useAiAvailability } from "@/features/ai";
+import { aiRuntime, aiService, useAiAvailability } from "@/modules/ai";
 import type { Trip } from "@/features/trips/store/tripsStore";
 import { useEventsStore, type TripEvent } from "@/features/itinerary/store/eventsStore";
 import { EventForm, type EventFormValues } from "@/features/itinerary/components/EventForm";
 import { TimelineList, UpNextList } from "@/features/itinerary/components/ItineraryViews";
 import { upNext } from "@/features/itinerary/utils/timeline";
 import { fromDateKey } from "@/features/trips/utils/dates";
-import { logger } from "@/services/logger";
+import { logger } from "@/modules/logger";
 import { useGmailImport } from "@/features/expenses/hooks/useGmailImport";
 import { useGmailProgressLabel, useGmailStatus } from "@/features/expenses/hooks/useGmailStatus";
 import { syncTripGmail } from "@/features/expenses/services/tripGmailSync";
@@ -35,7 +30,7 @@ export function TripItinerary({ trip }: { trip: Trip; accent: string }) {
   const updateEvent = useEventsStore((state) => state.updateEvent);
   const deleteEvent = useEventsStore((state) => state.deleteEvent);
   const deleteEvents = useEventsStore((state) => state.deleteEvents);
-  const isAiAvailable = useAiAvailability().available;
+  const isAiAvailable = useAiAvailability("itinerary").available;
 
   const [isRefining, setIsRefining] = useState(false);
   const [allOpen, setAllOpen] = useState(false);
@@ -81,15 +76,15 @@ export function TripItinerary({ trip }: { trip: Trip; accent: string }) {
       const refinement = await aiService.refineItinerary(ordered);
       const remove = ordered.filter((event) => !refinement.keepIds.includes(event.id)).map((event) => event.id);
       if (remove.length === 0) {
-        Alert.alert(t("itinerary.refineNoneTitle"), t("itinerary.refineNoneBody"));
+        showToast(t("itinerary.refineNoneTitle"), t("itinerary.refineNoneBody"));
         return;
       }
       setReview({ keep: refinement.keepIds.length, remove });
     } catch (error) {
       logger.warn("itinerary-refinement", "failed", error);
-      Alert.alert(t("itinerary.refineErrorTitle"), t("itinerary.refineErrorBody"));
+      showAlert(t("itinerary.refineErrorTitle"), t("itinerary.refineErrorBody"));
     } finally {
-      await localModelService.release();
+      await aiRuntime.release();
       setIsRefining(false);
     }
   }, [isRefining, ordered, t]);

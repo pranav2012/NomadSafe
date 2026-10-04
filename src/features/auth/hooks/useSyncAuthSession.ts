@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { authClient } from "../services/authClient";
+import { authClient } from "@/modules/backend";
 import { useAuthStore } from "../store/authStore";
 
 /**

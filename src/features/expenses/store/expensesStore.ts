@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import { mmkvStateStorage } from "@/stores/storage";
+import { mmkvStateStorage } from "@/modules/storage";
 import type { ExpenseCategory } from "@/features/expenses/constants/categories";
 import { toLocalDayKey } from "@/features/expenses/utils/dateKey";
 import type { ExpenseShare } from "@/features/expenses/utils/split";

@@ -1,10 +1,6 @@
 import React, { useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
-import { AuraButton } from "@/components/aura/AuraButton";
-import { AuraChip } from "@/components/aura/AuraChip";
-import { AuraDateField } from "@/components/aura/AuraDateField";
-import { AuraField } from "@/components/aura/AuraField";
-import { AuraSheet } from "@/components/aura/AuraSheet";
+import { AuraButton, AuraChip, AuraDateField, AuraField, AuraSheet } from "@/atoms";
 import { auraEventColors } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { EVENT_TYPES, type EventType } from "@/features/itinerary/constants/eventTypes";

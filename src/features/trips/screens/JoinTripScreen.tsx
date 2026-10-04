@@ -1,16 +1,9 @@
 import React, { useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useMutation, useQuery } from "convex/react";
+import { api, useMutation, useQuery } from "@/modules/backend";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { api } from "@convex/_generated/api";
-import { AuraButton } from "@/components/aura/AuraButton";
-import { AuraCard } from "@/components/aura/AuraCard";
-import { AuraChip } from "@/components/aura/AuraChip";
-import { AuraField } from "@/components/aura/AuraField";
-import { useAura } from "@/components/aura/useAura";
-import { Icon } from "@/components/nomad/Icon";
-import { PressableScale } from "@/components/motion/PressableScale";
+import { AuraButton, AuraCard, AuraChip, AuraField, Icon, PressableScale, useAura } from "@/atoms";
 import { useAuthStore } from "@/features/auth/store/authStore";
 import { registerTripPush } from "@/features/sync";
 import { useTripsStore } from "@/features/trips/store/tripsStore";

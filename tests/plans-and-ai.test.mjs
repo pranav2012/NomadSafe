@@ -17,11 +17,13 @@ function loadModule(entryPoint) {
 }
 
 const rules = loadModule("convex/billingRules.ts");
-const plan = loadModule("src/features/billing/utils/plan.ts");
-const providers = loadModule("src/features/ai/services/remote/providers.ts");
-const schemas = loadModule("src/features/ai/services/aiSchemas.ts");
-const prompts = loadModule("src/features/ai/services/aiPrompts.ts");
-const memory = loadModule("src/features/ai/services/chatMemory.ts");
+const plan = loadModule("src/modules/billing/plan.ts");
+const providers = loadModule("src/modules/ai/remote/providers.ts");
+const schemas = loadModule("src/modules/ai/schemas.ts");
+const prompts = loadModule("src/modules/ai/prompts.ts");
+const memory = loadModule("src/modules/ai/chatMemory.ts");
+const policy = loadModule("src/modules/ai/policy.ts");
+const adRules = loadModule("src/modules/ads/rules.ts");
 
 const NOW = Date.parse("2026-10-04T12:00:00Z");
 const day = 24 * 60 * 60 * 1000;
@@ -117,7 +119,7 @@ test("OpenAI-compatible JSON request uses JSON mode against the custom base URL"
   const body = JSON.parse(req.body);
   assert.equal(req.url, "https://openrouter.ai/api/v1/chat/completions");
   assert.deepEqual(body.response_format, { type: "json_object" });
-  assert.equal(body.max_tokens, providers.JSON_MAX_TOKENS);
+  assert.equal(body.max_tokens, policy.REMOTE_JSON_MAX_TOKENS);
   assert.equal(body.reasoning_effort, undefined);
 });
 
@@ -224,4 +226,42 @@ test("chat memory also compacts when a chat of short turns passes the turn cap",
   assert.equal(capped.summary, "summary");
   assert.ok(capped.history.length <= 20);
   assert.deepEqual(capped.history.at(-1), history.at(-1));
+});
+
+test("AI policy: categorization stays on the phone and every task has a route", () => {
+  assert.deepEqual(policy.AI_TASK_ROUTES.expenseCategory, ["local"]);
+  for (const [task, route] of Object.entries(policy.AI_TASK_ROUTES)) assert.ok(route.length > 0, task);
+  const online = { onlineAiEnabled: true, hasByokKey: true, cloudAi: true, signedIn: true, cloudExhausted: false };
+  assert.deepEqual(policy.onlineProvidersFor("expenseCategory", online), []);
+  assert.deepEqual(policy.onlineProvidersFor("chat", online), ["byok", "cloud"]);
+  assert.deepEqual(policy.onlineProvidersFor("chat", { ...online, onlineAiEnabled: false }), []);
+  assert.deepEqual(policy.onlineProvidersFor("voiceExpense", { ...online, hasByokKey: false, cloudExhausted: true }), []);
+});
+
+test("AI policy: a preferred source goes first, then the rest in route order", () => {
+  const all = { onlineAiEnabled: true, hasByokKey: true, cloudAi: true, signedIn: true, cloudExhausted: false, localReady: true };
+  assert.deepEqual(policy.providerOrder("chat", all), ["byok", "cloud", "local"]);
+  assert.deepEqual(policy.providerOrder("chat", { ...all, preferred: "cloud" }), ["cloud", "byok", "local"]);
+  assert.deepEqual(policy.onlineProvidersFor("tripBudget", { ...all, preferred: "cloud" }), ["cloud", "byok"]);
+  // On-device with a model ready never goes online; without one the automatic order applies.
+  assert.deepEqual(policy.providerOrder("voiceExpense", { ...all, preferred: "local" }), ["local"]);
+  assert.deepEqual(policy.onlineProvidersFor("chat", { ...all, preferred: "local" }), []);
+  assert.deepEqual(policy.providerOrder("chat", { ...all, preferred: "local", localReady: false }), ["byok", "cloud", "local"]);
+  // An unusable pick is ignored, not applied.
+  assert.equal(policy.effectivePreference("chat", { ...all, preferred: "cloud", signedIn: false }), null);
+  assert.equal(policy.effectivePreference("chat", { ...all, preferred: "byok", onlineAiEnabled: false }), null);
+  assert.deepEqual(policy.providerOrder("chat", { ...all, preferred: "byok", hasByokKey: false }), ["byok", "cloud", "local"]);
+  assert.deepEqual(policy.onlineProvidersFor("chat", { ...all, preferred: "byok", hasByokKey: false }), ["cloud"]);
+  // Categorization stays on the phone whatever the pick.
+  assert.deepEqual(policy.providerOrder("expenseCategory", { ...all, preferred: "cloud" }), ["local"]);
+  assert.deepEqual(policy.onlineProvidersFor("expenseCategory", { ...all, preferred: "byok" }), []);
+});
+
+test("ads: never on the first trip, only when loaded, at most once every 4 hours", () => {
+  const base = { now: NOW, lastShownAt: null, firstTrip: false, loaded: true };
+  assert.equal(adRules.canShowAd(base), true);
+  assert.equal(adRules.canShowAd({ ...base, firstTrip: true }), false);
+  assert.equal(adRules.canShowAd({ ...base, loaded: false }), false);
+  assert.equal(adRules.canShowAd({ ...base, lastShownAt: NOW - adRules.AD_INTERVAL_MS + 1 }), false);
+  assert.equal(adRules.canShowAd({ ...base, lastShownAt: NOW - adRules.AD_INTERVAL_MS }), true);
 });

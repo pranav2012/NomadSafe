@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import { mmkvStateStorage } from "@/stores/storage";
+import { mmkvStateStorage } from "@/modules/storage";
 import type { EventType } from "@/features/itinerary/constants/eventTypes";
 import { consolidateEmailBookings, mergeBooking, sameBooking } from "@/features/itinerary/utils/bookings";
 

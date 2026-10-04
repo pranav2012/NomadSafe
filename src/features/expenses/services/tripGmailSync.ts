@@ -19,8 +19,8 @@ import { isGenericTitle } from "@/features/itinerary/utils/bookings";
 import { toLocalDayKey } from "@/features/expenses/utils/dateKey";
 import { useEventsStore, type EmailMergeResult } from "@/features/itinerary/store/eventsStore";
 import { useTripsStore, type Trip } from "@/features/trips/store/tripsStore";
-import { track } from "@/services/analytics";
-import { logger } from "@/services/logger";
+import { track } from "@/modules/analytics";
+import { logger } from "@/modules/logger";
 
 export interface TripGmailSyncResult {
   scanned: boolean;

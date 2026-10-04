@@ -124,6 +124,8 @@
     "privacyPolicy": "隐私政策",
     "usageAnalytics": "共享使用情况分析",
     "usageAnalyticsSub": "帮助改进 NomadSafe 的使用统计、崩溃报告和已遮挡的屏幕录制。绝不包含你的行程、支出、聊天或精确位置。",
+    "adPrivacyChoices": "广告隐私选项",
+    "adPrivacyChoicesSub": "更改 Google 在免费方案的广告中如何使用你的数据。",
     "gmailConnected": "Gmail 已连接",
     "gmailConnectedSub": "只读权限，用于查找预订和收据",
     "gmailConnectedAsSub": "{{email}} · 只读权限，用于查找预订和收据",
@@ -189,7 +191,27 @@
     "onlineAiCloud": "联网时使用 NomadSafe Cloud（Pro）",
     "onlineAiNone": "添加你自己的密钥或升级 Pro 即可使用",
     "aiKey": "自己的 API 密钥",
-    "aiKeyNone": "未设置"
+    "aiKeyNone": "未设置",
+    "onlineAiLocalPicked": "已开启，但你选择了设备端 AI",
+    "cloudAiUsageSub": "NomadSafe Cloud 额度，每月重置",
+    "manageSubscriptionSub": "在应用商店更改或取消套餐",
+    "restoreSub": "恢复用此商店账号购买的套餐",
+    "autoLockSub": "在后台运行后锁定 NomadSafe",
+    "changePinSub": "用于解锁 NomadSafe 的 PIN",
+    "usageAnalyticsShort": "帮助改进 NomadSafe，绝不包括你的行程",
+    "privacyPolicySub": "NomadSafe 收集什么以及原因",
+    "defaultCheckInSub": "每次新签到的时长",
+    "appearanceSub": "浅色、深色或跟随手机",
+    "languageSub": "NomadSafe 使用的语言",
+    "currency": "默认货币",
+    "currencySub": "用于新行程和预算",
+    "currencyAutomatic": "自动",
+    "currencyAutomaticDetail": "手机货币：{{currency}}",
+    "currencyAutomaticValue": "自动 · {{currency}}",
+    "currencySheetSub": "新行程和预算将以此货币开始。",
+    "aiKeySub": "使用你自己的 OpenAI、Anthropic 或 Gemini 密钥",
+    "cloudBackupShort": "在新手机上找回你的行程",
+    "signOutSub": "在此手机上退出 NomadSafe"
   },
   "auth": {
     "sceneLocation": "北极圈挪威",
@@ -1340,6 +1362,7 @@
     "featureEverything": "安全、支出、分账和共享行程，全部包含",
     "featureOfflineAi": "可离线使用的设备端 AI",
     "featureOwnKey": "如有自己的 AI API 密钥，也可使用",
+    "featureNoAds": "无广告",
     "featureCloudAi": "更强大的在线 AI，用于聊天、预算、语音和行程安排",
     "featureOfflineFallback": "离线时自动切换到设备端 AI",
     "unavailable": "此设备目前无法购买。请确认已登录 Google Play，稍后再试。",
@@ -1398,5 +1421,16 @@
     "invalidKey": "服务商拒绝了此 API 密钥。",
     "invalidModel": "服务商无法识别此模型，或未接受该请求。请检查模型 ID。",
     "rateLimited": "服务商正在限制此密钥的请求频率，或额度已用完。请稍后再试。"
+  },
+  "aiSource": {
+    "cloudDetail": "Pro · 更强大，在线",
+    "byok": "你的 {{provider}} 密钥",
+    "byokDetail": "{{model}} · 在线",
+    "local": "设备端 · {{model}}",
+    "localDetail": "私密，可离线使用",
+    "pickerTitle": "回答来源",
+    "pickerSubtitle": "用于聊天和所有 AI 功能。",
+    "pickerFootnote": "如果所选的在线来源无法回答，NomadSafe 会尝试另一个，然后使用本机。选择设备端时，一切都留在手机上。导入的邮件和短信始终在手机上分类。",
+    "pickerHint": "选择由哪个 AI 回答"
   }
 }

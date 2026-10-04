@@ -1,11 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, AppState, Linking, StyleSheet, Text, View } from "react-native";
-import { AuraCard } from "@/components/aura/AuraCard";
-import { AuraListGroup, AuraListRow } from "@/components/aura/AuraList";
-import { AuraSection } from "@/components/aura/AuraSection";
-import { AuraSwitch } from "@/components/aura/AuraSwitch";
-import { useAura } from "@/components/aura/useAura";
-import { Icon } from "@/components/nomad/Icon";
+import { AuraCard, AuraListGroup, AuraListRow, AuraSection, AuraSwitch, Icon, useAura } from "@/atoms";
 import { auraStatusAccent, auraStatusColors } from "@/constants/aura";
 import { TrustedContactsEditor, type TrustedContactsSummary } from "@/features/settings/components/TrustedContactsEditor";
 import { permissionsService, type PermissionStatus } from "@/features/onboarding/services/permissions";

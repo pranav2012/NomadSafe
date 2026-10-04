@@ -2,13 +2,9 @@ import React, { useState } from "react";
 import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { PostHogMaskView } from "posthog-react-native";
+import { PrivateView } from "@/modules/analytics";
 import { LinearGradient } from "expo-linear-gradient";
-import { Icon } from "@/components/nomad/Icon";
-import { PressableScale } from "@/components/motion/PressableScale";
-import { AuraButton } from "@/components/aura/AuraButton";
-import { useAura } from "@/components/aura/useAura";
-import { useTabBarInset } from "@/components/tabbar/tabBarInset";
+import { AuraButton, Icon, PressableScale, useAura, useTabBarInset } from "@/atoms";
 import { useScrollActivity } from "@/hooks/useScrollActivity";
 import { auraStatusAccent } from "@/constants/aura";
 import { useGlobeContext } from "@/features/home/hooks/useGlobeContext";
@@ -36,7 +32,7 @@ export function EmptyHome({ tripCount, onViewTrips, onPlanTrip }: { tripCount: n
         scrollEventThrottle={16}
         contentContainerStyle={{ paddingBottom: tabBarInset + 24 }}
       >
-        <PostHogMaskView style={{ height: globeHeight + insets.top + 8 }}>
+        <PrivateView style={{ height: globeHeight + insets.top + 8 }}>
           <Animated.View entering={FadeIn.duration(600)}>
             <Globe
               stops={[]}
@@ -55,7 +51,7 @@ export function EmptyHome({ tripCount, onViewTrips, onPlanTrip }: { tripCount: n
             />
           </Animated.View>
           <LinearGradient pointerEvents="none" colors={[`${c.bg}00`, c.bg]} style={styles.globeFade} />
-        </PostHogMaskView>
+        </PrivateView>
 
         <Animated.View entering={FadeInDown.delay(250).duration(420)} style={styles.body}>
           <Text style={[styles.title, { color: c.text, fontFamily: f.semibold }]}>{t("trip.createTitle")}</Text>

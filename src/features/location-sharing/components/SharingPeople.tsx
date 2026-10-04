@@ -1,14 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Alert, Linking, Share, StyleSheet, Text, View } from "react-native";
-import { useMutation, useQuery } from "convex/react";
-import { api } from "@convex/_generated/api";
-import type { Id } from "@convex/_generated/dataModel";
-import { AuraCard } from "@/components/aura/AuraCard";
-import { AuraChip } from "@/components/aura/AuraChip";
-import { AuraSection } from "@/components/aura/AuraSection";
-import { useAura } from "@/components/aura/useAura";
-import { Icon, type IconName } from "@/components/nomad/Icon";
-import { PressableScale } from "@/components/motion/PressableScale";
+import { ActivityIndicator, Linking, Share, StyleSheet, Text, View } from "react-native";
+import { api, type Id, useMutation, useQuery } from "@/modules/backend";
+import { AuraCard, AuraChip, AuraSection, Icon, type IconName, PressableScale, showAlert, useAura } from "@/atoms";
 import { distanceKm } from "@/features/home/components/aura/globe/sun";
 import { formatDistance } from "@/features/home/utils/format";
 import { emergencyContactsStorage, normalizeEmail } from "@/features/onboarding/services/emergencyContactsStorage";
@@ -74,7 +67,7 @@ export function SharingPeople({ isBroadcasting, location, accent }: SharingPeopl
     return map;
   }, []);
 
-  const linkError = useCallback(() => Alert.alert(t("sharing.linkErrorTitle"), t("sharing.linkErrorBody")), [t]);
+  const linkError = useCallback(() => showAlert(t("sharing.linkErrorTitle"), t("sharing.linkErrorBody")), [t]);
 
   const sendInvite = useCallback((invite: { name: string; phone?: string | null; email?: string | null }) => {
     const body = t("sharing.inviteMessage", { url: PLAY_STORE_URL });
@@ -92,7 +85,7 @@ export function SharingPeople({ isBroadcasting, location, accent }: SharingPeopl
   const handleAddPerson = useCallback(async (input: { name: string; email: string; phone?: string }) => {
     const res = await requestContactLink({ name: input.name, email: input.email, phone: input.phone });
     if (res.status === "invite_pending") {
-      Alert.alert(t("sharing.notOnAppTitle", { name: input.name }), t("sharing.notOnAppBody"), [
+      showAlert(t("sharing.notOnAppTitle", { name: input.name }), t("sharing.notOnAppBody"), [
         { text: t("common.later"), style: "cancel" },
         { text: t("sharing.sendInvite"), onPress: () => sendInvite(input) },
       ]);
@@ -100,7 +93,7 @@ export function SharingPeople({ isBroadcasting, location, accent }: SharingPeopl
   }, [requestContactLink, sendInvite, t]);
 
   const confirmRemove = (linkId: Id<"contactLinks">, name: string) => {
-    Alert.alert(t("sharing.removeTitle", { name }), t("sharing.removeBody"), [
+    showAlert(t("sharing.removeTitle", { name }), t("sharing.removeBody"), [
       { text: t("common.cancel"), style: "cancel" },
       { text: t("sharing.remove"), style: "destructive", onPress: () => void removeContactLink({ linkId }).catch(linkError) },
     ]);
@@ -108,7 +101,7 @@ export function SharingPeople({ isBroadcasting, location, accent }: SharingPeopl
 
   const ping = (phone: string | undefined) => {
     if (!phone) {
-      Alert.alert(t("sharing.noPhoneTitle"), t("sharing.noPhoneBody"));
+      showAlert(t("sharing.noPhoneTitle"), t("sharing.noPhoneBody"));
       return;
     }
     const body = location

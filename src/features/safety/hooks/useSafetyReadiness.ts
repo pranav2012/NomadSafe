@@ -1,14 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, Linking, Platform } from "react-native";
 import * as Battery from "expo-battery";
-import * as Location from "expo-location";
 import { useFocusEffect } from "expo-router";
 import {
   getNotificationPermissionDetails,
   requestNotificationPermission,
 } from "../services/checkInNotifications";
 import { getContactPhones } from "../services/sosService";
-import { logger } from "@/services/logger";
+import {
+  getBackgroundPermission,
+  getForegroundPermission,
+  requestBackgroundPermission,
+  requestForegroundPermission,
+} from "@/modules/location";
+import { logger } from "@/modules/logger";
 
 export type PermissionReadiness = "granted" | "askable" | "blocked";
 
@@ -37,8 +42,8 @@ async function readBatteryOptimized(): Promise<boolean | null> {
 
 async function readReadiness(): Promise<SafetyReadiness> {
   const [foreground, background, notifications, batteryOptimized] = await Promise.all([
-    Location.getForegroundPermissionsAsync().catch(() => null),
-    Location.getBackgroundPermissionsAsync().catch(() => null),
+    getForegroundPermission().catch(() => null),
+    getBackgroundPermission().catch(() => null),
     getNotificationPermissionDetails(),
     readBatteryOptimized(),
   ]);
@@ -102,11 +107,11 @@ export function useSafetyReadiness(notificationChannelName: string) {
   );
 
   const fixForeground = useCallback(async () => {
-    const current = await Location.getForegroundPermissionsAsync().catch(() => null);
+    const current = await getForegroundPermission().catch(() => null);
     if (current && !current.granted && !current.canAskAgain) {
       await Linking.openSettings();
     } else {
-      await Location.requestForegroundPermissionsAsync().catch(() => null);
+      await requestForegroundPermission().catch(() => null);
     }
     await refresh();
   }, [refresh]);
@@ -114,9 +119,9 @@ export function useSafetyReadiness(notificationChannelName: string) {
   // Call only after the user accepted BackgroundLocationDisclosure.
   const requestBackground = useCallback(async () => {
     try {
-      const foreground = await Location.requestForegroundPermissionsAsync();
+      const foreground = await requestForegroundPermission();
       if (foreground.granted) {
-        const background = await Location.requestBackgroundPermissionsAsync();
+        const background = await requestBackgroundPermission();
         if (!background.granted && !background.canAskAgain) await Linking.openSettings();
       } else if (!foreground.canAskAgain) {
         await Linking.openSettings();

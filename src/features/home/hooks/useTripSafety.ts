@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { useAction } from "convex/react";
-import { api } from "@convex/_generated/api";
+import { api, useAction } from "@/modules/backend";
 import { areaKey, readPlacesCache, writePlacesCache } from "@/features/places/services/placesCache";
-import { logger } from "@/services/logger";
+import { logger } from "@/modules/logger";
 import type { HomeStop } from "@/features/home/types";
 
 export type SafetyKind = "hospital" | "police" | "pharmacy";

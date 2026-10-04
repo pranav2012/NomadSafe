@@ -1,29 +1,33 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Linking, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Linking, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import Constants from "expo-constants";
 import { useFocusEffect, useRouter } from "expo-router";
-import { useMutation, useQuery } from "convex/react";
-import { api } from "@convex/_generated/api";
-import { AuraListGroup, AuraListRow } from "@/components/aura/AuraList";
-import { AuraSwitch } from "@/components/aura/AuraSwitch";
-import { useAura } from "@/components/aura/useAura";
-import { Icon } from "@/components/nomad/Icon";
-import { PressableScale } from "@/components/motion/PressableScale";
+import { api, useMutation, useQuery } from "@/modules/backend";
+import {
+  AuraListGroup,
+  AuraListRow,
+  AuraOptionSheet,
+  AuraSwitch,
+  Icon,
+  PressableScale,
+  showAlert,
+  showToast,
+  useAura,
+} from "@/atoms";
 import { auraStatusAccent, auraStatusColors } from "@/constants/aura";
 import { LEGAL_URLS } from "@/constants/legal";
 import { LANGUAGE_OPTIONS, useLocalization, type SupportedLocale } from "@/localization";
-import { confirmDeviceOwner, disconnectGmail, signOutAndCleanup } from "@/services/session";
+import { currencyCodes, currencyDisplayName } from "@/utils/currency";
+import { confirmDeviceOwner, disconnectGmail, signOutAndCleanup } from "@/features/auth/services/session";
 import { disableBackup, flushGroupSync, flushSync, hasBackupOwner } from "@/features/sync";
 import { localAuth, useAuthStore, useBiometricPresentation } from "@/features/auth";
-import { useProvisioningStore } from "@/features/ai";
-import { AiKeySheet } from "@/features/ai/components/AiKeySheet";
-import { useByokStore } from "@/features/ai/services/remote/byok";
-import { byokProviderName } from "@/features/ai/utils/remoteLabel";
-import { FREE_TRIP_LIMIT, ownedTripCount, usePlan } from "@/features/billing";
-import { manageSubscriptions, restorePurchases } from "@/features/billing/services/purchases";
-import { track } from "@/services/analytics";
+import { AiKeySheet } from "@/features/ai";
+import { byokProviderName, useAiAvailability, useAiSources, useByokStore, useProvisioningStore } from "@/modules/ai";
+import { FREE_TRIP_LIMIT, manageSubscriptions, ownedTripCount, restorePurchases, usePlan } from "@/modules/billing";
+import { track } from "@/modules/analytics";
+import { showAdPrivacyOptions, useAdsStore } from "@/modules/ads";
 import { useTripsStore } from "@/features/trips/store/tripsStore";
 import { hasGmailGrant, hydrateGmailConnection, useGmailConnectionStore } from "@/features/expenses/store/gmailConnectionStore";
 import { ensureGmailAccountEmail } from "@/features/expenses/services/gmailAuth";
@@ -31,7 +35,6 @@ import { useSettingsStore } from "@/features/settings";
 import { emergencyContactsStorage } from "@/features/onboarding/services/emergencyContactsStorage";
 import { exportEverything } from "@/features/settings/services/exportService";
 import { wipeAllDeviceData } from "@/features/settings/services/wipeService";
-import { SettingsOptionSheet } from "@/features/settings/components/SettingsOptionSheet";
 import { SettingsProfileHeader } from "@/features/settings/components/SettingsProfileHeader";
 import { SmsTemplatesSheet } from "@/features/settings/components/SmsTemplatesSheet";
 
@@ -42,7 +45,7 @@ const [INDIGO, TEAL, VIOLET] = auraStatusColors.calm;
 const AMBER = auraStatusAccent.live;
 
 type ThemeMode = "light" | "dark" | "system";
-type SheetId = "autoLock" | "checkIn" | "appearance" | "language" | "sms" | "aiKey";
+type SheetId = "autoLock" | "checkIn" | "appearance" | "language" | "currency" | "sms" | "aiKey";
 type Translate = ReturnType<typeof useLocalization>["t"];
 
 function formatShortDuration(seconds: number, t: Translate): string {
@@ -74,7 +77,7 @@ export default function SettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { c, f, isDark } = useAura();
-  const { t, locale, deviceLocale } = useLocalization();
+  const { t, locale, deviceLocale, deviceCurrency } = useLocalization();
 
   const user = useAuthStore((s) => s.user);
   const isPinSet = useAuthStore((s) => s.isPinSet);
@@ -89,6 +92,8 @@ export default function SettingsScreen() {
   const setThemeMode = useSettingsStore((s) => s.setThemeMode);
   const localeOverride = useSettingsStore((s) => s.localeOverride);
   const setLocaleOverride = useSettingsStore((s) => s.setLocaleOverride);
+  const currencyOverride = useSettingsStore((s) => s.currencyOverride);
+  const setCurrencyOverride = useSettingsStore((s) => s.setCurrencyOverride);
   const tripModeEnabled = useSettingsStore((s) => s.tripModeEnabled);
   const setTripModeEnabled = useSettingsStore((s) => s.setTripModeEnabled);
   const defaultCheckInDuration = useSettingsStore((s) => s.defaultCheckInDuration);
@@ -98,7 +103,10 @@ export default function SettingsScreen() {
   const onlineAiEnabled = useSettingsStore((s) => s.onlineAiEnabled);
   const setOnlineAiEnabled = useSettingsStore((s) => s.setOnlineAiEnabled);
   const byok = useByokStore((s) => s.summary);
+  const onlineAiSource = useAiAvailability().configured;
+  const aiPick = useAiSources().selected;
   const plan = usePlan();
+  const adChoicesRequired = useAdsStore((s) => s.privacyOptionsRequired);
   const cloudUsage = useQuery(api.ai.myUsage, plan.cloudAi ? {} : "skip");
   const analyticsEnabled = useSettingsStore((s) => s.analyticsEnabled);
   const setAnalyticsEnabled = useSettingsStore((s) => s.setAnalyticsEnabled);
@@ -174,17 +182,26 @@ export default function SettingsScreen() {
     ...LANGUAGE_OPTIONS.map((option) => ({ value: option.locale, label: option.nativeLabel })),
   ];
 
+  const currencyOptions: { value: string | null; label: string; detail?: string }[] = [
+    { value: null, label: t("settings.currencyAutomatic"), detail: t("settings.currencyAutomaticDetail", { currency: deviceCurrency }) },
+    ...currencyCodes(deviceCurrency, currencyOverride ?? deviceCurrency).map((code) => ({
+      value: code,
+      label: `${code} · ${currencyDisplayName(code, locale)}`,
+    })),
+  ];
+  const currencyValue = currencyOverride ?? t("settings.currencyAutomaticValue", { currency: deviceCurrency });
+
   const toggleBiometric = (value: boolean) => {
     if (!value) {
       setBiometricEnabled(false);
       return;
     }
     if (!biometricAvailable) {
-      Alert.alert(t("settings.biometricNotSetUpTitle"), t("settings.biometricNotSetUpBody"));
+      showAlert(t("settings.biometricNotSetUpTitle"), t("settings.biometricNotSetUpBody"));
       return;
     }
     if (!isPinSet) {
-      Alert.alert(t("settings.setPinFirstTitle"), t("settings.setPinFirstBody"), [
+      showAlert(t("settings.setPinFirstTitle"), t("settings.setPinFirstBody"), [
         { text: t("common.cancel"), style: "cancel" },
         { text: t("common.continue"), onPress: () => router.push("/(auth)/setup-pin?from=settings") },
       ]);
@@ -195,7 +212,7 @@ export default function SettingsScreen() {
 
   const handleExport = () => {
     if (exporting) return;
-    Alert.alert(t("settings.exportEverything"), t("settings.exportEverythingSub"), [
+    showAlert(t("settings.exportEverything"), t("settings.exportEverythingSub"), [
       { text: t("common.cancel"), style: "cancel" },
       {
         text: t("common.continue"),
@@ -203,9 +220,9 @@ export default function SettingsScreen() {
           setExporting(true);
           try {
             const shared = await exportEverything();
-            if (!shared) Alert.alert(t("settings.exportUnavailableTitle"), t("settings.exportUnavailableBody"));
+            if (!shared) showAlert(t("settings.exportUnavailableTitle"), t("settings.exportUnavailableBody"));
           } catch {
-            Alert.alert(t("settings.exportFailedTitle"), t("settings.exportFailedBody"));
+            showAlert(t("settings.exportFailedTitle"), t("settings.exportFailedBody"));
           } finally {
             setExporting(false);
           }
@@ -216,7 +233,7 @@ export default function SettingsScreen() {
 
   const handleWipe = () => {
     if (wiping) return;
-    Alert.alert(t("settings.wipeConfirmTitle"), t("settings.wipeConfirmBody"), [
+    showAlert(t("settings.wipeConfirmTitle"), t("settings.wipeConfirmBody"), [
       { text: t("common.cancel"), style: "cancel" },
       {
         text: t("common.delete"),
@@ -229,7 +246,7 @@ export default function SettingsScreen() {
             await wipeAllDeviceData();
             router.replace("/(auth)/sign-in");
           } catch {
-            Alert.alert(t("settings.wipeFailedTitle"), t("settings.wipeFailedBody"));
+            showAlert(t("settings.wipeFailedTitle"), t("settings.wipeFailedBody"));
           } finally {
             setWiping(false);
           }
@@ -246,7 +263,7 @@ export default function SettingsScreen() {
   // Backed-up and shared data leaves the phone on sign-out, so make sure pending changes reached the account first.
   const handleSignOut = () => {
     const backedUp = hasBackupOwner();
-    Alert.alert(t("settings.signOutTitle"), t(backedUp ? "settings.signOutBodyBackedUp" : "settings.signOutBody"), [
+    showAlert(t("settings.signOutTitle"), t(backedUp ? "settings.signOutBodyBackedUp" : "settings.signOutBody"), [
       { text: t("common.cancel"), style: "cancel" },
       {
         text: t("settings.signOut"),
@@ -255,7 +272,7 @@ export default function SettingsScreen() {
           // Shared trips leave the phone on sign-out too, so their pending changes count as well.
           const sent = (await flushGroupSync()) && (!backedUp || (await flushSync()));
           if (!sent) {
-            Alert.alert(t("settings.signOutUnsyncedTitle"), t("settings.signOutUnsyncedBody"), [
+            showAlert(t("settings.signOutUnsyncedTitle"), t("settings.signOutUnsyncedBody"), [
               { text: t("common.cancel"), style: "cancel" },
               { text: t("settings.signOutAnyway"), style: "destructive", onPress: () => void signOutNow() },
             ]);
@@ -272,7 +289,7 @@ export default function SettingsScreen() {
       setCloudBackupEnabled(true);
       return;
     }
-    Alert.alert(t("settings.cloudBackupOffTitle"), t("settings.cloudBackupOffBody"), [
+    showAlert(t("settings.cloudBackupOffTitle"), t("settings.cloudBackupOffBody"), [
       { text: t("common.cancel"), style: "cancel" },
       {
         text: t("settings.cloudBackupOffConfirm"),
@@ -283,7 +300,7 @@ export default function SettingsScreen() {
             await disableBackup();
             setCloudBackupEnabled(false);
           } catch {
-            Alert.alert(t("settings.cloudBackupOffFailed"));
+            showAlert(t("settings.cloudBackupOffFailed"));
           } finally {
             setBackupBusy(false);
           }
@@ -294,7 +311,7 @@ export default function SettingsScreen() {
 
   const handleDeleteAccount = () => {
     if (deleting) return;
-    Alert.alert(t("settings.deleteAccountTitle"), t("settings.deleteAccountBody"), [
+    showAlert(t("settings.deleteAccountTitle"), t("settings.deleteAccountBody"), [
       { text: t("common.cancel"), style: "cancel" },
       {
         text: t("settings.deleteAccountConfirm"),
@@ -307,14 +324,14 @@ export default function SettingsScreen() {
             await deleteAccount({});
           } catch {
             setDeleting(false);
-            Alert.alert(t("settings.deleteAccountFailedTitle"), t("settings.deleteAccountFailedBody"));
+            showAlert(t("settings.deleteAccountFailedTitle"), t("settings.deleteAccountFailedBody"));
             return;
           }
           try {
             await wipeAllDeviceData();
           } catch {}
           setDeleting(false);
-          Alert.alert(t("settings.deleteAccountDoneTitle"), t("settings.deleteAccountDoneBody"));
+          showToast(t("settings.deleteAccountDoneTitle"), t("settings.deleteAccountDoneBody"));
           router.replace("/(auth)/sign-in");
         },
       },
@@ -322,7 +339,7 @@ export default function SettingsScreen() {
   };
 
   const handleDisconnectGmail = () => {
-    Alert.alert(t("settings.gmailDisconnectTitle"), t("settings.gmailDisconnectBody"), [
+    showAlert(t("settings.gmailDisconnectTitle"), t("settings.gmailDisconnectBody"), [
       { text: t("common.cancel"), style: "cancel" },
       {
         text: t("settings.gmailDisconnect"),
@@ -340,12 +357,10 @@ export default function SettingsScreen() {
     try {
       const restored = await restorePurchases();
       track("purchases_restored", { tier: restored });
-      Alert.alert(
-        restored === "free" ? t("paywall.restoreNoneTitle") : t("paywall.restoreDoneTitle"),
-        restored === "free" ? t("paywall.restoreNoneBody") : t(restored === "pro" ? "paywall.restoreDonePro" : "paywall.restoreDonePlus"),
-      );
+      if (restored === "free") showAlert(t("paywall.restoreNoneTitle"), t("paywall.restoreNoneBody"));
+      else showToast(t("paywall.restoreDoneTitle"), t(restored === "pro" ? "paywall.restoreDonePro" : "paywall.restoreDonePlus"));
     } catch {
-      Alert.alert(t("paywall.failedTitle"), t("paywall.restoreFailedBody"));
+      showAlert(t("paywall.failedTitle"), t("paywall.restoreFailedBody"));
     } finally {
       setRestoring(false);
     }
@@ -365,11 +380,13 @@ export default function SettingsScreen() {
   const cloudLeft = cloudUsage ? Math.max(0, cloudUsage.chat.limit - cloudUsage.chat.used) : null;
   const onlineAiDetail = !onlineAiEnabled
     ? t("settings.onlineAiOff")
-    : byok
-      ? t("settings.onlineAiByok", { provider: byokProviderName(byok) })
-      : plan.cloudAi
-        ? t("settings.onlineAiCloud")
-        : t("settings.onlineAiNone");
+    : aiPick === "local"
+      ? t("settings.onlineAiLocalPicked")
+      : onlineAiSource === "byok" && byok
+        ? t("settings.onlineAiByok", { provider: byokProviderName(byok) })
+        : onlineAiSource === "cloud"
+          ? t("settings.onlineAiCloud")
+          : t("settings.onlineAiNone");
 
   const spinner = (color: string) => <ActivityIndicator color={color} />;
 
@@ -411,16 +428,22 @@ export default function SettingsScreen() {
               icon="sparkle"
               tone={TEAL}
               label={t("settings.cloudAiUsage")}
+              detail={t("settings.cloudAiUsageSub")}
               value={t("settings.cloudAiLeft", { count: cloudLeft })}
             />
           ) : null}
           {plan.tier !== "free" ? (
-            <AuraListRow icon="settings" label={t("settings.manageSubscription")} onPress={() => void manageSubscriptions().catch(() => {})} />
+            <AuraListRow
+              icon="settings"
+              label={t("settings.manageSubscription")}
+              detail={t("settings.manageSubscriptionSub")}
+              onPress={() => void manageSubscriptions().catch(() => {})} />
           ) : null}
           {plan.billingAvailable ? (
             <AuraListRow
               icon="download"
               label={t("paywall.restore")}
+              detail={t("settings.restoreSub")}
               trailing={restoring ? spinner(c.textMuted) : undefined}
               onPress={() => void handleRestore()}
             />
@@ -447,12 +470,18 @@ export default function SettingsScreen() {
               icon="lock"
               tone={INDIGO}
               label={t("settings.autoLock")}
+              detail={t("settings.autoLockSub")}
               value={formatAutoLock(autoLockTimeout, t)}
               onPress={() => setSheet("autoLock")}
             />
           ) : null}
           {isPinSet ? (
-            <AuraListRow icon="edit" label={t("settings.changePin")} onPress={() => router.push("/(auth)/setup-pin?from=settings")} />
+            <AuraListRow
+              icon="edit"
+              label={t("settings.changePin")}
+              detail={t("settings.changePinSub")}
+              onPress={() => router.push("/(auth)/setup-pin?from=settings")}
+            />
           ) : null}
           {gmailConnected ? (
             <AuraListRow
@@ -471,11 +500,25 @@ export default function SettingsScreen() {
             icon="trendUp"
             tone={INDIGO}
             label={t("settings.usageAnalytics")}
+            detail={t("settings.usageAnalyticsShort")}
             trailing={
               <AuraSwitch value={analyticsEnabled} onValueChange={setAnalyticsEnabled} accessibilityLabel={t("settings.usageAnalytics")} />
             }
           />
-          <AuraListRow icon="info" label={t("settings.privacyPolicy")} onPress={() => Linking.openURL(LEGAL_URLS.privacy).catch(() => {})} />
+          {plan.tier === "free" && adChoicesRequired ? (
+            <AuraListRow
+              icon="shield"
+              tone={TEAL}
+              label={t("settings.adPrivacyChoices")}
+              detail={t("settings.adPrivacyChoicesSub")}
+              onPress={() => void showAdPrivacyOptions()}
+            />
+          ) : null}
+          <AuraListRow
+            icon="info"
+            label={t("settings.privacyPolicy")}
+            detail={t("settings.privacyPolicySub")}
+            onPress={() => Linking.openURL(LEGAL_URLS.privacy).catch(() => {})} />
         </AuraListGroup>
 
         <AuraListGroup title={t("settings.safetySection")}>
@@ -484,6 +527,7 @@ export default function SettingsScreen() {
             icon="clock"
             tone={TEAL}
             label={t("settings.defaultCheckIn")}
+            detail={t("settings.defaultCheckInSub")}
             value={formatShortDuration(defaultCheckInDuration, t)}
             onPress={() => setSheet("checkIn")}
           />
@@ -497,13 +541,29 @@ export default function SettingsScreen() {
         </AuraListGroup>
 
         <AuraListGroup title={t("settings.appearanceLanguageSection")}>
-          <AuraListRow icon="sparkle" tone={VIOLET} label={t("settings.appearance")} value={themeLabel} onPress={() => setSheet("appearance")} />
+          <AuraListRow
+            icon="sparkle"
+            tone={VIOLET}
+            label={t("settings.appearance")}
+            detail={t("settings.appearanceSub")}
+            value={themeLabel}
+            onPress={() => setSheet("appearance")}
+          />
           <AuraListRow
             icon="globe"
             tone={INDIGO}
             label={t("settings.language")}
+            detail={t("settings.languageSub")}
             value={localeOverride ? nativeLanguageName(localeOverride) : t("settings.languageSystem")}
             onPress={() => setSheet("language")}
+          />
+          <AuraListRow
+            icon="wallet"
+            tone={TEAL}
+            label={t("settings.currency")}
+            detail={t("settings.currencySub")}
+            value={currencyValue}
+            onPress={() => setSheet("currency")}
           />
         </AuraListGroup>
 
@@ -549,6 +609,7 @@ export default function SettingsScreen() {
             icon="lock"
             tone={AMBER}
             label={t("settings.aiKey")}
+            detail={t("settings.aiKeySub")}
             value={byok ? byokProviderName(byok) : t("settings.aiKeyNone")}
             onPress={openKeySheet}
           />
@@ -559,6 +620,7 @@ export default function SettingsScreen() {
             icon="globe"
             tone={TEAL}
             label={t("settings.cloudBackup")}
+            detail={t("settings.cloudBackupShort")}
             trailing={
               backupBusy ? (
                 spinner(c.textMuted)
@@ -585,7 +647,7 @@ export default function SettingsScreen() {
         </AuraListGroup>
 
         <AuraListGroup title={t("settings.accountSection")}>
-          <AuraListRow icon="logout" label={t("settings.signOut")} detail={user?.email ?? user?.phone} onPress={handleSignOut} />
+          <AuraListRow icon="logout" label={t("settings.signOut")} detail={user?.email ?? user?.phone ?? t("settings.signOutSub")} onPress={handleSignOut} />
           <AuraListRow
             icon="trash"
             destructive
@@ -606,7 +668,7 @@ export default function SettingsScreen() {
         </View>
       </ScrollView>
 
-      <SettingsOptionSheet
+      <AuraOptionSheet
         visible={sheet === "autoLock"}
         onClose={closeSheet}
         title={t("settings.autoLock")}
@@ -615,7 +677,7 @@ export default function SettingsScreen() {
         selected={autoLockTimeout}
         onSelect={setAutoLockTimeout}
       />
-      <SettingsOptionSheet
+      <AuraOptionSheet
         visible={sheet === "checkIn"}
         onClose={closeSheet}
         title={t("settings.defaultCheckIn")}
@@ -624,7 +686,7 @@ export default function SettingsScreen() {
         selected={defaultCheckInDuration}
         onSelect={setDefaultCheckInDuration}
       />
-      <SettingsOptionSheet
+      <AuraOptionSheet
         visible={sheet === "appearance"}
         onClose={closeSheet}
         title={t("settings.appearance")}
@@ -632,7 +694,7 @@ export default function SettingsScreen() {
         selected={themeMode}
         onSelect={setThemeMode}
       />
-      <SettingsOptionSheet
+      <AuraOptionSheet
         visible={sheet === "language"}
         onClose={closeSheet}
         title={t("settings.language")}
@@ -640,6 +702,15 @@ export default function SettingsScreen() {
         selected={localeOverride}
         onSelect={setLocaleOverride}
         footnote={t("settings.languageRtlNote")}
+      />
+      <AuraOptionSheet
+        visible={sheet === "currency"}
+        onClose={closeSheet}
+        title={t("settings.currency")}
+        subtitle={t("settings.currencySheetSub")}
+        options={currencyOptions}
+        selected={currencyOverride}
+        onSelect={setCurrencyOverride}
       />
       <SmsTemplatesSheet visible={sheet === "sms"} onClose={closeSheet} />
       <AiKeySheet key={keySheetSession} visible={sheet === "aiKey"} onClose={closeSheet} />

@@ -2,14 +2,10 @@ import React, { useState } from "react";
 import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { PostHogMaskView } from "posthog-react-native";
+import { PrivateView } from "@/modules/analytics";
 import { LinearGradient } from "expo-linear-gradient";
-import { Icon } from "@/components/nomad/Icon";
-import { AuraButton } from "@/components/aura/AuraButton";
+import { AuraButton, Icon, PressableScale, RollingNumber, useTabBarInset } from "@/atoms";
 import { useGmailStatus } from "@/features/expenses/hooks/useGmailStatus";
-import { PressableScale } from "@/components/motion/PressableScale";
-import { RollingNumber } from "@/components/motion/RollingNumber";
-import { useTabBarInset } from "@/components/tabbar/tabBarInset";
 import { useScrollActivity } from "@/hooks/useScrollActivity";
 import { auraDark, auraFonts as f, auraLight, auraStatusAccent, auraStatusColors, type AuraStatus } from "@/constants/aura";
 import { useGlobeContext } from "@/features/home/hooks/useGlobeContext";
@@ -192,7 +188,7 @@ export function TripHome({
           </PressableScale>
         </View>
 
-        <PostHogMaskView style={StyleSheet.absoluteFill}>
+        <PrivateView style={StyleSheet.absoluteFill}>
           {hero.mode === "globe" ? (
             <Animated.View
               key={hero.entry ? `globe-${hero.entry.latitude}` : "globe"}
@@ -239,7 +235,7 @@ export function TripHome({
               />
             </Animated.View>
           )}
-        </PostHogMaskView>
+        </PrivateView>
         {hero.mode === "globe" ? (
           <LinearGradient pointerEvents="none" colors={[`${c.bg}00`, c.bg]} style={styles.heroFade} />
         ) : null}
@@ -266,9 +262,9 @@ export function TripHome({
           </Animated.View>
         ) : null}
 
-        <PostHogMaskView style={styles.passWrap}>
+        <PrivateView style={styles.passWrap}>
           <BoardingPass data={data} palette={c} accent={accent} gradient={auraStatusColors[status]} isDark={isDark} emergency={emergency} scrolling={scrolling} />
-        </PostHogMaskView>
+        </PrivateView>
 
         <View style={styles.body}>
           <DayRail

@@ -15,7 +15,7 @@ import {
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { Easing, useDerivedValue, useSharedValue, withDelay, withSpring, withTiming } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
-import { springs } from "@/components/motion/springs";
+import { springs } from "@/atoms";
 import { selectionChanged } from "@/utils/haptics";
 
 interface SpendChartProps {

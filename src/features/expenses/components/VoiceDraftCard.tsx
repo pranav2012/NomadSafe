@@ -1,9 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { AuraButton } from "@/components/aura/AuraButton";
-import { useAura } from "@/components/aura/useAura";
-import { Icon } from "@/components/nomad/Icon";
-import { PressableScale } from "@/components/motion/PressableScale";
+import { AuraButton, Icon, PressableScale, useAura } from "@/atoms";
 import { auraCategoryColors, auraStatusAccent } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { getCategoryMeta } from "@/features/expenses/constants/categories";

@@ -23,7 +23,7 @@ import {
 } from "@/features/expenses/services/currencyConversion";
 import { translate } from "@/localization/translate";
 import { isPreTripBooking, tripMatchReason } from "@/features/expenses/services/tripEmailFilter";
-import { countAttributes, logger } from "@/services/logger";
+import { countAttributes, logger } from "@/modules/logger";
 
 // Local model calls are slow; only unmatched candidates use it, capped per import.
 const MAX_MODEL_CALLS = 20;

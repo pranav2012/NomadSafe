@@ -11,8 +11,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { useAnimationsActive } from "@/hooks/useAnimationsActive";
-import { Icon, type IconName } from "@/components/nomad/Icon";
-import { PressableScale } from "@/components/motion/PressableScale";
+import { Icon, type IconName, PressableScale } from "@/atoms";
 import { auraFonts, type AuraPalette } from "@/constants/aura";
 
 interface ActionButtonProps {

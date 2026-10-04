@@ -1,10 +1,7 @@
 import React, { type RefObject } from "react";
 import { StyleSheet, Text, TextInput, View, type LayoutChangeEvent } from "react-native";
 import Svg, { Path } from "react-native-svg";
-import { useAura } from "@/components/aura/useAura";
-import { Icon } from "@/components/nomad/Icon";
-import { PressableScale } from "@/components/motion/PressableScale";
-import { GlassSurface } from "@/components/tabbar/GlassSurface";
+import { GlassSurface, Icon, PressableScale, useAura } from "@/atoms";
 import { useLocalization } from "@/localization";
 
 export const MAX_INPUT = 300;
@@ -23,6 +20,8 @@ interface Props {
   busyElsewhere: boolean;
   modelName: string | null;
   online?: boolean;
+  /** Opens the AI source picker; when set, the status line is tappable. */
+  onPickSource?: () => void;
   blurTarget?: RefObject<View | null>;
   onLayout?: (event: LayoutChangeEvent) => void;
 }
@@ -48,12 +47,23 @@ export function AiComposer({
   busyElsewhere,
   modelName,
   online = false,
+  onPickSource,
   blurTarget,
   onLayout,
 }: Props) {
   const { c, f, isDark } = useAura();
   const { t } = useLocalization();
   const canSend = value.trim().length > 0 && !busy;
+  const privacy = t(online ? "aiTab.composer.online" : "aiTab.composer.private");
+  const status = modelName ? `${t("aiTab.chatModel", { model: modelName })} · ${privacy}` : privacy;
+  const statusContent = (
+    <>
+      <Icon name={online ? "globe" : "lock"} size={11} color={c.textMuted} strokeWidth={2} />
+      <Text numberOfLines={1} style={[styles.metaText, styles.shrink, { color: c.textMuted, fontFamily: f.regular }]}>
+        {status}
+      </Text>
+    </>
+  );
 
   return (
     <View style={[styles.wrap, { bottom }]} pointerEvents="box-none" onLayout={onLayout}>
@@ -100,12 +110,21 @@ export function AiComposer({
             </Text>
           ) : (
             <View style={[styles.metaLeft, styles.flex]}>
-              <Icon name={online ? "globe" : "lock"} size={11} color={c.textMuted} strokeWidth={2} />
-              <Text numberOfLines={1} style={[styles.metaText, styles.flex, { color: c.textMuted, fontFamily: f.regular }]}>
-                {modelName
-                  ? `${t("aiTab.chatModel", { model: modelName })} · ${t(online ? "aiTab.composer.online" : "aiTab.composer.private")}`
-                  : t(online ? "aiTab.composer.online" : "aiTab.composer.private")}
-              </Text>
+              {onPickSource ? (
+                <PressableScale
+                  onPress={onPickSource}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel={status}
+                  accessibilityHint={t("aiSource.pickerHint")}
+                  style={[styles.metaLeft, styles.shrink]}
+                >
+                  {statusContent}
+                  <Icon name="chevronDown" size={11} color={c.textMuted} strokeWidth={2} />
+                </PressableScale>
+              ) : (
+                statusContent
+              )}
             </View>
           )}
           {value.length >= COUNTER_FROM ? (
@@ -121,6 +140,7 @@ export function AiComposer({
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
+  shrink: { flexShrink: 1 },
   wrap: { position: "absolute", left: 12, right: 12 },
   panel: {
     borderRadius: RADIUS,

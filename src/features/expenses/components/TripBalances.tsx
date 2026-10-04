@@ -1,16 +1,19 @@
 import React, { useMemo, useState } from "react";
-import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
-import { AuraButton } from "@/components/aura/AuraButton";
-import { AuraCard } from "@/components/aura/AuraCard";
-import { AuraChip } from "@/components/aura/AuraChip";
-import { AuraField } from "@/components/aura/AuraField";
-import { AuraSection } from "@/components/aura/AuraSection";
-import { AuraSheet } from "@/components/aura/AuraSheet";
-import { useAura } from "@/components/aura/useAura";
-import { PressableScale } from "@/components/motion/PressableScale";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  AuraButton,
+  AuraCard,
+  AuraChip,
+  AuraField,
+  AuraSection,
+  AuraSheet,
+  PressableScale,
+  showAlert,
+  useAura,
+} from "@/atoms";
 import { auraStatusAccent } from "@/constants/aura";
 import { useLocalization } from "@/localization";
-import { track } from "@/services/analytics";
+import { track } from "@/modules/analytics";
 import type { Trip } from "@/features/trips/store/tripsStore";
 import { useExpensesStore } from "@/features/expenses/store/expensesStore";
 import { useConvertedExpenses } from "@/features/expenses/hooks/useTripExpenseSummary";
@@ -68,7 +71,7 @@ export function TripBalances({ trip }: { trip: Trip }) {
   const others = everyone.filter((person) => person !== SELF_ID);
 
   const confirmDelete = (id: string) =>
-    Alert.alert(t("split.deletePaymentTitle"), t("split.deletePaymentBody"), [
+    showAlert(t("split.deletePaymentTitle"), t("split.deletePaymentBody"), [
       { text: t("common.cancel"), style: "cancel" },
       { text: t("common.delete"), style: "destructive", onPress: () => deleteSettlement(id) },
     ]);
@@ -202,7 +205,7 @@ function SettleUpSheet({
   const save = () => {
     const value = parseAmountInput(amount, decimalSeparator);
     if (!Number.isFinite(value) || value <= 0 || from === to) {
-      Alert.alert(t("expenses.validationTitle"), t("split.paymentValidation"));
+      showAlert(t("expenses.validationTitle"), t("split.paymentValidation"));
       return;
     }
     addSettlement({

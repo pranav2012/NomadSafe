@@ -1,4 +1,6 @@
-const siteUrl = process.env.EXPO_PUBLIC_CONVEX_SITE_URL ?? "";
+import { backendSiteUrl } from "@/modules/backend";
+
+const siteUrl = backendSiteUrl ?? "";
 
 export const LEGAL_URLS = {
   privacy: `${siteUrl}/privacy`,

@@ -1,31 +1,27 @@
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Linking, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Linking, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { PurchasesPackage } from "react-native-purchases";
-import { AuraButton } from "@/components/aura/AuraButton";
-import { AuraCard } from "@/components/aura/AuraCard";
-import { AuraSegmented } from "@/components/aura/AuraSegmented";
-import { useAura } from "@/components/aura/useAura";
-import { Icon } from "@/components/nomad/Icon";
-import { PressableScale } from "@/components/motion/PressableScale";
+import { AuraButton, AuraCard, AuraSegmented, Icon, PressableScale, showAlert, showToast, useAura } from "@/atoms";
 import { auraStatusColors } from "@/constants/aura";
 import { LEGAL_URLS } from "@/constants/legal";
 import { useLocalization } from "@/localization";
-import { logger } from "@/services/logger";
-import { track } from "@/services/analytics";
+import { logger } from "@/modules/logger";
+import { track } from "@/modules/analytics";
 import { selectionChanged, successNotification } from "@/utils/haptics";
-import { usePlan } from "../hooks/usePlan";
-import { FREE_TRIP_LIMIT, type PlanTier } from "../utils/plan";
 import {
+  FREE_TRIP_LIMIT,
   PACKAGE_IDS,
   freeTrialDays,
   introEligibleProducts,
   loadPackages,
   purchase,
   restorePurchases,
+  usePlan,
   type PackageId,
-} from "../services/purchases";
+  type PlanTier,
+  type PurchasesPackage,
+} from "@/modules/billing";
 
 type PaidTier = Exclude<PlanTier, "free">;
 type Reason = "trips" | "ai" | "settings";
@@ -101,8 +97,8 @@ export default function PaywallScreen() {
 
   const features =
     tier === "plus"
-      ? [t("paywall.featureUnlimitedTrips"), t("paywall.featureEverything"), t("paywall.featureOfflineAi"), t("paywall.featureOwnKey")]
-      : [t("paywall.featureUnlimitedTrips"), t("paywall.featureCloudAi"), t("paywall.featureOfflineFallback"), t("paywall.featureOwnKey")];
+      ? [t("paywall.featureUnlimitedTrips"), t("paywall.featureNoAds"), t("paywall.featureEverything"), t("paywall.featureOfflineAi"), t("paywall.featureOwnKey")]
+      : [t("paywall.featureUnlimitedTrips"), t("paywall.featureNoAds"), t("paywall.featureCloudAi"), t("paywall.featureOfflineFallback"), t("paywall.featureOwnKey")];
 
   const title =
     reason === "trips"
@@ -119,11 +115,11 @@ export default function PaywallScreen() {
       if (outcome === "cancelled") return;
       track("purchase_completed", { tier, period: periodOf(selected), trial: trialDays !== null });
       successNotification();
-      Alert.alert(t("paywall.thanksTitle"), tier === "pro" ? t("paywall.thanksPro") : t("paywall.thanksPlus"));
+      showToast(t("paywall.thanksTitle"), tier === "pro" ? t("paywall.thanksPro") : t("paywall.thanksPlus"));
       router.back();
     } catch (error) {
       logger.warn("paywall", "purchase failed", error);
-      Alert.alert(t("paywall.failedTitle"), t("paywall.failedBody"));
+      showAlert(t("paywall.failedTitle"), t("paywall.failedBody"));
     } finally {
       setBusy(null);
     }
@@ -136,14 +132,14 @@ export default function PaywallScreen() {
       const restored = await restorePurchases();
       track("purchases_restored", { tier: restored });
       if (restored === "free") {
-        Alert.alert(t("paywall.restoreNoneTitle"), t("paywall.restoreNoneBody"));
+        showAlert(t("paywall.restoreNoneTitle"), t("paywall.restoreNoneBody"));
       } else {
-        Alert.alert(t("paywall.restoreDoneTitle"), t(restored === "pro" ? "paywall.restoreDonePro" : "paywall.restoreDonePlus"));
+        showToast(t("paywall.restoreDoneTitle"), t(restored === "pro" ? "paywall.restoreDonePro" : "paywall.restoreDonePlus"));
         router.back();
       }
     } catch (error) {
       logger.warn("paywall", "restore failed", error);
-      Alert.alert(t("paywall.failedTitle"), t("paywall.restoreFailedBody"));
+      showAlert(t("paywall.failedTitle"), t("paywall.restoreFailedBody"));
     } finally {
       setBusy(null);
     }

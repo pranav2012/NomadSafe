@@ -1,3 +1,6 @@
+// The widget library calls these as plain functions, which the React Compiler's hooks break.
+"use no memo";
+
 import React from "react";
 import type { WidgetTaskHandlerProps } from "react-native-android-widget";
 import { SOS_WIDGET_NAME, SosWidget } from "@/features/widget/SosWidget";

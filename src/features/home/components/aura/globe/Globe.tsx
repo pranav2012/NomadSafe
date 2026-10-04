@@ -31,8 +31,7 @@ import Animated, {
   type SharedValue,
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
-import { springs } from "@/components/motion/springs";
-import { useAura } from "@/components/aura/useAura";
+import { springs, useAura } from "@/atoms";
 import { useAnimationsActive } from "@/hooks/useAnimationsActive";
 import { useGlobeWeather } from "@/features/home/hooks/useGlobeWeather";
 import { detailBoxFor, getRegionImagery, type DetailBox } from "@/features/home/services/globeImagery";

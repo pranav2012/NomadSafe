@@ -1,7 +1,13 @@
-import * as Location from "expo-location";
 import type { ExpenseLocation } from "@/features/expenses/store/expensesStore";
+import {
+  getCurrentPosition,
+  getForegroundPermission,
+  requestForegroundPermission,
+  reverseGeocode,
+  type GeocodedPlace,
+} from "@/modules/location";
 
-function buildLabel(place: Location.LocationGeocodedAddress): string | undefined {
+function buildLabel(place: GeocodedPlace): string | undefined {
   const parts = [
     place.name && place.name !== place.street ? place.name : null,
     place.city ?? place.subregion,
@@ -18,25 +24,23 @@ function buildLabel(place: Location.LocationGeocodedAddress): string | undefined
  */
 export async function getCurrentExpenseLocation(): Promise<ExpenseLocation | null> {
   try {
-    const existing = await Location.getForegroundPermissionsAsync();
+    const existing = await getForegroundPermission();
     let granted = existing.granted;
     if (!granted && existing.canAskAgain) {
-      const requested = await Location.requestForegroundPermissionsAsync();
+      const requested = await requestForegroundPermission();
       granted = requested.granted;
     }
     if (!granted) return null;
 
-    const position = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.Balanced,
-    });
+    const position = await getCurrentPosition("balanced");
 
     const location: ExpenseLocation = {
-      latitude: position.coords.latitude,
-      longitude: position.coords.longitude,
+      latitude: position.latitude,
+      longitude: position.longitude,
     };
 
     try {
-      const places = await Location.reverseGeocodeAsync({
+      const places = await reverseGeocode({
         latitude: location.latitude,
         longitude: location.longitude,
       });

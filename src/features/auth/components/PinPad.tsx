@@ -1,8 +1,6 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { useAura } from "@/components/aura/useAura";
-import { PressableScale } from "@/components/motion/PressableScale";
-import { Icon } from "@/components/nomad/Icon";
+import { Icon, PressableScale, useAura } from "@/atoms";
 import { useLocalization } from "@/localization";
 
 const ROWS = [

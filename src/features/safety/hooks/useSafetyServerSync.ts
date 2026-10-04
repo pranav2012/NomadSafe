@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useConvexAuth } from "convex/react";
+import { useConvexAuth } from "@/modules/backend";
 import { syncCheckInDeadline } from "../services/safetyServerAlerts";
 import { useSafetyStore } from "../store/safetyStore";
 

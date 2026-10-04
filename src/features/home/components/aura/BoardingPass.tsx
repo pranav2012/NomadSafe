@@ -28,15 +28,11 @@ import Animated, {
   type SharedValue,
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
-import { Icon } from "@/components/nomad/Icon";
-import { PressableScale } from "@/components/motion/PressableScale";
-import { springs } from "@/components/motion/springs";
+import { Icon, LiveDot, PressableScale, RollingNumber, springs } from "@/atoms";
 import type { EmergencyContact } from "@/features/onboarding/services/emergencyContactsStorage";
 import { lightImpact } from "@/utils/haptics";
-import { LiveDot } from "@/components/motion/LiveDot";
 import { useAnimationsActive } from "@/hooks/useAnimationsActive";
 import type { HomeData } from "@/features/home/types";
-import { RollingNumber } from "@/components/motion/RollingNumber";
 import { SAFETY_KIND_META } from "./safety/kinds";
 import { useLocalization } from "@/localization";
 import { formatDistance } from "@/features/home/utils/format";

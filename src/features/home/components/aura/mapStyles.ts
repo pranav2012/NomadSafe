@@ -1,4 +1,4 @@
-import type { MapStyleElement } from "react-native-maps";
+import type { MapStyleElement } from "@/modules/location";
 
 interface MapPalette {
   land: string;

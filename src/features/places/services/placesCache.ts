@@ -1,4 +1,4 @@
-import { storage } from "@/stores/storage";
+import { storage } from "@/modules/storage";
 
 const PREFIX = "places-cache:";
 const TTL_MS = 6 * 60 * 60 * 1000;

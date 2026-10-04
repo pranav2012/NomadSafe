@@ -1,7 +1,6 @@
 import React from "react";
 import { StyleSheet, Text, TextInput, View } from "react-native";
-import { useAura } from "@/components/aura/useAura";
-import { AuraChip } from "@/components/aura/AuraChip";
+import { AuraChip, useAura } from "@/atoms";
 import { useLocalization } from "@/localization";
 import type { TranslateParams } from "@/localization/translate";
 import { parseAmountInput } from "@/features/expenses/utils/amountInput";

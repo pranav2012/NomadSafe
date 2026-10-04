@@ -1,16 +1,19 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn, FadeInDown, FadeOut, LinearTransition } from "react-native-reanimated";
-import { Icon, type IconName } from "@/components/nomad/Icon";
-import { PressableScale } from "@/components/motion/PressableScale";
-import { AuraButton } from "@/components/aura/AuraButton";
-import { AuraChip } from "@/components/aura/AuraChip";
-import { AuraDateField } from "@/components/aura/AuraDateField";
-import { AuraField } from "@/components/aura/AuraField";
-import { AuraSheet } from "@/components/aura/AuraSheet";
-import { useAura } from "@/components/aura/useAura";
-import { aiService, localModelService, useAiAvailability } from "@/features/ai";
-import type { TripBudgetEstimate } from "@/features/ai/services/aiPrompts";
+import {
+  AuraButton,
+  AuraChip,
+  AuraDateField,
+  AuraField,
+  AuraSheet,
+  Icon,
+  type IconName,
+  PressableScale,
+  showAlert,
+  useAura,
+} from "@/atoms";
+import { aiRuntime, aiService, useAiAvailability, type TripBudgetEstimate } from "@/modules/ai";
 import { useSettingsStore } from "@/features/settings";
 import { normalizeSearchText } from "@/features/trips/data/destinations";
 import {
@@ -27,10 +30,11 @@ import { DestinationSearch } from "@/features/trips/components/DestinationSearch
 import { addDays, countInclusiveDays, fromDateKey, startOfLocalDay, toDateKey } from "@/features/trips/utils/dates";
 import { parseAmount, sanitizeAmountInput } from "@/features/trips/utils/amount";
 import { defaultTripName } from "@/features/trips/utils/tripName";
-import { useLocalization } from "@/localization";
-import { CURRENCY_OPTIONS } from "@/utils/currency";
-import { track } from "@/services/analytics";
-import { logger } from "@/services/logger";
+import { useDefaultCurrency, useLocalization } from "@/localization";
+import { currencyCodes } from "@/utils/currency";
+import { track } from "@/modules/analytics";
+import { logger } from "@/modules/logger";
+import { showTripCreatedAd } from "@/modules/ads";
 
 type DateField = "start" | "end";
 /** Who set the name: "auto" names follow the destinations; "user"/"ai" names are never overwritten by the default. */
@@ -136,7 +140,7 @@ function tripToFormState(trip: Trip): FormState {
 export function TripForm({ editingTrip, onSave, onCancel, destinations, knownCoordinates }: TripFormProps) {
   const { c, f } = useAura();
   const { t, locale, formatCurrency } = useLocalization();
-  const defaultCurrency = useSettingsStore((state) => state.defaultCurrency);
+  const defaultCurrency = useDefaultCurrency();
   const defaultTripMode = useSettingsStore((state) => state.defaultTripMode);
   const tripModeEnabled = useSettingsStore((state) => state.tripModeEnabled);
   const createTrip = useTripsStore((state) => state.createTrip);
@@ -175,7 +179,7 @@ export function TripForm({ editingTrip, onSave, onCancel, destinations, knownCoo
   const budgetEstimateKeyRef = useRef<string | null>(null);
   const nameGenerationKeyRef = useRef<string | null>(null);
 
-  const isAiReady = useAiAvailability().available;
+  const isAiReady = useAiAvailability("tripBudget").available;
   const shouldShowBudgetEstimate = isAiReady && form.destinations.length > 0;
   const budgetEstimateKey = budgetEstimateKeyOf(form);
   // Edit opens with the saved trip's key, so it only re-estimates and scrolls after a change.
@@ -316,7 +320,7 @@ export function TripForm({ editingTrip, onSave, onCancel, destinations, knownCoo
       setBudgetEstimate(null);
       setBudgetEstimateError(t("trip.aiBudgetError"));
     } finally {
-      await localModelService.release();
+      await aiRuntime.release();
       aiTaskRef.current = null;
       setIsEstimatingBudget(false);
     }
@@ -406,7 +410,7 @@ export function TripForm({ editingTrip, onSave, onCancel, destinations, knownCoo
       logger.warn("trip-form", "trip name generation failed after retries", lastError);
       setNameError(t("trip.aiNameError"));
     } finally {
-      await localModelService.release();
+      await aiRuntime.release();
       aiTaskRef.current = null;
       setIsGeneratingName(false);
     }
@@ -468,12 +472,12 @@ export function TripForm({ editingTrip, onSave, onCancel, destinations, knownCoo
     const budget = Number.isFinite(parsedBudget) && parsedBudget > 0 ? parsedBudget : 0;
 
     if (form.destinations.length === 0 || !trimmedName) {
-      Alert.alert(t("trip.validationTitle"), t("trip.validationBody"));
+      showAlert(t("trip.validationTitle"), t("trip.validationBody"));
       return;
     }
 
     if (form.endDate < form.startDate) {
-      Alert.alert(t("trip.dateValidationTitle"), t("trip.dateValidationBody"));
+      showAlert(t("trip.dateValidationTitle"), t("trip.dateValidationBody"));
       return;
     }
 
@@ -514,6 +518,7 @@ export function TripForm({ editingTrip, onSave, onCancel, destinations, knownCoo
       }
 
       onSave();
+      if (!editingTrip) showTripCreatedAd();
     } finally {
       isSavingRef.current = false;
       setIsSaving(false);
@@ -572,8 +577,8 @@ export function TripForm({ editingTrip, onSave, onCancel, destinations, knownCoo
         />
         {isCurrencyPickerOpen ? (
           <Animated.View entering={FadeIn.duration(160)} exiting={FadeOut.duration(120)} style={styles.wrap}>
-            {CURRENCY_OPTIONS.map((option) => (
-              <AuraChip key={option.code} label={option.code} selected={option.code === form.currency} onPress={() => handleSelectCurrency(option.code)} />
+            {currencyCodes(initialForm.currency, defaultCurrency).map((code) => (
+              <AuraChip key={code} label={code} selected={code === form.currency} onPress={() => handleSelectCurrency(code)} />
             ))}
           </Animated.View>
         ) : null}

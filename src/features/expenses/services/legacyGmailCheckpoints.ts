@@ -1,4 +1,4 @@
-import * as SecureStore from "expo-secure-store";
+import { secureStore } from "@/modules/storage";
 
 // Checkpoints from before per-trip coverage: one app-wide for spends, one per trip for itinerary.
 const EXPENSE_KEY = "nomadsafe.gmail.last-sync-at";
@@ -14,7 +14,7 @@ export async function clearLegacyGmailCheckpoints(): Promise<void> {
   cleared = true;
   let tripIds: string[] = [];
   try {
-    const raw = await SecureStore.getItemAsync(ITINERARY_INDEX_KEY);
+    const raw = await secureStore.get(ITINERARY_INDEX_KEY);
     const parsed = raw ? (JSON.parse(raw) as unknown) : [];
     if (Array.isArray(parsed)) tripIds = parsed.filter((id): id is string => typeof id === "string");
   } catch {}
@@ -24,5 +24,5 @@ export async function clearLegacyGmailCheckpoints(): Promise<void> {
     ITINERARY_INDEX_KEY,
     ...tripIds.map((id) => `${ITINERARY_PREFIX}${id.replace(/[^\w.-]/g, "_")}`),
   ];
-  await Promise.all(keys.map((key) => SecureStore.deleteItemAsync(key).catch(() => undefined)));
+  await Promise.all(keys.map((key) => secureStore.remove(key).catch(() => undefined)));
 }

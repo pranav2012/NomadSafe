@@ -12,23 +12,14 @@ import {
 } from "react-native";
 import { BlurTargetView } from "expo-blur";
 import Animated, { FadeIn } from "react-native-reanimated";
-import { AuraCard } from "@/components/aura/AuraCard";
-import { AuraOrb } from "@/components/aura/AuraOrb";
-import { useAura } from "@/components/aura/useAura";
-import { Icon } from "@/components/nomad/Icon";
-import { PressableScale } from "@/components/motion/PressableScale";
-import { useTabBarInset } from "@/components/tabbar/tabBarInset";
+import { AuraCard, AuraOptionSheet, AuraOrb, Icon, PressableScale, useAura, useTabBarInset } from "@/atoms";
 import { auraStatusAccent } from "@/constants/aura";
 import { useAnimationsActive } from "@/hooks/useAnimationsActive";
 import { useLocalization } from "@/localization";
 import { useTripsStore } from "@/features/trips/store/tripsStore";
-import { track } from "@/services/analytics";
+import { track } from "@/modules/analytics";
 import { GENERAL_CHAT_KEY, useChatStore, useChatStreamStore } from "../store/chatStore";
-import { localModelService } from "../services/localModelService";
-import { modelNotifications } from "../services/modelNotifications";
-import { useAiProvisioning } from "../hooks/useAiProvisioning";
-import { useAiAvailability } from "../hooks/useAiAvailability";
-import { remoteLabel } from "../utils/remoteLabel";
+import { aiRuntime, modelNotifications, remoteLabel, useAiAvailability, useAiProvisioning, useAiSources } from "@/modules/ai";
 import { useSettingsStore } from "@/features/settings/store/settingsStore";
 import { provisionUnavailableText } from "../utils/provisionCopy";
 import { AiComposer } from "./AiComposer";
@@ -70,6 +61,8 @@ export function AiChat({ activeModelName }: { activeModelName: string | null }) 
   const streamingText = useChatStreamStore((s) => (s.conversationKey === conversationKey ? s.text : null));
   const provisioning = useAiProvisioning();
   const ai = useAiAvailability();
+  const aiSources = useAiSources();
+  const [sourcePickerOpen, setSourcePickerOpen] = useState(false);
   const onlineName = ai.remote ? remoteLabel(ai.remote, ai.byok, t("aiTab.cloudName")) : null;
   const configuredName = ai.configured ? remoteLabel(ai.configured, ai.byok, t("aiTab.cloudName")) : null;
   const unavailableText = onlineName || provisioning.isReady ? null : provisionUnavailableText(provisioning, t);
@@ -95,7 +88,7 @@ export function AiChat({ activeModelName }: { activeModelName: string | null }) 
 
   const preloadLocal = ai.configured === null;
   useEffect(() => {
-    if (preloadLocal) void localModelService.preload();
+    if (preloadLocal) void aiRuntime.preload();
   }, [preloadLocal]);
 
   const onScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -257,11 +250,24 @@ export function AiChat({ activeModelName }: { activeModelName: string | null }) 
             busyElsewhere={busyElsewhere}
             modelName={onlineName ?? activeModelName}
             online={onlineName !== null}
+            onPickSource={aiSources.sources.length > 1 ? () => setSourcePickerOpen(true) : undefined}
             blurTarget={Platform.OS === "android" ? blurTarget : undefined}
             onLayout={(event) => setComposerHeight(Math.round(event.nativeEvent.layout.height))}
           />
         </View>
       </KeyboardAvoidingView>
+      <AuraOptionSheet
+        visible={sourcePickerOpen && aiSources.sources.length > 1}
+        onClose={() => setSourcePickerOpen(false)}
+        title={t("aiSource.pickerTitle")}
+        subtitle={t("aiSource.pickerSubtitle")}
+        options={aiSources.sources.map((source) => ({ value: source.id, label: source.label, detail: source.detail }))}
+        selected={aiSources.current}
+        onSelect={(id) => {
+          if (id) aiSources.select(id);
+        }}
+        footnote={t("aiSource.pickerFootnote")}
+      />
     </View>
   );
 }

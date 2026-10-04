@@ -1,11 +1,10 @@
 import React from "react";
 import { Linking, Platform, Share } from "react-native";
 import * as Clipboard from "expo-clipboard";
-import { AuraSheet } from "@/components/aura/AuraSheet";
-import { AuraListGroup, AuraListRow } from "@/components/aura/AuraList";
+import { AuraListGroup, AuraListRow, AuraSheet } from "@/atoms";
 import { buildMapsUrl } from "@/features/safety/services/sosService";
 import { useLocalization } from "@/localization";
-import { track } from "@/services/analytics";
+import { track } from "@/modules/analytics";
 import { successNotification } from "@/utils/haptics";
 
 interface LocationActionsSheetProps {

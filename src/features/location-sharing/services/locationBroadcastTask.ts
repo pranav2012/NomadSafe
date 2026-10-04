@@ -1,12 +1,18 @@
-import * as Location from "expo-location";
 import * as Battery from "expo-battery";
-import { defineTask } from "expo-task-manager";
-import { ConvexHttpClient } from "convex/browser";
-import { api } from "@convex/_generated/api";
-import { storage } from "@/stores/storage";
-import { clearConvexJwt, getConvexJwt } from "@/features/auth/services/convexJwt";
+import { api, clearConvexJwt, createBackendHttpClient, getConvexJwt } from "@/modules/backend";
+import {
+  defineLocationTask,
+  getCurrentPosition,
+  hasStartedLocationUpdates,
+  requestBackgroundPermission,
+  requestForegroundPermission,
+  startLocationUpdates,
+  stopLocationUpdates,
+  type BackgroundUpdateOptions,
+} from "@/modules/location";
+import { storage } from "@/modules/storage";
 import { translate } from "@/localization/translate";
-import { logger } from "@/services/logger";
+import { logger } from "@/modules/logger";
 import { getIntervalForMode, type BroadcastMode } from "../store/sharingStore";
 
 export const BROADCAST_TASK_NAME = "nomadsafe-location-broadcast";
@@ -17,7 +23,6 @@ export const EMERGENCY_LIMIT_MS = 60 * 60_000;
 // Consecutive publishes that reached nobody before sharing stops itself.
 const MAX_IDLE_PUBLISHES = 3;
 const LAST_BROADCAST_KEY = "sharing-last-broadcast";
-const convexUrl = process.env.EXPO_PUBLIC_CONVEX_URL;
 
 interface BroadcastState {
   isBroadcasting: boolean;
@@ -95,12 +100,11 @@ export async function publishLocation(
   let failure: unknown;
 
   try {
-    const jwt = convexUrl ? await getConvexJwt() : null;
-    if (!jwt || !convexUrl) {
+    const jwt = await getConvexJwt();
+    if (!jwt) {
       error = "not_authenticated";
     } else {
-      const client = new ConvexHttpClient(convexUrl);
-      client.setAuth(jwt);
+      const client = createBackendHttpClient(jwt);
       const result = await client.mutation(api.sharing.publishLocation, {
         latitude,
         longitude,
@@ -129,24 +133,18 @@ export async function publishLocation(
   return ok;
 }
 
-function locationOptions(mode: BroadcastMode): Location.LocationTaskOptions {
+function locationOptions(mode: BroadcastMode): BackgroundUpdateOptions {
   const interval = getIntervalForMode(mode) * 1000;
   return {
     // GPS only for emergencies; normal and low use network/Wi-Fi fixes, which cost far less power.
-    accuracy:
-      mode === "emergency"
-        ? Location.Accuracy.BestForNavigation
-        : mode === "low"
-          ? Location.Accuracy.Low
-          : Location.Accuracy.Balanced,
+    accuracy: mode === "emergency" ? "navigation" : mode === "low" ? "low" : "balanced",
     timeInterval: interval,
     distanceInterval: mode === "emergency" ? 10 : mode === "low" ? 200 : 50,
     // Batches fixes so the JS task wakes about once per interval instead of once per fix.
     deferredUpdatesInterval: mode === "emergency" ? undefined : interval,
-    activityType: Location.ActivityType.Other,
     foregroundService: {
-      notificationTitle: translate("sharing.serviceTitle"),
-      notificationBody: translate("sharing.serviceBody"),
+      title: translate("sharing.serviceTitle"),
+      body: translate("sharing.serviceBody"),
       killServiceOnDestroy: false,
     },
     // iOS won't resume paused updates from the background, so a safety share must never pause.
@@ -170,7 +168,7 @@ export async function enforceBroadcastLimits(): Promise<boolean> {
   if (state.mode === "emergency" && state.emergencyUntil && now >= state.emergencyUntil) {
     writeBroadcastState({ mode: "normal", emergencyUntil: null });
     try {
-      await Location.startLocationUpdatesAsync(BROADCAST_TASK_NAME, locationOptions("normal"));
+      await startLocationUpdates(BROADCAST_TASK_NAME, locationOptions("normal"));
     } catch {
       // Publishing still drops to the normal interval; the next foreground start applies the options.
     }
@@ -178,11 +176,7 @@ export async function enforceBroadcastLimits(): Promise<boolean> {
   return true;
 }
 
-defineTask(BROADCAST_TASK_NAME, async ({ data, error }) => {
-  if (error) return;
-  const locations = (data as { locations?: Location.LocationObject[] } | undefined)?.locations;
-  if (!locations?.length) return;
-
+defineLocationTask(BROADCAST_TASK_NAME, async (positions) => {
   if (!(await enforceBroadcastLimits())) return;
   const state = readBroadcastState();
 
@@ -190,8 +184,8 @@ defineTask(BROADCAST_TASK_NAME, async ({ data, error }) => {
   // Small tolerance so OS batching jitter doesn't skip every other update.
   if (state.lastPublishedAt && Date.now() - state.lastPublishedAt < intervalMs * 0.8) return;
 
-  const last = locations[locations.length - 1];
-  await publishLocation(last.coords.latitude, last.coords.longitude, state.mode);
+  const last = positions[positions.length - 1];
+  await publishLocation(last.latitude, last.longitude, state.mode);
 });
 
 export class BackgroundLocationDeniedError extends Error {
@@ -210,14 +204,14 @@ export async function startLocationBroadcast(
   mode: BroadcastMode,
   { expiresAt = null, sos = false }: { expiresAt?: number | null; sos?: boolean } = {},
 ) {
-  const foreground = await Location.requestForegroundPermissionsAsync();
+  const foreground = await requestForegroundPermission();
   if (!foreground.granted) throw new Error("Location permission denied");
 
-  const background = await Location.requestBackgroundPermissionsAsync();
+  const background = await requestBackgroundPermission();
   if (!background.granted) throw new BackgroundLocationDeniedError();
 
-  if (await Location.hasStartedLocationUpdatesAsync(BROADCAST_TASK_NAME)) {
-    await Location.stopLocationUpdatesAsync(BROADCAST_TASK_NAME);
+  if (await hasStartedLocationUpdates(BROADCAST_TASK_NAME)) {
+    await stopLocationUpdates(BROADCAST_TASK_NAME);
   }
 
   writeBroadcastState({
@@ -229,13 +223,11 @@ export async function startLocationBroadcast(
     idlePublishes: 0,
   });
 
-  await Location.startLocationUpdatesAsync(BROADCAST_TASK_NAME, locationOptions(mode));
+  await startLocationUpdates(BROADCAST_TASK_NAME, locationOptions(mode));
 
   try {
-    const current = await Location.getCurrentPositionAsync({
-      accuracy: mode === "emergency" ? Location.Accuracy.High : Location.Accuracy.Balanced,
-    });
-    await publishLocation(current.coords.latitude, current.coords.longitude, mode);
+    const current = await getCurrentPosition(mode === "emergency" ? "high" : "balanced");
+    await publishLocation(current.latitude, current.longitude, mode);
   } catch {
     // The task will publish on the next OS location update.
   }
@@ -245,16 +237,14 @@ export async function startLocationBroadcast(
 export async function stopLocationBroadcast() {
   writeBroadcastState({ isBroadcasting: false, expiresAt: null, emergencyUntil: null, idlePublishes: 0 });
   try {
-    if (await Location.hasStartedLocationUpdatesAsync(BROADCAST_TASK_NAME)) {
-      await Location.stopLocationUpdatesAsync(BROADCAST_TASK_NAME);
+    if (await hasStartedLocationUpdates(BROADCAST_TASK_NAME)) {
+      await stopLocationUpdates(BROADCAST_TASK_NAME);
     }
   } finally {
     try {
-      const jwt = convexUrl ? await getConvexJwt() : null;
-      if (jwt && convexUrl) {
-        const client = new ConvexHttpClient(convexUrl);
-        client.setAuth(jwt);
-        await client.mutation(api.sharing.stopSharing, {});
+      const jwt = await getConvexJwt();
+      if (jwt) {
+        await createBackendHttpClient(jwt).mutation(api.sharing.stopSharing, {});
       }
     } catch {}
   }
@@ -262,7 +252,7 @@ export async function stopLocationBroadcast() {
 
 export async function isLocationBroadcastRunning() {
   try {
-    return await Location.hasStartedLocationUpdatesAsync(BROADCAST_TASK_NAME);
+    return await hasStartedLocationUpdates(BROADCAST_TASK_NAME);
   } catch {
     return false;
   }

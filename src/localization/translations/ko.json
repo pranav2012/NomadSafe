@@ -124,6 +124,8 @@
     "privacyPolicy": "개인정보 처리방침",
     "usageAnalytics": "사용 분석 공유",
     "usageAnalyticsSub": "NomadSafe 개선에 도움이 되는 사용 통계, 오류 보고서, 가려진 화면 녹화입니다. 여행, 지출, 채팅, 정확한 위치는 절대 포함되지 않습니다.",
+    "adPrivacyChoices": "광고 개인정보 선택",
+    "adPrivacyChoicesSub": "무료 요금제에 표시되는 광고에 Google이 내 데이터를 사용하는 방식을 변경합니다.",
     "gmailConnected": "Gmail 연결됨",
     "gmailConnectedSub": "예약 및 영수증을 찾기 위한 읽기 전용 접근 권한",
     "gmailConnectedAsSub": "{{email}} · 예약 및 영수증을 찾기 위한 읽기 전용 접근 권한",
@@ -189,7 +191,27 @@
     "onlineAiCloud": "온라인일 때 NomadSafe Cloud(Pro) 사용",
     "onlineAiNone": "사용하려면 내 키를 추가하거나 Pro를 이용하세요",
     "aiKey": "내 API 키",
-    "aiKeyNone": "설정 안 됨"
+    "aiKeyNone": "설정 안 됨",
+    "onlineAiLocalPicked": "켜짐, 하지만 기기 내 AI를 선택함",
+    "cloudAiUsageSub": "NomadSafe Cloud 사용량, 매달 초기화",
+    "manageSubscriptionSub": "스토어에서 플랜 변경 또는 해지",
+    "restoreSub": "이 스토어 계정으로 구매한 플랜 복원",
+    "autoLockSub": "백그라운드에 있었던 후 NomadSafe 잠금",
+    "changePinSub": "NomadSafe 잠금을 해제하는 PIN",
+    "usageAnalyticsShort": "NomadSafe 개선에 도움, 여행 정보는 절대 아님",
+    "privacyPolicySub": "NomadSafe가 수집하는 정보와 이유",
+    "defaultCheckInSub": "새 체크인의 지속 시간",
+    "appearanceSub": "라이트, 다크 또는 휴대폰 설정",
+    "languageSub": "NomadSafe에서 쓰는 언어",
+    "currency": "기본 통화",
+    "currencySub": "새 여행과 예산에 사용",
+    "currencyAutomatic": "자동",
+    "currencyAutomaticDetail": "휴대폰 통화: {{currency}}",
+    "currencyAutomaticValue": "자동 · {{currency}}",
+    "currencySheetSub": "새 여행과 예산은 이 통화로 시작됩니다.",
+    "aiKeySub": "내 OpenAI, Anthropic 또는 Gemini 키 사용",
+    "cloudBackupShort": "새 휴대폰에서 여행 되찾기",
+    "signOutSub": "이 휴대폰에서 NomadSafe 로그아웃"
   },
   "auth": {
     "sceneLocation": "북극권 노르웨이",
@@ -1340,6 +1362,7 @@
     "featureEverything": "안전, 지출, 정산, 공유 여행 모두 포함",
     "featureOfflineAi": "오프라인에서도 작동하는 기기 내 AI",
     "featureOwnKey": "가지고 있는 AI API 키도 사용 가능",
+    "featureNoAds": "광고 없음",
     "featureCloudAi": "채팅, 예산, 음성, 일정에 쓰는 더 뛰어난 온라인 AI",
     "featureOfflineFallback": "오프라인일 때는 기기 내 AI로 전환",
     "unavailable": "지금은 이 기기에서 구매할 수 없어요. Google Play에 로그인되어 있는지 확인하고 나중에 다시 시도해 주세요.",
@@ -1398,5 +1421,16 @@
     "invalidKey": "제공업체가 이 API 키를 거부했어요.",
     "invalidModel": "제공업체가 이 모델을 인식하지 못했거나 요청이 수락되지 않았어요. 모델 ID를 확인하세요.",
     "rateLimited": "제공업체가 이 키의 사용량을 제한하고 있거나 크레딧이 부족해요. 나중에 다시 시도하세요."
+  },
+  "aiSource": {
+    "cloudDetail": "Pro · 더 뛰어난 성능, 온라인",
+    "byok": "내 {{provider}} 키",
+    "byokDetail": "{{model}} · 온라인",
+    "local": "기기 내 · {{model}}",
+    "localDetail": "비공개, 오프라인에서도 작동",
+    "pickerTitle": "답변 제공",
+    "pickerSubtitle": "채팅과 모든 AI 기능에 사용됩니다.",
+    "pickerFootnote": "온라인 선택지가 답하지 못하면 NomadSafe가 다른 하나를 시도한 뒤 이 휴대폰을 사용합니다. 기기 내를 선택하면 모든 것이 휴대폰에 남습니다. 가져온 이메일과 문자는 항상 휴대폰에서 분류됩니다.",
+    "pickerHint": "답변할 AI 선택"
   }
 }

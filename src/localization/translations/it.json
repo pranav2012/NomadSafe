@@ -124,6 +124,8 @@
     "privacyPolicy": "Informativa sulla privacy",
     "usageAnalytics": "Condividi statistiche di utilizzo",
     "usageAnalyticsSub": "Statistiche di utilizzo, segnalazioni di arresti anomali e registrazioni dello schermo oscurate che aiutano a migliorare NomadSafe. Mai i tuoi viaggi, spese, chat o la tua posizione precisa.",
+    "adPrivacyChoices": "Scelte sulla privacy degli annunci",
+    "adPrivacyChoicesSub": "Modifica come Google può usare i tuoi dati per gli annunci del piano gratuito.",
     "gmailConnected": "Gmail collegato",
     "gmailConnectedSub": "Accesso in sola lettura per trovare prenotazioni e ricevute",
     "gmailConnectedAsSub": "{{email}} · Accesso in sola lettura per trovare prenotazioni e ricevute",
@@ -189,7 +191,27 @@
     "onlineAiCloud": "Usa NomadSafe Cloud (Pro) quando sei online",
     "onlineAiNone": "Aggiungi la tua chiave o passa a Pro per usarla",
     "aiKey": "La tua chiave API",
-    "aiKeyNone": "Non impostata"
+    "aiKeyNone": "Non impostata",
+    "onlineAiLocalPicked": "Attiva, ma hai scelto l'IA sul dispositivo",
+    "cloudAiUsageSub": "Quota NomadSafe Cloud, si rinnova ogni mese",
+    "manageSubscriptionSub": "Cambia o annulla il piano nello store",
+    "restoreSub": "Recupera un piano acquistato con questo account dello store",
+    "autoLockSub": "Blocca NomadSafe dopo che è stata in background",
+    "changePinSub": "Il PIN che sblocca NomadSafe",
+    "usageAnalyticsShort": "Aiuta a migliorare NomadSafe, mai i tuoi viaggi",
+    "privacyPolicySub": "Cosa raccoglie NomadSafe e perché",
+    "defaultCheckInSub": "Quanto dura ogni nuovo check-in",
+    "appearanceSub": "Chiaro, scuro o come il telefono",
+    "languageSub": "La lingua usata da NomadSafe",
+    "currency": "Valuta predefinita",
+    "currencySub": "Per nuovi viaggi e budget",
+    "currencyAutomatic": "Automatica",
+    "currencyAutomaticDetail": "Valuta del telefono: {{currency}}",
+    "currencyAutomaticValue": "Automatica · {{currency}}",
+    "currencySheetSub": "I nuovi viaggi e budget partono in questa valuta.",
+    "aiKeySub": "Usa la tua chiave OpenAI, Anthropic o Gemini",
+    "cloudBackupShort": "Ritrova i tuoi viaggi su un nuovo telefono",
+    "signOutSub": "Esci da NomadSafe su questo telefono"
   },
   "auth": {
     "sceneLocation": "Norvegia artica",
@@ -1340,6 +1362,7 @@
     "featureEverything": "Sicurezza, spese, divisioni e viaggi condivisi, tutto incluso",
     "featureOfflineAi": "IA sul dispositivo che funziona offline",
     "featureOwnKey": "Usa la tua chiave API di IA, se ne hai una",
+    "featureNoAds": "Nessuna pubblicità",
     "featureCloudAi": "Un'IA online più potente per chat, budget, voce e itinerari",
     "featureOfflineFallback": "Torna all'IA sul dispositivo quando sei offline",
     "unavailable": "Gli acquisti non sono disponibili su questo dispositivo al momento. Controlla di aver effettuato l'accesso a Google Play e riprova più tardi.",
@@ -1398,5 +1421,16 @@
     "invalidKey": "Il provider ha rifiutato questa chiave API.",
     "invalidModel": "Il provider non riconosce questo modello o la richiesta non è stata accettata. Controlla l'ID del modello.",
     "rateLimited": "Il provider sta limitando questa chiave o il credito è esaurito. Riprova più tardi."
+  },
+  "aiSource": {
+    "cloudDetail": "Pro · più capace, online",
+    "byok": "La tua chiave {{provider}}",
+    "byokDetail": "{{model}} · online",
+    "local": "Sul dispositivo · {{model}}",
+    "localDetail": "Privato, funziona offline",
+    "pickerTitle": "Le risposte arrivano da",
+    "pickerSubtitle": "Per la chat e ogni funzione IA.",
+    "pickerFootnote": "Se una scelta online non può rispondere, NomadSafe prova l'altra, poi questo telefono. Sul dispositivo tutto resta sul telefono. Email e SMS importati vengono sempre ordinati sul telefono.",
+    "pickerHint": "Scegli quale IA risponde"
   }
 }

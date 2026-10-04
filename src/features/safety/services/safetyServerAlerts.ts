@@ -1,9 +1,7 @@
-import * as Notifications from "expo-notifications";
-import { Platform } from "react-native";
-import { api } from "@convex/_generated/api";
-import { convex } from "@/services/convex";
-import { logger } from "@/services/logger";
-import { storage } from "@/stores/storage";
+import { api, convex } from "@/modules/backend";
+import { logger } from "@/modules/logger";
+import { notifications } from "@/modules/notifications";
+import { storage } from "@/modules/storage";
 import { useSafetyStore } from "../store/safetyStore";
 
 /** Must match CHANNEL_ID in convex/safetyAlerts.ts. */
@@ -17,12 +15,11 @@ const SERVER_CALL_TIMEOUT_MS = 8_000;
 
 /** Android channel for SOS / missed check-in pushes from contacts; created before any can arrive. */
 export async function ensureSafetyAlertChannel(name: string) {
-  if (Platform.OS !== "android") return;
-  await Notifications.setNotificationChannelAsync(SAFETY_ALERT_CHANNEL_ID, {
+  await notifications.setChannel(SAFETY_ALERT_CHANNEL_ID, {
     name,
-    importance: Notifications.AndroidImportance.MAX,
+    importance: "max",
     vibrationPattern: [0, 500, 250, 500, 250, 500],
-    lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+    lockscreenVisibility: "public",
   }).catch(() => {});
 }
 

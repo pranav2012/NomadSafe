@@ -18,12 +18,8 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
 import { LinearGradient } from "expo-linear-gradient";
-import { PostHogMaskView } from "posthog-react-native";
-import { Icon } from "@/components/nomad/Icon";
-import { PressableScale } from "@/components/motion/PressableScale";
-import { AuraButton } from "@/components/aura/AuraButton";
-import { AuraChip } from "@/components/aura/AuraChip";
-import { useAura } from "@/components/aura/useAura";
+import { PrivateView } from "@/modules/analytics";
+import { AuraButton, AuraChip, Icon, PressableScale, useAura } from "@/atoms";
 import { auraStatusAccent } from "@/constants/aura";
 import { Globe } from "@/features/home/components/aura/globe/Globe";
 import { useGlobeContext } from "@/features/home/hooks/useGlobeContext";
@@ -33,7 +29,7 @@ import { TripForm } from "@/features/trips/components/TripForm";
 import { normalizeSearchText } from "@/features/trips/data/destinations";
 import { geocodeDestination, type LatLng } from "@/features/trips/services/geocoding";
 import { useTripsStore } from "@/features/trips/store/tripsStore";
-import { canCreateTrip, usePlanStore } from "@/features/billing";
+import { canCreateTrip, usePlanStore } from "@/modules/billing";
 import { useLocalization } from "@/localization";
 import { selectionChanged, successNotification } from "@/utils/haptics";
 
@@ -139,7 +135,7 @@ export default function PlanTripScreen() {
   return (
     <View style={[styles.root, { backgroundColor: c.bg }]}>
       <Animated.View style={[styles.band, bandStyle]}>
-        <PostHogMaskView style={styles.flex}>
+        <PrivateView style={styles.flex}>
           <Animated.View style={canvasStyle}>
             <Globe
               stops={stops}
@@ -155,7 +151,7 @@ export default function PlanTripScreen() {
               overview
             />
           </Animated.View>
-        </PostHogMaskView>
+        </PrivateView>
         <LinearGradient pointerEvents="none" colors={[`${c.bg}00`, c.bg]} style={styles.bandFade} />
         <View style={[styles.topBar, { top: insets.top + 8 }]}>
           <PressableScale

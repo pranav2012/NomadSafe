@@ -1,9 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
-import { AuraButton } from "@/components/aura/AuraButton";
-import { AuraChip } from "@/components/aura/AuraChip";
-import { AuraField } from "@/components/aura/AuraField";
-import { AuraSheet } from "@/components/aura/AuraSheet";
+import { AuraButton, AuraChip, AuraField, AuraSheet } from "@/atoms";
 import { emergencyContactsStorage, normalizeEmail } from "@/features/onboarding/services/emergencyContactsStorage";
 import { useLocalization } from "@/localization";
 

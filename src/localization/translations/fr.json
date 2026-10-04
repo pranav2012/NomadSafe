@@ -124,6 +124,8 @@
     "privacyPolicy": "Politique de confidentialité",
     "usageAnalytics": "Partager les statistiques d'utilisation",
     "usageAnalyticsSub": "Des statistiques d'utilisation, des rapports de plantage et des enregistrements d'écran masqués qui aident à améliorer NomadSafe. Jamais vos voyages, dépenses, discussions ou votre position précise.",
+    "adPrivacyChoices": "Choix de confidentialité publicitaire",
+    "adPrivacyChoicesSub": "Modifiez la façon dont Google peut utiliser vos données pour les publicités de l'offre gratuite.",
     "gmailConnected": "Gmail connecté",
     "gmailConnectedSub": "Accès en lecture seule pour trouver réservations et reçus",
     "gmailConnectedAsSub": "{{email}} · Accès en lecture seule pour trouver réservations et reçus",
@@ -189,7 +191,27 @@
     "onlineAiCloud": "Utilise NomadSafe Cloud (Pro) quand vous êtes en ligne",
     "onlineAiNone": "Ajoutez votre propre clé ou passez à Pro pour l'utiliser",
     "aiKey": "Votre propre clé API",
-    "aiKeyNone": "Non définie"
+    "aiKeyNone": "Non définie",
+    "onlineAiLocalPicked": "Activée, mais vous avez choisi l'IA sur l'appareil",
+    "cloudAiUsageSub": "Quota NomadSafe Cloud, renouvelé chaque mois",
+    "manageSubscriptionSub": "Modifier ou résilier votre forfait dans le store",
+    "restoreSub": "Récupérer un forfait acheté avec ce compte store",
+    "autoLockSub": "Verrouiller NomadSafe après un passage en arrière-plan",
+    "changePinSub": "Le code PIN qui déverrouille NomadSafe",
+    "usageAnalyticsShort": "Aide à améliorer NomadSafe, jamais vos voyages",
+    "privacyPolicySub": "Ce que NomadSafe collecte et pourquoi",
+    "defaultCheckInSub": "Durée de chaque nouveau check-in",
+    "appearanceSub": "Clair, sombre ou comme votre téléphone",
+    "languageSub": "La langue utilisée par NomadSafe",
+    "currency": "Devise par défaut",
+    "currencySub": "Pour les nouveaux voyages et budgets",
+    "currencyAutomatic": "Automatique",
+    "currencyAutomaticDetail": "Devise de votre téléphone : {{currency}}",
+    "currencyAutomaticValue": "Automatique · {{currency}}",
+    "currencySheetSub": "Les nouveaux voyages et budgets démarrent dans cette devise.",
+    "aiKeySub": "Utilisez votre clé OpenAI, Anthropic ou Gemini",
+    "cloudBackupShort": "Retrouvez vos voyages sur un nouveau téléphone",
+    "signOutSub": "Se déconnecter de NomadSafe sur ce téléphone"
   },
   "auth": {
     "sceneLocation": "Norvège arctique",
@@ -1340,6 +1362,7 @@
     "featureEverything": "Sécurité, dépenses, partages et voyages partagés, tout est inclus",
     "featureOfflineAi": "IA sur l'appareil qui fonctionne hors ligne",
     "featureOwnKey": "Utilisez votre propre clé API d'IA si vous en avez une",
+    "featureNoAds": "Sans publicité",
     "featureCloudAi": "Une IA en ligne plus performante pour le chat, les budgets, la voix et les itinéraires",
     "featureOfflineFallback": "Repasse à l'IA sur l'appareil hors ligne",
     "unavailable": "Les achats ne sont pas disponibles sur cet appareil pour le moment. Vérifiez que vous êtes connecté à Google Play et réessayez plus tard.",
@@ -1398,5 +1421,16 @@
     "invalidKey": "Le fournisseur a refusé cette clé API.",
     "invalidModel": "Le fournisseur ne reconnaît pas ce modèle, ou la requête n'a pas été acceptée. Vérifiez l'ID du modèle.",
     "rateLimited": "Le fournisseur limite le débit de cette clé ou son crédit est épuisé. Réessayez plus tard."
+  },
+  "aiSource": {
+    "cloudDetail": "Pro · plus performant, en ligne",
+    "byok": "Votre clé {{provider}}",
+    "byokDetail": "{{model}} · en ligne",
+    "local": "Sur l'appareil · {{model}}",
+    "localDetail": "Privé, fonctionne hors ligne",
+    "pickerTitle": "Les réponses viennent de",
+    "pickerSubtitle": "Pour le chat et toutes les fonctions IA.",
+    "pickerFootnote": "Si un choix en ligne ne peut pas répondre, NomadSafe essaie l'autre, puis ce téléphone. Sur l'appareil, tout reste sur le téléphone. Les e-mails et SMS importés sont toujours triés sur le téléphone.",
+    "pickerHint": "Choisir quelle IA répond"
   }
 }

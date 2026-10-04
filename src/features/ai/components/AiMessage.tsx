@@ -1,7 +1,6 @@
 import React from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
-import { AuraOrb } from "@/components/aura/AuraOrb";
-import { useAura } from "@/components/aura/useAura";
+import { AuraOrb, useAura } from "@/atoms";
 import type { ChatMessage } from "../store/chatStore";
 
 const MONO = Platform.select({ ios: "Menlo", default: "monospace" });

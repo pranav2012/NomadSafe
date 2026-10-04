@@ -1,4 +1,4 @@
-import { localModelService } from "@/features/ai/services/localModelService";
+import { aiService } from "@/modules/ai";
 import type { ExpenseCategory } from "@/features/expenses/constants/categories";
 import {
   categorizeHeuristic,
@@ -28,7 +28,7 @@ export async function categorizeExpense(
   }
 
   try {
-    const modelCategory = await localModelService.categorizeExpense(input);
+    const modelCategory = await aiService.categorizeExpense(input);
     if (modelCategory) {
       return { category: modelCategory, viaModel: true };
     }

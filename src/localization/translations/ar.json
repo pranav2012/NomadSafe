@@ -124,6 +124,8 @@
     "privacyPolicy": "سياسة الخصوصية",
     "usageAnalytics": "مشاركة تحليلات الاستخدام",
     "usageAnalyticsSub": "إحصاءات استخدام وتقارير أعطال وتسجيلات شاشة مموّهة تساعدنا على تحسين NomadSafe. لا تشمل أبدًا رحلاتك أو نفقاتك أو محادثاتك أو موقعك الدقيق.",
+    "adPrivacyChoices": "خيارات خصوصية الإعلانات",
+    "adPrivacyChoicesSub": "غيّر طريقة استخدام Google لبياناتك في الإعلانات المعروضة في الخطة المجانية.",
     "gmailConnected": "تم ربط Gmail",
     "gmailConnectedSub": "وصول للقراءة فقط للعثور على الحجوزات والإيصالات",
     "gmailConnectedAsSub": "{{email}} · وصول للقراءة فقط للعثور على الحجوزات والإيصالات",
@@ -189,7 +191,27 @@
     "onlineAiCloud": "يستخدم NomadSafe Cloud (Pro) عندما تكون متصلًا",
     "onlineAiNone": "أضف مفتاحك الخاص أو اشترك في Pro لاستخدامه",
     "aiKey": "مفتاح API الخاص بك",
-    "aiKeyNone": "غير محدد"
+    "aiKeyNone": "غير محدد",
+    "onlineAiLocalPicked": "مفعّل، لكنك اخترت الذكاء الاصطناعي على الجهاز",
+    "cloudAiUsageSub": "حصة NomadSafe Cloud، تتجدد شهريًا",
+    "manageSubscriptionSub": "غيّر خطتك أو ألغها من المتجر",
+    "restoreSub": "استعد خطة اشتريتها بحساب المتجر هذا",
+    "autoLockSub": "اقفل NomadSafe بعد بقائه في الخلفية",
+    "changePinSub": "رمز PIN الذي يفتح NomadSafe",
+    "usageAnalyticsShort": "يساعد في تحسين NomadSafe، وليس رحلاتك أبدًا",
+    "privacyPolicySub": "ما يجمعه NomadSafe ولماذا",
+    "defaultCheckInSub": "مدة كل تسجيل وصول جديد",
+    "appearanceSub": "فاتح أو داكن أو حسب هاتفك",
+    "languageSub": "اللغة التي يستخدمها NomadSafe",
+    "currency": "العملة الافتراضية",
+    "currencySub": "للرحلات والميزانيات الجديدة",
+    "currencyAutomatic": "تلقائي",
+    "currencyAutomaticDetail": "عملة هاتفك: {{currency}}",
+    "currencyAutomaticValue": "تلقائي · {{currency}}",
+    "currencySheetSub": "تبدأ الرحلات والميزانيات الجديدة بهذه العملة.",
+    "aiKeySub": "استخدم مفتاحك من OpenAI أو Anthropic أو Gemini",
+    "cloudBackupShort": "استعد رحلاتك على هاتف جديد",
+    "signOutSub": "تسجيل الخروج من NomadSafe على هذا الهاتف"
   },
   "auth": {
     "sceneLocation": "النرويج القطبية",
@@ -1340,6 +1362,7 @@
     "featureEverything": "الأمان والنفقات والتقسيم والرحلات المشتركة، كلها مضمّنة",
     "featureOfflineAi": "ذكاء اصطناعي على الجهاز يعمل دون اتصال",
     "featureOwnKey": "استخدم مفتاح API الخاص بك للذكاء الاصطناعي إن كان لديك",
+    "featureNoAds": "بدون إعلانات",
     "featureCloudAi": "ذكاء اصطناعي أقوى عبر الإنترنت للدردشة والميزانيات والصوت وخطط الرحلات",
     "featureOfflineFallback": "يعود إلى الذكاء الاصطناعي على الجهاز عند انقطاع الاتصال",
     "unavailable": "الشراء غير متاح على هذا الجهاز حاليًا. تأكد من تسجيل الدخول إلى Google Play وحاول مرة أخرى لاحقًا.",
@@ -1398,5 +1421,16 @@
     "invalidKey": "رفض المزوّد مفتاح API هذا.",
     "invalidModel": "لا يتعرّف المزوّد على هذا النموذج، أو لم يُقبل الطلب. تحقق من معرّف النموذج.",
     "rateLimited": "يقيّد المزوّد معدل استخدام هذا المفتاح أو نفد رصيده. حاول مرة أخرى لاحقًا."
+  },
+  "aiSource": {
+    "cloudDetail": "Pro · أقوى، عبر الإنترنت",
+    "byok": "مفتاح {{provider}} الخاص بك",
+    "byokDetail": "{{model}} · عبر الإنترنت",
+    "local": "على الجهاز · {{model}}",
+    "localDetail": "خاص، يعمل دون اتصال",
+    "pickerTitle": "مصدر الإجابات",
+    "pickerSubtitle": "للدردشة ولكل ميزات الذكاء الاصطناعي.",
+    "pickerFootnote": "إذا تعذّر على الخيار عبر الإنترنت الرد، يجرّب NomadSafe الخيار الآخر ثم هذا الهاتف. مع الخيار على الجهاز يبقى كل شيء على الهاتف. تُصنَّف الرسائل والبريد المستورد دائمًا على الهاتف.",
+    "pickerHint": "اختر الذكاء الاصطناعي الذي يجيب"
   }
 }

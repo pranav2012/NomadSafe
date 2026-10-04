@@ -1,12 +1,10 @@
-import Constants from "expo-constants";
 import * as Device from "expo-device";
-import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
-import { api } from "@convex/_generated/api";
+import { api, convex } from "@/modules/backend";
 import { getCurrentLocale, translate } from "@/localization/translate";
-import { convex } from "@/services/convex";
-import { logger } from "@/services/logger";
-import { storage } from "@/stores/storage";
+import { logger } from "@/modules/logger";
+import { notifications } from "@/modules/notifications";
+import { storage } from "@/modules/storage";
 
 /** Must match `SOURCE` and `CHANNEL_ID` in convex/tripNotifications.ts. */
 export const TRIP_NOTIFICATION_SOURCE = "nomadsafe-trip";
@@ -21,17 +19,11 @@ const UNREGISTER_TIMEOUT_MS = 8_000;
 export async function registerTripPush(ask: boolean): Promise<void> {
   if (!Device.isDevice) return;
   try {
-    let { granted } = await Notifications.getPermissionsAsync();
-    if (!granted && ask) ({ granted } = await Notifications.requestPermissionsAsync());
+    let { granted } = await notifications.getPermission();
+    if (!granted && ask) ({ granted } = await notifications.requestPermission());
     if (!granted) return;
-    if (Platform.OS === "android") {
-      await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
-        name: translate("groupTrip.channelName"),
-        importance: Notifications.AndroidImportance.DEFAULT,
-      });
-    }
-    const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
-    const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId });
+    await notifications.setChannel(CHANNEL_ID, { name: translate("groupTrip.channelName"), importance: "default" });
+    const token = await notifications.getPushToken();
     storage.set(TOKEN_KEY, token);
     await convex.mutation(api.tripNotifications.savePushToken, { token, locale: getCurrentLocale() });
   } catch (err) {

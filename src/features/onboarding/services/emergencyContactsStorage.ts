@@ -1,4 +1,4 @@
-import { storage } from "@/stores/storage";
+import { storage } from "@/modules/storage";
 
 export interface EmergencyContact {
   id: string;

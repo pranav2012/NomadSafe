@@ -1,17 +1,21 @@
 import React, { useEffect, useState } from "react";
-import { Alert, Linking, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Linking, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import * as Contacts from "expo-contacts/legacy";
-import { AuraButton } from "@/components/aura/AuraButton";
-import { AuraCard } from "@/components/aura/AuraCard";
-import { AuraField } from "@/components/aura/AuraField";
-import { AuraListGroup, AuraListRow } from "@/components/aura/AuraList";
-import { AuraSheet } from "@/components/aura/AuraSheet";
-import { useAura } from "@/components/aura/useAura";
-import { Icon } from "@/components/nomad/Icon";
-import { PressableScale } from "@/components/motion/PressableScale";
+import {
+  AuraButton,
+  AuraCard,
+  AuraField,
+  AuraListGroup,
+  AuraListRow,
+  AuraSheet,
+  Icon,
+  PressableScale,
+  showAlert,
+  useAura,
+} from "@/atoms";
 import { auraStatusAccent, auraStatusColors } from "@/constants/aura";
 import { useLocalization } from "@/localization";
-import { logger } from "@/services/logger";
+import { logger } from "@/modules/logger";
 import { emergencyContactsStorage, type EmergencyContact } from "@/features/onboarding/services/emergencyContactsStorage";
 import { isValidPhone, normalizePhone } from "@/features/safety/utils/phone";
 
@@ -74,7 +78,7 @@ export function TrustedContactsEditor({ onChange }: { onChange?: (summary: Trust
     if (Platform.OS !== "android") return true;
     const { granted } = await Contacts.requestPermissionsAsync();
     if (granted) return true;
-    Alert.alert(t("emergencyContacts.permissionTitle"), t("emergencyContacts.permissionBody"), [
+    showAlert(t("emergencyContacts.permissionTitle"), t("emergencyContacts.permissionBody"), [
       { text: t("common.cancel"), style: "cancel" },
       { text: t("emergencyContacts.addManually"), onPress: openManualEntry },
       { text: t("emergencyContacts.openSettings"), onPress: () => Linking.openSettings() },
@@ -99,13 +103,13 @@ export function TrustedContactsEditor({ onChange }: { onChange?: (summary: Trust
         email ||
         t("onboarding.unnamedContact");
       if (!addContact({ id: contact.id ?? `picked-${Date.now()}`, name, phone, email })) {
-        Alert.alert(t("settings.emergencyContacts"), t("emergencyContacts.duplicate"));
+        showAlert(t("settings.emergencyContacts"), t("emergencyContacts.duplicate"));
         return;
       }
-      if (!isValidPhone(phone)) Alert.alert(name, t("emergencyContacts.noPhoneWarning"));
+      if (!isValidPhone(phone)) showAlert(name, t("emergencyContacts.noPhoneWarning"));
     } catch (err) {
       logger.warn("contacts", "picker failed", err);
-      Alert.alert(t("settings.emergencyContacts"), t("emergencyContacts.pickerFailed"), [
+      showAlert(t("settings.emergencyContacts"), t("emergencyContacts.pickerFailed"), [
         { text: t("common.cancel"), style: "cancel" },
         { text: t("emergencyContacts.addManually"), onPress: openManualEntry },
       ]);
@@ -127,7 +131,7 @@ export function TrustedContactsEditor({ onChange }: { onChange?: (summary: Trust
   };
 
   const confirmRemove = (contact: EmergencyContact) =>
-    Alert.alert(t("emergencyContacts.confirmRemoveTitle", { name: contact.name }), t("emergencyContacts.confirmRemoveBody"), [
+    showAlert(t("emergencyContacts.confirmRemoveTitle", { name: contact.name }), t("emergencyContacts.confirmRemoveBody"), [
       { text: t("common.cancel"), style: "cancel" },
       {
         text: t("emergencyContacts.remove"),

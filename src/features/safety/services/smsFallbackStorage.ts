@@ -1,4 +1,4 @@
-import { storage } from "@/stores/storage";
+import { storage } from "@/modules/storage";
 
 export type SmsTemplatePurpose = "missedCheckIn" | "sos" | "invite" | "other";
 

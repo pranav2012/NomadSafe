@@ -22,3 +22,18 @@ export function getEffectiveCurrency(currencyOverride: string | null, deviceCurr
   return currencyOverride ? normalizeCurrencyCode(currencyOverride) : normalizeCurrencyCode(deviceCurrency);
 }
 
+
+/** The picker's currency codes, with any of `extra` (e.g. the phone's currency) that aren't listed added first. */
+export function currencyCodes(...extra: string[]): string[] {
+  const listed = CURRENCY_OPTIONS.map((option) => option.code);
+  return [...new Set([...extra.filter((code) => !listed.includes(code)), ...listed])];
+}
+
+/** Localized currency name ("Euro"), falling back to the English list, then the code. */
+export function currencyDisplayName(code: string, locale: string): string {
+  try {
+    const name = new Intl.DisplayNames([locale], { type: "currency" }).of(code);
+    if (name && name !== code) return name;
+  } catch {}
+  return CURRENCY_OPTIONS.find((option) => option.code === code)?.name ?? code;
+}

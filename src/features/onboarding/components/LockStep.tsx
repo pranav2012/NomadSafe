@@ -1,20 +1,18 @@
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, AppState, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn, ZoomIn } from "react-native-reanimated";
-import { AuraListGroup, AuraListRow } from "@/components/aura/AuraList";
-import { useAura } from "@/components/aura/useAura";
-import { Icon, type IconName } from "@/components/nomad/Icon";
-import { PressableScale } from "@/components/motion/PressableScale";
+import { AuraListGroup, AuraListRow, Icon, type IconName, PressableScale, useAura } from "@/atoms";
 import { auraStatusColors } from "@/constants/aura";
 import { localAuth, useAuthStore, type BiometricPresentation } from "@/features/auth";
 import { BiometricGlyph } from "@/features/auth/components/BiometricGlyph";
-import { findModel, provisionPercent, useAiProvisioning } from "@/features/ai";
+import { provisionPercent } from "@/features/ai";
+import { findModel, useAiProvisioning } from "@/modules/ai";
 import { emergencyContactsStorage } from "@/features/onboarding/services/emergencyContactsStorage";
 import { permissionsService } from "@/features/onboarding/services/permissions";
 import { isValidPhone } from "@/features/safety/utils/phone";
 import { useLocalization } from "@/localization";
 import { successNotification } from "@/utils/haptics";
-import { logger } from "@/services/logger";
+import { logger } from "@/modules/logger";
 import { StepHeader } from "./StepHeader";
 
 const MATCHED = "#3DDC97";

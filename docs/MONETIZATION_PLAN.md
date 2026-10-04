@@ -7,6 +7,7 @@
 | Trips you own | 2 (joining someone else's shared trip is always free) | Unlimited | Unlimited |
 | Features | Everything | Everything | Everything |
 | AI | On-device model + your own API key | On-device model + your own API key | GPT-6 Luna when online (monthly quota), on-device model as fallback, your own key first |
+| Ads | Occasional interstitial (see Ads) | None | None |
 | Billing | – | Monthly, yearly or lifetime | Monthly or yearly, with a 3-day free trial |
 
 "Trips you own" counts personal trips and shared trips where the user is the owner (`Trip.shared.role === "owner"`). Deleting a trip frees its slot. The app isn't live yet, so there's no grandfathering.
@@ -40,6 +41,16 @@ Voice expenses use online AI too. Only the transcribed text is sent, never audio
   - by the webhook at `POST /revenuecat/webhook`;
   - by `billing.refreshMyPlan`, which the app calls after a purchase or restore.
 
+## Ads (Free plan)
+
+- Google AdMob through `react-native-google-mobile-ads`, wrapped by `src/modules/ads` (nothing else imports the library).
+- **Who sees ads:** Free only. Any paid plan (`unlimitedTrips` in the plan store, so Plus monthly/yearly/lifetime and Pro) never starts the consent flow or the SDK. Upgrading mid-session drops the preloaded ad and stops loading (the SDK can't be shut down until the next launch, but it requests nothing).
+- **Placement:** one interstitial, shown after a *new* trip is saved (`TripForm` → `showTripCreatedAd()`), fire and forget, about 0.6 s after the planner closes and only if the app is active. Never on safety flows (SOS, check-in, live location, lock screen, voice capture).
+- **Frequency:** at most once every 4 hours (`ads:lastShownAt` in MMKV) and never for the user's first trip ever on this install (`ads:firstTripCreated`). Free users own at most 2 trips, so in practice this is the second trip and later ones after deleting a trip.
+- **Consent:** `AdsGate` in `src/app/_layout.tsx` starts ads only when the user is in the app, unlocked and not on SOS or voice capture. `AdsConsent.gatherConsent()` (UMP) runs once per launch; `mobileAds().initialize()` runs once, as soon as `canRequestAds` is true (from this session's form or a previous one). Where GDPR applies and the user didn't consent to personalised ads, requests are non-personalised. When UMP requires privacy options, Settings shows **Ad privacy choices** (`showPrivacyOptionsForm`).
+- **IDs:** AdMob app IDs are static in `app.json` (currently Google's sample IDs; replace before production, see `docs/PLAY_RELEASE.md` step 12). Interstitial unit ids come from `EXPO_PUBLIC_ADMOB_ANDROID_INTERSTITIAL_ID` / `EXPO_PUBLIC_ADMOB_IOS_INTERSTITIAL_ID`; dev builds and builds without them use `TestIds.INTERSTITIAL`.
+- **Analytics:** `ad_shown` and `ad_failed` (`placement`, `stage`), enums only.
+
 ## NomadSafe Cloud AI (Pro)
 
 - `convex/ai.ts`. JSON tasks go through the `ai.complete` action; chat streams from `POST /ai/chat` (Convex JWT as Bearer).
@@ -66,4 +77,5 @@ Voice expenses use online AI too. Only the transcribed text is sent, never audio
   - `REVENUECAT_WEBHOOK_AUTH`: any long random string. Set the same value as the webhook's Authorization header in RevenueCat.
   - `OPENAI_API_KEY`.
 - **RevenueCat webhook:** point it at `https://<deployment>.convex.site/revenuecat/webhook`.
+- **AdMob:** see `docs/PLAY_RELEASE.md` step 12 (real app IDs, interstitial unit ids, consent message, app-ads.txt).
 - **Play data safety form:** declare that chat messages, trip and money context and voice transcripts can go to OpenAI (Pro, via our server) or to the provider the user picks. Purchase history goes to RevenueCat/Google Play.

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import { mmkvStateStorage } from "@/stores/storage";
+import { mmkvStateStorage } from "@/modules/storage";
 import type { TripGmailCoverage } from "@/features/expenses/services/tripGmailCoverage";
 
 interface TripGmailCoverageState {

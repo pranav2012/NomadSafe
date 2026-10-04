@@ -1,7 +1,7 @@
 import { SELF_ID } from "@/features/expenses/utils/split";
 import type { Expense } from "@/features/expenses/store/expensesStore";
 import type { Trip } from "@/features/trips/store/tripsStore";
-import { storage } from "@/stores/storage";
+import { storage } from "@/modules/storage";
 
 export type SharedKind = "expense" | "settlement" | "event";
 

@@ -1,5 +1,5 @@
 import { translate } from "@/localization/translate";
-import { storage } from "@/stores/storage";
+import { storage } from "@/modules/storage";
 import { fromLocalDayKey, toLocalDayKey } from "@/features/expenses/utils/dateKey";
 
 export interface ExchangeRate {

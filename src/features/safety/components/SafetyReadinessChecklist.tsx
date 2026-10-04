@@ -1,10 +1,6 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { AuraCard } from "@/components/aura/AuraCard";
-import { AuraSection } from "@/components/aura/AuraSection";
-import { useAura } from "@/components/aura/useAura";
-import { Icon, type IconName } from "@/components/nomad/Icon";
-import { PressableScale } from "@/components/motion/PressableScale";
+import { AuraCard, AuraSection, Icon, type IconName, PressableScale, useAura } from "@/atoms";
 import { auraStatusAccent } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { summarizeReadiness, type PermissionReadiness, type SafetyReadiness } from "../hooks/useSafetyReadiness";

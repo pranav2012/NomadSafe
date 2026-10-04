@@ -1,11 +1,8 @@
 import React from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { AuraButton } from "@/components/aura/AuraButton";
-import { AuraSheet } from "@/components/aura/AuraSheet";
-import { useAura } from "@/components/aura/useAura";
-import { Icon, type IconName } from "@/components/nomad/Icon";
+import { AuraButton, AuraSheet, Icon, type IconName, useAura } from "@/atoms";
 import { useLocalization } from "@/localization";
-import { storage } from "@/stores/storage";
+import { storage } from "@/modules/storage";
 
 const ACCEPTED_KEY = "nomadsafe.bg-location-disclosure-accepted";
 

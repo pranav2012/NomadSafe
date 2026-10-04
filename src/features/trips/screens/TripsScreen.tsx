@@ -1,21 +1,14 @@
 import React, { useMemo, useState } from "react";
-import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeIn, FadeInDown, FadeOut, LinearTransition } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { useMutation } from "convex/react";
-import { api } from "@convex/_generated/api";
-import type { Id } from "@convex/_generated/dataModel";
-import { Icon } from "@/components/nomad/Icon";
-import { PressableScale } from "@/components/motion/PressableScale";
-import { AuraButton } from "@/components/aura/AuraButton";
-import { AuraField } from "@/components/aura/AuraField";
-import { AuraSheet } from "@/components/aura/AuraSheet";
-import { useAura } from "@/components/aura/useAura";
+import { api, type Id, useMutation } from "@/modules/backend";
+import { AuraButton, AuraField, AuraSheet, Icon, PressableScale, showAlert, useAura } from "@/atoms";
 import { auraStatusColors } from "@/constants/aura";
 import { useLocalization } from "@/localization";
-import { useStartNewTrip } from "@/features/billing";
+import { useStartNewTrip } from "@/modules/billing";
 import { TripFormSheet } from "@/features/trips/components/TripForm";
 import { isArchived, TripPeopleSheet } from "@/features/trips/components/TripPeopleSheet";
 import { selectActiveTrip, type Trip, useTripsStore } from "@/features/trips/store/tripsStore";
@@ -109,7 +102,7 @@ export default function TripsScreen() {
     if (!trip.shared) return;
     const archived = !trip.shared.archived;
     setPreferences({ tripId: trip.shared.tripId as Id<"sharedTrips">, archived }).catch(() =>
-      Alert.alert(t("groupTrip.actionFailed")),
+      showAlert(t("groupTrip.actionFailed")),
     );
     if (archived && trip.id === activeTrip?.id) useTripsStore.getState().clearActiveTrip();
   };
@@ -143,7 +136,7 @@ export default function TripsScreen() {
   const confirmDelete = () => {
     if (!deleteTarget) return;
     if (!matchesConfirmWord(confirmText, t("trip.deletePlaceholder"), locale)) {
-      Alert.alert(t("trip.deleteConfirmErrorTitle"), t("trip.deleteConfirmErrorBody"));
+      showAlert(t("trip.deleteConfirmErrorTitle"), t("trip.deleteConfirmErrorBody"));
       return;
     }
     const tripId = deleteTarget.id;

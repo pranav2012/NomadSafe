@@ -1,11 +1,9 @@
 import React, { useEffect, useMemo, useRef } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import MapView, { Marker, PROVIDER_DEFAULT } from "react-native-maps";
 import { LinearGradient } from "expo-linear-gradient";
-import { PostHogMaskView } from "posthog-react-native";
-import { Icon } from "@/components/nomad/Icon";
-import { LiveDot } from "@/components/motion/LiveDot";
-import { PressableScale } from "@/components/motion/PressableScale";
+import { PrivateView } from "@/modules/analytics";
+import { MapView, Marker, type MapViewHandle } from "@/modules/location";
+import { Icon, LiveDot, PressableScale } from "@/atoms";
 import { auraFonts as f, type AuraPalette } from "@/constants/aura";
 import { quietMapStyle } from "@/features/home/components/aura/mapStyles";
 import { useLocalization } from "@/localization";
@@ -47,7 +45,7 @@ export function SafetyMapHero({
   onTouchActive,
 }: SafetyMapHeroProps) {
   const { t } = useLocalization();
-  const mapRef = useRef<MapView>(null);
+  const mapRef = useRef<MapViewHandle>(null);
   const style = useMemo(() => quietMapStyle(isDark), [isDark]);
 
   const points = useMemo(() => [...(me ? [me] : []), ...contacts.map(({ latitude, longitude }) => ({ latitude, longitude }))], [contacts, me]);
@@ -74,7 +72,7 @@ export function SafetyMapHero({
   return (
     <View style={{ height }}>
       {first ? (
-        <PostHogMaskView style={StyleSheet.absoluteFill}>
+        <PrivateView style={StyleSheet.absoluteFill}>
           <View
             style={StyleSheet.absoluteFill}
             onTouchStart={() => onTouchActive(true)}
@@ -84,7 +82,6 @@ export function SafetyMapHero({
             <MapView
               ref={mapRef}
               style={StyleSheet.absoluteFill}
-              provider={PROVIDER_DEFAULT}
               initialRegion={{ ...first, latitudeDelta: 0.05, longitudeDelta: 0.05 }}
               customMapStyle={style}
               userInterfaceStyle={isDark ? "dark" : "light"}
@@ -118,7 +115,7 @@ export function SafetyMapHero({
               ))}
             </MapView>
           </View>
-        </PostHogMaskView>
+        </PrivateView>
       ) : (
         <View style={[StyleSheet.absoluteFill, styles.fallback]}>
           <Icon name="globe" size={30} color={c.textMuted} />

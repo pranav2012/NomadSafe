@@ -1,4 +1,4 @@
-import type { IconName } from "@/components/nomad/Icon";
+import type { IconName } from "@/atoms";
 import type { SafetyKind } from "@/features/home/hooks/useTripSafety";
 
 export const SAFETY_KIND_META: Record<SafetyKind, { labelKey: string; icon: IconName; color: string }> = {

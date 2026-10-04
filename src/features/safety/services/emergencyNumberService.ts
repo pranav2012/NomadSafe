@@ -1,4 +1,4 @@
-import { storage } from "@/stores/storage";
+import { storage } from "@/modules/storage";
 import { resolveCountry } from "./countryResolver";
 
 export interface EmergencyNumbers {

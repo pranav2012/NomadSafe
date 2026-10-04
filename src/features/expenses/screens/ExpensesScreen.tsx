@@ -5,14 +5,18 @@ import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { AuraButton } from "@/components/aura/AuraButton";
-import { AuraCard } from "@/components/aura/AuraCard";
-import { AuraSection } from "@/components/aura/AuraSection";
-import { AuraSegmented } from "@/components/aura/AuraSegmented";
-import { useAura } from "@/components/aura/useAura";
-import { Icon } from "@/components/nomad/Icon";
-import { PressableScale } from "@/components/motion/PressableScale";
-import { useFloatingBarBottom, useKeyboardVisible, useTabBarInset } from "@/components/tabbar/tabBarInset";
+import {
+  AuraButton,
+  AuraCard,
+  AuraSection,
+  AuraSegmented,
+  Icon,
+  PressableScale,
+  useAura,
+  useFloatingBarBottom,
+  useKeyboardVisible,
+  useTabBarInset,
+} from "@/atoms";
 import { auraStatusAccent } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { selectActiveTrip, useTripsStore } from "@/features/trips/store/tripsStore";

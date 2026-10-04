@@ -4,7 +4,7 @@ import { requestWidgetUpdate } from "react-native-android-widget";
 import { ExtensionStorage } from "@bacons/apple-targets";
 import { useTripsStore } from "@/features/trips/store/tripsStore";
 import { translate } from "@/localization/translate";
-import { logger } from "@/services/logger";
+import { logger } from "@/modules/logger";
 import { VOICE_WIDGET_NAME, VoiceExpenseWidget } from "@/features/widget/VoiceExpenseWidget";
 import { SOS_WIDGET_NAME, SosWidget } from "@/features/widget/SosWidget";
 import { buildSosWidgetProps, buildWidgetProps } from "@/features/widget/widgetContent";

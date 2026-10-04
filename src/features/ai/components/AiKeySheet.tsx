@@ -1,19 +1,23 @@
 import React, { useState } from "react";
-import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
-import { PostHogMaskView } from "posthog-react-native";
-import { AuraButton } from "@/components/aura/AuraButton";
-import { AuraChip } from "@/components/aura/AuraChip";
-import { AuraField } from "@/components/aura/AuraField";
-import { AuraSheet } from "@/components/aura/AuraSheet";
-import { useAura } from "@/components/aura/useAura";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { PrivateView, track } from "@/modules/analytics";
+import { AuraButton, AuraChip, AuraField, AuraSheet, showAlert, useAura } from "@/atoms";
 import { useLocalization } from "@/localization";
-import { track } from "@/services/analytics";
-import { logger } from "@/services/logger";
+import { logger } from "@/modules/logger";
 import { successNotification } from "@/utils/haptics";
-import { clearByokConfig, getByokConfig, saveByokConfig, testByokConfig, useByokStore } from "../services/remote/byok";
-import { RemoteAiError } from "../services/remote/http";
-import { PROVIDER_DEFAULTS, isConfigComplete, type ByokConfig, type ByokProvider } from "../services/remote/providers";
-import { byokProviderName } from "../utils/remoteLabel";
+import {
+  BYOK_PROVIDER_DEFAULTS,
+  RemoteAiError,
+  byokProviderName,
+  clearByokConfig,
+  getByokConfig,
+  isByokConfigComplete,
+  saveByokConfig,
+  testByokConfig,
+  useByokStore,
+  type ByokConfig,
+  type ByokProvider,
+} from "@/modules/ai";
 
 const PROVIDERS: ByokProvider[] = ["openai", "anthropic", "gemini", "openai_compatible"];
 
@@ -24,7 +28,7 @@ export function AiKeySheet({ visible, onClose }: { visible: boolean; onClose: ()
   const saved = useByokStore((s) => s.summary);
   const [provider, setProvider] = useState<ByokProvider>(saved?.provider ?? "openai");
   const [apiKey, setApiKey] = useState("");
-  const [model, setModel] = useState(saved?.model ?? PROVIDER_DEFAULTS.openai.model);
+  const [model, setModel] = useState(saved?.model ?? BYOK_PROVIDER_DEFAULTS.openai.model);
   const [baseUrl, setBaseUrl] = useState(saved?.baseUrl ?? "");
   const [busy, setBusy] = useState(false);
 
@@ -33,7 +37,7 @@ export function AiKeySheet({ visible, onClose }: { visible: boolean; onClose: ()
 
   const pickProvider = (next: ByokProvider) => {
     setProvider(next);
-    setModel(saved?.provider === next ? saved.model : PROVIDER_DEFAULTS[next].model);
+    setModel(saved?.provider === next ? saved.model : BYOK_PROVIDER_DEFAULTS[next].model);
   };
 
   const handleSave = async () => {
@@ -43,8 +47,8 @@ export function AiKeySheet({ visible, onClose }: { visible: boolean; onClose: ()
       model: model.trim(),
       baseUrl: provider === "openai_compatible" ? baseUrl.trim() : undefined,
     };
-    if (!isConfigComplete(config)) {
-      Alert.alert(t("aiKey.incompleteTitle"), t(provider === "openai_compatible" ? "aiKey.incompleteBodyUrl" : "aiKey.incompleteBody"));
+    if (!isByokConfigComplete(config)) {
+      showAlert(t("aiKey.incompleteTitle"), t(provider === "openai_compatible" ? "aiKey.incompleteBodyUrl" : "aiKey.incompleteBody"));
       return;
     }
     setBusy(true);
@@ -66,14 +70,14 @@ export function AiKeySheet({ visible, onClose }: { visible: boolean; onClose: ()
             : status === 429
               ? t("aiKey.rateLimited")
               : t("aiKey.checkFailed");
-      Alert.alert(t("aiKey.checkFailedTitle"), body);
+      showAlert(t("aiKey.checkFailedTitle"), body);
     } finally {
       setBusy(false);
     }
   };
 
   const handleRemove = () => {
-    Alert.alert(t("aiKey.removeTitle"), t("aiKey.removeBody"), [
+    showAlert(t("aiKey.removeTitle"), t("aiKey.removeBody"), [
       { text: t("common.cancel"), style: "cancel" },
       {
         text: t("aiKey.remove"),
@@ -119,7 +123,7 @@ export function AiKeySheet({ visible, onClose }: { visible: boolean; onClose: ()
           />
         ) : null}
 
-        <PostHogMaskView>
+        <PrivateView>
           <AuraField
             label={t("aiKey.apiKey")}
             value={apiKey}
@@ -130,7 +134,7 @@ export function AiKeySheet({ visible, onClose }: { visible: boolean; onClose: ()
             secureTextEntry
             textContentType="password"
           />
-        </PostHogMaskView>
+        </PrivateView>
 
         <AuraField
           label={t("aiKey.model")}
@@ -140,9 +144,9 @@ export function AiKeySheet({ visible, onClose }: { visible: boolean; onClose: ()
           autoCapitalize="none"
           autoCorrect={false}
         />
-        {PROVIDER_DEFAULTS[provider].suggestions.length > 0 ? (
+        {BYOK_PROVIDER_DEFAULTS[provider].suggestions.length > 0 ? (
           <View style={styles.chips}>
-            {PROVIDER_DEFAULTS[provider].suggestions.map((id) => (
+            {BYOK_PROVIDER_DEFAULTS[provider].suggestions.map((id) => (
               <AuraChip key={id} label={id} selected={model.trim() === id} onPress={() => setModel(id)} />
             ))}
           </View>

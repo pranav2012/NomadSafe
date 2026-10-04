@@ -1,4 +1,4 @@
-export { authClient } from "./services/authClient";
+export { authClient } from "@/modules/backend";
 export { localAuth } from "./services/localAuth";
 export { secureStorage } from "./services/secureStorage";
 export { useAuth } from "./hooks/useAuth";

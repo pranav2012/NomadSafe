@@ -1,4 +1,4 @@
-import * as SecureStore from "expo-secure-store";
+import { secureStore } from "@/modules/storage";
 
 const KEY = "nomadsafe.pin-attempts";
 const FREE_ATTEMPTS = 5;
@@ -18,7 +18,7 @@ function lockoutFor(failures: number) {
 
 async function read(): Promise<AttemptState> {
   try {
-    const raw = await SecureStore.getItemAsync(KEY);
+    const raw = await secureStore.get(KEY);
     return raw ? { ...EMPTY, ...(JSON.parse(raw) as AttemptState) } : EMPTY;
   } catch {
     return EMPTY;
@@ -27,7 +27,7 @@ async function read(): Promise<AttemptState> {
 
 async function write(state: AttemptState) {
   try {
-    await SecureStore.setItemAsync(KEY, JSON.stringify(state));
+    await secureStore.set(KEY, JSON.stringify(state));
   } catch {}
 }
 
@@ -52,7 +52,7 @@ export const pinAttempts = {
 
   async reset() {
     try {
-      await SecureStore.deleteItemAsync(KEY);
+      await secureStore.remove(KEY);
     } catch {}
   },
 };

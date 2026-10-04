@@ -1,20 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, AppState, Linking, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { AppState, Linking, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
-import * as Location from "expo-location";
 import { useNetworkState } from "expo-network";
 import { useFocusEffect, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useQuery } from "convex/react";
-import { api } from "@convex/_generated/api";
-import { AuraButton } from "@/components/aura/AuraButton";
-import { AuraCard } from "@/components/aura/AuraCard";
-import { AuraChip } from "@/components/aura/AuraChip";
-import { AuraSection } from "@/components/aura/AuraSection";
-import { useAura } from "@/components/aura/useAura";
-import { Icon } from "@/components/nomad/Icon";
-import { useTabBarInset } from "@/components/tabbar/tabBarInset";
+import { api, useQuery } from "@/modules/backend";
+import { getCurrentPosition, getLastKnownPosition, requestForegroundPermission } from "@/modules/location";
+import { AuraButton, AuraCard, AuraChip, AuraSection, Icon, showAlert, useAura, useTabBarInset } from "@/atoms";
 import { auraStatusAccent, type AuraStatus } from "@/constants/aura";
 import { ActionButton } from "@/features/home/components/aura/ActionButton";
 import { useLocalization } from "@/localization";
@@ -73,8 +66,8 @@ import {
   type SmsDelivery,
 } from "../store/safetyStore";
 import { errorNotification, heavyImpact, lightImpact, successNotification } from "@/utils/haptics";
-import { track } from "@/services/analytics";
-import { logger } from "@/services/logger";
+import { track } from "@/modules/analytics";
+import { logger } from "@/modules/logger";
 
 const PRESETS = [15 * 60, 30 * 60, 60 * 60, 2 * 60 * 60, 4 * 60 * 60, 8 * 60 * 60];
 
@@ -259,26 +252,26 @@ export default function SafetyScreen() {
     let mounted = true;
     async function bootstrap() {
       try {
-        const { status: perm } = await Location.requestForegroundPermissionsAsync();
+        const { status: perm } = await requestForegroundPermission();
         void refreshReadiness();
-        if (perm !== Location.PermissionStatus.GRANTED) return;
+        if (perm !== "granted") return;
         // A fresh fix can take a while indoors; show the phone's last known position meanwhile.
-        const recent = await Location.getLastKnownPositionAsync({ maxAge: 30 * 60_000 }).catch(() => null);
+        const recent = await getLastKnownPosition({ maxAge: 30 * 60_000 }).catch(() => null);
         if (recent && mounted) {
           setLocation((current) =>
             current ?? {
-              latitude: recent.coords.latitude,
-              longitude: recent.coords.longitude,
-              accuracy: recent.coords.accuracy ?? null,
+              latitude: recent.latitude,
+              longitude: recent.longitude,
+              accuracy: recent.accuracy,
               timestamp: recent.timestamp,
             },
           );
         }
-        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        const loc = await getCurrentPosition("balanced");
         const fix = {
-          latitude: loc.coords.latitude,
-          longitude: loc.coords.longitude,
-          accuracy: loc.coords.accuracy ?? null,
+          latitude: loc.latitude,
+          longitude: loc.longitude,
+          accuracy: loc.accuracy,
           timestamp: loc.timestamp,
         };
         saveLastKnownFix(fix);
@@ -332,13 +325,13 @@ export default function SafetyScreen() {
 
   const callEmergency = useCallback(() => {
     Linking.openURL(`tel:${emergencyNumber}`).catch(() => {
-      Alert.alert(t("sos.callEmergency", { number: emergencyNumber }), t("sos.callHint", { number: emergencyNumber }));
+      showAlert(t("sos.callEmergency", { number: emergencyNumber }), t("sos.callHint", { number: emergencyNumber }));
     });
   }, [emergencyNumber, t]);
 
   const showNoContactsAlert = useCallback(() => {
     errorNotification();
-    Alert.alert(t("safety.noContactsTitle"), t("safety.noContactsBody"), [
+    showAlert(t("safety.noContactsTitle"), t("safety.noContactsBody"), [
       { text: t("common.cancel"), style: "cancel" },
       { text: t("sos.callEmergency", { number: emergencyNumber }), onPress: callEmergency },
       { text: t("safety.addContacts"), onPress: () => router.push("/emergency-contacts") },
@@ -612,7 +605,7 @@ export default function SafetyScreen() {
   }, [missedBusy, recordMissedAlert, sendAlertSms, showNoContactsAlert]);
 
   const handleCancelSos = useCallback(() => {
-    Alert.alert(t("safety.cancelTitle"), t("safety.cancelBody"), [
+    showAlert(t("safety.cancelTitle"), t("safety.cancelBody"), [
       { text: t("safety.cancelKeep"), style: "cancel" },
       {
         text: t("safety.cancelConfirm"),

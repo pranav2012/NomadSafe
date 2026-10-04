@@ -9,7 +9,7 @@ import {
 } from "@/features/expenses/services/gmailParsing";
 import { translate } from "@/localization/translate";
 import type { GmailFetchProgress } from "@/features/expenses/store/gmailSyncStatusStore";
-import { logger } from "@/services/logger";
+import { logger } from "@/modules/logger";
 
 export const GMAIL_SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"];
 

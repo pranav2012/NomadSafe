@@ -1,4 +1,3 @@
-import * as Location from "expo-location";
 import * as SMS from "expo-sms";
 import { Linking, Platform } from "react-native";
 import {
@@ -13,7 +12,8 @@ import { hasAcceptedBackgroundDisclosure } from "@/features/location-sharing/com
 import { emergencyContactsStorage } from "@/features/onboarding/services/emergencyContactsStorage";
 import { normalizePhone, isValidPhone } from "../utils/phone";
 import { readLastKnownFix, saveLastKnownFix } from "./lastKnownLocation";
-import { logger } from "@/services/logger";
+import { getBackgroundPermission, getCurrentPosition, getForegroundPermission, getLastKnownPosition } from "@/modules/location";
+import { logger } from "@/modules/logger";
 
 export type SmsOutcome = "sent" | "cancelled" | "opened" | "failed";
 
@@ -65,29 +65,29 @@ function newest(a: CachedPosition | null, b: CachedPosition | null): CachedPosit
 export async function getBestPosition(cached: CachedPosition | null): Promise<AlertPosition | null> {
   let osLastAt: number | null = null;
   try {
-    const perm = await Location.getForegroundPermissionsAsync();
+    const perm = await getForegroundPermission();
     if (perm.granted) {
       const fresh = await withTimeout(
-        Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }).catch(() => null),
+        getCurrentPosition("high").catch(() => null),
         FRESH_FIX_TIMEOUT_MS,
       );
       if (fresh) {
         const fix = {
-          latitude: fresh.coords.latitude,
-          longitude: fresh.coords.longitude,
-          accuracy: fresh.coords.accuracy ?? null,
+          latitude: fresh.latitude,
+          longitude: fresh.longitude,
+          accuracy: fresh.accuracy,
           timestamp: fresh.timestamp,
         };
         saveLastKnownFix(fix);
         return { ...fix, source: "fresh" };
       }
-      const last = await Location.getLastKnownPositionAsync().catch(() => null);
+      const last = await getLastKnownPosition().catch(() => null);
       if (last) {
         osLastAt = last.timestamp;
         saveLastKnownFix({
-          latitude: last.coords.latitude,
-          longitude: last.coords.longitude,
-          accuracy: last.coords.accuracy ?? null,
+          latitude: last.latitude,
+          longitude: last.longitude,
+          accuracy: last.accuracy,
           timestamp: last.timestamp,
         });
       }
@@ -148,7 +148,7 @@ export function snapshotBroadcast(): BroadcastSnapshot {
 
 export async function hasBackgroundLocationPermission(): Promise<boolean> {
   try {
-    return (await Location.getBackgroundPermissionsAsync()).granted;
+    return (await getBackgroundPermission()).granted;
   } catch {
     return false;
   }

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { useAura } from "@/components/aura/useAura";
+import { useAura } from "@/atoms";
 import { auraStatusColors } from "@/constants/aura";
 
 const SIZE = 64;

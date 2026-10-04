@@ -1,12 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
-import { AuraButton } from "@/components/aura/AuraButton";
-import { AuraCard } from "@/components/aura/AuraCard";
-import { AuraChip } from "@/components/aura/AuraChip";
-import { useAura } from "@/components/aura/useAura";
-import { PressableScale } from "@/components/motion/PressableScale";
-import { Icon } from "@/components/nomad/Icon";
+import { AuraButton, AuraCard, AuraChip, Icon, PressableScale, useAura } from "@/atoms";
 import { auraStatusAccent } from "@/constants/aura";
 import { useAnimationsActive } from "@/hooks/useAnimationsActive";
 import { useLocalization } from "@/localization";

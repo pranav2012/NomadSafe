@@ -1,5 +1,4 @@
-import { AI_MODELS, formatBytes } from "../services/aiModelService";
-import type { ProvisioningState } from "../services/modelProvisioner";
+import { AI_MODELS, formatBytes, type ProvisioningState } from "@/modules/ai";
 
 type Translate = (key: string, params?: Record<string, string | number>) => string;
 

@@ -1,13 +1,9 @@
 import React from "react";
-import { View, Text, StyleSheet, ActivityIndicator, Alert } from "react-native";
-import { AuraButton } from "@/components/aura/AuraButton";
-import { useAura } from "@/components/aura/useAura";
+import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
+import { AuraButton, Icon, type IconName, showAlert, useAura } from "@/atoms";
 import { auraStatusAccent } from "@/constants/aura";
 import { useLocalization } from "@/localization";
-import { Icon, type IconName } from "@/components/nomad/Icon";
-import { useAiProvisioning } from "../hooks/useAiProvisioning";
-import { aiModelService, findModel, formatBytes } from "../services/aiModelService";
-import type { ProvisionPhase } from "../services/modelProvisioner";
+import { aiRuntime, findModel, formatBytes, useAiProvisioning, type ProvisionPhase } from "@/modules/ai";
 import { provisionCopy, provisionPercent, provisionProgressText } from "../utils/provisionCopy";
 
 interface Props {
@@ -44,7 +40,7 @@ export function AiProvisionCard({ mode, busy = false }: Props) {
   const { t, locale } = useLocalization();
   const provisioning = useAiProvisioning();
   const { phase, model } = provisioning;
-  const copy = provisionCopy(provisioning, t, locale, aiModelService.usesSystemDownloader());
+  const copy = provisionCopy(provisioning, t, locale, aiRuntime.usesSystemDownloader());
   const percent = provisionPercent(provisioning);
   const showProgress = PROGRESS_PHASES.has(phase) && model !== null;
   const activeModel = findModel(provisioning.activeModelId);
@@ -54,7 +50,7 @@ export function AiProvisionCard({ mode, busy = false }: Props) {
 
   const confirmRemove = () => {
     if (!activeModel) return;
-    Alert.alert(
+    showAlert(
       t("aiTab.provision.removeConfirmTitle"),
       t("aiTab.provision.removeConfirmBody", { model: activeModel.name }),
       [

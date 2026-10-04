@@ -4,10 +4,7 @@ import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Redirect, useRouter, useLocalSearchParams } from "expo-router";
 import Animated, { FadeIn, FadeInDown, FadeOut } from "react-native-reanimated";
-import { AuraButton } from "@/components/aura/AuraButton";
-import { AuraOrb } from "@/components/aura/AuraOrb";
-import { useAura } from "@/components/aura/useAura";
-import { Icon } from "@/components/nomad/Icon";
+import { AuraButton, AuraOrb, Icon, useAura } from "@/atoms";
 import {
   localAuth,
   secureStorage,
@@ -21,7 +18,7 @@ import { ONBOARDING_LOCK_STEP } from "@/features/onboarding/steps";
 import { useSettingsStore } from "@/features/settings";
 import { errorNotification } from "@/utils/haptics";
 import { useLocalization } from "@/localization";
-import { logger } from "@/services/logger";
+import { logger } from "@/modules/logger";
 
 const PIN_LENGTH = 6;
 const DANGER = "#FF4D5E";

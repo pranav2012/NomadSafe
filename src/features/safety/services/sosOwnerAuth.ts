@@ -3,7 +3,7 @@ import { localAuth } from "@/features/auth/services/localAuth";
 import { pinAttempts } from "@/features/auth/services/pinAttempts";
 import { useAuthStore } from "@/features/auth/store/authStore";
 import { useSettingsStore } from "@/features/settings/store/settingsStore";
-import { logger } from "@/services/logger";
+import { logger } from "@/modules/logger";
 import { useSafetyStore } from "../store/safetyStore";
 
 let stopWaiting: (() => void) | null = null;

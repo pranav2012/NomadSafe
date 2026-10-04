@@ -1,4 +1,4 @@
-import type { IconName } from "@/components/nomad/Icon";
+import type { IconName } from "@/atoms";
 
 export type EventType = "transit" | "stay" | "activity";
 

@@ -1,8 +1,6 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { useAura } from "@/components/aura/useAura";
-import { Icon } from "@/components/nomad/Icon";
-import { PressableScale } from "@/components/motion/PressableScale";
+import { Icon, PressableScale, useAura } from "@/atoms";
 import { auraCategoryColors, auraStatusAccent } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { getCategoryMeta } from "@/features/expenses/constants/categories";

@@ -1,25 +1,21 @@
-import * as Keychain from "react-native-keychain";
+import { credentials } from "@/modules/storage";
 
 const PIN_SERVICE = "nomadsafe-pin";
 
 export const secureStorage = {
   async setPin(hashedPin: string): Promise<void> {
-    await Keychain.setGenericPassword("pin", hashedPin, {
-      service: PIN_SERVICE,
-    });
+    await credentials.set(PIN_SERVICE, hashedPin);
   },
 
   async getPin(): Promise<string | null> {
-    const result = await Keychain.getGenericPassword({ service: PIN_SERVICE });
-    return result ? result.password : null;
+    return credentials.get(PIN_SERVICE);
   },
 
   async hasPin(): Promise<boolean> {
-    const result = await Keychain.getGenericPassword({ service: PIN_SERVICE });
-    return !!result;
+    return (await credentials.get(PIN_SERVICE)) !== null;
   },
 
   async resetPin(): Promise<void> {
-    await Keychain.resetGenericPassword({ service: PIN_SERVICE });
+    await credentials.remove(PIN_SERVICE);
   },
 };

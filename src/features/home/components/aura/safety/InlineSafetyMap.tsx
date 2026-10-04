@@ -1,15 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Linking, Platform, StyleSheet, Text, View } from "react-native";
-import MapView, { Marker, Polyline, PROVIDER_DEFAULT, type Region } from "react-native-maps";
 import Animated, { FadeInDown, FadeOutDown } from "react-native-reanimated";
-import { Icon } from "@/components/nomad/Icon";
-import { PressableScale } from "@/components/motion/PressableScale";
+import { Icon, PressableScale } from "@/atoms";
 import { auraFonts as f, type AuraPalette } from "@/constants/aura";
 import type { HomeStop } from "@/features/home/types";
 import type { PlacePin, SafetyPlace } from "@/features/home/hooks/useTripSafety";
 import { formatDistance } from "@/features/home/utils/format";
 import { isCompactFrame, regionForPoints } from "@/features/trips/utils/mapFraming";
 import { useLocalization } from "@/localization";
+import { MapView, Marker, Polyline, type MapViewHandle, type Region } from "@/modules/location";
 import { distanceKm } from "../globe/sun";
 import { quietMapStyle } from "../mapStyles";
 import { SAFETY_KIND_META } from "./kinds";
@@ -94,7 +93,7 @@ export function InlineSafetyMap({
   onTouchActive,
 }: InlineSafetyMapProps) {
   const { t, locale } = useLocalization();
-  const mapRef = useRef<MapView>(null);
+  const mapRef = useRef<MapViewHandle>(null);
   const [selected, setSelected] = useState<SafetyPlace | null>(null);
   const [settled, setSettled] = useState(false);
   const style = useMemo(() => quietMapStyle(isDark), [isDark]);
@@ -163,7 +162,6 @@ export function InlineSafetyMap({
       <MapView
         ref={mapRef}
         style={StyleSheet.absoluteFill}
-        provider={PROVIDER_DEFAULT}
         initialCamera={startCamera}
         customMapStyle={style}
         userInterfaceStyle={isDark ? "dark" : "light"}

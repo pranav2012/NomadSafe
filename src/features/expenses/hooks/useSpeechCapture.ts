@@ -5,7 +5,7 @@ import {
   ExpoSpeechRecognitionModule,
   useSpeechRecognitionEvent,
 } from "expo-speech-recognition";
-import { logger } from "@/services/logger";
+import { logger } from "@/modules/logger";
 
 export type SpeechUnavailableReason =
   | "unsupported"

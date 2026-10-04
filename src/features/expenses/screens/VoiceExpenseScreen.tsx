@@ -5,25 +5,24 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as Haptics from "expo-haptics";
 import Animated, { FadeIn, FadeInDown, FadeOut, LinearTransition } from "react-native-reanimated";
-import { PostHogMaskView } from "posthog-react-native";
-import { AuraButton } from "@/components/aura/AuraButton";
-import { AuraCard } from "@/components/aura/AuraCard";
-import { AuraChip } from "@/components/aura/AuraChip";
-import { AuraOrb, type AuraOrbMode } from "@/components/aura/AuraOrb";
-import { AuraSheet } from "@/components/aura/AuraSheet";
-import { useAura } from "@/components/aura/useAura";
-import { Icon } from "@/components/nomad/Icon";
-import { PressableScale } from "@/components/motion/PressableScale";
+import { PrivateView, track } from "@/modules/analytics";
+import {
+  AuraButton,
+  AuraCard,
+  AuraChip,
+  AuraOrb,
+  type AuraOrbMode,
+  AuraSheet,
+  Icon,
+  PressableScale,
+  useAura,
+} from "@/atoms";
 import { auraStatusAccent } from "@/constants/aura";
 import { useLocalization } from "@/localization";
-import { track } from "@/services/analytics";
-import { logger } from "@/services/logger";
+import { logger } from "@/modules/logger";
 import { useAuthStore } from "@/features/auth";
 import { useSettingsStore } from "@/features/settings";
-import { localModelService } from "@/features/ai/services/localModelService";
-import { aiService } from "@/features/ai/services/aiService";
-import { useAiAvailability } from "@/features/ai/hooks/useAiAvailability";
-import { remoteLabel } from "@/features/ai/utils/remoteLabel";
+import { aiRuntime, aiService, remoteLabel, useAiAvailability } from "@/modules/ai";
 import { useTripsStore } from "@/features/trips/store/tripsStore";
 import { useExpensesStore } from "@/features/expenses/store/expensesStore";
 import { useSpeechCapture } from "@/features/expenses/hooks/useSpeechCapture";
@@ -64,7 +63,7 @@ export default function VoiceExpenseScreen() {
   const addSettlement = useExpensesStore((state) => state.addSettlement);
   const locked = useAuthStore((state) => state.isSignedIn && state.isPinSet && !state.isUnlocked);
   const localAiEnabled = useSettingsStore((state) => state.localAiEnabled);
-  const ai = useAiAvailability();
+  const ai = useAiAvailability("voiceExpense");
 
   const [tripId, setTripId] = useState<string | null>(
     () => (params.tripId && trips.some((trip) => trip.id === params.tripId) ? params.tripId : null) ??
@@ -116,7 +115,7 @@ export default function VoiceExpenseScreen() {
   useEffect(() => {
     track("voice_capture_opened", { from_widget: fromWidget, locked });
     // Warming the on-device model costs memory and battery; skip it when online AI will answer.
-    if (!ai.configured) void localModelService.preload();
+    if (!ai.configured) void aiRuntime.preload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -298,19 +297,19 @@ export default function VoiceExpenseScreen() {
                 </View>
               </PressableScale>
 
-              <PostHogMaskView style={styles.words}>
+              <PrivateView style={styles.words}>
                 {status ? <Text style={[styles.status, { color: c.text, fontFamily: f.semibold }]}>{status}</Text> : null}
                 {heard ? (
                   <Animated.Text entering={FadeIn.duration(160)} style={[styles.heard, { color: c.textSoft, fontFamily: f.regular }]}>
                     “{heard}”
                   </Animated.Text>
                 ) : null}
-              </PostHogMaskView>
+              </PrivateView>
             </Animated.View>
 
             {phase.name === "review" && draft ? (
               <Animated.View entering={FadeInDown.springify().damping(18)} exiting={FadeOut.duration(150)}>
-                <PostHogMaskView>
+                <PrivateView>
                   <VoiceDraftCard
                     key={draft.transcript}
                     draft={draft}
@@ -323,7 +322,7 @@ export default function VoiceExpenseScreen() {
                     onEdit={draft.kind === "expense" ? () => setEditing(true) : undefined}
                     onRetry={listen}
                   />
-                </PostHogMaskView>
+                </PrivateView>
               </Animated.View>
             ) : phase.name === "saved" ? (
               <Animated.View entering={FadeInDown.springify().damping(18)} style={styles.savedActions}>

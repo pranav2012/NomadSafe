@@ -8,8 +8,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from "react-native-reanimated";
-import { useAura } from "@/components/aura/useAura";
-import { springs } from "@/components/motion/springs";
+import { springs, useAura } from "@/atoms";
 
 const ERROR = "#FF4D5E";
 const DOT = 12;

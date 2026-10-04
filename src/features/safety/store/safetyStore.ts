@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import { mmkvStateStorage } from "@/stores/storage";
+import { mmkvStateStorage } from "@/modules/storage";
 import { cancelCheckInNotifications } from "../services/checkInNotifications";
 import type { BroadcastSnapshot, SmsOutcome } from "../services/sosService";
 

@@ -14,7 +14,7 @@ import {
 } from "@/features/itinerary/store/eventsStore";
 import type { EventType } from "@/features/itinerary/constants/eventTypes";
 import { fromDateKey } from "@/features/trips/utils/dates";
-import { countAttributes, logger } from "@/services/logger";
+import { countAttributes, logger } from "@/modules/logger";
 import { floatingTime, parseBookingEmail } from "@/features/itinerary/services/bookingEmailParser";
 
 export interface BuildEventsOptions {

@@ -1,15 +1,17 @@
 import React, { useState } from "react";
-import { ActivityIndicator, Alert, ScrollView, Share, StyleSheet, Text, View } from "react-native";
-import { useMutation } from "convex/react";
-import { api } from "@convex/_generated/api";
-import type { Id } from "@convex/_generated/dataModel";
-import { AuraButton } from "@/components/aura/AuraButton";
-import { AuraListGroup, AuraListRow } from "@/components/aura/AuraList";
-import { AuraSheet } from "@/components/aura/AuraSheet";
-import { AuraSwitch } from "@/components/aura/AuraSwitch";
-import { useAura } from "@/components/aura/useAura";
-import { Icon } from "@/components/nomad/Icon";
-import { PressableScale } from "@/components/motion/PressableScale";
+import { ActivityIndicator, ScrollView, Share, StyleSheet, Text, View } from "react-native";
+import { api, type Id, useMutation } from "@/modules/backend";
+import {
+  AuraButton,
+  AuraListGroup,
+  AuraListRow,
+  AuraSheet,
+  AuraSwitch,
+  Icon,
+  PressableScale,
+  showAlert,
+  useAura,
+} from "@/atoms";
 import { auraStatusColors } from "@/constants/aura";
 import { inviteUrl } from "@/constants/legal";
 import { useAuthStore } from "@/features/auth/store/authStore";
@@ -45,7 +47,7 @@ export function TripPeopleSheet({ tripId, onClose }: { tripId: string | null; on
     try {
       await action();
     } catch {
-      Alert.alert(t("groupTrip.actionFailed"));
+      showAlert(t("groupTrip.actionFailed"));
     } finally {
       setBusy(false);
     }
@@ -70,7 +72,7 @@ export function TripPeopleSheet({ tripId, onClose }: { tripId: string | null; on
   };
 
   const confirm = (title: string, body: string, label: string, action: () => Promise<unknown>, after?: () => void) =>
-    Alert.alert(title, body, [
+    showAlert(title, body, [
       { text: t("common.cancel"), style: "cancel" },
       {
         text: label,
@@ -86,7 +88,7 @@ export function TripPeopleSheet({ tripId, onClose }: { tripId: string | null; on
   const onLeave = () => {
     if (!trip || !serverId) return;
     if (!isSettledUp(trip)) {
-      Alert.alert(t("groupTrip.leaveUnsettledTitle"), t("groupTrip.leaveUnsettledBody"));
+      showAlert(t("groupTrip.leaveUnsettledTitle"), t("groupTrip.leaveUnsettledBody"));
       return;
     }
     confirm(t("groupTrip.leaveTitle"), t("groupTrip.leaveBody"), t("groupTrip.leave"), () => leaveTrip({ tripId: serverId }), close);
@@ -95,7 +97,7 @@ export function TripPeopleSheet({ tripId, onClose }: { tripId: string | null; on
   const onDelete = () => {
     if (!serverId) return;
     if (othersJoined) {
-      Alert.alert(t("groupTrip.deleteTrip"), t("groupTrip.deleteBlocked"));
+      showAlert(t("groupTrip.deleteTrip"), t("groupTrip.deleteBlocked"));
       return;
     }
     confirm(t("groupTrip.deleteTitle"), t("groupTrip.deleteBody"), t("groupTrip.deleteTrip"), () => deleteSharedTrip({ tripId: serverId }), close);

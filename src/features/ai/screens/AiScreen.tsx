@@ -1,25 +1,21 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { AuraButton } from "@/components/aura/AuraButton";
-import { useAura } from "@/components/aura/useAura";
-import { Icon } from "@/components/nomad/Icon";
-import { LiveDot } from "@/components/motion/LiveDot";
-import { PressableScale } from "@/components/motion/PressableScale";
+import { AuraButton, Icon, LiveDot, PressableScale, useAura } from "@/atoms";
 import { auraStatusAccent } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { useSettingsStore } from "@/features/settings";
 import { AiChat } from "../components/AiChat";
+import { AiKeySheet } from "../components/AiKeySheet";
 import { AiModelsSheet } from "../components/AiModelsSheet";
-import { useAiProvisioning } from "../hooks/useAiProvisioning";
-import { useAiAvailability } from "../hooks/useAiAvailability";
-import { remoteLabel } from "../utils/remoteLabel";
-import { findModel } from "../services/aiModelService";
+import { findModel, remoteLabel, useAiAvailability, useAiProvisioning } from "@/modules/ai";
 import { provisionPercent } from "../utils/provisionCopy";
 
 const READY = "#3DDC97";
+// Lets the models sheet finish closing before the key sheet's modal opens.
+const SHEET_SWAP_MS = 260;
 
 /** AI tab: chat with the on-device model or online AI, with which one answers in the header. */
 export default function AiScreen() {
@@ -30,6 +26,22 @@ export default function AiScreen() {
   const localAiEnabled = useSettingsStore((s) => s.localAiEnabled);
   const provisioning = useAiProvisioning();
   const [modelsOpen, setModelsOpen] = useState(false);
+  const [keyOpen, setKeyOpen] = useState(false);
+  // Remounts the key sheet on each open so it starts from what's saved.
+  const [keySheetSession, setKeySheetSession] = useState(0);
+  const swapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (swapTimer.current) clearTimeout(swapTimer.current);
+  }, []);
+
+  const openKeySheet = () => {
+    setModelsOpen(false);
+    if (swapTimer.current) clearTimeout(swapTimer.current);
+    swapTimer.current = setTimeout(() => {
+      setKeySheetSession((value) => value + 1);
+      setKeyOpen(true);
+    }, SHEET_SWAP_MS);
+  };
   const ai = useAiAvailability();
   const onlineName = ai.remote ? remoteLabel(ai.remote, ai.byok, t("aiTab.cloudName")) : null;
   const chatEnabled = localAiEnabled || ai.configured !== null;
@@ -75,7 +87,8 @@ export default function AiScreen() {
       {chatEnabled ? (
         <>
           <AiChat activeModelName={localAiEnabled ? (activeModel?.name ?? null) : null} />
-          <AiModelsSheet visible={modelsOpen} onClose={() => setModelsOpen(false)} />
+          <AiModelsSheet visible={modelsOpen} onClose={() => setModelsOpen(false)} onOpenKey={openKeySheet} />
+          <AiKeySheet key={keySheetSession} visible={keyOpen} onClose={() => setKeyOpen(false)} />
         </>
       ) : (
         <View style={styles.disabled}>

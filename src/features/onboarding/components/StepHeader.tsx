@@ -1,6 +1,6 @@
 import React from "react";
 import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
-import { useAura } from "@/components/aura/useAura";
+import { useAura } from "@/atoms";
 
 /** Big sentence-case headline and lede that opens every onboarding step. */
 export function StepHeader({ title, lede, style }: { title: string; lede?: string; style?: StyleProp<ViewStyle> }) {

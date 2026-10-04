@@ -1,14 +1,12 @@
-import { api } from "@convex/_generated/api";
-import type { Id } from "@convex/_generated/dataModel";
+import { api, convex, type Id } from "@/modules/backend";
 import { useChatStore } from "@/features/ai/store/chatStore";
 import { useExpensesStore, type Expense, type Settlement } from "@/features/expenses/store/expensesStore";
 import { SELF_ID, type ExpenseShare } from "@/features/expenses/utils/split";
 import { useEventsStore, type TripEvent } from "@/features/itinerary/store/eventsStore";
 import { pickDefaultActiveTripId, useTripsStore, type SharedTripInfo, type Trip } from "@/features/trips/store/tripsStore";
 import { syncWidgets } from "@/features/widget/syncWidgets";
-import { convex } from "@/services/convex";
-import { logger } from "@/services/logger";
-import { storage } from "@/stores/storage";
+import { logger } from "@/modules/logger";
+import { storage } from "@/modules/storage";
 import { hashOf } from "../utils/hash";
 import { clearGroupLedgers, groupLedgerKey, makeSharedScope, stripRaw, type SharedKind } from "../utils/sharedScope";
 

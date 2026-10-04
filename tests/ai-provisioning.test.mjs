@@ -16,7 +16,7 @@ function loadModule(entryPoint) {
   return module.exports;
 }
 
-const catalog = loadModule("src/features/ai/services/modelCatalog.ts");
+const catalog = loadModule("src/modules/ai/local/modelCatalog.ts");
 const { pickModelForDevice, nominalRamGb, findModel, AI_MODELS, RETIRED_MODEL_FILES, STORAGE_HEADROOM_BYTES, GB } = catalog;
 
 const PLENTY = 64 * GB;

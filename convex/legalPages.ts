@@ -83,6 +83,9 @@ export const privacyPolicy = httpAction(async () => {
 <h2>Purchases</h2>
 <p>Plans are bought through Google Play (or the App Store). We use RevenueCat to check which plan you have: it receives your NomadSafe account ID and your store purchase records (product, dates, status and price), not your payment details. Our server stores which plan you have and when it ends. Deleting your account deletes this record and your RevenueCat customer.</p>
 
+<h2>Advertising (free plan)</h2>
+<p>On the free plan, NomadSafe occasionally shows a full-screen ad from Google AdMob, at most once every few hours and only after you create a trip. Ads never appear on SOS, check-in, live location, the lock screen or voice entry. To show and measure ads, Google receives your device's advertising ID, your IP address (used for an approximate location), device and app information (such as model, OS, language and app version) and your interactions with the ads. In the EEA, the UK and Switzerland you are asked for consent first, and you can change your choice at any time in <em>Settings → Ad privacy choices</em>; without consent to personalised ads, Google shows non-personalised ads. You can also reset or delete your advertising ID in your phone's settings. No trip, expense, chat, contact or location data from NomadSafe is shared with Google or any ad partner. Google processes this data under its own <a href="https://policies.google.com/technologies/partner-sites">privacy policy</a>. Paid plans (Plus and Pro) show no ads, and the ad SDK is not started for them.</p>
+
 <h2>Gmail import (optional)</h2>
 <p>If you connect Gmail, NomadSafe requests read-only access to find booking confirmations and receipts for your trips. Emails are fetched and read on your device. The email text itself is never sent to our servers or any third party, not used for advertising, and not read by humans. The expenses (merchant, amount, date) and bookings NomadSafe creates from them are trip data like any other: they are saved in your account backup if it is on, and shown to a shared trip's members if you add them there. Merchant names and booking details read from Gmail are never sent to online AI. Access tokens are stored securely on your device, and you can disconnect at any time from the app or at <a href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</a>.</p>
 <p>NomadSafe's use and transfer of information received from Google APIs adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including the Limited Use requirements.</p>
@@ -102,6 +105,7 @@ export const privacyPolicy = httpAction(async () => {
 <li><strong>OpenAI</strong> (via our server, Pro with Online AI on): AI requests as described under Online AI.</li>
 <li><strong>The AI provider you choose</strong> (directly from your phone, if you add your own API key): AI requests as described under Online AI.</li>
 <li><strong>RevenueCat and Google Play / the App Store</strong>: your account ID and purchase records, to provide paid plans.</li>
+<li><strong>Google AdMob</strong> (free plan only): advertising ID, IP-derived approximate location, device and app information and ad interactions, to show ads, as described under Advertising.</li>
 <li><strong>PostHog</strong> (EU hosting): usage analytics, feature flags, session recordings, crash reports and diagnostic logs, described below.</li>
 </ul>
 
@@ -114,7 +118,7 @@ export const privacyPolicy = httpAction(async () => {
 <li>Crash reports and diagnostic logs: device model, OS, app version, technical details of the error, and counts (for example "12 emails scanned, 3 expenses found").</li>
 </ul>
 <p>Analytics never include your trip names or destinations, expense amounts or merchants, notes, chats, emails, contacts or location. You can turn analytics, crash reports and logs off at any time in <em>Settings → Share usage analytics</em>. Analytics and crash reports are kept for up to 12 months, diagnostic logs for 14 days and session recordings for up to 30 days.</p>
-<p>We do not sell your data, use it for advertising, or share it with data brokers.</p>
+<p>We do not sell your data or share it with data brokers, and apart from the free-plan ads described above, we do not use it for advertising.</p>
 
 <h2>Permissions</h2>
 <ul>

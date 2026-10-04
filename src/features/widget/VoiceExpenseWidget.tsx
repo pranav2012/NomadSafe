@@ -1,3 +1,6 @@
+// The widget library calls these as plain functions, which the React Compiler's hooks break.
+"use no memo";
+
 import React from "react";
 import { FlexWidget, SvgWidget, TextWidget } from "react-native-android-widget";
 import { auraDark, auraLight, type AuraPalette } from "@/constants/aura";

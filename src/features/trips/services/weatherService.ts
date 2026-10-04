@@ -1,4 +1,4 @@
-import { storage } from "@/stores/storage";
+import { storage } from "@/modules/storage";
 import type { LatLng } from "@/features/trips/store/tripsStore";
 
 export interface DailyForecast {

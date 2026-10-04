@@ -2,22 +2,14 @@ import React, { useEffect, useRef } from "react";
 import { AppState, Modal, Pressable, StyleSheet, Text, View, type AppStateStatus } from "react-native";
 import { Stack, usePathname, useRouter, useSegments, type ErrorBoundaryProps } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { useConvexAuth, useMutation } from "convex/react";
-import { ConvexBetterAuthProvider } from "@convex-dev/better-auth/react";
+import { api, BackendProvider, useConvexAuth, useMutation } from "@/modules/backend";
 import { useFonts } from "expo-font";
-import { api } from "@convex/_generated/api";
-import { convex } from "@/services/convex";
 import { registerTripPush, startGroupSync, startSync, stopGroupSync, stopSync, useTripNotificationRouting } from "@/features/sync";
 import { AURA_FONT_FILES } from "@/constants/aura";
-import { authClient, useAuthStore, useSyncAuthSession } from "@/features/auth";
+import { useAuthStore, useSyncAuthSession } from "@/features/auth";
 import LockScreen from "@/features/auth/screens/LockScreen";
-import {
-  ensureProvisioned,
-  localModelService,
-  modelNotifications,
-  registerModelDownloadTask,
-  useChatStore,
-} from "@/features/ai";
+import { useChatStore } from "@/features/ai";
+import { aiRuntime, modelNotifications } from "@/modules/ai";
 import { enforceBroadcastLimits, isLocationBroadcastRunning, readBroadcastState, useSharingStore } from "@/features/location-sharing";
 import { isSosRoute, useQuickSosStore, useSafetyNotificationRouting, useSafetyServerSync, useSafetyStore } from "@/features/safety";
 import { useSettingsStore } from "@/features/settings";
@@ -26,7 +18,8 @@ import {
   isVoiceCaptureRoute,
 } from "@/features/expenses/services/voiceCaptureSession";
 import { WidgetSync } from "@/features/widget/WidgetSync";
-import { BillingEffects } from "@/features/billing";
+import { BillingEffects } from "@/modules/billing";
+import { AdsEffects } from "@/modules/ads";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { LocalizationProvider } from "@/localization";
 import { translate } from "@/localization/translate";
@@ -36,8 +29,9 @@ import {
   setAnalyticsEnabled,
   setReplayRecording,
   trackScreen,
-} from "@/services/analytics";
-import { logger } from "@/services/logger";
+} from "@/modules/analytics";
+import { logger } from "@/modules/logger";
+import { AuraAlertHost } from "@/atoms";
 
 export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
   useEffect(() => {
@@ -81,7 +75,7 @@ function AppStateLock() {
           // Keep the model loaded if a chat reply is still streaming; the chat
           // store releases it once the reply finishes (and notifies the user).
           if (!useChatStore.getState().generatingConversationKey) {
-            localModelService.release();
+            aiRuntime.release();
           } else {
             // Android keeps running in the background, so cap how long a reply may keep the CPU/GPU busy.
             setTimeout(() => {
@@ -95,7 +89,7 @@ function AppStateLock() {
 
         if (nextState !== "active" || prev === "active") return;
 
-        void ensureProvisioned();
+        void aiRuntime.ensureProvisioned();
         // Apply share expiry and the emergency time limit, then mirror the task's state in the UI store.
         void enforceBroadcastLimits()
           .then(() => isLocationBroadcastRunning())
@@ -153,6 +147,27 @@ function LockGate() {
       <LockScreen />
     </Modal>
   );
+}
+
+/** Starts ads (free plan) only once the user is in the app, unlocked and not on a safety or capture screen. */
+function AdsGate() {
+  const pathname = usePathname();
+  const onboardingCompleted = useSettingsStore((s) => s.onboardingCompleted);
+  const isSignedIn = useAuthStore((s) => s.isSignedIn);
+  const isPinSet = useAuthStore((s) => s.isPinSet);
+  const isUnlocked = useAuthStore((s) => s.isUnlocked);
+  const sosActive = useSafetyStore((s) => s.status === "emergency");
+  const sosArming = useQuickSosStore((s) => s.arming || s.requestedAt !== null);
+  const ready =
+    onboardingCompleted &&
+    isSignedIn &&
+    (!isPinSet || isUnlocked) &&
+    !sosActive &&
+    !sosArming &&
+    !isSosRoute(pathname) &&
+    !isVoiceCaptureRoute(pathname);
+
+  return <AdsEffects ready={ready} />;
 }
 
 /** Backs up trips while signed in with backup on, and keeps shared trips live while signed in. */
@@ -274,28 +289,30 @@ function RootLayout() {
   // session), wire up the background task, and prepare download notifications.
   useEffect(() => {
     modelNotifications.configure();
-    registerModelDownloadTask();
-    void ensureProvisioned();
+    aiRuntime.registerBackgroundDownload();
+    void aiRuntime.ensureProvisioned();
   }, []);
 
   if (!fontsLoaded) return null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <ConvexBetterAuthProvider client={convex} authClient={authClient}>
+      <BackendProvider>
         <LocalizationProvider>
           <ThemeProvider>
             <AppStateLock />
             <SessionEffects />
             <BackupEffects />
             <BillingEffects />
+            <AdsGate />
             <AnalyticsEffects />
             <WidgetSync />
             <AppStack />
             <LockGate />
+            <AuraAlertHost />
           </ThemeProvider>
         </LocalizationProvider>
-      </ConvexBetterAuthProvider>
+      </BackendProvider>
     </GestureHandlerRootView>
   );
 }

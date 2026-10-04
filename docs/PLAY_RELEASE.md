@@ -15,6 +15,7 @@ Status of each step for the first Android release. ✅ = done, 🧑 = you do it 
 | 9 | Closed testing (new personal accounts: 12 testers × 14 days) | 🧑 |
 | 10 | Gmail restricted-scope verification (CASA) | 🧑 (can run in parallel) |
 | 11 | PostHog error tracking and logs | 🧑 |
+| 12 | AdMob app, real app/ad unit IDs, app-ads.txt, consent message | 🧑 Before the production build (step 4) |
 
 ## Reference values
 
@@ -95,7 +96,7 @@ npx eas-cli submit -p android --profile production --path <aab or latest>
 |---|---|
 | Privacy policy | `https://gregarious-crocodile-599.convex.site/privacy` |
 | App access | Restricted. Add a Google test account (email + password) for reviewers. Note: "Sign in with Google, create any 6-digit PIN." |
-| Ads | No ads |
+| Ads | **Yes, the app contains ads** (Free plan only; AdMob interstitial after creating a trip) |
 | Content rating | Complete the IARC questionnaire. It's a utility app with no user-generated public content; location sharing is only with contacts the user chose. Expect Everyone / PEGI 3. |
 | Target audience | 18 and over (or 13+). Not designed for children. |
 | News app | No |
@@ -125,6 +126,12 @@ npx eas-cli submit -p android --profile production --path <aab or latest>
 | Messages → Other in-app messages (AI chat questions, voice-expense text) | Yes, when online AI is used | Yes (OpenAI via our server for Pro; the user's own provider for their key) | Yes | Optional (Settings → Online AI) | App functionality |
 | Financial info → Other financial info (trip budget and spending figures sent with AI requests) | Yes, when online AI is used | Yes (as above) | Yes | Optional (Settings → Online AI) | App functionality |
 | Financial info → Purchase history | Yes | Yes (RevenueCat) | No | Optional (only with a paid plan) | App functionality, Account management |
+| Device or other IDs (advertising ID) | Yes (Free plan, by the Google Mobile Ads SDK) | Yes (Google AdMob) | No | Required on the Free plan (not collected on paid plans) | Advertising or marketing |
+| App activity → App interactions (ad views and taps) | Yes (Free plan) | Yes (Google AdMob) | No | Required on the Free plan | Advertising or marketing, Analytics |
+| Location → Approximate (IP-derived, by the ads SDK) | Yes (Free plan) | Yes (Google AdMob) | No | Required on the Free plan | Advertising or marketing |
+| App info and performance → Diagnostics (ads SDK) | Yes (Free plan) | Yes (Google AdMob) | No | Required on the Free plan | Advertising or marketing, Analytics |
+
+Also in **App content → Advertising ID**: answer **Yes**, the app uses an advertising ID, for **Advertising or marketing** (and Analytics). The Google Mobile Ads SDK adds `com.google.android.gms.permission.AD_ID` to the manifest; keep it out of `android.blockedPermissions`, or Play rejects the declaration and ads lose the ID.
 
 ### Sensitive permissions (Policy → App content → Sensitive permissions)
 - **Location permissions → background location**
@@ -183,6 +190,15 @@ Draft full description:
 >
 > Your trips, expenses and chats are stored encrypted on your phone. Your trips are backed up to your account (you can turn this off), and your live location goes to our servers only while you share it. Delete your account at any time in Settings.
 
+## 12. AdMob 🧑
+
+1. Create an AdMob account and add the Android app (and iOS later), linked to the Play listing once it's published.
+2. ✅ App IDs are set in `app.json` (`react-native-google-mobile-ads` plugin): Android `ca-app-pub-6692019921438774~3292587091`, iOS `ca-app-pub-6692019921438774~8391947090`. They're static on purpose (env-dependent app config breaks the EAS fingerprint).
+3. Create one **Interstitial** ad unit per platform and set `EXPO_PUBLIC_ADMOB_ANDROID_INTERSTITIAL_ID` / `EXPO_PUBLIC_ADMOB_IOS_INTERSTITIAL_ID` in the EAS **production** (and preview, if you want real ads there) environment. Without them, and in dev builds, the app uses Google's test ad unit.
+4. **Privacy & messaging**: create a GDPR (European regulations) message for the app, and a US state regulations message if you want it. The app shows it through UMP (`AdsConsent.gatherConsent`) before starting the SDK. Add the privacy policy URL there.
+5. **app-ads.txt**: AdMob → Apps → app-ads.txt gives a line like `google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0`. Host it at `https://<developer website>/app-ads.txt`, where the developer website is the one in the Play store listing (Play Console → Store settings → Website).
+6. Test on a real phone with the test ad unit (or a registered test device) only; clicking your own live ads can get the AdMob account suspended.
+
 ---
 
 ## Device test checklist (internal-test build, real Android phone)
@@ -197,5 +213,6 @@ Draft full description:
 - [ ] AI model: download on Wi-Fi, pause, kill the app → it doesn't auto-resume. Resume → completes. Chat, then stop mid-reply.
 - [ ] Expenses: paste `EUR 1.234,56` and an OTP message → correct amount, OTP ignored. Gmail import with a test user.
 - [ ] Settings → Export (share sheet), Wipe, Delete account (rows gone in the Convex dashboard).
+- [ ] Ads (Free plan): the first trip shows no ad; the next new trip shows a test interstitial after the planner closes; another within 4 hours shows none. With a VPN in the EU, the consent form appears once after unlock, and Settings shows **Ad privacy choices**. After buying Plus, no more ads and the row is gone.
 - [ ] Switch to Arabic → the app reloads right-to-left, and chevrons are mirrored.
 - [ ] Airplane mode on each tab → no crashes, readable errors.

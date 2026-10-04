@@ -8,7 +8,8 @@ import { useSafetyStore } from "@/features/safety/store/safetyStore";
 import { useSharingStore } from "@/features/location-sharing/store/sharingStore";
 import { useSettingsStore } from "@/features/settings/store/settingsStore";
 import { emergencyContactsStorage } from "@/features/onboarding/services/emergencyContactsStorage";
-import { aiModelService } from "@/features/ai/services/aiModelService";
+import { aiRuntime } from "@/modules/ai";
+import { getDefaultCurrency } from "@/localization";
 
 export interface NomadSafeExport {
   exportedAt: string;
@@ -24,6 +25,7 @@ export interface NomadSafeExport {
   settings: {
     themeMode: string;
     defaultCurrency: string;
+    currencyOverride: string | null;
     localeOverride: string | null;
     defaultTripMode: string;
     defaultCheckInDuration: number;
@@ -54,14 +56,15 @@ function buildExport(): NomadSafeExport {
     geofences: useSharingStore.getState().geofences,
     settings: {
       themeMode: settings.themeMode,
-      defaultCurrency: settings.defaultCurrency,
+      defaultCurrency: getDefaultCurrency(),
+      currencyOverride: settings.currencyOverride,
       localeOverride: settings.localeOverride,
       defaultTripMode: settings.defaultTripMode,
       defaultCheckInDuration: settings.defaultCheckInDuration,
     },
     emergencyContacts: emergencyContactsStorage.get(),
     aiModel: {
-      activeId: aiModelService.getActiveModelId(),
+      activeId: aiRuntime.provisionedModelId(),
     },
   };
 }

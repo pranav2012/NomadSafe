@@ -1,9 +1,6 @@
 import React, { type RefObject } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { useAura } from "@/components/aura/useAura";
-import { Icon } from "@/components/nomad/Icon";
-import { PressableScale } from "@/components/motion/PressableScale";
-import { GlassSurface } from "@/components/tabbar/GlassSurface";
+import { GlassSurface, Icon, PressableScale, useAura } from "@/atoms";
 import { useLocalization } from "@/localization";
 
 export const CAPTURE_BAR_HEIGHT = 54;

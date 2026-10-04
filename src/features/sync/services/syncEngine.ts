@@ -1,12 +1,11 @@
 import { AppState, type NativeEventSubscription } from "react-native";
-import { api } from "@convex/_generated/api";
+import { api, convex } from "@/modules/backend";
 import { useExpensesStore, type Expense, type Settlement } from "@/features/expenses/store/expensesStore";
 import { useEventsStore, type TripEvent } from "@/features/itinerary/store/eventsStore";
 import { pickDefaultActiveTripId, useTripsStore, type Trip } from "@/features/trips/store/tripsStore";
 import { syncWidgets } from "@/features/widget/syncWidgets";
-import { convex } from "@/services/convex";
-import { logger } from "@/services/logger";
-import { storage } from "@/stores/storage";
+import { logger } from "@/modules/logger";
+import { storage } from "@/modules/storage";
 import { hashOf } from "../utils/hash";
 import { clearGroupLedgers, makeSharedScope, stripRaw } from "../utils/sharedScope";
 

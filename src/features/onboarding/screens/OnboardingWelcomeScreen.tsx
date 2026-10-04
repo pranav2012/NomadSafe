@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Alert, BackHandler, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { BackHandler, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -13,13 +13,9 @@ import Animated, {
   withSpring,
   type SharedValue,
 } from "react-native-reanimated";
-import { AuraButton } from "@/components/aura/AuraButton";
-import { useAura } from "@/components/aura/useAura";
-import { Icon } from "@/components/nomad/Icon";
-import { PressableScale } from "@/components/motion/PressableScale";
-import { springs } from "@/components/motion/springs";
+import { AuraButton, Icon, PressableScale, showAlert, springs, useAura } from "@/atoms";
 import { LEGAL_URLS } from "@/constants/legal";
-import { ensureProvisioned, useProvisioningStore } from "@/features/ai";
+import { aiRuntime, useProvisioningStore } from "@/modules/ai";
 import { useAuthStore, useBiometricPresentation } from "@/features/auth";
 import { useSettingsStore } from "@/features/settings";
 import type { TrustedContactsSummary } from "@/features/settings/components/TrustedContactsEditor";
@@ -30,7 +26,7 @@ import { SafetyStep } from "@/features/onboarding/components/SafetyStep";
 import { OnDeviceStep } from "@/features/onboarding/components/OnDeviceStep";
 import { LockStep } from "@/features/onboarding/components/LockStep";
 import { useLocalization } from "@/localization";
-import { track } from "@/services/analytics";
+import { track } from "@/modules/analytics";
 
 const LAST_STEP = ONBOARDING_STEPS.length - 1;
 const TOTAL = ONBOARDING_STEPS.length;
@@ -72,7 +68,7 @@ export default function OnboardingWelcomeScreen() {
 
   // Start the model download as early as possible; onboarding never waits on it.
   useEffect(() => {
-    void ensureProvisioned();
+    void aiRuntime.ensureProvisioned();
   }, []);
 
   useEffect(() => {
@@ -122,7 +118,7 @@ export default function OnboardingWelcomeScreen() {
       advance();
       return;
     }
-    Alert.alert(
+    showAlert(
       t("onboarding.noContactsTitle"),
       contacts.count === 0 ? t("onboarding.noContactsWarning") : t("emergencyContacts.noneWithPhone"),
       [
