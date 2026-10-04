@@ -1379,7 +1379,7 @@
     "unavailable": "지금은 이 기기에서 구매할 수 없어요. Google Play에 로그인되어 있는지 확인하고 나중에 다시 시도해 주세요.",
     "notOffered": "이 버전에서는 아직 유료 플랜을 이용할 수 없어요. 다른 기능은 평소처럼 사용할 수 있어요.",
     "unavailableIos": "지금은 이 기기에서 구매할 수 없어요. App Store에 로그인되어 있는지 확인하고 나중에 다시 시도해 주세요.",
-    "proPrivacy": "Pro에서는 AI 질문과 답변에 필요한 여행·금액 정보가 NomadSafe를 거쳐 OpenAI로 전송돼요. AI를 휴대폰에서만 쓰려면 설정에서 온라인 AI를 끄세요.",
+    "proPrivacy": "Pro에서는 AI 질문과 답변에 필요한 여행·금액 정보가 NomadSafe를 거쳐 OpenRouter로 전송돼요. AI를 휴대폰에서만 쓰려면 설정에서 온라인 AI를 끄세요.",
     "period_monthly": "월간",
     "period_annual": "연간",
     "period_lifetime": "평생",

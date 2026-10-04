@@ -1379,7 +1379,7 @@
     "unavailable": "此设备目前无法购买。请确认已登录 Google Play，稍后再试。",
     "notOffered": "此版本暂不提供付费方案。其他功能照常使用。",
     "unavailableIos": "此设备目前无法购买。请确认已登录 App Store，稍后再试。",
-    "proPrivacy": "使用 Pro 时，你向 AI 提出的问题及所需的行程和资金信息会经由 NomadSafe 发送给 OpenAI 以生成回答。在设置中关闭在线 AI，即可让 AI 只在手机上运行。",
+    "proPrivacy": "使用 Pro 时，你向 AI 提出的问题及所需的行程和资金信息会经由 NomadSafe 发送给 OpenRouter 以生成回答。在设置中关闭在线 AI，即可让 AI 只在手机上运行。",
     "period_monthly": "按月",
     "period_annual": "按年",
     "period_lifetime": "终身",

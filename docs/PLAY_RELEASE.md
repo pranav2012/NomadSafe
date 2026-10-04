@@ -123,7 +123,7 @@ npx eas-cli submit -p android --profile production --path <aab or latest>
 | App activity → App interactions, Other user-generated content (masked session recordings) | Yes, if PostHog is enabled | No | No | Optional (Settings → Share usage analytics) | Analytics |
 | Location → Approximate (country/city from IP, via PostHog GeoIP) | Yes, if PostHog is enabled | No | No | Optional | Analytics |
 | Device or other IDs (PostHog anonymous ID) | Yes, if PostHog is enabled | No | No | Optional | Analytics |
-| Messages → Other in-app messages (AI chat questions, voice-expense text) | Yes, when online AI is used | Yes (OpenAI via our server for Pro; the user's own provider for their key) | Yes | Optional (Settings → Online AI) | App functionality |
+| Messages → Other in-app messages (AI chat questions, voice-expense text) | Yes, when online AI is used | Yes (OpenRouter and its model provider, via our server, for Pro; the user's own provider for their key) | Yes | Optional (Settings → Online AI) | App functionality |
 | Financial info → Other financial info (trip budget and spending figures sent with AI requests) | Yes, when online AI is used | Yes (as above) | Yes | Optional (Settings → Online AI) | App functionality |
 | App activity → App interactions (monthly NomadSafe Cloud request counts per AI feature; no content) | Yes, with Pro | No | No | Optional (Settings → Online AI) | App functionality |
 | Financial info → Purchase history | Yes | Yes (RevenueCat) | No | Optional (only with a paid plan) | App functionality, Account management |

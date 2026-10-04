@@ -1379,7 +1379,7 @@
     "unavailable": "Las compras no están disponibles en este dispositivo ahora mismo. Comprueba que has iniciado sesión en Google Play y vuelve a intentarlo más tarde.",
     "notOffered": "Los planes de pago aún no están disponibles en esta versión. Todo lo demás funciona con normalidad.",
     "unavailableIos": "Las compras no están disponibles en este dispositivo ahora mismo. Comprueba que has iniciado sesión en el App Store y vuelve a intentarlo más tarde.",
-    "proPrivacy": "Con Pro, tus preguntas a la IA y los datos de viaje y dinero que necesitan se envían a través de NomadSafe a OpenAI para responderlas. Desactiva la IA en línea en Ajustes para mantener la IA en tu teléfono.",
+    "proPrivacy": "Con Pro, tus preguntas a la IA y los datos de viaje y dinero que necesitan se envían a través de NomadSafe a OpenRouter para responderlas. Desactiva la IA en línea en Ajustes para mantener la IA en tu teléfono.",
     "period_monthly": "Mensual",
     "period_annual": "Anual",
     "period_lifetime": "De por vida",

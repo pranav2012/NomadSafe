@@ -108,8 +108,8 @@ export const REMOTE_JSON_TIMEOUT_MS = 30_000;
 export const REMOTE_FIRST_CHUNK_TIMEOUT_MS = 30_000;
 export const REMOTE_STREAM_TIMEOUT_MS = 120_000;
 
-// Label only: the model NomadSafe Cloud actually calls is set server-side in convex/ai.ts.
-export const CLOUD_MODEL = "gpt-6-luna";
+// Label only: NomadSafe Cloud calls OpenRouter from convex/ai.ts, and the CLOUD_AI_MODEL Convex env var picks the model.
+export const CLOUD_MODEL = "openai/gpt-6-luna";
 
 export type ByokProvider = "openai" | "anthropic" | "gemini" | "openai_compatible";
 

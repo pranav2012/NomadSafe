@@ -15,8 +15,9 @@ import {
 } from "./billingRules";
 import { getAuthenticatedUser, requireUser } from "./users";
 
-const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
-const MODEL = "gpt-6-luna";
+// NomadSafe Cloud goes through OpenRouter. CLOUD_AI_MODEL switches the model without a deploy.
+const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+const DEFAULT_MODEL = "openai/gpt-6-luna";
 const CHAT_MAX_TOKENS = 2048;
 const TASK_MAX_TOKENS = 1024;
 const MAX_MESSAGES = 60;
@@ -133,13 +134,34 @@ function validMessages(value: unknown): Message[] | null {
   return total <= MAX_INPUT_CHARS ? messages : null;
 }
 
-function openAiRequest(body: Record<string, unknown>) {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error("OPENAI_API_KEY not set");
-  return fetch(OPENAI_URL, {
+/**
+ * One OpenRouter chat completion. Requests only go to providers that don't collect data (the privacy
+ * policy relies on this) and that support every parameter sent, so JSON-schema tasks never get a
+ * provider that ignores the schema.
+ */
+/** OpenRouter's error message for logs (it describes the failure, never the user's prompt). */
+async function upstreamError(res: Response) {
+  const body = (await res.json().catch(() => null)) as { error?: { message?: unknown } } | null;
+  const message = typeof body?.error?.message === "string" ? body.error.message.slice(0, 200) : "";
+  return new Error(`OpenRouter HTTP ${res.status}${message ? `: ${message}` : ""}`);
+}
+
+function modelRequest(body: Record<string, unknown>) {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) throw new Error("OPENROUTER_API_KEY not set");
+  return fetch(OPENROUTER_URL, {
     method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model: MODEL, ...body }),
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": "https://play.google.com/store/apps/details?id=com.pranav.nomadsafe",
+      "X-OpenRouter-Title": "NomadSafe",
+    },
+    body: JSON.stringify({
+      model: process.env.CLOUD_AI_MODEL || DEFAULT_MODEL,
+      provider: { data_collection: "deny", require_parameters: true },
+      ...body,
+    }),
   });
 }
 
@@ -158,19 +180,19 @@ export const complete = action({
     if ("error" in auth) throw new ConvexError({ code: auth.error });
 
     try {
-      const res = await openAiRequest({
+      const res = await modelRequest({
         messages: [
           { role: "system", content: system },
           { role: "user", content: prompt },
         ],
-        max_completion_tokens: TASK_MAX_TOKENS,
-        reasoning_effort: "none",
+        max_tokens: TASK_MAX_TOKENS,
+        reasoning: { effort: "none", exclude: true },
         response_format: { type: "json_schema", json_schema: { name: schemaName, strict: true, schema } },
       });
-      if (!res.ok) throw new Error(`OpenAI HTTP ${res.status}`);
+      if (!res.ok) throw await upstreamError(res);
       const body = (await res.json()) as { choices?: { message?: { content?: string | null } }[] };
       const text = body.choices?.[0]?.message?.content;
-      if (!text) throw new Error("OpenAI returned no content");
+      if (!text) throw new Error("OpenRouter returned no content");
       return text;
     } catch (error) {
       await ctx.runMutation(internal.ai.refund, { userId: auth.userId, task });
@@ -188,7 +210,7 @@ const ERROR_STATUS = { no_plan: 402, quota: 429, rate_limited: 429 } as const;
 
 /**
  * Streams a chat reply as plain UTF-8 text chunks. The app authenticates with its Convex JWT as a
- * Bearer token; OpenAI's SSE stream is reduced to just the text deltas.
+ * Bearer token; OpenRouter's SSE stream is reduced to just the text deltas (its keep-alive comments are skipped).
  */
 export const chatStream = httpAction(async (ctx, req) => {
   const user = await getAuthenticatedUser(ctx);
@@ -206,13 +228,13 @@ export const chatStream = httpAction(async (ctx, req) => {
 
   let upstream: Response;
   try {
-    upstream = await openAiRequest({
+    upstream = await modelRequest({
       messages,
-      max_completion_tokens: CHAT_MAX_TOKENS,
-      reasoning_effort: "low",
+      max_tokens: CHAT_MAX_TOKENS,
+      reasoning: { effort: "low", exclude: true },
       stream: true,
     });
-    if (!upstream.ok || !upstream.body) throw new Error(`OpenAI HTTP ${upstream.status}`);
+    if (!upstream.ok || !upstream.body) throw await upstreamError(upstream);
   } catch (error) {
     await ctx.runMutation(internal.ai.refund, { userId: auth.userId, task });
     console.error("[ai] chat failed", error instanceof Error ? error.message : error);
@@ -223,30 +245,41 @@ export const chatStream = httpAction(async (ctx, req) => {
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
   let buffer = "";
+  let sentText = false;
 
   const stream = new ReadableStream<Uint8Array>({
+    // Keeps reading until there's text: a pull that enqueues nothing isn't called again, and the
+    // stream would stall on OpenRouter's role-only first chunk and keep-alive comments.
     async pull(controller) {
-      const { done, value } = await reader.read();
-      if (done) {
-        controller.close();
-        return;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          controller.close();
+          return;
+        }
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        let text = "";
+        for (const line of lines) {
+          const data = line.startsWith("data:") ? line.slice(5).trim() : "";
+          if (!data || data === "[DONE]") continue;
+          try {
+            const chunk = JSON.parse(data) as { choices?: { delta?: { content?: string | null } }[] };
+            text += chunk.choices?.[0]?.delta?.content ?? "";
+          } catch {}
+        }
+        if (text) {
+          sentText = true;
+          controller.enqueue(encoder.encode(text));
+          return;
+        }
       }
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() ?? "";
-      let text = "";
-      for (const line of lines) {
-        const data = line.startsWith("data:") ? line.slice(5).trim() : "";
-        if (!data || data === "[DONE]") continue;
-        try {
-          const chunk = JSON.parse(data) as { choices?: { delta?: { content?: string | null } }[] };
-          text += chunk.choices?.[0]?.delta?.content ?? "";
-        } catch {}
-      }
-      if (text) controller.enqueue(encoder.encode(text));
     },
-    cancel() {
+    // The app gave up (timeout or Stop) before any text arrived, so the reply doesn't count.
+    async cancel() {
       void reader.cancel();
+      if (!sentText) await ctx.runMutation(internal.ai.refund, { userId: auth.userId, task });
     },
   });
 

@@ -1379,7 +1379,7 @@
     "unavailable": "Les achats ne sont pas disponibles sur cet appareil pour le moment. Vérifiez que vous êtes connecté à Google Play et réessayez plus tard.",
     "notOffered": "Les offres payantes ne sont pas encore disponibles dans cette version. Tout le reste fonctionne normalement.",
     "unavailableIos": "Les achats ne sont pas disponibles sur cet appareil pour le moment. Vérifiez que vous êtes connecté à l'App Store et réessayez plus tard.",
-    "proPrivacy": "Avec Pro, vos questions à l'IA et les informations de voyage et d'argent nécessaires sont envoyées via NomadSafe à OpenAI pour y répondre. Désactivez l'IA en ligne dans les Paramètres pour garder l'IA sur votre téléphone.",
+    "proPrivacy": "Avec Pro, vos questions à l'IA et les informations de voyage et d'argent nécessaires sont envoyées via NomadSafe à OpenRouter pour y répondre. Désactivez l'IA en ligne dans les Paramètres pour garder l'IA sur votre téléphone.",
     "period_monthly": "Mensuel",
     "period_annual": "Annuel",
     "period_lifetime": "À vie",

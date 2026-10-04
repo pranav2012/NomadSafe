@@ -54,7 +54,7 @@ Voice expenses use online AI too. Only the transcribed text is sent, never audio
 ## NomadSafe Cloud AI (Pro)
 
 - `convex/ai.ts`. JSON tasks go through the `ai.complete` action; chat streams from `POST /ai/chat` (Convex JWT as Bearer).
-- Model `gpt-6-luna` via Chat Completions. Monthly quota in `aiUsage`: `CLOUD_AI_LIMITS` (300 chat replies, 1,500 small tasks). There's also a per-user rate limit.
+- Calls OpenRouter's chat completions API (`OPENROUTER_API_KEY`). The model is the `CLOUD_AI_MODEL` Convex env var (default `openai/gpt-6-luna`), so it can change without a deploy. Every request sets `provider.data_collection = "deny"` and `require_parameters`. Monthly quota in `aiUsage`: `CLOUD_AI_LIMITS` (300 chat replies, 1,500 small tasks). There's also a per-user rate limit.
 - When the quota runs out, the app falls back to the on-device model until next month.
 
 ## Bring your own key
@@ -75,7 +75,7 @@ Voice expenses use online AI too. Only the transcribed text is sent, never audio
 - **Convex env:**
   - `REVENUECAT_SECRET_API_KEY` (v1 secret key).
   - `REVENUECAT_WEBHOOK_AUTH`: any long random string. Set the same value as the webhook's Authorization header in RevenueCat.
-  - `OPENAI_API_KEY`.
+  - `OPENROUTER_API_KEY` (and optionally `CLOUD_AI_MODEL`).
 - **RevenueCat webhook:** point it at `https://<deployment>.convex.site/revenuecat/webhook`.
 - **AdMob:** see `docs/PLAY_RELEASE.md` step 12 (real app IDs, interstitial unit ids, consent message, app-ads.txt).
-- **Play data safety form:** declare that chat messages, trip and money context and voice transcripts can go to OpenAI (Pro, via our server) or to the provider the user picks. Purchase history goes to RevenueCat/Google Play.
+- **Play data safety form:** declare that chat messages, trip and money context and voice transcripts can go to OpenRouter and the model provider it routes to (Pro, via our server) or to the provider the user picks. Purchase history goes to RevenueCat/Google Play.

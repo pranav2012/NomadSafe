@@ -1379,7 +1379,7 @@
     "unavailable": "Purchases aren't available on this device right now. Check that you're signed in to Google Play and try again later.",
     "notOffered": "Paid plans aren't available in this version yet. Everything else works as usual.",
     "unavailableIos": "Purchases aren't available on this device right now. Check that you're signed in to App Store and try again later.",
-    "proPrivacy": "With Pro, your AI questions and the trip and money details they need are sent through NomadSafe to OpenAI to answer them. Turn off Online AI in Settings to keep AI on your phone.",
+    "proPrivacy": "With Pro, your AI questions and the trip and money details they need are sent through NomadSafe to OpenRouter to answer them. Turn off Online AI in Settings to keep AI on your phone.",
     "period_monthly": "Monthly",
     "period_annual": "Yearly",
     "period_lifetime": "Lifetime",

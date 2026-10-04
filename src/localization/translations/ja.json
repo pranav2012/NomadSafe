@@ -1379,7 +1379,7 @@
     "unavailable": "現在このデバイスでは購入できません。Google Play にサインインしているか確認し、しばらくしてからもう一度お試しください。",
     "notOffered": "このバージョンでは有料プランはまだご利用いただけません。その他の機能は通常どおり使えます。",
     "unavailableIos": "現在このデバイスでは購入できません。App Store にサインインしているか確認し、しばらくしてからもう一度お試しください。",
-    "proPrivacy": "Pro では、AIへの質問と回答に必要な旅行・お金の情報が NomadSafe を経由して OpenAI に送信されます。AIをスマホ上だけで使うには、設定でオンラインAIをオフにしてください。",
+    "proPrivacy": "Pro では、AIへの質問と回答に必要な旅行・お金の情報が NomadSafe を経由して OpenRouter に送信されます。AIをスマホ上だけで使うには、設定でオンラインAIをオフにしてください。",
     "period_monthly": "月額",
     "period_annual": "年額",
     "period_lifetime": "買い切り",
