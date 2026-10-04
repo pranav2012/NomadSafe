@@ -5,14 +5,6 @@ import { mmkvStateStorage } from "@/stores/storage";
 import { localModelService, type ChatTurn } from "../services/localModelService";
 import { modelNotifications } from "../services/modelNotifications";
 import { loadTripMoneySnapshot } from "../services/chatContext";
-import {
-  answerMoneyIntent,
-  matchMoneyIntent,
-  parseAmount,
-  type MoneyIntent,
-  type MoneyIntentMatch,
-} from "../services/moneyFacts";
-import { translate } from "@/localization/translate";
 import { logger } from "@/services/logger";
 
 export interface ChatMessage {
@@ -29,11 +21,6 @@ export interface ChatErrorLabels {
   error: string;
 }
 
-export interface SendOptions {
-  /** Forces a deterministic money answer (quick question chips). */
-  intent?: MoneyIntent;
-}
-
 export const GENERAL_CHAT_KEY = "general";
 
 type PromptTurn = Pick<ChatTurn, "role" | "content">;
@@ -48,7 +35,7 @@ interface ChatState {
   conversations: Record<string, ChatConversation>;
   generatingConversationKey: string | null;
   /** Returns false when the message was not accepted (e.g. another reply is generating). */
-  send: (conversationKey: string, text: string, labels: ChatErrorLabels, options?: SendOptions) => boolean;
+  send: (conversationKey: string, text: string, labels: ChatErrorLabels) => boolean;
   /** Stops the reply being generated, keeping any partial text. */
   stop: () => void;
   clear: (conversationKey: string) => void;
@@ -107,7 +94,7 @@ export const useChatStore = create<ChatState>()(
         conversations: {},
         generatingConversationKey: null,
 
-        send: (conversationKey, text, labels, options) => {
+        send: (conversationKey, text, labels) => {
           if (get().generatingConversationKey) return false;
           const question = text.trim();
           if (!question) return false;
@@ -137,10 +124,6 @@ export const useChatStore = create<ChatState>()(
             ...conversation.contextMessages,
             { role: "user", content: question },
           ];
-          const moneyMatch: MoneyIntentMatch | null = options?.intent
-            ? { intent: options.intent, amount: parseAmount(question) }
-            : matchMoneyIntent(question, translate("aiTab.quickAffordPrefix"));
-
           let streamed = "";
           let lastFlush = 0;
           let flushTimer: ReturnType<typeof setTimeout> | null = null;
@@ -155,18 +138,13 @@ export const useChatStore = create<ChatState>()(
             useChatStreamStore.setState({ conversationKey: null, text: "" });
           };
 
-          // Money intents are answered from computed facts without the model;
-          // everything else goes to the model with those facts in the prompt.
+          // Every question goes to the model, with the trip's computed money facts in its prompt.
           loadTripMoneySnapshot()
             .catch((error: unknown) => {
               logger.warn("chatStore", "money facts unavailable", error);
               return null;
             })
             .then(async (snapshot) => {
-              if (moneyMatch) {
-                const reply = answerMoneyIntent(moneyMatch, snapshot?.facts ?? null, translate, snapshot?.locale ?? "en");
-                return { reply, deterministic: true };
-              }
               const systemContext = snapshot?.context;
               const memory = await localModelService.prepareChatMemory(history, {
                 systemContext,
@@ -185,7 +163,7 @@ export const useChatStore = create<ChatState>()(
                   },
                 };
               });
-              if (stopRequested) return { reply: "", deterministic: false };
+              if (stopRequested) return "";
               const reply = await localModelService.chat(memory.history, {
                 systemContext,
                 conversationSummary: memory.summary ?? undefined,
@@ -197,9 +175,9 @@ export const useChatStore = create<ChatState>()(
                   flushTimer = setTimeout(flushStream, wait);
                 },
               });
-              return { reply, deterministic: false };
+              return reply;
             })
-            .then(({ reply, deterministic }) => {
+            .then((reply) => {
               clearStream();
               const text = reply.trim();
               set((state) => {
@@ -219,15 +197,9 @@ export const useChatStore = create<ChatState>()(
                     [conversationKey]: {
                       ...current,
                       messages,
-                      contextMessages: !text
-                        ? current.contextMessages
-                        : deterministic
-                          ? [
-                              ...current.contextMessages,
-                              { role: "user", content: question },
-                              { role: "assistant", content: text },
-                            ]
-                          : [...current.contextMessages, { role: "assistant", content: text }],
+                      contextMessages: text
+                        ? [...current.contextMessages, { role: "assistant", content: text }]
+                        : current.contextMessages,
                     },
                   },
                 };

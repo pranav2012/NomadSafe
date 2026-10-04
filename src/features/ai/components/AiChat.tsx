@@ -15,7 +15,7 @@ import Animated, { FadeIn } from "react-native-reanimated";
 import { AuraCard } from "@/components/aura/AuraCard";
 import { AuraOrb } from "@/components/aura/AuraOrb";
 import { useAura } from "@/components/aura/useAura";
-import { Icon, type IconName } from "@/components/nomad/Icon";
+import { Icon } from "@/components/nomad/Icon";
 import { PressableScale } from "@/components/motion/PressableScale";
 import { useTabBarInset } from "@/components/tabbar/tabBarInset";
 import { auraStatusAccent } from "@/constants/aura";
@@ -26,10 +26,9 @@ import { track } from "@/services/analytics";
 import { GENERAL_CHAT_KEY, useChatStore, useChatStreamStore } from "../store/chatStore";
 import { localModelService } from "../services/localModelService";
 import { modelNotifications } from "../services/modelNotifications";
-import type { MoneyIntent } from "../services/moneyFacts";
 import { useAiProvisioning } from "../hooks/useAiProvisioning";
 import { provisionUnavailableText } from "../utils/provisionCopy";
-import { AiComposer, type QuickQuestion } from "./AiComposer";
+import { AiComposer } from "./AiComposer";
 import { AiMessage } from "./AiMessage";
 
 const EMPTY_CONVERSATION = { messages: [], summary: null, contextMessages: [] };
@@ -107,24 +106,17 @@ export function AiChat({ activeModelName }: { activeModelName: string | null }) 
     });
   }, []);
 
-  const send = (text?: string, intent?: MoneyIntent) => {
-    const q = (text ?? input).trim();
+  const send = () => {
+    const q = input.trim();
     if (!q) return;
-    const accepted = sendMessage(
-      conversationKey,
-      q,
-      { noModel: unavailableText ?? t("aiTab.provision.chatPreparing"), error: t("aiTab.chatModelLoadError") },
-      { intent },
-    );
+    const accepted = sendMessage(conversationKey, q, {
+      noModel: unavailableText ?? t("aiTab.provision.chatPreparing"),
+      error: t("aiTab.chatModelLoadError"),
+    });
     if (!accepted) return;
-    track("ai_message_sent", { quick_question: text !== undefined });
-    if (text === undefined) setInput("");
+    track("ai_message_sent");
+    setInput("");
     nearBottomRef.current = true;
-  };
-
-  const startAffordQuestion = () => {
-    setInput(`${t("aiTab.quickAffordPrefix")} `);
-    inputRef.current?.focus();
   };
 
   const enableNotifications = async () => {
@@ -140,25 +132,6 @@ export function AiChat({ activeModelName }: { activeModelName: string | null }) 
     yesterday.setDate(yesterday.getDate() - 1);
     if (key === localDayKey(yesterday.getTime())) return t("aiTab.yesterday");
     return formatDate(timestamp);
-  };
-
-  const prompts: { icon: IconName; label: string }[] = [
-    { icon: "trendDown", label: t("aiTab.promptOverspend") },
-    { icon: "trendUp", label: t("aiTab.promptForecast") },
-    { icon: "wallet", label: t("aiTab.promptCategory") },
-    { icon: "sparkle", label: t("aiTab.promptSave") },
-  ];
-
-  const quickQuestions: QuickQuestion[] = [
-    { key: "daily", label: t("aiTab.quickDaily"), question: t("aiTab.quickDailyQuestion"), intent: "dailyBudget" },
-    { key: "left", label: t("aiTab.quickLeft"), question: t("aiTab.quickLeftQuestion"), intent: "remaining" },
-    { key: "top", label: t("aiTab.quickTop"), question: t("aiTab.quickTopQuestion"), intent: "topCategory" },
-    { key: "afford", label: t("aiTab.quickAfford") },
-  ];
-
-  const onQuickQuestion = (chip: QuickQuestion) => {
-    if (chip.intent && chip.question) send(chip.question, chip.intent);
-    else startAffordQuestion();
   };
 
   const showNotifyBanner = !notifyEnabled && !notifyDismissed && !unavailableText;
@@ -238,23 +211,7 @@ export function AiChat({ activeModelName }: { activeModelName: string | null }) 
                 <Animated.View entering={FadeIn.duration(260)} style={styles.empty}>
                   <AuraOrb size={124} mode="idle" isDark={isDark} paused={!animating} />
                   <Text style={[styles.emptyTitle, { color: c.text, fontFamily: f.semibold }]}>{t("aiTab.introTitle")}</Text>
-                  <Text style={[styles.tryAsking, { color: c.textMuted, fontFamily: f.medium }]}>{t("aiTab.tryAsking")}</Text>
-                  <View style={styles.promptGrid}>
-                    {prompts.map((p) => (
-                      <PressableScale
-                        key={p.label}
-                        onPress={() => send(p.label)}
-                        disabled={busy}
-                        pressedScale={0.97}
-                        accessibilityRole="button"
-                        accessibilityState={{ disabled: busy }}
-                        style={[styles.prompt, { backgroundColor: c.surface, borderColor: c.hairline, opacity: busy ? 0.5 : 1 }]}
-                      >
-                        <Icon name={p.icon} size={16} color={c.textSoft} />
-                        <Text style={[styles.promptLabel, { color: c.text, fontFamily: f.medium }]}>{p.label}</Text>
-                      </PressableScale>
-                    ))}
-                  </View>
+                  <Text style={[styles.emptyHint, { color: c.textMuted, fontFamily: f.regular }]}>{t("aiTab.introHint")}</Text>
                 </Animated.View>
               ) : null}
             </ScrollView>
@@ -265,10 +222,8 @@ export function AiChat({ activeModelName }: { activeModelName: string | null }) 
             inputRef={inputRef}
             value={input}
             onChange={setInput}
-            onSend={() => send()}
+            onSend={send}
             onStop={stopReply}
-            quickQuestions={quickQuestions}
-            onQuickQuestion={onQuickQuestion}
             generating={isGenerating}
             busy={busy}
             busyElsewhere={busyElsewhere}
@@ -295,15 +250,5 @@ const styles = StyleSheet.create({
   dividerText: { fontSize: 12 },
   empty: { alignItems: "center" },
   emptyTitle: { fontSize: 22, letterSpacing: -0.6, textAlign: "center", marginTop: 6 },
-  tryAsking: { fontSize: 13, marginTop: 22, marginBottom: 10 },
-  promptGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, alignSelf: "stretch" },
-  prompt: {
-    flexBasis: "47%",
-    flexGrow: 1,
-    gap: 10,
-    padding: 14,
-    borderRadius: 18,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  promptLabel: { fontSize: 14, lineHeight: 19 },
+  emptyHint: { fontSize: 14.5, lineHeight: 21, textAlign: "center", marginTop: 8, maxWidth: 280 },
 });

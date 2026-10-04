@@ -21,7 +21,7 @@ export interface AnalyticsEvents {
   sos_triggered: { contacts: number };
   sos_sms_result: { outcome: SmsResult; has_location: boolean };
   sos_cancelled: undefined;
-  ai_message_sent: { quick_question: boolean };
+  ai_message_sent: undefined;
   settlement_recorded: { source: "manual" | "voice" };
   voice_capture_opened: { from_widget: boolean; locked: boolean };
   voice_capture_failed: { reason: VoiceCaptureFailure };

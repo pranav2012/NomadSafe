@@ -1,25 +1,15 @@
 import React, { type RefObject } from "react";
-import { ScrollView, StyleSheet, Text, TextInput, View, type LayoutChangeEvent } from "react-native";
+import { StyleSheet, Text, TextInput, View, type LayoutChangeEvent } from "react-native";
 import Svg, { Path } from "react-native-svg";
-import { AuraChip } from "@/components/aura/AuraChip";
 import { useAura } from "@/components/aura/useAura";
 import { Icon } from "@/components/nomad/Icon";
 import { PressableScale } from "@/components/motion/PressableScale";
 import { GlassSurface } from "@/components/tabbar/GlassSurface";
 import { useLocalization } from "@/localization";
-import type { MoneyIntent } from "../services/moneyFacts";
 
 export const MAX_INPUT = 300;
 const RADIUS = 26;
 const COUNTER_FROM = 240;
-
-/** A chip above the input; with an intent it sends `question`, otherwise it prefills the input. */
-export interface QuickQuestion {
-  key: string;
-  label: string;
-  question?: string;
-  intent?: MoneyIntent;
-}
 
 interface Props {
   bottom: number;
@@ -28,8 +18,6 @@ interface Props {
   onChange: (text: string) => void;
   onSend: () => void;
   onStop: () => void;
-  quickQuestions: QuickQuestion[];
-  onQuickQuestion: (chip: QuickQuestion) => void;
   generating: boolean;
   busy: boolean;
   busyElsewhere: boolean;
@@ -46,7 +34,7 @@ function ArrowUp({ color }: { color: string }) {
   );
 }
 
-/** Floating glass composer above the tab bar: quick questions, input, send / stop and a status line. */
+/** Floating glass composer above the tab bar: input, send / stop and a status line. */
 export function AiComposer({
   bottom,
   inputRef,
@@ -54,8 +42,6 @@ export function AiComposer({
   onChange,
   onSend,
   onStop,
-  quickQuestions,
-  onQuickQuestion,
   generating,
   busy,
   busyElsewhere,
@@ -71,24 +57,6 @@ export function AiComposer({
     <View style={[styles.wrap, { bottom }]} pointerEvents="box-none" onLayout={onLayout}>
       <View style={[styles.panel, { borderColor: c.hairline }]}>
         <GlassSurface isDark={isDark} radius={RADIUS} blurTarget={blurTarget} />
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          accessibilityLabel={t("aiTab.quickQuestions")}
-          style={styles.chipScroll}
-          contentContainerStyle={styles.chipRow}
-        >
-          {quickQuestions.map((chip) => {
-            const disabled = chip.intent !== undefined && busy;
-            return (
-              <View key={chip.key} style={{ opacity: disabled ? 0.45 : 1 }} accessibilityHint={chip.question}>
-                <AuraChip label={chip.label} onPress={disabled ? undefined : () => onQuickQuestion(chip)} />
-              </View>
-            );
-          })}
-        </ScrollView>
-
         <View style={styles.inputRow}>
           <TextInput
             ref={inputRef}
@@ -155,16 +123,14 @@ const styles = StyleSheet.create({
   panel: {
     borderRadius: RADIUS,
     borderWidth: StyleSheet.hairlineWidth,
-    paddingTop: 10,
+    paddingTop: 6,
     paddingBottom: 8,
     shadowColor: "#000",
     shadowOpacity: 0.16,
     shadowRadius: 20,
     shadowOffset: { width: 0, height: 8 },
   },
-  chipScroll: { flexGrow: 0 },
-  chipRow: { gap: 6, paddingHorizontal: 10 },
-  inputRow: { flexDirection: "row", alignItems: "flex-end", gap: 8, paddingLeft: 16, paddingRight: 8, marginTop: 6 },
+  inputRow: { flexDirection: "row", alignItems: "flex-end", gap: 8, paddingLeft: 16, paddingRight: 8 },
   input: { flex: 1, fontSize: 15.5, lineHeight: 21, paddingTop: 10, paddingBottom: 10, maxHeight: 112 },
   send: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center", marginBottom: 2 },
   stop: { width: 12, height: 12, borderRadius: 3 },
