@@ -19,7 +19,7 @@ import {
   useChatStore,
 } from "@/features/ai";
 import { enforceBroadcastLimits, isLocationBroadcastRunning, readBroadcastState, useSharingStore } from "@/features/location-sharing";
-import { useSafetyNotificationRouting } from "@/features/safety";
+import { isSosRoute, useQuickSosStore, useSafetyNotificationRouting, useSafetyServerSync, useSafetyStore } from "@/features/safety";
 import { useSettingsStore } from "@/features/settings";
 import {
   isCaptureLinkRecent,
@@ -110,7 +110,7 @@ function AppStateLock() {
         backgroundedAt.current = null;
         if (!since || !auth.isSignedIn || !auth.isPinSet) return;
         if (Date.now() - since > auth.autoLockTimeout) {
-          // A widget "Speak" tap opens the capture screen, which works while locked.
+          // Widget taps open voice capture or the SOS countdown, which work while locked.
           const capturing = isVoiceCaptureRoute(pathnameRef.current) || isCaptureLinkRecent();
           if (router.canDismiss() && !capturing) router.dismissAll();
           auth.setUnlocked(false);
@@ -125,17 +125,21 @@ function AppStateLock() {
 }
 
 /**
- * Renders the lock screen above every route (including native modals). The
- * voice capture screen is the exception: it only adds expenses, so it works locked.
+ * Renders the lock screen above every route (including native modals). Two exceptions work
+ * locked: voice capture (it only adds expenses) and the Safety tab while an SOS is counting
+ * down or active (it shows only the SOS takeover, never trip data).
  */
 function LockGate() {
   const pathname = usePathname();
+  const sosStatus = useSafetyStore((s) => s.status);
+  const sosArming = useQuickSosStore((s) => s.arming);
+  const sosOnScreen = isSosRoute(pathname) && (sosStatus === "emergency" || sosArming);
   const onboardingCompleted = useSettingsStore((s) => s.onboardingCompleted);
   const isSignedIn = useAuthStore((s) => s.isSignedIn);
   const isPinSet = useAuthStore((s) => s.isPinSet);
   const isUnlocked = useAuthStore((s) => s.isUnlocked);
   const locked =
-    onboardingCompleted && isSignedIn && isPinSet && !isUnlocked && !isVoiceCaptureRoute(pathname);
+    onboardingCompleted && isSignedIn && isPinSet && !isUnlocked && !isVoiceCaptureRoute(pathname) && !sosOnScreen;
 
   return (
     <Modal
@@ -179,6 +183,7 @@ function SessionEffects() {
   const userId = useAuthStore((s) => s.user?.id);
 
   useSafetyNotificationRouting();
+  useSafetyServerSync();
   useTripNotificationRouting();
 
   useEffect(() => {

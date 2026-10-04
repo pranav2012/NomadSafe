@@ -188,6 +188,17 @@
               "targetCellHeight": 2,
               "resizeMode": "horizontal|vertical",
               "updatePeriodMillis": 0
+            },
+            {
+              "name": "SosWidget",
+              "label": "NomadSafe · SOS",
+              "description": "One tap to alert your emergency contacts",
+              "minWidth": "110dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 2,
+              "targetCellHeight": 2,
+              "resizeMode": "horizontal|vertical",
+              "updatePeriodMillis": 0
             }
           ]
         }

@@ -123,6 +123,16 @@ export default defineSchema({
     .index("by_trip_record", ["tripId", "kind", "clientId"])
     .index("by_trip_seq", ["tripId", "seq"]),
 
+  // Server side of SOS and check-in: the check-in deadline (and its scheduled alert) and which
+  // alert linked contacts were last sent, so they hear when the user is safe again.
+  safetyAlerts: defineTable({
+    userId: v.string(),
+    checkInEndsAt: v.optional(v.number()),
+    checkInJob: v.optional(v.id("_scheduled_functions")),
+    activeAlert: v.optional(v.union(v.literal("sos"), v.literal("missedCheckIn"))),
+    lastSosAt: v.optional(v.number()),
+  }).index("by_user", ["userId"]),
+
   // Expo push tokens, one row per device, with the app language for notification text.
   pushTokens: defineTable({
     userId: v.string(),

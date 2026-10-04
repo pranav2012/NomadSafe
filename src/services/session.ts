@@ -19,6 +19,7 @@ import {
   stopSync,
   unregisterTripPush,
 } from "@/features/sync";
+import { clearServerCheckIn } from "@/features/safety/services/safetyServerAlerts";
 
 /** Revokes the Google grant (best-effort) and forgets the local tokens. */
 export async function disconnectGmail() {
@@ -70,6 +71,8 @@ export async function signOutAndCleanup() {
   useSharingStore.getState().setBroadcasting(false);
 
   await disconnectGmail();
+  // While the session is still valid, so contacts aren't alerted about a check-in nobody can answer.
+  await clearServerCheckIn();
 
   // Shared trips and backed-up data live on the account, so they leave the phone with it. Both
   // engines stop before anything is cleared, or the clearing would be uploaded as deletions.

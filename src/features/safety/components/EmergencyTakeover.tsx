@@ -163,13 +163,14 @@ function Pulse() {
 
 interface SosCountdownOverlayProps {
   seconds: number | null;
-  contactCount: number;
+  /** Who will be alerted when the countdown ends. */
+  body: string;
   onCancel: () => void;
   onSendNow: () => void;
 }
 
-/** The cancel window between the SOS hold and the SMS opening. */
-export function SosCountdownOverlay({ seconds, contactCount, onCancel, onSendNow }: SosCountdownOverlayProps) {
+/** The cancel window between the SOS hold (or widget tap) and contacts being alerted. */
+export function SosCountdownOverlay({ seconds, body, onCancel, onSendNow }: SosCountdownOverlayProps) {
   const { c, f } = useAura();
   const { t } = useLocalization();
   return (
@@ -187,7 +188,7 @@ export function SosCountdownOverlay({ seconds, contactCount, onCancel, onSendNow
             {seconds ?? 0}
           </Text>
           <Text style={[styles.status, styles.center, { color: c.textSoft, fontFamily: f.regular }]}>
-            {t("sos.countdownBody", { count: contactCount })}
+            {body}
           </Text>
           <View style={styles.countButtons}>
             <AuraButton label={t("sos.countdownCancel")} onPress={onCancel} />

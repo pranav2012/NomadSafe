@@ -1,14 +1,18 @@
 import React, { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
+import Animated, { FadeIn } from "react-native-reanimated";
 import { AuraButton } from "@/components/aura/AuraButton";
 import { AuraCard } from "@/components/aura/AuraCard";
 import { AuraChip } from "@/components/aura/AuraChip";
 import { useAura } from "@/components/aura/useAura";
+import { PressableScale } from "@/components/motion/PressableScale";
+import { Icon } from "@/components/nomad/Icon";
 import { auraStatusAccent } from "@/constants/aura";
 import { useAnimationsActive } from "@/hooks/useAnimationsActive";
 import { useLocalization } from "@/localization";
 
 const ALERT = auraStatusAccent.alert;
+const HOW_IT_WORKS_STEPS = ["safety.checkInStep1", "safety.checkInStep2", "safety.checkInStep3"] as const;
 
 interface CheckInCardProps {
   state: "idle" | "active" | "missed";
@@ -21,6 +25,7 @@ interface CheckInCardProps {
   plannedLabel: string;
   accent: string;
   missedBody: string;
+  activeBody: string;
   missedStatus: string | null;
   missedBusy: boolean;
   onSelectDuration: (seconds: number) => void;
@@ -64,6 +69,7 @@ export function CheckInCard({
   plannedLabel,
   accent,
   missedBody,
+  activeBody,
   missedStatus,
   missedBusy,
   onSelectDuration,
@@ -75,6 +81,7 @@ export function CheckInCard({
   const { c, f } = useAura();
   const { t } = useLocalization();
   const missed = state === "missed";
+  const [howOpen, setHowOpen] = useState(false);
   const visible = useAnimationsActive();
   const now = useSecondTicker(visible && state !== "idle" && endsAt !== null);
   const shown =
@@ -96,8 +103,36 @@ export function CheckInCard({
         {missed ? `+${formatCountdown(shown)}` : formatCountdown(shown)}
       </Text>
       <Text style={[styles.sub, { color: c.textSoft, fontFamily: f.regular }]}>
-        {missed ? missedBody : state === "active" ? t("safety.autoAlert") : t("safety.setTarget")}
+        {missed ? missedBody : state === "active" ? activeBody : t("safety.checkInExplainer")}
       </Text>
+      {!missed ? (
+        <PressableScale
+          haptic={false}
+          onPress={() => setHowOpen((open) => !open)}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: howOpen }}
+          hitSlop={8}
+          style={styles.howToggle}
+        >
+          <Icon name="info" size={14} color={c.textMuted} />
+          <Text style={[styles.howLabel, { color: c.textMuted, fontFamily: f.medium }]}>{t("safety.checkInHowItWorks")}</Text>
+          <View style={howOpen ? styles.flipped : undefined}>
+            <Icon name="chevronDown" size={14} color={c.textMuted} />
+          </View>
+        </PressableScale>
+      ) : null}
+      {howOpen && !missed ? (
+        <Animated.View entering={FadeIn.duration(180)} style={styles.steps}>
+          {HOW_IT_WORKS_STEPS.map((key, i) => (
+            <View key={key} style={styles.step}>
+              <View style={[styles.stepNum, { borderColor: c.hairline, backgroundColor: c.surfaceStrong }]}>
+                <Text style={[styles.stepNumText, { color: c.text, fontFamily: f.semibold }]}>{i + 1}</Text>
+              </View>
+              <Text style={[styles.stepText, { color: c.textSoft, fontFamily: f.regular }]}>{t(key)}</Text>
+            </View>
+          ))}
+        </Animated.View>
+      ) : null}
       {missed && missedStatus ? (
         <Text style={[styles.sub, { color: c.textMuted, fontFamily: f.regular }]} accessibilityLiveRegion="polite">
           {missedStatus}
@@ -134,4 +169,12 @@ const styles = StyleSheet.create({
   presets: { gap: 8, paddingHorizontal: 18 },
   first: { marginTop: 16 },
   buttons: { gap: 10, marginTop: 16 },
+  howToggle: { flexDirection: "row", alignItems: "center", alignSelf: "flex-start", gap: 6, marginTop: 10 },
+  howLabel: { fontSize: 13 },
+  flipped: { transform: [{ rotate: "180deg" }] },
+  steps: { gap: 10, marginTop: 12 },
+  step: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
+  stepNum: { width: 22, height: 22, borderRadius: 11, borderWidth: StyleSheet.hairlineWidth, alignItems: "center", justifyContent: "center" },
+  stepNumText: { fontSize: 12 },
+  stepText: { flex: 1, fontSize: 13.5, lineHeight: 19, marginTop: 1 },
 });

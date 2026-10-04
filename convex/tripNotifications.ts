@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { internalAction, internalMutation, mutation } from "./_generated/server";
+import { internalAction, internalMutation, mutation, type ActionCtx } from "./_generated/server";
 import { requireUser } from "./users";
 
 const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
@@ -89,6 +89,38 @@ export const deleteTokens = internalMutation({
   },
 });
 
+export type PushMessage = {
+  to: string;
+  title: string;
+  body: string;
+  sound: "default";
+  channelId: string;
+  priority?: "high";
+  data: Record<string, string>;
+};
+
+/** Sends Expo pushes in chunks and drops tokens Expo reports as no longer registered. Best-effort. */
+export async function sendPushMessages(ctx: ActionCtx, messages: PushMessage[]) {
+  const gone: string[] = [];
+  for (let i = 0; i < messages.length; i += PUSH_CHUNK) {
+    const chunk = messages.slice(i, i + PUSH_CHUNK);
+    try {
+      const res = await fetch(EXPO_PUSH_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(chunk),
+      });
+      const body = (await res.json().catch(() => null)) as { data?: { status: string; details?: { error?: string } }[] } | null;
+      body?.data?.forEach((ticket, index) => {
+        if (ticket.status === "error" && ticket.details?.error === "DeviceNotRegistered") gone.push(chunk[index].to);
+      });
+    } catch {
+      // Best-effort: recipients still see the change next time they open the app.
+    }
+  }
+  if (gone.length > 0) await ctx.runMutation(internal.tripNotifications.deleteTokens, { tokens: gone });
+}
+
 const changeValidator = v.object({
   kind: v.union(v.literal("expense"), v.literal("settlement")),
   action: v.union(v.literal("added"), v.literal("updated"), v.literal("deleted")),
@@ -125,29 +157,12 @@ export const notifyTrip = internalAction({
         to: token,
         title: info.tripName,
         body: fill(template, values),
-        sound: "default",
+        sound: "default" as const,
         channelId: CHANNEL_ID,
-        data: { source: SOURCE, tripId },
+        data: { source: SOURCE, tripId: String(tripId) },
       };
     });
 
-    const gone: string[] = [];
-    for (let i = 0; i < messages.length; i += PUSH_CHUNK) {
-      const chunk = messages.slice(i, i + PUSH_CHUNK);
-      try {
-        const res = await fetch(EXPO_PUSH_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Accept: "application/json" },
-          body: JSON.stringify(chunk),
-        });
-        const body = (await res.json().catch(() => null)) as { data?: { status: string; details?: { error?: string } }[] } | null;
-        body?.data?.forEach((ticket, index) => {
-          if (ticket.status === "error" && ticket.details?.error === "DeviceNotRegistered") gone.push(chunk[index].to);
-        });
-      } catch {
-        // Best-effort: members still see the change next time the app syncs.
-      }
-    }
-    if (gone.length > 0) await ctx.runMutation(internal.tripNotifications.deleteTokens, { tokens: gone });
+    await sendPushMessages(ctx, messages);
   },
 });

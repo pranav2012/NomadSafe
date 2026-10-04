@@ -1,7 +1,9 @@
 import { useEffect } from "react";
 import * as Notifications from "expo-notifications";
 import { useRouter } from "expo-router";
+import { translate } from "@/localization/translate";
 import { SAFETY_NOTIFICATION_SOURCE, SOS_ROUTE } from "../services/checkInNotifications";
+import { ensureSafetyAlertChannel } from "../services/safetyServerAlerts";
 
 let handlerConfigured = false;
 
@@ -23,8 +25,8 @@ function configureHandler() {
 }
 
 /**
- * Routes taps on check-in notifications (including the one that cold-started
- * the app) to the SOS tab. Mount once inside the root navigator.
+ * Routes taps on check-in notifications and contacts' SOS alerts (including the one that
+ * cold-started the app) to the SOS tab. Mount once inside the root navigator.
  */
 export function useSafetyNotificationRouting() {
   const router = useRouter();
@@ -32,6 +34,7 @@ export function useSafetyNotificationRouting() {
 
   useEffect(() => {
     configureHandler();
+    void ensureSafetyAlertChannel(translate("safety.alertChannelName"));
   }, []);
 
   useEffect(() => {

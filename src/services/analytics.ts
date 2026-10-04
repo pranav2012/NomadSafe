@@ -18,9 +18,10 @@ export interface AnalyticsEvents {
   live_share_stopped: undefined;
   check_in_started: { duration_minutes: number };
   check_in_completed: undefined;
-  sos_triggered: { contacts: number };
+  sos_triggered: { contacts: number; app_contacts: number; from_widget: boolean };
   sos_sms_result: { outcome: SmsResult; has_location: boolean };
   sos_cancelled: undefined;
+  location_coords_action: { action: "share" | "copy" | "maps" };
   ai_message_sent: undefined;
   settlement_recorded: { source: "manual" | "voice" };
   voice_capture_opened: { from_widget: boolean; locked: boolean };

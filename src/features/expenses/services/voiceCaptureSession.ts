@@ -3,9 +3,9 @@ const LINK_GRACE_MS = 5_000;
 
 let captureLinkAt = 0;
 
-/** Called for incoming deep links so the auto-lock doesn't dismiss a capture screen that is still opening. */
-export function noteIncomingLink(path: string) {
-  if (path.includes("voice-expense")) captureLinkAt = Date.now();
+/** Called for incoming deep links so the auto-lock doesn't dismiss a widget screen that is still opening. */
+export function noteIncomingLink(path: string, widgetSos = false) {
+  if (widgetSos || path.includes("voice-expense")) captureLinkAt = Date.now();
 }
 
 export function isCaptureLinkRecent(): boolean {

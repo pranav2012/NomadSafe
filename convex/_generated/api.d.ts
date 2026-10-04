@@ -15,6 +15,7 @@ import type * as groupTrips from "../groupTrips.js";
 import type * as http from "../http.js";
 import type * as legalPages from "../legalPages.js";
 import type * as places from "../places.js";
+import type * as safetyAlerts from "../safetyAlerts.js";
 import type * as sharing from "../sharing.js";
 import type * as sync from "../sync.js";
 import type * as tripNotifications from "../tripNotifications.js";
@@ -34,6 +35,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   legalPages: typeof legalPages;
   places: typeof places;
+  safetyAlerts: typeof safetyAlerts;
   sharing: typeof sharing;
   sync: typeof sync;
   tripNotifications: typeof tripNotifications;

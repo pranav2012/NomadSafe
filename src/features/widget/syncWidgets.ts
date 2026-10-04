@@ -6,15 +6,17 @@ import { useTripsStore } from "@/features/trips/store/tripsStore";
 import { translate } from "@/localization/translate";
 import { logger } from "@/services/logger";
 import { VOICE_WIDGET_NAME, VoiceExpenseWidget } from "@/features/widget/VoiceExpenseWidget";
-import { buildWidgetProps } from "@/features/widget/widgetContent";
+import { SOS_WIDGET_NAME, SosWidget } from "@/features/widget/SosWidget";
+import { buildSosWidgetProps, buildWidgetProps } from "@/features/widget/widgetContent";
 import { resolveWidgetTrip } from "@/features/widget/widgetTrip";
 
 export const APP_GROUP = "group.com.pranav.NomadSafe";
 const IOS_WIDGET_KIND = "VoiceExpenseWidget";
+const IOS_SOS_WIDGET_KIND = "SosWidget";
 
 /**
- * Pushes trip names to the home-screen widgets. iOS reads them from the App
- * Group (plain UserDefaults), so only ids, names and UI labels are shared.
+ * Pushes trip names and labels to the home-screen widgets (voice expense and SOS). iOS reads
+ * them from the App Group (plain UserDefaults), so only ids, names and UI labels are shared.
  */
 export async function syncWidgets() {
   try {
@@ -22,6 +24,11 @@ export async function syncWidgets() {
       await requestWidgetUpdate({
         widgetName: VOICE_WIDGET_NAME,
         renderWidget: () => React.createElement(VoiceExpenseWidget, buildWidgetProps()),
+        widgetNotFound: () => {},
+      });
+      await requestWidgetUpdate({
+        widgetName: SOS_WIDGET_NAME,
+        renderWidget: () => React.createElement(SosWidget, buildSosWidgetProps()),
         widgetNotFound: () => {},
       });
     } else if (Platform.OS === "ios") {
@@ -38,7 +45,9 @@ export async function syncWidgets() {
           defaultTrip: translate("voiceExpense.widget.defaultTrip"),
         }),
       );
+      shared.set("sosLabels", JSON.stringify({ title: translate("sos.widget.title"), hint: translate("sos.widget.hint") }));
       ExtensionStorage.reloadWidget(IOS_WIDGET_KIND);
+      ExtensionStorage.reloadWidget(IOS_SOS_WIDGET_KIND);
     }
   } catch (error) {
     logger.warn("widgets", "widget sync failed", error);

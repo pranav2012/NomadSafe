@@ -3,6 +3,7 @@ import { components, internal } from "./_generated/api";
 import { internalMutation, mutation, type MutationCtx } from "./_generated/server";
 import { POSTHOG_DELETE_DELAY_MS } from "./analytics";
 import { removeUserFromTrips } from "./groupTrips";
+import { deleteSafetyAlerts } from "./safetyAlerts";
 import { deleteSyncBatch } from "./sync";
 import { findAuthUserByEmail, normalizeEmail, requireUser } from "./users";
 
@@ -22,7 +23,7 @@ async function deleteAuthRows(ctx: MutationCtx, model: AuthModel, field: string,
 
 /**
  * Deletes every server-side record tied to a user: their shared-trip memberships (owned trips
- * pass to another member), push tokens, their trip/expense backup,
+ * pass to another member), push tokens, SOS/check-in alert state, their trip/expense backup,
  * sharing links in both directions, location shares, invites they sent or received, and finally
  * their Better Auth sessions, linked accounts and user record. Their PostHog
  * analytics are deleted by a scheduled action, which only runs if this commits.
@@ -66,6 +67,7 @@ async function purgeUser(ctx: MutationCtx, userId: string, email: string | null)
     .withIndex("by_user", (q) => q.eq("userId", userId))
     .collect();
   for (const token of tokens) await ctx.db.delete(token._id);
+  await deleteSafetyAlerts(ctx, userId);
 
   if (!(await deleteSyncBatch(ctx, userId))) {
     await ctx.scheduler.runAfter(0, internal.sync.purgeUserRecords, { userId });

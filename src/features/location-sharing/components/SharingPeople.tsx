@@ -12,6 +12,7 @@ import { PressableScale } from "@/components/motion/PressableScale";
 import { distanceKm } from "@/features/home/components/aura/globe/sun";
 import { formatDistance } from "@/features/home/utils/format";
 import { emergencyContactsStorage, normalizeEmail } from "@/features/onboarding/services/emergencyContactsStorage";
+import { registerTripPush } from "@/features/sync";
 import { useLocalization } from "@/localization";
 import { AddPersonSheet } from "./AddPersonSheet";
 
@@ -136,7 +137,15 @@ export function SharingPeople({ isBroadcasting, location, accent }: SharingPeopl
           <AuraCard style={styles.list}>
             {requests.map((req, i) => (
               <PersonRow key={req.id} name={req.ownerName} sub={t("sharing.requestBody")} color={AVATAR_COLORS[i % 4]} divider={i > 0}>
-                <SmallAction label={t("sharing.accept")} filled onPress={() => void respondToContactLink({ linkId: req.id, accept: true }).catch(linkError)} />
+                <SmallAction
+                  label={t("sharing.accept")}
+                  filled
+                  onPress={() => {
+                    // Accepting means receiving their SOS alerts, which arrive as push notifications.
+                    void registerTripPush(true);
+                    void respondToContactLink({ linkId: req.id, accept: true }).catch(linkError);
+                  }}
+                />
                 <SmallAction label={t("sharing.decline")} onPress={() => void respondToContactLink({ linkId: req.id, accept: false }).catch(linkError)} />
               </PersonRow>
             ))}

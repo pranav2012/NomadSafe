@@ -58,7 +58,9 @@ export type IconName =
   | "mic"
   | "volume"
   | "volumeOff"
-  | "logout";
+  | "logout"
+  | "copy"
+  | "share";
 
 const DIRECTIONAL: ReadonlySet<IconName> = new Set(["chevronRight", "chevronLeft", "send", "logout"]);
 
@@ -87,6 +89,22 @@ export function Icon({
   let body: React.ReactNode = null;
 
   switch (name) {
+    case "copy":
+      body = (
+        <G {...p}>
+          <Rect x="8.5" y="8.5" width="12" height="12" rx="2" />
+          <Path d="M15.5 8.5V5.5a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2h3" />
+        </G>
+      );
+      break;
+    case "share":
+      body = (
+        <G {...p}>
+          <Path d="M12 3v12M7.5 7.5L12 3l4.5 4.5" />
+          <Path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+        </G>
+      );
+      break;
     case "mic":
       body = (
         <G {...p}>

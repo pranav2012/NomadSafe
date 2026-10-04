@@ -33,6 +33,9 @@ export interface SmsDelivery {
   at: number;
 }
 
+/** Push alert to linked NomadSafe contacts; "pending" means the server couldn't be reached yet. */
+export type ContactAlert = { state: "sending" } | { state: "sent"; recipients: number } | { state: "pending" };
+
 /** "needsSetup": not started because it would need a permission prompt mid-SOS. */
 export type BroadcastOutcome = "starting" | "started" | "denied" | "failed" | "needsSetup";
 
@@ -49,6 +52,7 @@ interface SafetyState {
   sosDelivery: SmsDelivery | null;
   sosBroadcast: BroadcastOutcome | null;
   previousBroadcast: BroadcastSnapshot | null;
+  sosContactAlert: ContactAlert | null;
 
   startTimer: (durationSeconds?: number) => void;
   extendTimer: (extraSeconds: number) => void;
@@ -58,6 +62,7 @@ interface SafetyState {
   triggerSos: (previousBroadcast: BroadcastSnapshot | null) => void;
   recordSosDelivery: (delivery: SmsDelivery) => void;
   recordSosBroadcast: (outcome: BroadcastOutcome) => void;
+  recordSosContactAlert: (alert: ContactAlert) => void;
   cancelSos: () => void;
   addEvent: (event: Omit<SafetyEvent, "id" | "dateIso">) => void;
   setTrustedContacts: (contacts: SafetyTrustedContact[]) => void;
@@ -103,6 +108,7 @@ export const useSafetyStore = create<SafetyState>()(
       sosDelivery: null,
       sosBroadcast: null,
       previousBroadcast: null,
+      sosContactAlert: null,
 
       startTimer: (durationSeconds) => {
         const duration = durationSeconds ?? DEFAULT_DURATION;
@@ -186,6 +192,7 @@ export const useSafetyStore = create<SafetyState>()(
           sosDelivery: null,
           sosBroadcast: null,
           previousBroadcast,
+          sosContactAlert: null,
         });
         void cancelCheckInNotifications();
         get().addEvent({ messageKey: "safety.eventSosTriggered", icon: "shield", color: "stamp" });
@@ -212,6 +219,19 @@ export const useSafetyStore = create<SafetyState>()(
         });
       },
 
+      recordSosContactAlert: (alert) => {
+        if (get().status !== "emergency") return;
+        set({ sosContactAlert: alert });
+        if (alert.state === "sent" && alert.recipients > 0) {
+          get().addEvent({
+            messageKey: "safety.eventSosContactsAlerted",
+            messageParams: { count: alert.recipients },
+            icon: "shield",
+            color: "stamp",
+          });
+        }
+      },
+
       cancelSos: () => {
         set({
           status: "idle",
@@ -219,6 +239,7 @@ export const useSafetyStore = create<SafetyState>()(
           sosDelivery: null,
           sosBroadcast: null,
           previousBroadcast: null,
+          sosContactAlert: null,
         });
         get().addEvent({ messageKey: "safety.eventSosCancelled", icon: "check", color: "teal" });
       },
@@ -249,6 +270,7 @@ export const useSafetyStore = create<SafetyState>()(
           sosDelivery: null,
           sosBroadcast: null,
           previousBroadcast: null,
+          sosContactAlert: null,
         });
       },
     }),

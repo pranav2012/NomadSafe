@@ -2,7 +2,7 @@ import AppIntents
 import SwiftUI
 import WidgetKit
 
-private let appGroup = UserDefaults(suiteName: "group.com.pranav.NomadSafe")
+let appGroup = UserDefaults(suiteName: "group.com.pranav.NomadSafe")
 
 struct SharedTrip: Codable {
   let id: String
@@ -17,7 +17,7 @@ struct SharedLabels: Codable {
 }
 
 // The app writes these as JSON strings via ExtensionStorage (see src/features/widget/syncWidgets.ts).
-private func decode<T: Decodable>(_ key: String, as type: T.Type) -> T? {
+func decode<T: Decodable>(_ key: String, as type: T.Type) -> T? {
   guard let raw = appGroup?.string(forKey: key), let data = raw.data(using: .utf8) else { return nil }
   return try? JSONDecoder().decode(T.self, from: data)
 }
@@ -158,7 +158,6 @@ struct VoiceExpenseWidgetView: View {
   }
 }
 
-@main
 struct VoiceExpenseWidget: Widget {
   var body: some WidgetConfiguration {
     AppIntentConfiguration(kind: "VoiceExpenseWidget", intent: SelectTripIntent.self, provider: VoiceProvider()) {
