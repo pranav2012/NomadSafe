@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Linking, Platform, StyleSheet, Text, View } from "react-native";
 import MapView, { Marker, Polyline, PROVIDER_DEFAULT, type Region } from "react-native-maps";
 import Animated, { FadeInDown, FadeOutDown } from "react-native-reanimated";
@@ -28,6 +28,10 @@ function altitudeForZoom(zoom: number, latitude: number, viewHeight: number) {
 /** Wider than this many degrees of longitude and the user has zoomed back out to globe scale. */
 const BACK_TO_GLOBE_SPAN = 40;
 const EDGE_PADDING = { top: 70, right: 50, bottom: 70, left: 50 };
+// Android snapshots a custom marker once when tracking is off, often before its SVG icon has drawn,
+// leaving a plain coloured circle. Track briefly after the markers change, then stop to save redraws.
+const MARKER_SETTLE_MS = 800;
+const LEGEND_KINDS: SafetyPlace["kind"][] = ["hospital", "police", "pharmacy"];
 
 /** Gently curved line through the stops (quadratic bend per leg), as on the old trip map. */
 function routePath(points: { latitude: number; longitude: number }[]) {
@@ -132,6 +136,23 @@ export function InlineSafetyMap({
   );
   const selectedKm = selected && stop ? distanceKm(stop, selected) : null;
 
+  const markerKey = `${sorted.map(({ place }) => place.name).join("|")}#${hotel?.latitude ?? ""}#${contacts.length}`;
+  const [settledMarkers, setSettledMarkers] = useState<string | null>(null);
+  const tracking = settledMarkers !== markerKey;
+  useEffect(() => {
+    const id = setTimeout(() => setSettledMarkers(markerKey), MARKER_SETTLE_MS);
+    return () => clearTimeout(id);
+  }, [markerKey]);
+
+  const legend = [
+    ...LEGEND_KINDS.filter((kind) => sorted.some(({ place }) => place.kind === kind)).map((kind) => ({
+      key: kind,
+      label: t(SAFETY_KIND_META[kind].labelKey),
+      color: SAFETY_KIND_META[kind].color,
+    })),
+    ...(hotel ? [{ key: "stay", label: t("home.yourStay"), color: c.inverse }] : []),
+  ];
+
   return (
     <View
       style={{ height }}
@@ -161,20 +182,20 @@ export function InlineSafetyMap({
         ) : null}
         {stops.map((s, i) =>
           stop && s.latitude === stop.latitude && s.longitude === stop.longitude ? null : (
-            <Marker key={`stop-${i}`} coordinate={s} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
+            <Marker key={`stop-${i}`} coordinate={s} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={tracking}>
               <View style={[styles.otherStop, { borderColor: accent, backgroundColor: c.surfaceStrong }]} />
             </Marker>
           ),
         )}
         {stop ? (
-          <Marker coordinate={stop} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
+          <Marker coordinate={stop} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={tracking}>
             <View style={[styles.stopHalo, { backgroundColor: `${accent}33` }]}>
               <View style={[styles.stopDot, { backgroundColor: accent }]} />
             </View>
           </Marker>
         ) : null}
         {hotel ? (
-          <Marker coordinate={hotel} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
+          <Marker coordinate={hotel} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={tracking}>
             <View style={[styles.pin, { backgroundColor: c.inverse }]}>
               <Icon name="building" size={15} color={c.onInverse} />
             </View>
@@ -187,7 +208,7 @@ export function InlineSafetyMap({
               key={`${place.name}-${i}`}
               coordinate={place}
               anchor={{ x: 0.5, y: 0.5 }}
-              tracksViewChanges={false}
+              tracksViewChanges={tracking}
               onPress={(event) => {
                 event.stopPropagation();
                 setSelected(place);
@@ -200,13 +221,24 @@ export function InlineSafetyMap({
           );
         })}
         {contacts.map((contact, i) => (
-          <Marker key={`contact-${i}`} coordinate={contact} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
+          <Marker key={`contact-${i}`} coordinate={contact} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={tracking}>
             <View style={styles.contact}>
               <Text style={styles.contactInitial}>{contact.name.charAt(0).toUpperCase()}</Text>
             </View>
           </Marker>
         ))}
       </MapView>
+
+      {legend.length > 0 ? (
+        <View pointerEvents="none" style={[styles.legend, { backgroundColor: c.surfaceStrong, borderColor: c.hairline }]}>
+          {legend.map((item) => (
+            <View key={item.key} style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: item.color }]} />
+              <Text style={[styles.legendText, { color: c.text }]}>{item.label}</Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
 
       <PressableScale
         onPress={() => onBackToGlobe(from.center)}
@@ -275,6 +307,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  legend: {
+    position: "absolute",
+    top: 12,
+    left: 16,
+    maxWidth: "72%",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    columnGap: 10,
+    rowGap: 4,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+    borderRadius: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  legendItem: { flexDirection: "row", alignItems: "center", gap: 5 },
+  legendDot: { width: 8, height: 8, borderRadius: 4, borderWidth: 1, borderColor: "#FFFFFF" },
+  legendText: { fontFamily: f.medium, fontSize: 11.5 },
   card: {
     position: "absolute",
     left: 16,
