@@ -3,9 +3,9 @@ import { useRouter } from "expo-router";
 import * as Location from "expo-location";
 import type { AuraStatus } from "@/constants/aura";
 import { ExpenseForm } from "@/features/expenses/components/ExpenseForm";
+import { ImportSheet } from "@/features/expenses/components/ImportSheet";
 import { TripHome, type UserLocation } from "@/features/home/components/TripHome";
 import { useHomeData } from "@/features/home/hooks/useHomeData";
-import { useItineraryAutoSync } from "@/features/itinerary";
 import { BackgroundLocationDisclosure } from "@/features/location-sharing/components/BackgroundLocationDisclosure";
 import { useBroadcastToggle } from "@/features/location-sharing/hooks/useBroadcastToggle";
 import { cancelCheckInNotifications, useSafetyStore } from "@/features/safety";
@@ -60,7 +60,6 @@ export default function HomeScreen() {
   const router = useRouter();
   const tripCount = useTripsStore((state) => state.trips.length);
   const activeTrip = useTripsStore(selectActiveTrip);
-  useItineraryAutoSync(activeTrip);
   const data = useHomeData();
 
   const safetyStatus = useSafetyStore((s) => s.status);
@@ -71,6 +70,7 @@ export default function HomeScreen() {
 
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [formOpen, setFormOpen] = useState(false);
+  const [importTab, setImportTab] = useState<"gmail" | "paste" | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -115,13 +115,13 @@ export default function HomeScreen() {
         userLocation={userLocation}
         checkInActive={checkInActive}
         onAddSpend={() => setFormOpen(true)}
+        onImportSpends={setImportTab}
         onCheckIn={handleCheckIn}
         onToggleShare={() => void share.toggle()}
         onSos={() => router.navigate("/(tabs)/sos")}
         onSwitchTrip={() => router.push("/trips")}
         onOpenSettings={() => router.push("/settings")}
       />
-
 
       <ExpenseForm
         visible={formOpen}
@@ -134,6 +134,19 @@ export default function HomeScreen() {
           setFormOpen(false);
           router.push({ pathname: "/voice-expense", params: { tripId: activeTrip.id } });
         }}
+        onImport={(source) => {
+          setFormOpen(false);
+          setImportTab(source);
+        }}
+      />
+
+      <ImportSheet
+        visible={importTab !== null}
+        tripId={activeTrip.id}
+        trip={activeTrip}
+        initialTab={importTab ?? "paste"}
+        onClose={() => setImportTab(null)}
+        onImported={() => setImportTab(null)}
       />
 
       <BackgroundLocationDisclosure visible={share.disclosureVisible} onAccept={share.onDisclosureAccept} onDecline={share.onDisclosureDecline} />

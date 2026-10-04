@@ -5,7 +5,7 @@ import {
   saveGmailTokens,
   type StoredGmailTokens,
 } from "@/features/expenses/services/gmailTokenStore";
-import { clearSharedGmailFetch } from "@/features/expenses/services/gmailSharedFetch";
+import { clearTripGmailCoverage } from "@/features/expenses/store/tripGmailCoverageStore";
 
 interface GmailConnectionState {
   hydrated: boolean;
@@ -42,7 +42,8 @@ export async function storeGmailTokens(tokens: StoredGmailTokens): Promise<void>
 }
 
 export async function forgetGmailTokens(options: { lostAccess: boolean }): Promise<void> {
-  clearSharedGmailFetch();
+  // An expired grant keeps coverage for the reconnect; a deliberate disconnect forgets it.
+  if (!options.lostAccess) clearTripGmailCoverage();
   useGmailConnectionStore.setState({ tokens: null, hydrated: true, lostAccess: options.lostAccess });
   await clearGmailTokens();
 }

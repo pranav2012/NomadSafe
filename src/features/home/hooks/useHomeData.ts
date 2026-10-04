@@ -91,6 +91,7 @@ export function useHomeData(): HomeData | null {
     moneyLabel: t("trip.spent"),
     moneyValue: formatMoney(formatCurrency, summary.total, trip.currency),
     spendDays,
+    hasSpends: summary.convertedExpenses.length > 0 || summary.unavailableExpenses.length > 0,
     isSharing,
     sharingLabel,
     travellersLabel: trip.mode === "solo" ? t("trip.solo") : t("trip.groupWithCount", { count: trip.companions.length + 1 }),

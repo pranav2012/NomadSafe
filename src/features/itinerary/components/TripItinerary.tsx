@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { Icon } from "@/components/nomad/Icon";
 import { PressableScale } from "@/components/motion/PressableScale";
@@ -7,46 +7,30 @@ import { AuraButton } from "@/components/aura/AuraButton";
 import { AuraSection } from "@/components/aura/AuraSection";
 import { AuraSheet } from "@/components/aura/AuraSheet";
 import { useAura } from "@/components/aura/useAura";
-import { auraEventColors } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { localModelService, useAiReadyModelId } from "@/features/ai";
 import { useSettingsStore } from "@/features/settings";
 import type { Trip } from "@/features/trips/store/tripsStore";
 import { useEventsStore, type TripEvent } from "@/features/itinerary/store/eventsStore";
-import { getEventTypeMeta } from "@/features/itinerary/constants/eventTypes";
 import { EventForm, type EventFormValues } from "@/features/itinerary/components/EventForm";
-import { EventDeck, type DeckEvent } from "@/features/itinerary/components/EventDeck";
-import { localizeEventDetail, localizeEventTitle } from "@/features/itinerary/utils/eventText";
+import { TimelineList, UpNextList } from "@/features/itinerary/components/ItineraryViews";
+import { upNext } from "@/features/itinerary/utils/timeline";
+import { fromDateKey } from "@/features/trips/utils/dates";
 import { logger } from "@/services/logger";
+import { useGmailImport } from "@/features/expenses/hooks/useGmailImport";
+import { useGmailProgressLabel, useGmailStatus } from "@/features/expenses/hooks/useGmailStatus";
+import { syncTripGmail } from "@/features/expenses/services/tripGmailSync";
+import { useTripGmailSyncStatus } from "@/features/expenses/store/gmailSyncStatusStore";
 
-const DECK_COUNT = 5;
-
-function startOfDay(date: Date): number {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
-}
-
-/** Returns the next upcoming events first, falling back to the most recent ones. */
-function pickPreview(ordered: TripEvent[]): TripEvent[] {
-  const today = startOfDay(new Date());
-  const upcoming = ordered.filter((event) => startOfDay(new Date(event.startAt)) >= today);
-  return upcoming.length > 0 ? upcoming.slice(0, DECK_COUNT) : ordered.slice(-DECK_COUNT);
-}
-
-/** Keeps an edited event's duration by moving `endAt` along with `startAt`. */
-function shiftEndAt(event: TripEvent, startAt: string): string | undefined {
-  if (!event.endAt) return undefined;
-  const delta = new Date(startAt).getTime() - new Date(event.startAt).getTime();
-  const end = new Date(new Date(event.endAt).getTime() + delta);
-  return Number.isNaN(end.getTime()) ? event.endAt : end.toISOString();
-}
+const UP_NEXT_COUNT = 3;
 
 /**
- * The trip's itinerary on Home: a swipeable deck of what's next (tap to edit), an "All events"
+ * The trip's itinerary on Home: the next few bookings (tap to edit), a day-by-day "Full itinerary"
  * sheet, adding events, and on-device AI refinement with a review sheet before anything is removed.
  */
-export function TripItinerary({ trip, accent }: { trip: Trip; accent: string }) {
+export function TripItinerary({ trip }: { trip: Trip; accent: string }) {
   const { c, f } = useAura();
-  const { t, locale } = useLocalization();
+  const { t } = useLocalization();
   const events = useEventsStore((state) => state.events);
   const addEvent = useEventsStore((state) => state.addEvent);
   const updateEvent = useEventsStore((state) => state.updateEvent);
@@ -66,15 +50,8 @@ export function TripItinerary({ trip, accent }: { trip: Trip; accent: string }) 
     () => events.filter((event) => event.tripId === trip.id).sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime()),
     [events, trip.id],
   );
-  const timeFormatter = new Intl.DateTimeFormat(locale, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
-  const toDeck = (event: TripEvent): DeckEvent => ({
-    id: event.id,
-    type: event.type,
-    title: localizeEventTitle(event.title, t),
-    detail: localizeEventDetail(event.detail, t),
-    time: timeFormatter.format(new Date(event.startAt)),
-  });
-  const deck = pickPreview(ordered).map(toDeck);
+  const [now] = useState(() => Date.now());
+  const next = upNext(ordered, now, UP_NEXT_COUNT);
 
   useEffect(() => {
     let mounted = true;
@@ -91,11 +68,6 @@ export function TripItinerary({ trip, accent }: { trip: Trip; accent: string }) 
     };
   }, [aiReadyModelId, localAiEnabled]);
 
-  const openEvent = (id: string) => {
-    const event = ordered.find((e) => e.id === id);
-    if (event) setEditing(event);
-  };
-
   const handleSave = (values: EventFormValues) => {
     if (editing && editing !== "new") {
       updateEvent(editing.id, {
@@ -103,10 +75,19 @@ export function TripItinerary({ trip, accent }: { trip: Trip; accent: string }) 
         title: values.title,
         detail: values.detail || undefined,
         startAt: values.startAt,
-        endAt: shiftEndAt(editing, values.startAt),
+        endAt: values.endAt,
+        editedAt: new Date().toISOString(),
       });
     } else {
-      addEvent({ tripId: trip.id, type: values.type, title: values.title, detail: values.detail || undefined, startAt: values.startAt, source: "manual" });
+      addEvent({
+        tripId: trip.id,
+        type: values.type,
+        title: values.title,
+        detail: values.detail || undefined,
+        startAt: values.startAt,
+        endAt: values.endAt,
+        source: "manual",
+      });
     }
     setEditing(null);
   };
@@ -152,12 +133,12 @@ export function TripItinerary({ trip, accent }: { trip: Trip; accent: string }) 
         }
       />
 
-      {deck.length > 0 ? (
+      {next.length > 0 ? (
         <Animated.View entering={FadeIn.duration(300)}>
-          <EventDeck events={deck} palette={c} accent={accent} onPressEvent={openEvent} />
-          {ordered.length > deck.length || ordered.length > 1 ? (
+          <UpNextList events={next} onPress={setEditing} />
+          {ordered.length > 1 ? (
             <AuraButton
-              label={t("itinerary.viewAll", { count: ordered.length })}
+              label={t("itinerary.fullItinerary", { total: ordered.length })}
               variant="ghost"
               size="md"
               onPress={() => setAllOpen(true)}
@@ -166,32 +147,18 @@ export function TripItinerary({ trip, accent }: { trip: Trip; accent: string }) 
           ) : null}
         </Animated.View>
       ) : (
-        <PressableScale
-          onPress={() => setEditing("new")}
-          pressedScale={0.98}
-          style={[styles.empty, { backgroundColor: c.surface, borderColor: c.hairline }]}
-        >
-          <View style={[styles.emptyIcon, { backgroundColor: c.surfaceStrong }]}>
-            <Icon name="calendar" size={18} color={c.textSoft} />
-          </View>
-          <Text style={[styles.emptyText, { color: c.textSoft, fontFamily: f.regular }]}>{t("itinerary.empty")}</Text>
-        </PressableScale>
+        <ItineraryEmpty trip={trip} onAdd={() => setEditing("new")} />
       )}
 
-      <AuraSheet visible={allOpen} onClose={() => setAllOpen(false)} title={t("itinerary.title")} subtitle={trip.name}>
-        <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
-          {ordered.map((event) => (
-            <EventRow
-              key={event.id}
-              event={toDeck(event)}
-              past={startOfDay(new Date(event.startAt)) < startOfDay(new Date())}
-              onPress={() => {
-                setAllOpen(false);
-                setEditing(event);
-              }}
-            />
-          ))}
-        </ScrollView>
+      <AuraSheet visible={allOpen} onClose={() => setAllOpen(false)} title={t("itinerary.title")} subtitle={trip.name} full>
+        <TimelineList
+          events={ordered}
+          tripStart={fromDateKey(trip.startDate)}
+          onPress={(event) => {
+            setAllOpen(false);
+            setEditing(event);
+          }}
+        />
       </AuraSheet>
 
       <AuraSheet
@@ -239,39 +206,67 @@ export function TripItinerary({ trip, accent }: { trip: Trip; accent: string }) 
   );
 }
 
-function EventRow({ event, past, onPress }: { event: DeckEvent; past: boolean; onPress: () => void }) {
+/** Empty state that follows the Gmail booking sync: connect, checking, nothing found or failed. */
+function ItineraryEmpty({ trip, onAdd }: { trip: Trip; onAdd: () => void }) {
   const { c, f } = useAura();
-  const meta = getEventTypeMeta(event.type);
-  const color = auraEventColors[event.type];
+  const { t } = useLocalization();
+  const gmail = useGmailStatus();
+  const { connect, ready } = useGmailImport();
+  const progressLabel = useGmailProgressLabel(trip.id);
+  const sync = useTripGmailSyncStatus(trip.id).state;
+
+  const syncing = gmail.connected && sync === "syncing";
+  const title = gmail.connected && sync === "done" ? t("itinerary.noneFoundTitle") : t("itinerary.emptyTitle");
+  const body = !gmail.configured
+    ? t("itinerary.emptyManual")
+    : !gmail.connected
+      ? t("itinerary.emptyConnect")
+      : syncing
+        ? (progressLabel ?? t("itinerary.syncing"))
+        : sync === "failed"
+          ? t("itinerary.syncFailed")
+          : t("itinerary.noneFoundBody");
+
   return (
-    <PressableScale onPress={onPress} pressedScale={0.98} style={[styles.row, { opacity: past ? 0.55 : 1 }]}>
-      <View style={[styles.rowIcon, { backgroundColor: `${color}22` }]}>
-        <Icon name={meta.icon} size={16} color={color} />
+    <PressableScale
+      onPress={onAdd}
+      pressedScale={0.98}
+      accessibilityRole="button"
+      accessibilityHint={t("itinerary.form.addTitle")}
+      style={[styles.empty, { backgroundColor: c.surface, borderColor: c.hairline }]}
+    >
+      <View style={styles.emptyHead}>
+        <View style={[styles.emptyIcon, { backgroundColor: c.surfaceStrong }]}>
+          {syncing ? <ActivityIndicator size="small" color={c.textSoft} /> : <Icon name="calendar" size={18} color={c.textSoft} />}
+        </View>
+        <View style={styles.flex}>
+          <Text style={[styles.emptyTitle, { color: c.text, fontFamily: f.semibold }]}>{title}</Text>
+          <Text style={[styles.emptyText, { color: c.textSoft, fontFamily: f.regular }]} accessibilityLiveRegion="polite">
+            {body}
+          </Text>
+        </View>
       </View>
-      <View style={styles.rowText}>
-        <Text numberOfLines={1} style={[styles.rowTitle, { color: c.text, fontFamily: f.semibold }]}>
-          {event.title}
-        </Text>
-        <Text numberOfLines={1} style={[styles.rowSub, { color: c.textMuted, fontFamily: f.regular }]}>
-          {[event.time, event.detail].filter(Boolean).join(" · ")}
-        </Text>
-      </View>
-      <Icon name="chevronRight" size={14} color={c.textMuted} />
+      {gmail.configured && !syncing ? (
+        <AuraButton
+          size="md"
+          variant={gmail.connected ? "secondary" : "primary"}
+          icon="mail"
+          label={gmail.connected ? t("itinerary.scanAgain") : t("expenses.gmailConnect")}
+          disabled={!gmail.connected && !ready}
+          onPress={() => void (gmail.connected ? syncTripGmail(trip).catch(() => undefined) : connect())}
+        />
+      ) : null}
     </PressableScale>
   );
 }
 
 const styles = StyleSheet.create({
   viewAll: { alignSelf: "center", marginTop: 6 },
-  empty: { flexDirection: "row", alignItems: "center", gap: 12, padding: 16, borderRadius: 22, borderWidth: StyleSheet.hairlineWidth },
+  empty: { gap: 14, padding: 16, borderRadius: 22, borderWidth: StyleSheet.hairlineWidth },
+  emptyHead: { flexDirection: "row", alignItems: "center", gap: 12 },
   emptyIcon: { width: 38, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  emptyText: { flex: 1, fontSize: 14, lineHeight: 20 },
-  list: { paddingHorizontal: 20, paddingBottom: 12, gap: 4 },
-  row: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 11 },
-  rowIcon: { width: 36, height: 36, borderRadius: 11, alignItems: "center", justifyContent: "center" },
-  rowText: { flex: 1, gap: 2 },
-  rowTitle: { fontSize: 15 },
-  rowSub: { fontSize: 13 },
+  emptyTitle: { fontSize: 15.5 },
+  emptyText: { fontSize: 13.5, lineHeight: 19, marginTop: 2, fontVariant: ["tabular-nums"] },
   reviewActions: { flexDirection: "row", gap: 10 },
   reviewBody: { fontSize: 15, lineHeight: 22, paddingHorizontal: 20, paddingBottom: 8 },
   flex: { flex: 1 },

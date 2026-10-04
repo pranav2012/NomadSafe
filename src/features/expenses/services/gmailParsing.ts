@@ -18,34 +18,109 @@ export interface GmailMessage {
   };
 }
 
-const GMAIL_QUERY =
-  "newer_than:50d (booking OR reservation OR flight OR airline OR hotel OR hostel OR resort OR visa OR receipt OR invoice OR payment OR transaction OR debited)";
+const DAY_MS = 86_400_000;
+/** Bookings are searched for this many days before the trip starts. */
+export const PRE_TRIP_DAYS = 60;
 
-/** Builds the Gmail search query; `since` is epoch ms, `before` epoch seconds. */
-export function buildGmailQuery(since?: number | null, before?: number | null): string {
-  return [
-    GMAIL_QUERY,
-    since ? `after:${Math.floor(since / 1000)}` : null,
-    before ? `before:${before}` : null,
-  ]
-    .filter(Boolean)
-    .join(" ");
+const BOOKING_TERMS = [
+  "flight", "airline", "airport", "boarding", '"e-ticket"', "pnr", "train", "rail", "bus", "ferry", "cruise",
+  "hotel", "hostel", "resort", "accommodation", '"check-in"', "reservation", "booking", "itinerary", "tour",
+  "visa", '"e-visa"', "immigration", "passport",
+];
+const SPEND_TERMS = ["receipt", "invoice", "payment", "paid", "transaction", "debited", "charged", "purchase", "order", "bill"];
+const GENERIC_PLACE_WORDS = new Set(["city", "municipality", "subdistrict", "district"]);
+
+export interface TripMailWindow {
+  /** Epoch ms: local midnight `PRE_TRIP_DAYS` before the trip starts. */
+  from: number;
+  /** Epoch ms: local midnight of the first trip day. */
+  tripStart: number;
+  /** Epoch ms: local midnight after the last trip day. */
+  end: number;
 }
 
-/** Epoch seconds of local midnight after the trip ends; later mail is never imported. */
-export function gmailBeforeBound(endDate?: string | null): number | null {
-  if (!endDate) return null;
-  const [year, month, day] = endDate.slice(0, 10).split("-").map(Number);
+function localMidnight(dateKey: string, offsetDays = 0): number | null {
+  const [year, month, day] = dateKey.slice(0, 10).split("-").map(Number);
   if (!year || !month || !day) return null;
-  const nextDay = new Date(year, month - 1, day + 1);
-  return Math.floor(nextDay.getTime() / 1000);
+  return new Date(year, month - 1, day + offsetDays).getTime();
 }
 
-/** Only an invalid token or a missing scope means the grant is dead; other 403s are quota/config. */
+/** The mail window a trip cares about: bookings before it, spends and bookings during it. */
+export function tripMailWindow(trip: { startDate: string; endDate: string }): TripMailWindow | null {
+  const tripStart = localMidnight(trip.startDate);
+  const end = localMidnight(trip.endDate, 1);
+  if (tripStart === null || end === null || end <= tripStart) return null;
+  return { from: tripStart - PRE_TRIP_DAYS * DAY_MS, tripStart, end };
+}
+
+const stripDiacritics = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+/** Place names to search for, a superset of what the on-device destination filters accept. */
+export function destinationSearchTerms(destinations: string[]): string[] {
+  const terms = new Set<string>();
+  for (const destination of destinations) {
+    for (const variant of [destination, stripDiacritics(destination)]) {
+      const parts = variant.split(/[,/()\-]+/).map((part) => part.trim().toLowerCase()).filter((part) => part.length >= 3);
+      for (const part of parts) {
+        terms.add(part);
+        for (const token of part.split(/\s+/)) {
+          if (token.length >= 4 && !GENERIC_PLACE_WORDS.has(token)) terms.add(token);
+        }
+      }
+    }
+  }
+  return [...terms];
+}
+
+const anyOf = (terms: string[]) => `(${terms.join(" OR ")})`;
+const seconds = (ms: number) => Math.floor(ms / 1000);
+
+/**
+ * Gmail search for a trip's mail received in [after, before) (epoch ms). Mirrors
+ * the on-device trip filter so Gmail returns only candidates: bookings naming a
+ * destination before the trip, spends or bookings during it.
+ */
+export function buildTripGmailQuery(
+  trip: { startDate: string; endDate: string; destinations: string[] },
+  after: number,
+  before: number,
+): string | null {
+  const window = tripMailWindow(trip);
+  if (!window || before <= after) return null;
+  const tripStart = seconds(window.tripStart);
+  const places = destinationSearchTerms(trip.destinations).map((term) => `"${term.replace(/"/g, "")}"`);
+  const clauses: string[] = [];
+  if (after < window.tripStart && places.length > 0) {
+    clauses.push(`(before:${tripStart} ${anyOf(BOOKING_TERMS)} ${anyOf(places)})`);
+  }
+  if (before > window.tripStart) {
+    clauses.push(`(after:${tripStart} ${anyOf([...BOOKING_TERMS, ...SPEND_TERMS])})`);
+  }
+  if (clauses.length === 0) return null;
+  return [
+    "-category:promotions",
+    "-category:social",
+    `after:${seconds(after)}`,
+    `before:${seconds(before)}`,
+    clauses.length === 1 ? clauses[0] : `(${clauses.join(" OR ")})`,
+  ].join(" ");
+}
+
+/** Only an invalid token or a missing scope means the grant is dead; quota 403s are rate limits. */
 export function gmailErrorCode(status: number, message = ""): ImportErrorCode {
   if (status === 401) return "gmail-auth";
+  if (status === 429 || (status === 403 && /rate.?limit|quota/i.test(message))) return "gmail-rate-limit";
   if (status === 403 && /insufficient|scope/i.test(message)) return "gmail-auth";
   return "gmail-api";
+}
+
+const MAX_RETRY_DELAY_MS = 32_000;
+
+/** `Retry-After` if given, else exponential backoff with jitter so parallel requests don't retry in lockstep. */
+export function gmailRetryDelayMs(attempt: number, retryAfter: string | null, random = Math.random()): number {
+  const seconds = retryAfter ? Number(retryAfter) : NaN;
+  if (Number.isFinite(seconds) && seconds >= 0) return Math.min(seconds * 1000, MAX_RETRY_DELAY_MS * 2);
+  return Math.min(2 ** (attempt + 1) * 1000, MAX_RETRY_DELAY_MS) + Math.floor(random * 1000);
 }
 
 export function headerValue(message: GmailMessage, name: string): string | undefined {

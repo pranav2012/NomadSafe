@@ -21,7 +21,7 @@ import { selectActiveTrip, type Trip, useTripsStore } from "@/features/trips/sto
 import { countInclusiveDays, fromDateKey, getTripStatus, startOfLocalDay } from "@/features/trips/utils/dates";
 import { useChatStore } from "@/features/ai/store/chatStore";
 import { useEventsStore } from "@/features/itinerary/store/eventsStore";
-import { clearItinerarySyncCheckpoint } from "@/features/itinerary/services/itinerarySyncStore";
+import { clearTripGmailCoverage } from "@/features/expenses/store/tripGmailCoverageStore";
 import { useExpensesStore } from "@/features/expenses/store/expensesStore";
 import { selectionChanged } from "@/utils/haptics";
 
@@ -149,7 +149,7 @@ export default function TripsScreen() {
     useEventsStore.getState().removeByTripId(tripId);
     useExpensesStore.getState().removeByTripId(tripId);
     useChatStore.getState().removeConversation(tripId);
-    void clearItinerarySyncCheckpoint(tripId);
+    clearTripGmailCoverage(tripId);
     setDeleteTarget(null);
     setConfirmText("");
   };

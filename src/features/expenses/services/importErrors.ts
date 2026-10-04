@@ -2,6 +2,7 @@ export type ImportErrorCode =
   | "gmail-not-connected"
   | "gmail-auth"
   | "gmail-api"
+  | "gmail-rate-limit"
   | "network"
   | "unknown";
 

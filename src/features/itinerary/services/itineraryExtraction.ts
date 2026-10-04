@@ -15,6 +15,7 @@ import {
 import type { EventType } from "@/features/itinerary/constants/eventTypes";
 import { fromDateKey } from "@/features/trips/utils/dates";
 import { countAttributes, logger } from "@/services/logger";
+import { floatingTime, parseBookingEmail } from "@/features/itinerary/services/bookingEmailParser";
 
 export interface BuildEventsOptions {
   /** Events are scoped to the selected trip's date window. */
@@ -27,10 +28,15 @@ export interface EventCandidate {
   title: string;
   detail?: string;
   startAt: string;
+  /** Check-out for a stay, arrival for a flight. */
+  endAt?: string;
   source: EventSource;
   rawText?: string;
   note?: string;
   externalId?: string;
+  bookingRef?: string;
+  /** A cancellation email: the caller removes the matching booking. */
+  cancelled?: boolean;
   /** Already present in the itinerary. */
   duplicate: boolean;
 }
@@ -40,6 +46,9 @@ interface ExtractedEvent {
   title: string;
   detail: string;
   date: string;
+  endDate?: string;
+  bookingRef?: string;
+  cancelled?: boolean;
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -183,11 +192,16 @@ function withinWindow(date: Date, trip: Trip): boolean {
   return day >= start && day <= end;
 }
 
+/** Wall-clock time at the destination, stored without a zone so it doesn't shift when the phone changes zone. */
 function applyTime(date: Date, time: { hour: number; minute: number } | null, fallbackHour: number): string {
-  const result = new Date(date);
-  result.setHours(time?.hour ?? fallbackHour, time?.minute ?? 0, 0, 0);
-  return result.toISOString();
+  return floatingTime(
+    { year: date.getFullYear(), month: date.getMonth(), day: date.getDate() },
+    time?.hour ?? fallbackHour,
+    time?.minute ?? 0,
+  );
 }
+
+const INSURANCE = /\binsurance\b/i;
 
 /** Pulls an airport-code route like "BKK → HKT" when present. */
 function routeDetail(text: string): string {
@@ -218,19 +232,36 @@ function nearestHit(hits: DatedHit[], at: number): DatedHit | null {
   return best;
 }
 
-function dayKey(date: Date): string {
-  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-}
-
 /**
- * Heuristic, fully offline extraction for one booking email. Anchors each event
- * to its keyword so a multi-night stay yields only a check-in and a check-out
- * (not one per night), and a flight yields a departure and an arrival. Dates are
- * read from the body, not the email's received date.
+ * Heuristic, fully offline extraction for one booking email. Anchors dates to
+ * their keywords so a stay becomes one event from check-in to check-out and a
+ * flight one event from departure to arrival. Dates are read from the body, not
+ * the email's received date.
  */
 function extractEvents(message: RawMessage, trip: Trip | null): ExtractedEvent[] {
+  const parsed = parseBookingEmail(message);
+  if (parsed.handled) {
+    return parsed.bookings
+      // A booking belongs to the trip when it starts during it; cancellations always apply.
+      .filter((booking) => booking.cancelled || !trip || withinWindow(new Date(booking.startAt), trip))
+      .map((booking) => ({
+        type: booking.type,
+        title: booking.title,
+        detail: booking.detail,
+        date: booking.startAt,
+        endDate: booking.endAt,
+        bookingRef: booking.bookingRef,
+        cancelled: booking.cancelled,
+      }));
+  }
+  return extractEventsHeuristic(message, trip);
+}
+
+/** Fallback for emails the structured parser doesn't recognise. */
+function extractEventsHeuristic(message: RawMessage, trip: Trip | null): ExtractedEvent[] {
   const body = message.body;
   const context = `${message.sender ?? ""} ${body}`;
+  if (INSURANCE.test(body.slice(0, 300))) return [];
   const hits = extractDatedHits(body);
   const inWindow = trip ? hits.filter((hit) => withinWindow(hit.date, trip)) : hits;
   if (inWindow.length === 0) return [];
@@ -249,21 +280,21 @@ function extractEvents(message: RawMessage, trip: Trip | null): ExtractedEvent[]
     const checkInHit = ci >= 0 ? nearestHit(inWindow, ci) : inWindow[0];
     const checkOutHit = co >= 0 ? nearestHit(inWindow, co) : inWindow[inWindow.length - 1] ?? null;
 
+    const checkOut =
+      checkOutHit && (!checkInHit || checkOutHit.date.getTime() > checkInHit.date.getTime())
+        ? applyTime(checkOutHit.date, timeNear(body, checkOutHit.index), 11)
+        : undefined;
     if (checkInHit) {
       events.push({
         type: "stay",
         title,
-        detail: "Check-in",
+        detail: "",
         date: applyTime(checkInHit.date, timeNear(body, checkInHit.index), 14),
+        endDate: checkOut,
       });
-    }
-    if (checkOutHit && (co >= 0 || !checkInHit || dayKey(checkOutHit.date) !== dayKey(checkInHit.date))) {
-      events.push({
-        type: "stay",
-        title,
-        detail: "Check-out",
-        date: applyTime(checkOutHit.date, timeNear(body, checkOutHit.index), 11),
-      });
+    } else if (checkOut) {
+      // Only a check-out date: kept as a lone check-out that merges into the stay once it's known.
+      events.push({ type: "stay", title, detail: "Check-out", date: checkOut });
     }
     return events;
   }
@@ -277,19 +308,14 @@ function extractEvents(message: RawMessage, trip: Trip | null): ExtractedEvent[]
     const arrHit = arr >= 0 ? nearestHit(inWindow, arr) : null;
 
     if (depHit) {
+      const departure = applyTime(depHit.date, timeNear(body, depHit.index), 9);
+      const arrival = arrHit ? applyTime(arrHit.date, timeNear(body, arrHit.index), 12) : undefined;
       events.push({
         type: "transit",
         title,
-        detail: route ? `Departure · ${route}` : "Departure",
-        date: applyTime(depHit.date, timeNear(body, depHit.index), 9),
-      });
-    }
-    if (arrHit) {
-      events.push({
-        type: "transit",
-        title,
-        detail: route ? `Arrival · ${route}` : "Arrival",
-        date: applyTime(arrHit.date, timeNear(body, arrHit.index), 12),
+        detail: route,
+        date: departure,
+        endDate: arrival && arrival > departure ? arrival : undefined,
       });
     }
     return events;
@@ -363,12 +389,8 @@ export async function buildEventCandidates(
     for (let eventIndex = 0; eventIndex < extracted.length; eventIndex += 1) {
       const event = extracted[eventIndex];
       const startAt = event.date;
-      const fingerprint = eventFingerprint({
-        type: event.type,
-        title: event.title,
-        detail: event.detail,
-        startAt,
-      });
+      const stored = eventFingerprint({ type: event.type, title: event.title, detail: event.detail, startAt });
+      const fingerprint = `${event.cancelled ? "cancel|" : ""}${event.bookingRef ?? ""}|${stored}`;
       const externalId = message.externalId ? `${message.externalId}#${eventIndex}` : undefined;
       // Dedup within the batch by fingerprint, not source id, so the same logical
       // event arriving in two different emails (confirmation + reminder) collapses.
@@ -376,8 +398,8 @@ export async function buildEventCandidates(
       seen.add(fingerprint);
 
       const duplicate =
-        hasFingerprint(fingerprint, trip?.id) ||
-        Boolean(externalId && hasExternalId(externalId, trip?.id));
+        !event.cancelled &&
+        (hasFingerprint(stored, trip?.id) || Boolean(externalId && hasExternalId(externalId, trip?.id)));
       if (duplicate) diagnostics.duplicates += 1;
 
       candidates.push({
@@ -386,10 +408,13 @@ export async function buildEventCandidates(
         title: event.title,
         detail: event.detail || undefined,
         startAt,
+        endAt: event.endDate,
         source,
         rawText: message.body.slice(0, 200),
         note: message.note,
         externalId,
+        bookingRef: event.bookingRef,
+        cancelled: event.cancelled,
         duplicate,
       });
     }

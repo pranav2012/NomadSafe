@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { mmkvStateStorage } from "@/stores/storage";
 import type { EventType } from "@/features/itinerary/constants/eventTypes";
+import { consolidateEmailBookings, mergeBooking, sameBooking } from "@/features/itinerary/utils/bookings";
 
 export type EventSource = "manual" | "email";
 
@@ -20,6 +21,12 @@ export interface TripEvent {
   rawText?: string;
   /** Stable id of the originating message (e.g. `gmail:<messageId>`) for dedupe. */
   externalId?: string;
+  /** Ids of other emails about the same booking, merged into this event. */
+  sourceIds?: string[];
+  /** Confirmation number from the booking email; cancellations and updates match on it. */
+  bookingRef?: string;
+  /** Set when the user edits the event, so Gmail re-imports leave it alone. */
+  editedAt?: string;
   createdAt: string;
 }
 
@@ -34,6 +41,19 @@ export interface CreateEventInput {
   note?: string;
   rawText?: string;
   externalId?: string;
+  sourceIds?: string[];
+  bookingRef?: string;
+}
+
+export interface EmailEventInput extends CreateEventInput {
+  /** A cancellation email: removes the matching booking instead of adding one. */
+  cancelled?: boolean;
+}
+
+export interface EmailMergeResult {
+  added: number;
+  /** Source ids of Gmail events removed by cancellations, to drop their spends too. */
+  removedSourceIds: string[];
 }
 
 export type UpdateEventInput = Partial<Omit<TripEvent, "id" | "createdAt">>;
@@ -67,6 +87,10 @@ interface EventsState {
   /** Scoped to `tripId` when given, so the same booking can exist in two trips. */
   hasFingerprint: (fingerprint: string, tripId?: string | null) => boolean;
   hasExternalId: (externalId: string, tripId?: string | null) => boolean;
+  /** Applies Gmail events in order: merges into the same booking, adds new ones, removes cancelled ones. */
+  mergeEmailEvents: (inputs: EmailEventInput[]) => EmailMergeResult;
+  /** Drops a trip's Gmail events the user hasn't edited, before a re-import with a newer parser. */
+  removeUneditedEmailEvents: (tripId: string) => void;
   removeByTripId: (tripId: string) => void;
   reset: () => void;
 }
@@ -135,8 +159,39 @@ export const useEventsStore = create<EventsState>()(
       hasExternalId: (externalId, tripId) =>
         get().events.some(
           (event) =>
-            (tripId === undefined || event.tripId === tripId) && event.externalId === externalId,
+            (tripId === undefined || event.tripId === tripId) &&
+            (event.externalId === externalId || Boolean(event.sourceIds?.includes(externalId))),
         ),
+      mergeEmailEvents: (inputs) => {
+        const result: EmailMergeResult = { added: 0, removedSourceIds: [] };
+        set((state) => {
+          let events = [...state.events];
+          for (const { cancelled, ...input } of inputs) {
+            const matches = (event: TripEvent) => event.tripId === input.tripId && sameBooking(event, input);
+            if (cancelled) {
+              const removed = events.filter((event) => matches(event) && event.source === "email" && !event.editedAt);
+              for (const event of removed) {
+                result.removedSourceIds.push(...[event.externalId, ...(event.sourceIds ?? [])].filter((id): id is string => Boolean(id)));
+              }
+              events = events.filter((event) => !removed.includes(event));
+              continue;
+            }
+            const index = events.findIndex(matches);
+            if (index >= 0) {
+              events[index] = { ...events[index], ...mergeBooking(events[index], input) };
+            } else {
+              events.unshift(buildEvent(input));
+              result.added += 1;
+            }
+          }
+          return { events };
+        });
+        return result;
+      },
+      removeUneditedEmailEvents: (tripId) =>
+        set((state) => ({
+          events: state.events.filter((event) => !(event.tripId === tripId && event.source === "email" && !event.editedAt)),
+        })),
       removeByTripId: (tripId) =>
         set((state) => ({
           events: state.events.filter((event) => event.tripId !== tripId),
@@ -146,7 +201,13 @@ export const useEventsStore = create<EventsState>()(
     {
       name: "itinerary-store",
       storage: createJSONStorage(() => mmkvStateStorage),
-      version: 1,
+      version: 2,
+      migrate: (persisted, version) => {
+        const state = persisted as { events?: TripEvent[] };
+        // v2: one event per booking instead of check-in/check-out pairs and per-email copies.
+        if (version < 2 && state.events) return { ...state, events: consolidateEmailBookings(state.events) };
+        return state;
+      },
     },
   ),
 );

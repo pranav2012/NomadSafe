@@ -5,7 +5,7 @@ import { localModelService } from "@/features/ai/services/localModelService";
 import { wipeModels } from "@/features/ai/services/modelProvisioner";
 import { useChatStore } from "@/features/ai/store/chatStore";
 import { useExpensesStore } from "@/features/expenses/store/expensesStore";
-import { clearItinerarySyncCheckpoints } from "@/features/itinerary";
+import { clearLegacyGmailCheckpoints } from "@/features/expenses/services/legacyGmailCheckpoints";
 import { useEventsStore } from "@/features/itinerary/store/eventsStore";
 import { resetBackgroundDisclosure } from "@/features/location-sharing/components/BackgroundLocationDisclosure";
 import { emergencyContactsStorage } from "@/features/onboarding/services/emergencyContactsStorage";
@@ -48,7 +48,7 @@ export async function wipeAllDeviceData(): Promise<void> {
 
   emergencyContactsStorage.clear();
   resetBackgroundDisclosure();
-  await attempt(clearItinerarySyncCheckpoints);
+  await attempt(clearLegacyGmailCheckpoints);
   await attempt(() => secureStorage.resetPin());
   await attempt(() => pinAttempts.reset());
 

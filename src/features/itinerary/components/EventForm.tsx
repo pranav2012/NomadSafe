@@ -16,7 +16,11 @@ export interface EventFormValues {
   title: string;
   detail: string;
   startAt: string;
+  /** Check-out for a stay, arrival for a transit; undefined when not set. */
+  endAt?: string;
 }
+
+const DAY_MS = 86_400_000;
 
 /** Sheet to create or edit a single itinerary event; shows Delete when editing. */
 export function EventForm({
@@ -39,11 +43,17 @@ export function EventForm({
   const [title, setTitle] = useState(event ? localizeEventTitle(event.title, t) : "");
   const [detail, setDetail] = useState(event ? (localizeEventDetail(event.detail, t) ?? "") : "");
   const [when, setWhen] = useState<Date>(event ? new Date(event.startAt) : new Date());
+  const [until, setUntil] = useState<Date>(() =>
+    event?.endAt ? new Date(event.endAt) : new Date((event ? new Date(event.startAt) : new Date()).getTime() + DAY_MS),
+  );
+  // Stays always have a check-out; a transit shows its arrival only when one is known.
+  const hasEnd = type === "stay" || (type === "transit" && Boolean(event?.endAt));
   const canSave = title.trim().length > 0;
 
   const save = () => {
     if (!canSave) return;
-    onSave({ type, title: title.trim(), detail: detail.trim(), startAt: when.toISOString() });
+    const endAt = hasEnd && until.getTime() > when.getTime() ? until.toISOString() : undefined;
+    onSave({ type, title: title.trim(), detail: detail.trim(), startAt: when.toISOString(), endAt });
   };
 
   return (
@@ -80,7 +90,20 @@ export function EventForm({
         </View>
         <AuraField label={t("itinerary.form.title")} value={title} onChangeText={setTitle} placeholder={t("itinerary.form.titlePlaceholder")} returnKeyType="next" />
         <AuraField label={t("itinerary.form.detail")} value={detail} onChangeText={setDetail} placeholder={t("itinerary.form.detailPlaceholder")} />
-        <AuraDateField label={t("itinerary.form.when")} value={when} onChange={setWhen} withTime />
+        <AuraDateField
+          label={type === "stay" ? t("itinerary.defaults.checkIn") : type === "transit" ? t("itinerary.defaults.departure") : t("itinerary.form.when")}
+          value={when}
+          onChange={setWhen}
+          withTime
+        />
+        {hasEnd ? (
+          <AuraDateField
+            label={type === "stay" ? t("itinerary.defaults.checkOut") : t("itinerary.defaults.arrival")}
+            value={until}
+            onChange={setUntil}
+            withTime
+          />
+        ) : null}
       </ScrollView>
     </AuraSheet>
   );

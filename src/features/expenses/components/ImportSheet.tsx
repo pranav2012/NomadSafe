@@ -18,8 +18,8 @@ import {
 } from "@/features/expenses/services/importPipeline";
 import { importErrorCode } from "@/features/expenses/services/importErrors";
 import { useGmailImport } from "@/features/expenses/hooks/useGmailImport";
-import type { ExpenseSource } from "@/features/expenses/store/expensesStore";
-import type { RawMessage } from "@/features/expenses/services/transactionParser";
+import { useGmailProgressLabel } from "@/features/expenses/hooks/useGmailStatus";
+import { syncTripGmail, type TripGmailSyncResult } from "@/features/expenses/services/tripGmailSync";
 import type { Trip } from "@/features/trips/store/tripsStore";
 import { track } from "@/services/analytics";
 import { logger } from "@/services/logger";
@@ -55,34 +55,30 @@ function ImportBody({ tripId, trip, initialTab = "paste", onImported }: Omit<Imp
   const [pasted, setPasted] = useState("");
   const [candidates, setCandidates] = useState<ImportCandidate[] | null>(null);
   const [isWorking, setIsWorking] = useState(false);
+  const [gmailResult, setGmailResult] = useState<TripGmailSyncResult | null>(null);
+  const progressLabel = useGmailProgressLabel(trip?.id);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const autoScannedRef = useRef(false);
   const submittingRef = useRef(false);
-  // Gmail fetch start time; the checkpoint is saved only once the user confirms.
-  const gmailFetchedAtRef = useRef<number | null>(null);
 
-  const runImport = async (loader: () => Promise<RawMessage[]>, source: ExpenseSource) => {
+  // Gmail spends are added by the trip sync itself; only pasted alerts go through review.
+  const scanGmail = async () => {
+    if (!trip) {
+      setError(t("expenses.gmailNeedsTrip"));
+      return;
+    }
     setIsWorking(true);
     setError(null);
+    setGmailResult(null);
     try {
-      const messages = await loader();
-      const result = await buildImportCandidates(messages, source, { trip });
-      setCandidates(result);
+      setGmailResult(await syncTripGmail(trip));
     } catch (err) {
-      logger.warn("expense-import", "failed", err);
       setError(t(`expenses.importErrors.${importErrorCode(err)}`));
     } finally {
       setIsWorking(false);
     }
   };
-
-  const scanGmail = () =>
-    runImport(async () => {
-      const { messages, fetchedAt } = await gmail.fetchEmails({ trip, fresh: true });
-      gmailFetchedAtRef.current = fetchedAt;
-      return messages;
-    }, "email");
 
   // Once Gmail finishes connecting, scan automatically — no second tap needed.
   useEffect(() => {
@@ -95,9 +91,17 @@ function ImportBody({ tripId, trip, initialTab = "paste", onImported }: Omit<Imp
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, gmail.connected]);
 
-  const handleParsePaste = () => {
-    gmailFetchedAtRef.current = null;
-    return runImport(async () => splitPastedMessages(pasted), "paste");
+  const handleParsePaste = async () => {
+    setIsWorking(true);
+    setError(null);
+    try {
+      setCandidates(await buildImportCandidates(splitPastedMessages(pasted), "paste", { trip }));
+    } catch (err) {
+      logger.warn("expense-import", "failed", err);
+      setError(t(`expenses.importErrors.${importErrorCode(err)}`));
+    } finally {
+      setIsWorking(false);
+    }
   };
 
   const handleScanGmail = async () => {
@@ -146,11 +150,7 @@ function ImportBody({ tripId, trip, initialTab = "paste", onImported }: Omit<Imp
         selected.map((item) => candidateToInput(item, tripId, trip?.currency)),
       );
       const added = addExpenses(inputs);
-      const fetchedAt = gmailFetchedAtRef.current;
-      track("expense_added", { source: fetchedAt !== null ? "gmail" : "paste", count: added.length });
-      if (fetchedAt !== null) {
-        await gmail.completeSync(fetchedAt);
-      }
+      track("expense_added", { source: "paste", count: added.length });
       onImported(added.length);
     } catch (err) {
       logger.warn("expense-import", "confirm failed", err);
@@ -215,6 +215,15 @@ function ImportBody({ tripId, trip, initialTab = "paste", onImported }: Omit<Imp
                 loading={isWorking}
                 onPress={handleScanGmail}
               />
+              {isWorking || gmailResult ? (
+                <Text style={[styles.progress, { color: c.textSoft, fontFamily: f.medium }]} accessibilityLiveRegion="polite">
+                  {isWorking
+                    ? (progressLabel ?? t("expenses.gmailSearching"))
+                    : gmailResult && gmailResult.expensesAdded > 0
+                      ? t("expenses.autoSynced", { count: gmailResult.expensesAdded })
+                      : t("expenses.gmailUpToDate")}
+                </Text>
+              ) : null}
             </>
           )}
 
@@ -315,6 +324,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   body: { paddingHorizontal: 20, paddingTop: 4, paddingBottom: 24, gap: 14 },
   intro: { fontSize: 14, lineHeight: 20 },
+  progress: { fontSize: 13, textAlign: "center", fontVariant: ["tabular-nums"] },
   textArea: { minHeight: 160, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, padding: 14, fontSize: 14.5, lineHeight: 20, textAlignVertical: "top" },
   error: { color: auraStatusAccent.alert, fontSize: 13, lineHeight: 18 },
   footerError: { paddingHorizontal: 20, paddingBottom: 6 },

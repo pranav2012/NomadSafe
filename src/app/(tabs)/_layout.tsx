@@ -10,6 +10,7 @@ import { GlassTabBar, type GlassTabItem } from "@/components/tabbar/GlassTabBar"
 import { TAB_BAR_GAP, TAB_BAR_HEIGHT, useKeyboardVisible } from "@/components/tabbar/tabBarInset";
 import { AURA_FONT_FILES, auraDark, auraLight } from "@/constants/aura";
 import { usePendingJoinStore } from "@/features/trips/store/pendingJoinStore";
+import { useTripGmailSync } from "@/features/expenses/hooks/useTripGmailSync";
 import { useTheme } from "@/hooks/useTheme";
 import { useLocalization } from "@/localization";
 
@@ -22,6 +23,7 @@ const TABS = [
 
 export default function TabsLayout() {
   usePendingInvite();
+  useTripGmailSync();
   return Platform.OS === "ios" ? <NativeTabsLayout /> : <GlassTabsLayout />;
 }
 

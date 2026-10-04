@@ -4,6 +4,7 @@ import { mmkvStateStorage } from "@/stores/storage";
 import type { ExpenseCategory } from "@/features/expenses/constants/categories";
 import { toLocalDayKey } from "@/features/expenses/utils/dateKey";
 import type { ExpenseShare } from "@/features/expenses/utils/split";
+import type { SplitHint } from "@/features/expenses/utils/party";
 
 /** "sms" is legacy (device SMS import, removed); kept so stored expenses stay valid. */
 export type ExpenseSource = "manual" | "paste" | "sms" | "email" | "voice";
@@ -29,6 +30,8 @@ export interface Expense {
   paidBy?: string;
   /** Unset for personal spends; otherwise sums to `amount`. */
   shares?: ExpenseShare[];
+  /** Suggested split from a Gmail booking, waiting for the user; cleared once they save the spend. */
+  splitHint?: SplitHint;
   autoCategorized?: boolean;
   rawText?: string;
   /** Stable id of the originating message (e.g. `gmail:<messageId>`) for dedupe. */
@@ -48,6 +51,7 @@ export interface CreateExpenseInput {
   location?: ExpenseLocation | null;
   paidBy?: string;
   shares?: ExpenseShare[];
+  splitHint?: SplitHint;
   autoCategorized?: boolean;
   rawText?: string;
   externalId?: string;

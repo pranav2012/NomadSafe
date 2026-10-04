@@ -112,7 +112,7 @@ function mapShares(shares: ExpenseShare[] | undefined, map: Translate): ExpenseS
 /** A local record in server form (member ids, no local trip id, raw text or Gmail id), or null if someone isn't a member yet. */
 function toServerRecord(kind: SharedKind, record: LocalRecord, map: Translate): unknown {
   if (kind === "event") {
-    const { tripId: _trip, externalId: _external, ...rest } = stripRaw(record as TripEvent);
+    const { tripId: _trip, externalId: _external, sourceIds: _sources, ...rest } = stripRaw(record as TripEvent);
     return rest;
   }
   if (kind === "settlement") {
@@ -306,9 +306,10 @@ async function pullTrip(owner: string, server: ServerTrip, local: Trip): Promise
       blockedSeq = Math.min(blockedSeq ?? record.seq, record.seq);
       continue;
     }
-    const kept = previous as { rawText?: string; externalId?: string } | undefined;
+    const kept = previous as { rawText?: string; externalId?: string; sourceIds?: string[] } | undefined;
     if (kept?.rawText !== undefined) (next as { rawText?: string }).rawText = kept.rawText;
     if (kept?.externalId !== undefined) (next as { externalId?: string }).externalId = kept.externalId;
+    if (kept?.sourceIds !== undefined) (next as { sourceIds?: string[] }).sourceIds = kept.sourceIds;
     map.set(record.clientId, next);
     ledger.entries[key] = { hash, updatedAt: record.updatedAt };
     changed = true;

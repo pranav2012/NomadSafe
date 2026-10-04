@@ -5,7 +5,9 @@ import Constants from "expo-constants";
 import * as SecureStore from "expo-secure-store";
 
 const baseURL = process.env.EXPO_PUBLIC_CONVEX_SITE_URL;
-const scheme = Constants.expoConfig?.scheme as string | undefined;
+// The first scheme is the app's own; the others exist only for OAuth redirects.
+const configScheme = Constants.expoConfig?.scheme;
+const scheme = Array.isArray(configScheme) ? configScheme[0] : configScheme;
 
 if (!baseURL) {
   throw new Error(

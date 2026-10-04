@@ -12,10 +12,14 @@ interface RollingNumberProps {
 }
 
 /** Odometer-style text: each digit column springs to its new value, staggered from the right. */
-export function RollingNumber({ value, lineHeight, style }: RollingNumberProps) {
+export function RollingNumber({ value, lineHeight, style: textStyle }: RollingNumberProps) {
+  // Margins belong on the row: on each stacked digit they'd push every digit off its slot.
+  const { margin, marginTop, marginBottom, marginLeft, marginRight, marginHorizontal, marginVertical, ...style } =
+    StyleSheet.flatten(textStyle) ?? {};
+  const rowMargins = { margin, marginTop, marginBottom, marginLeft, marginRight, marginHorizontal, marginVertical };
   const chars = value.split("");
   return (
-    <View style={styles.row} accessible accessibilityLabel={value}>
+    <View style={[styles.row, rowMargins]} accessible accessibilityLabel={value}>
       {chars.map((char, index) => {
         // Key from the right so existing columns keep their identity when the length changes.
         const key = chars.length - index;

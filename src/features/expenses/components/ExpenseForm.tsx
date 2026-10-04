@@ -18,6 +18,7 @@ import { SELF_ID, type ExpenseShare } from "@/features/expenses/utils/split";
 import { initialSplitValue, SplitEditor, splitValueToShares, type SplitValue } from "@/features/expenses/components/SplitEditor";
 import { categorizeHeuristic } from "@/features/expenses/services/categorizer";
 import { getCurrentExpenseLocation } from "@/features/expenses/services/locationTagging";
+import { useGmailStatus } from "@/features/expenses/hooks/useGmailStatus";
 import { localeDecimalSeparator, parseAmountInput } from "@/features/expenses/utils/amountInput";
 import { track } from "@/services/analytics";
 
@@ -43,6 +44,8 @@ export interface ExpenseFormProps {
   onSave: () => void;
   onCancel: () => void;
   onSpeak?: () => void;
+  /** Shows Gmail / paste shortcuts above a new spend; the parent opens the import sheet. */
+  onImport?: (source: "gmail" | "paste") => void;
 }
 
 interface ExpenseSheetProps extends ExpenseFormProps {
@@ -138,6 +141,7 @@ function ExpenseFormBody({
   tripCurrency,
   companions = [],
   onSave,
+  onImport,
   onDelete,
 }: ExpenseFormProps & { onDelete: () => void }) {
   const { c, f } = useAura();
@@ -161,7 +165,13 @@ function ExpenseFormBody({
     ],
     [companions, prefill],
   );
-  const [split, setSplit] = useState<SplitValue>(() => initialSplitValue(everyone, decimalSeparator, prefill ? { ...prefill } : undefined));
+  const [split, setSplit] = useState<SplitValue>(() => {
+    const hint = editingExpense?.splitHint;
+    // A Gmail split suggestion: prefill the proposed shares, or start with the known people selected.
+    if (hint?.shares) return initialSplitValue(everyone, decimalSeparator, { paidBy: SELF_ID, shares: hint.shares, currency: editingExpense?.currency ?? tripCurrency });
+    if (hint) return { paidBy: SELF_ID, mode: "equal", people: hint.people, custom: {} };
+    return initialSplitValue(everyone, decimalSeparator, prefill ? { ...prefill } : undefined);
+  });
   const canSplit = everyone.length > 1;
   const [location, setLocation] = useState<ExpenseLocation | null>(editingExpense?.location ?? null);
   const [isLocating, setIsLocating] = useState(false);
@@ -213,6 +223,7 @@ function ExpenseFormBody({
       location,
       paidBy: shares ? split.paidBy : undefined,
       shares,
+      splitHint: undefined,
     };
     if (editingExpense) {
       updateExpense(editingExpense.id, payload);
@@ -228,6 +239,7 @@ function ExpenseFormBody({
   return (
     <View style={styles.flex}>
       <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+        {onImport && !editingExpense && !initialDraft ? <ImportShortcuts onImport={onImport} /> : null}
         <AuraField
           large
           label={t("expenses.amount")}
@@ -332,8 +344,57 @@ function ExpenseFormBody({
   );
 }
 
+function ImportShortcuts({ onImport }: { onImport: (source: "gmail" | "paste") => void }) {
+  const { c, f } = useAura();
+  const { t } = useLocalization();
+  const gmail = useGmailStatus();
+
+  const rows = [
+    gmail.configured
+      ? {
+          source: "gmail" as const,
+          icon: "mail" as const,
+          title: t("expenses.formImportGmail"),
+          detail: gmail.connected && gmail.email ? t("expenses.gmailConnectedAs", { email: gmail.email }) : t("expenses.formImportGmailSub"),
+        }
+      : null,
+    { source: "paste" as const, icon: "messageCircle" as const, title: t("expenses.formPasteAlert"), detail: t("expenses.formPasteAlertSub") },
+  ].filter((row): row is NonNullable<typeof row> => row !== null);
+
+  return (
+    <View style={[styles.shortcuts, { backgroundColor: c.surface, borderColor: c.hairline }]}>
+      {rows.map((row, index) => (
+        <PressableScale
+          key={row.source}
+          onPress={() => onImport(row.source)}
+          pressedScale={0.98}
+          accessibilityRole="button"
+          accessibilityLabel={row.title}
+          style={[styles.shortcut, index > 0 ? { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.hairline } : null]}
+        >
+          <View style={[styles.shortcutIcon, { backgroundColor: c.surfaceStrong }]}>
+            <Icon name={row.icon} size={16} color={c.text} />
+          </View>
+          <View style={styles.flex}>
+            <Text style={[styles.shortcutTitle, { color: c.text, fontFamily: f.medium }]}>{row.title}</Text>
+            <Text style={[styles.shortcutDetail, { color: c.textMuted, fontFamily: f.regular }]} numberOfLines={1}>
+              {row.detail}
+            </Text>
+          </View>
+          <Icon name="chevronRight" size={14} color={c.textMuted} />
+        </PressableScale>
+      ))}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   flex: { flex: 1 },
+  shortcuts: { borderRadius: 18, borderWidth: StyleSheet.hairlineWidth, overflow: "hidden" },
+  shortcut: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 58, paddingHorizontal: 14, paddingVertical: 10 },
+  shortcutIcon: { width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center" },
+  shortcutTitle: { fontSize: 14.5 },
+  shortcutDetail: { fontSize: 12.5, marginTop: 1 },
   scroll: { paddingHorizontal: 20, paddingTop: 6, paddingBottom: 20, gap: 18 },
   mic: { width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center" },
   currency: { flexDirection: "row", alignItems: "center", gap: 4, height: 28, paddingHorizontal: 10, borderRadius: 14 },

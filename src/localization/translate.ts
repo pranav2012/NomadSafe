@@ -21,6 +21,23 @@ export function interpolate(value: string, params?: TranslateParams) {
   return value.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(params[name] ?? ""));
 }
 
+/** CLDR plural category for engines without Intl.PluralRules (Hermes on Android), for the shipped locales. */
+function fallbackPluralCategory(locale: string, count: number): string {
+  const language = locale.split("-")[0];
+  if (["ja", "ko", "zh"].includes(language)) return "other";
+  if (language === "ar") {
+    const mod100 = count % 100;
+    if (count === 0) return "zero";
+    if (count === 1) return "one";
+    if (count === 2) return "two";
+    if (mod100 >= 3 && mod100 <= 10) return "few";
+    if (mod100 >= 11) return "many";
+    return "other";
+  }
+  if (["fr", "hi", "pt", "kn"].includes(language)) return count === 0 || count === 1 ? "one" : "other";
+  return count === 1 ? "one" : "other";
+}
+
 /**
  * Resolves a key with plural variants: when `params.count` is a number, tries
  * `key_<category>` (Intl.PluralRules: one, few, many, other…), then `key_other`,
@@ -35,9 +52,9 @@ export function lookup(
   const count = params?.count;
   const candidates = [key];
   if (typeof count === "number") {
-    let category = "other";
+    let category = fallbackPluralCategory(locale, count);
     try {
-      category = new Intl.PluralRules(locale).select(count);
+      if (typeof Intl.PluralRules === "function") category = new Intl.PluralRules(locale).select(count);
     } catch {}
     candidates.unshift(`${key}_${category}`, `${key}_other`);
   }

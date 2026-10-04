@@ -19,7 +19,7 @@ function loadModule(entryPoint) {
 
 const parsing = loadModule("src/features/expenses/services/gmailParsing.ts");
 const tripFilter = loadModule("src/features/expenses/services/tripEmailFilter.ts");
-const sharedFetch = loadModule("src/features/expenses/services/gmailSharedFetch.ts");
+const coverage = loadModule("src/features/expenses/services/tripGmailCoverage.ts");
 
 const b64 = (text) => Buffer.from(text, "utf8").toString("base64url");
 const part = (mimeType, text) => ({ mimeType, body: { data: b64(text) } });
@@ -78,28 +78,74 @@ test("reads headers case-insensitively", () => {
 test("treats only invalid tokens and missing scopes as a dead grant", () => {
   assert.equal(parsing.gmailErrorCode(401, "Invalid Credentials"), "gmail-auth");
   assert.equal(parsing.gmailErrorCode(403, "Request had insufficient authentication scopes."), "gmail-auth");
-  assert.equal(parsing.gmailErrorCode(403, "User-rate limit exceeded"), "gmail-api");
   assert.equal(parsing.gmailErrorCode(403, "Gmail API has not been used in project 123"), "gmail-api");
   assert.equal(parsing.gmailErrorCode(500), "gmail-api");
 });
 
-test("builds the Gmail query with optional after/before bounds", () => {
-  const base = parsing.buildGmailQuery(null, null);
-  assert.match(base, /^newer_than:50d \(/);
-  assert.doesNotMatch(base, /after:|before:/);
-
-  const bounded = parsing.buildGmailQuery(1_750_000_000_500, 1_760_000_000);
-  assert.ok(bounded.endsWith(" after:1750000000 before:1760000000"));
+test("classifies quota and rate-limit responses as retryable rate limits", () => {
+  assert.equal(parsing.gmailErrorCode(429), "gmail-rate-limit");
+  assert.equal(parsing.gmailErrorCode(403, "User-rate limit exceeded"), "gmail-rate-limit");
+  assert.equal(
+    parsing.gmailErrorCode(
+      403,
+      "Quota exceeded for quota metric 'Total Query Cost' and limit 'Units per minute per user' of service 'gmail.googleapis.com'",
+    ),
+    "gmail-rate-limit",
+  );
 });
 
-test("bounds the query at local midnight after the trip's last day", () => {
-  const expected = Math.floor(new Date(2026, 5, 21).getTime() / 1000);
-  assert.equal(parsing.gmailBeforeBound("2026-06-20"), expected);
-  assert.equal(parsing.gmailBeforeBound("2026-06-20T00:00:00.000Z"), expected);
-  assert.equal(parsing.gmailBeforeBound("2026-06-30"), Math.floor(new Date(2026, 6, 1).getTime() / 1000));
-  assert.equal(parsing.gmailBeforeBound(null), null);
-  assert.equal(parsing.gmailBeforeBound("not-a-date"), null);
+test("backs off exponentially with jitter, honouring Retry-After", () => {
+  assert.equal(parsing.gmailRetryDelayMs(0, null, 0), 2_000);
+  assert.equal(parsing.gmailRetryDelayMs(2, null, 0), 8_000);
+  assert.equal(parsing.gmailRetryDelayMs(10, null, 0), 32_000, "capped");
+  assert.equal(parsing.gmailRetryDelayMs(0, null, 0.5), 2_500);
+  assert.equal(parsing.gmailRetryDelayMs(0, "7", 0.5), 7_000);
+  assert.equal(parsing.gmailRetryDelayMs(1, "not-a-number", 0), 4_000);
 });
+
+const DAY = 86_400_000;
+const tokyo = { startDate: "2026-10-10", endDate: "2026-10-29", destinations: ["Tokyo, Japan"] };
+const tokyoStart = new Date(2026, 9, 10).getTime();
+const tokyoEnd = new Date(2026, 9, 30).getTime();
+
+test("a trip's mail window runs from 60 days before it starts to midnight after it ends", () => {
+  const window = parsing.tripMailWindow(tokyo);
+  assert.equal(window.tripStart, tokyoStart);
+  assert.equal(window.end, tokyoEnd);
+  assert.equal(window.from, new Date(2026, 9, 10).getTime() - 60 * DAY);
+  assert.equal(parsing.tripMailWindow({ startDate: "2026-10-10", endDate: "2026-10-01" }), null);
+  assert.equal(parsing.tripMailWindow({ startDate: "not-a-date", endDate: "2026-10-01" }), null);
+});
+
+test("searches destination names, their words and accent-free spellings", () => {
+  assert.deepEqual(parsing.destinationSearchTerms(["Tokyo, Japan"]), ["tokyo", "japan"]);
+  const terms = parsing.destinationSearchTerms(["Phú Quốc", "Ho Chi Minh City"]);
+  assert.ok(terms.includes("phú quốc") && terms.includes("phu quoc"));
+  assert.ok(terms.includes("ho chi minh city"));
+  assert.ok(!terms.includes("city"), "generic place words alone are too broad");
+});
+
+test("before the trip, the query only asks for bookings that name a destination", () => {
+  const query = parsing.buildTripGmailQuery(tokyo, tokyoStart - 60 * DAY, tokyoStart - 5 * DAY);
+  assert.match(query, /^-category:promotions -category:social after:\d+ before:\d+ \(before:\d+ \(flight OR /);
+  assert.match(query, /\("tokyo" OR "japan"\)\)$/);
+  assert.doesNotMatch(query, /receipt/, "pre-trip spends are never imported");
+});
+
+test("a window spanning the trip start asks for pre-trip bookings or anything during the trip", () => {
+  const query = parsing.buildTripGmailQuery(tokyo, tokyoStart - DAY, tokyoStart + DAY);
+  const start = tokyoStart / 1000;
+  assert.ok(query.includes(`(before:${start} (flight OR`));
+  assert.ok(query.includes(` OR (after:${start} (flight OR`));
+  assert.ok(query.includes("receipt OR invoice"));
+});
+
+test("without destinations, mail before the trip isn't searched at all", () => {
+  const trip = { ...tokyo, destinations: [] };
+  assert.equal(parsing.buildTripGmailQuery(trip, tokyoStart - 30 * DAY, tokyoStart - DAY), null);
+  assert.match(parsing.buildTripGmailQuery(trip, tokyoStart - 30 * DAY, tokyoStart + DAY), /\(after:\d+ \(flight/);
+});
+
 
 const trip = {
   id: "trip-1",
@@ -149,78 +195,49 @@ test("rejects mail with a missing or invalid date", () => {
   assert.equal(tripFilter.tripMatchReason(email("garbage", "Hotel booking"), trip), "invalid-email-date");
 });
 
-const at = (iso) => Date.parse(iso);
-const messages = [
-  { body: "old", date: "2026-06-01T00:00:00.000Z" },
-  { body: "new", date: "2026-06-15T00:00:00.000Z" },
-];
+const account = "me@example.com";
+const now = new Date(2026, 9, 4, 8, 0).getTime();
 
-function countingLoader(result = messages) {
-  const loader = async () => {
-    loader.calls += 1;
-    return result;
-  };
-  loader.calls = 0;
-  return loader;
-}
-
-test("shares one download when a cached fetch covers the range", async () => {
-  sharedFetch.clearSharedGmailFetch();
-  const load = countingLoader();
-  const range = { since: null, before: 100 };
-
-  const first = await sharedFetch.fetchTransactionEmailsShared("acct", range, load);
-  const second = await sharedFetch.fetchTransactionEmailsShared(
-    "acct",
-    { since: at("2026-06-10T00:00:00.000Z"), before: 100 },
-    load,
-  );
-
-  assert.equal(load.calls, 1);
-  assert.equal(first.messages.length, 2);
-  assert.deepEqual(second.messages.map((m) => m.body), ["new"]);
-  assert.equal(second.fetchedAt, first.fetchedAt);
+test("the first scan covers the whole window up to now", () => {
+  const window = coverage.nextGmailScanWindow(tokyo, null, account, now);
+  assert.deepEqual(window, { after: tokyoStart - 60 * DAY, before: now });
 });
 
-test("fetches again when the cache doesn't cover the request", async () => {
-  sharedFetch.clearSharedGmailFetch();
-  const load = countingLoader();
-  const since = at("2026-06-10T00:00:00.000Z");
-
-  await sharedFetch.fetchTransactionEmailsShared("acct", { since, before: 100 }, load);
-  await sharedFetch.fetchTransactionEmailsShared("acct", { since: null, before: 100 }, load);
-  assert.equal(load.calls, 2, "a wider window needs a new download");
-
-  await sharedFetch.fetchTransactionEmailsShared("acct", { since: null, before: 200 }, load);
-  assert.equal(load.calls, 3, "a different trip end needs a new download");
-
-  await sharedFetch.fetchTransactionEmailsShared("other", { since: null, before: 200 }, load);
-  assert.equal(load.calls, 4, "another account never reuses cached mail");
-
-  await sharedFetch.fetchTransactionEmailsShared("other", { since: null, before: 200 }, load, { fresh: true });
-  assert.equal(load.calls, 5, "fresh bypasses the cache");
+test("a later open only reads mail since the last check, with a small overlap", () => {
+  const first = coverage.nextGmailScanWindow(tokyo, null, account, now);
+  const saved = coverage.coverageAfterScan(tokyo, account, first, null);
+  const later = now + 3 * DAY;
+  const window = coverage.nextGmailScanWindow(tokyo, saved, account, later);
+  assert.deepEqual(window, { after: now - 10 * 60_000, before: later });
+  assert.equal(coverage.coverageAfterScan(tokyo, account, window, saved).from, first.after, "keeps the earlier coverage");
 });
 
-test("concurrent callers share the in-flight download", async () => {
-  sharedFetch.clearSharedGmailFetch();
-  const load = countingLoader();
-  const range = { since: null, before: null };
-  await Promise.all([
-    sharedFetch.fetchTransactionEmailsShared("acct", range, load),
-    sharedFetch.fetchTransactionEmailsShared("acct", range, load),
-  ]);
-  assert.equal(load.calls, 1);
+test("an up-to-date trip needs no Gmail calls", () => {
+  const saved = coverage.coverageAfterScan(tokyo, account, { after: tokyoStart - 60 * DAY, before: now }, null);
+  assert.equal(coverage.nextGmailScanWindow(tokyo, saved, account, now + 30_000), null);
 });
 
-test("a failed download isn't cached", async () => {
-  sharedFetch.clearSharedGmailFetch();
-  const range = { since: null, before: null };
-  await assert.rejects(
-    sharedFetch.fetchTransactionEmailsShared("acct", range, async () => {
-      throw new Error("offline");
-    }),
-  );
-  const load = countingLoader();
-  await sharedFetch.fetchTransactionEmailsShared("acct", range, load);
-  assert.equal(load.calls, 1);
+test("a finished, fully checked trip is never scanned again", () => {
+  const saved = coverage.coverageAfterScan(tokyo, account, { after: tokyoStart - 60 * DAY, before: tokyoEnd }, null);
+  assert.equal(coverage.nextGmailScanWindow(tokyo, saved, account, tokyoEnd + 90 * DAY), null);
+});
+
+test("a later end date only adds the new days", () => {
+  const saved = coverage.coverageAfterScan(tokyo, account, { after: tokyoStart - 60 * DAY, before: tokyoEnd }, null);
+  const extended = { ...tokyo, endDate: "2026-11-02" };
+  const window = coverage.nextGmailScanWindow(extended, saved, account, tokyoEnd + 90 * DAY);
+  assert.deepEqual(window, { after: tokyoEnd - 10 * 60_000, before: new Date(2026, 10, 3).getTime() });
+});
+
+test("a new start date, destination or Gmail account rescans the whole trip", () => {
+  const saved = coverage.coverageAfterScan(tokyo, account, { after: tokyoStart - 60 * DAY, before: now }, null);
+  const full = (trip, who = account) => coverage.nextGmailScanWindow(trip, saved, who, now + DAY);
+  assert.equal(full({ ...tokyo, startDate: "2026-10-08" }).after, new Date(2026, 9, 8).getTime() - 60 * DAY);
+  assert.equal(full({ ...tokyo, destinations: ["Tokyo, Japan", "Kyoto"] }).after, tokyoStart - 60 * DAY);
+  assert.equal(full(tokyo, "other@example.com").after, tokyoStart - 60 * DAY);
+  assert.equal(full({ ...tokyo, destinations: [" tokyo, japan "] }).after, now - 10 * 60_000, "case and spacing don't count");
+});
+
+test("a trip more than 60 days away has nothing to scan yet", () => {
+  assert.equal(coverage.nextGmailScanWindow(tokyo, null, account, tokyoStart - 61 * DAY), null);
 });

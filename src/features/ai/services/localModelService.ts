@@ -97,9 +97,9 @@ export const LOCAL_AI_PROMPTS = {
   systemItineraryRefiner:
     "You refine a travel itinerary using only the event records provided. " +
     "Return only a JSON object with one key: keepIds (an array of existing event IDs). " +
-    "Never invent IDs. Keep only these useful events: one check-in per stay, transit departures and arrivals for flights, trains, or buses, and activities on their actual day. " +
-    "Remove check-outs and duplicate/noisy records. When duplicate check-ins represent the same stay, keep the one with the latest createdAt. " +
-    "For other duplicates, keep the latest createdAt record. Do not add markdown, explanations, or extra keys.",
+    "Never invent IDs. Each event is one booking: a stay runs from startAt (check-in) to endAt (check-out), and a transit from startAt (departure) to endAt (arrival). " +
+    "Keep one event per real stay, transit or activity. Remove duplicate or noisy records; when several describe the same booking, keep the one with the most specific title and an endAt, " +
+    "else the latest createdAt. Do not add markdown, explanations, or extra keys.",
 
   itineraryRefinementRequest: (events: ItineraryEventRefinementInput[]): string =>
     `Events:\n${JSON.stringify(events)}\nJSON:`,
@@ -143,6 +143,7 @@ export interface ItineraryEventRefinementInput {
   title: string;
   detail?: string;
   startAt: string;
+  endAt?: string;
   createdAt: string;
 }
 
@@ -713,12 +714,13 @@ export const localModelService = {
     events: ItineraryEventRefinementInput[],
   ): Promise<ItineraryEventRefinement> {
     const model = await requireReadyModel();
-    const refinementEvents = events.map(({ id, type, title, detail, startAt, createdAt }) => ({
+    const refinementEvents = events.map(({ id, type, title, detail, startAt, endAt, createdAt }) => ({
       id,
       type,
       title,
       detail,
       startAt,
+      endAt,
       createdAt,
     }));
     const prompt =

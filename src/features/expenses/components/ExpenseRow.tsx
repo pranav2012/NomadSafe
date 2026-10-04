@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { useAura } from "@/components/aura/useAura";
 import { Icon } from "@/components/nomad/Icon";
 import { PressableScale } from "@/components/motion/PressableScale";
-import { auraCategoryColors } from "@/constants/aura";
+import { auraCategoryColors, auraStatusAccent } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { getCategoryMeta } from "@/features/expenses/constants/categories";
 import type { Expense } from "@/features/expenses/store/expensesStore";
@@ -27,7 +27,21 @@ function dayFormatter(locale: string) {
   return formatter;
 }
 
-export function ExpenseRow({ expense, onPress }: { expense: Expense; onPress: () => void }) {
+/**
+ * One ledger row. With `displayCurrency` and a converted amount, a foreign spend shows in the trip
+ * currency (at that day's rate) with its original amount underneath.
+ */
+export function ExpenseRow({
+  expense,
+  convertedAmount,
+  displayCurrency,
+  onPress,
+}: {
+  expense: Expense;
+  convertedAmount?: number;
+  displayCurrency?: string;
+  onPress: () => void;
+}) {
   const { c, f } = useAura();
   const { t, locale, formatCurrency } = useLocalization();
   const meta = getCategoryMeta(expense.category);
@@ -56,10 +70,29 @@ export function ExpenseRow({ expense, onPress }: { expense: Expense; onPress: ()
           </Text>
           {expense.location?.label ? <Icon name="mapPin" size={11} color={c.textMuted} /> : null}
         </View>
+        {expense.splitHint ? (
+          <View style={[styles.hint, { backgroundColor: `${auraStatusAccent.live}22` }]}>
+            <Icon name="users" size={11} color={auraStatusAccent.live} />
+            <Text style={[styles.hintText, { color: auraStatusAccent.live, fontFamily: f.medium }]}>
+              {expense.splitHint.shares ? t("split.reviewBadge") : t("split.suggestFor", { count: expense.splitHint.pax })}
+            </Text>
+          </View>
+        ) : null}
       </View>
-      <Text style={[styles.amount, { color: c.text, fontFamily: f.semibold }]}>
-        {formatCurrency(expense.amount, expense.currency, {})}
-      </Text>
+      {displayCurrency && expense.currency !== displayCurrency && convertedAmount !== undefined ? (
+        <View style={styles.amounts}>
+          <Text style={[styles.amount, { color: c.text, fontFamily: f.semibold }]}>
+            {formatCurrency(convertedAmount, displayCurrency, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+          </Text>
+          <Text style={[styles.original, { color: c.textMuted, fontFamily: f.regular }]}>
+            {formatCurrency(expense.amount, expense.currency, {})}
+          </Text>
+        </View>
+      ) : (
+        <Text style={[styles.amount, { color: c.text, fontFamily: f.semibold }]}>
+          {formatCurrency(expense.amount, expense.currency, {})}
+        </Text>
+      )}
     </PressableScale>
   );
 }
@@ -72,4 +105,8 @@ const styles = StyleSheet.create({
   metaRow: { flexDirection: "row", alignItems: "center", gap: 5 },
   meta: { fontSize: 12.5, flexShrink: 1 },
   amount: { fontSize: 15.5, fontVariant: ["tabular-nums"] },
+  amounts: { alignItems: "flex-end", gap: 2 },
+  hint: { flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "flex-start", paddingHorizontal: 7, height: 20, borderRadius: 10, marginTop: 2 },
+  hintText: { fontSize: 11.5 },
+  original: { fontSize: 12, fontVariant: ["tabular-nums"] },
 });

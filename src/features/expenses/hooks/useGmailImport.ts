@@ -1,43 +1,17 @@
 import { useCallback, useEffect } from "react";
 import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
-import {
-  GMAIL_CLIENT_IDS,
-  GMAIL_SCOPES,
-  fetchTransactionEmails,
-  isGmailConfigured,
-} from "@/features/expenses/services/gmailImport";
-import {
-  fetchTransactionEmailsShared,
-  type GmailFetchResult,
-} from "@/features/expenses/services/gmailSharedFetch";
-import { gmailBeforeBound } from "@/features/expenses/services/gmailParsing";
-import {
-  ensureGmailAccountEmail,
-  toStoredTokens,
-  withGmailAccess,
-} from "@/features/expenses/services/gmailAuth";
-import {
-  loadGmailLastSyncAt,
-  saveGmailLastSyncAt,
-} from "@/features/expenses/services/gmailSyncStore";
+import { GMAIL_CLIENT_IDS, GMAIL_SCOPES, isGmailConfigured } from "@/features/expenses/services/gmailImport";
+import { ensureGmailAccountEmail, toStoredTokens } from "@/features/expenses/services/gmailAuth";
 import {
   hasGmailGrant,
   hydrateGmailConnection,
   storeGmailTokens,
   useGmailConnectionStore,
 } from "@/features/expenses/store/gmailConnectionStore";
-import { ImportError } from "@/features/expenses/services/importErrors";
 import { useAuthStore } from "@/features/auth/store/authStore";
-import type { Trip } from "@/features/trips/store/tripsStore";
 
 WebBrowser.maybeCompleteAuthSession();
-
-export interface GmailFetchOptions {
-  trip: Trip | null;
-  /** Skip the shared launch fetch, e.g. when the user taps "Scan Gmail". */
-  fresh?: boolean;
-}
 
 export interface GmailImport {
   configured: boolean;
@@ -45,13 +19,6 @@ export interface GmailImport {
   connected: boolean;
   accountEmail: string | null;
   connect: () => Promise<void>;
-  fetchEmails: (options: GmailFetchOptions) => Promise<GmailFetchResult>;
-  /** Fetches mail after `since` without touching the expense checkpoint, so
-   *  other consumers (e.g. itinerary) can keep an independent checkpoint. */
-  fetchEmailsSince: (since: number | null, options: GmailFetchOptions) => Promise<GmailFetchResult>;
-  /** Saves the expense checkpoint; pass the result's `fetchedAt` so mail that
-   *  arrived during review is picked up next time. */
-  completeSync: (at: number) => Promise<void>;
 }
 
 export function useGmailImport(): GmailImport {
@@ -89,41 +56,11 @@ export function useGmailImport(): GmailImport {
     await promptAsync();
   }, [configured, promptAsync]);
 
-  const fetchEmailsSince = useCallback(
-    async (since: number | null, options: GmailFetchOptions) => {
-      await hydrateGmailConnection();
-      const current = useGmailConnectionStore.getState().tokens;
-      const account = current?.refreshToken ?? current?.accessToken;
-      if (!account) throw new ImportError("gmail-not-connected");
-
-      const range = { since, before: gmailBeforeBound(options.trip?.endDate) };
-      return fetchTransactionEmailsShared(
-        account,
-        range,
-        () => withGmailAccess((accessToken) => fetchTransactionEmails(accessToken, range)),
-        { fresh: options.fresh },
-      );
-    },
-    [],
-  );
-
-  const fetchEmails = useCallback(
-    async (options: GmailFetchOptions) => fetchEmailsSince(await loadGmailLastSyncAt(), options),
-    [fetchEmailsSince],
-  );
-
-  const completeSync = useCallback(async (at: number) => {
-    await saveGmailLastSyncAt(at);
-  }, []);
-
   return {
     configured,
     ready: Boolean(request),
     connected: hasGmailGrant(tokens),
     accountEmail: tokens?.email ?? null,
     connect,
-    fetchEmails,
-    fetchEmailsSince,
-    completeSync,
   };
 }

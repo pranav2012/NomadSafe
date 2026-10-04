@@ -5,6 +5,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PostHogMaskView } from "posthog-react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Icon } from "@/components/nomad/Icon";
+import { AuraButton } from "@/components/aura/AuraButton";
+import { useGmailStatus } from "@/features/expenses/hooks/useGmailStatus";
 import { PressableScale } from "@/components/motion/PressableScale";
 import { RollingNumber } from "@/components/motion/RollingNumber";
 import { useTabBarInset } from "@/components/tabbar/tabBarInset";
@@ -44,6 +46,7 @@ interface TripHomeProps {
   userLocation: UserLocation | null;
   checkInActive: boolean;
   onAddSpend: () => void;
+  onImportSpends: (source: "gmail" | "paste") => void;
   onCheckIn: () => void;
   onToggleShare: () => void;
   onSos: () => void;
@@ -64,12 +67,14 @@ export function TripHome({
   userLocation,
   checkInActive,
   onAddSpend,
+  onImportSpends,
   onCheckIn,
   onToggleShare,
   onSos,
   onSwitchTrip,
   onOpenSettings,
 }: TripHomeProps) {
+  const gmail = useGmailStatus();
   const c = isDark ? auraDark : auraLight;
   const accent = auraStatusAccent[status];
   const { t } = useLocalization();
@@ -292,28 +297,68 @@ export function TripHome({
             <Text style={[styles.railLabel, { color: c.textMuted }]}>{data.dayDates[data.dayDates.length - 1]}</Text>
           </View>
 
-          <View style={[styles.moneyCard, { backgroundColor: c.surface, borderColor: c.hairline }]}>
-            <View style={[styles.cardHighlight, { backgroundColor: c.highlight }]} />
-            <View style={styles.moneyText}>
-              <Text style={[styles.moneyLabel, { color: c.textMuted }]}>{scrubbedSpend ? scrubbedSpend.label : data.moneyLabel}</Text>
-              <RollingNumber
-                value={scrubbedSpend ? scrubbedSpend.amountLabel : data.moneyValue}
-                lineHeight={42}
-                style={[styles.moneyValue, { color: c.text }]}
-              />
-            </View>
-            {showChart ? (
-              <View style={styles.chart}>
-                <SpendChart
-                  values={data.spendDays.map((d) => d.amount)}
-                  accent={accent}
-                  guide={isDark ? "rgba(255,255,255,0.2)" : "rgba(14,16,24,0.16)"}
-                  onScrub={setSpendDay}
-                  height={84}
+          {!data.hasSpends ? (
+            <View style={[styles.moneyCard, styles.moneyEmpty, { backgroundColor: c.surface, borderColor: c.hairline }]}>
+              <View style={[styles.cardHighlight, { backgroundColor: c.highlight }]} />
+              <View style={styles.emptyHead}>
+                <View style={[styles.emptyIcon, { backgroundColor: c.surfaceStrong }]}>
+                  <Icon name="wallet" size={18} color={c.text} />
+                </View>
+                <View style={styles.flex}>
+                  <Text style={[styles.emptyTitle, { color: c.text }]}>{t("expenses.noExpensesTitle")}</Text>
+                  <Text style={[styles.emptyBody, { color: c.textSoft }]}>
+                    {!gmail.configured
+                      ? t("expenses.homeEmptyBodyNoGmail")
+                      : gmail.connected
+                        ? t("expenses.homeEmptyBodyConnected")
+                        : t("expenses.homeEmptyBody")}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.emptyActions}>
+                {gmail.configured ? (
+                  <AuraButton
+                    size="md"
+                    icon="mail"
+                    label={gmail.connected ? t("expenses.gmailFetch") : t("expenses.gmailConnect")}
+                    onPress={() => onImportSpends("gmail")}
+                    style={styles.flex}
+                  />
+                ) : null}
+                <AuraButton
+                  size="md"
+                  variant={gmail.configured ? "secondary" : "primary"}
+                  icon="messageCircle"
+                  label={t("expenses.pasteAlertShort")}
+                  onPress={() => onImportSpends("paste")}
+                  style={styles.flex}
                 />
               </View>
-            ) : null}
-          </View>
+            </View>
+          ) : (
+            <View style={[styles.moneyCard, { backgroundColor: c.surface, borderColor: c.hairline }]}>
+              <View style={[styles.cardHighlight, { backgroundColor: c.highlight }]} />
+              <View style={styles.moneyText}>
+                <Text style={[styles.moneyLabel, { color: c.textMuted }]}>{scrubbedSpend ? scrubbedSpend.label : data.moneyLabel}</Text>
+                <RollingNumber
+                  value={scrubbedSpend ? scrubbedSpend.amountLabel : data.moneyValue}
+                  lineHeight={42}
+                  style={[styles.moneyValue, { color: c.text }]}
+                />
+              </View>
+              {showChart ? (
+                <View style={styles.chart}>
+                  <SpendChart
+                    values={data.spendDays.map((d) => d.amount)}
+                    accent={accent}
+                    guide={isDark ? "rgba(255,255,255,0.2)" : "rgba(14,16,24,0.16)"}
+                    onScrub={setSpendDay}
+                    height={84}
+                  />
+                </View>
+              ) : null}
+            </View>
+          )}
 
           <View style={styles.actions}>
             <ActionButton icon="plus" label={t("expenses.addAction")} palette={c} accent={accent} onPress={onAddSpend} />
@@ -424,6 +469,12 @@ const styles = StyleSheet.create({
     right: 28,
     height: StyleSheet.hairlineWidth,
   },
+  moneyEmpty: { flexDirection: "column", alignItems: "stretch", gap: 16 },
+  emptyHead: { flexDirection: "row", alignItems: "center", gap: 12 },
+  emptyIcon: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
+  emptyTitle: { fontFamily: f.semibold, fontSize: 17, letterSpacing: -0.2 },
+  emptyBody: { fontFamily: f.regular, fontSize: 13.5, lineHeight: 19, marginTop: 2 },
+  emptyActions: { flexDirection: "row", gap: 10 },
   moneyText: { flexShrink: 1, gap: 2 },
   moneyLabel: { fontFamily: f.medium, fontSize: 13 },
   moneyValue: { fontFamily: f.semibold, fontSize: 36, letterSpacing: -1.2 },

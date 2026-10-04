@@ -5,10 +5,29 @@ The Money / Ledger screen (`src/features/expenses`) can add spends two ways:
 1. **Paste** bank / UPI / card alerts (works everywhere, no setup).
 2. **Gmail** transactional emails (needs a Google OAuth client — see below).
 
-Both feed the same pipeline: `transactionParser` extracts amount + merchant,
-`categorizer` assigns a category (keyword heuristic first, local LLM for the rest),
-and the review sheet lets the user deselect duplicates and fix categories before
-saving. Spends are stored on-device in MMKV (`expensesStore`).
+Both feed the same parser: `transactionParser` extracts amount + merchant and
+`categorizer` assigns a category. Pasted alerts go through a review sheet; Gmail
+spends are added directly (duplicates skipped). Spends are stored on-device in
+MMKV (`expensesStore`).
+
+## Gmail trip sync
+
+`services/tripGmailSync.ts` syncs the active trip on every app open (launch and
+return to foreground, via `useTripGmailSync` in the tabs layout) and on "Scan
+Gmail" / "Scan again". One download feeds both new spends and itinerary events.
+
+- **Gmail-side filter** (`buildTripGmailQuery`): skips Promotions/Social and only
+  asks for (a) booking emails naming a destination, received in the 60 days
+  before the trip, and (b) booking or spend emails received during the trip.
+  This mirrors the on-device trip filter, which still runs afterwards.
+- **Per-trip coverage** (`tripGmailCoverage.ts`, persisted in
+  `tripGmailCoverageStore`): records the received-time range already scanned and
+  the start date, destinations and Gmail account it used. Later syncs only read
+  mail since the last check (10-minute overlap, deduped); a later end date only
+  adds the new days; a new start date, destination or account rescans the trip.
+  A finished, fully covered trip makes no Gmail calls.
+- Reads are throttled, rate-limit responses are retried with backoff, and each
+  request times out after 20s.
 
 There is no SMS inbox import. `READ_SMS` is a restricted Play permission and is
 listed in `android.blockedPermissions`, so users paste SMS alerts instead.

@@ -20,10 +20,10 @@ import { countInclusiveDays, fromDateKey, getTripStatus, startOfLocalDay } from 
 import { useExpensesStore, type Expense } from "@/features/expenses/store/expensesStore";
 import { categoryBreakdown, filterByTrip, sumAmount } from "@/features/expenses/utils/aggregate";
 import { useConvertedExpenses } from "@/features/expenses/hooks/useTripExpenseSummary";
-import { useGmailAutoSync } from "@/features/expenses/hooks/useGmailAutoSync";
+import { dismissGmailSyncBanner, useTripGmailSyncStatus } from "@/features/expenses/store/gmailSyncStatusStore";
 import { dismissGmailLostAccess, hasGmailGrant, useGmailConnectionStore } from "@/features/expenses/store/gmailConnectionStore";
 import { formatMoney } from "@/features/expenses/utils/money";
-import { isSplitExpense } from "@/features/expenses/utils/split";
+import { SELF_ID, isSplitExpense } from "@/features/expenses/utils/split";
 import { CAPTURE_BAR_HEIGHT, CaptureBar } from "@/features/expenses/components/CaptureBar";
 import { ExpenseForm } from "@/features/expenses/components/ExpenseForm";
 import { ExpenseRow } from "@/features/expenses/components/ExpenseRow";
@@ -60,15 +60,24 @@ export default function ExpensesScreen() {
   const [editing, setEditing] = useState<Expense | null>(null);
   const [importTab, setImportTab] = useState<"paste" | "gmail" | null>(null);
   const [ledgerLimit, setLedgerLimit] = useState(LEDGER_PAGE);
-  const autoSync = useGmailAutoSync(activeTrip);
+  const gmailAdded = useTripGmailSyncStatus(activeTrip?.id).unseenExpenses;
   const gmailLostAccess = useGmailConnectionStore((state) => state.lostAccess && !hasGmailGrant(state.tokens));
 
   const currency = activeTrip?.currency ?? deviceCurrency;
   const scoped = useMemo(() => filterByTrip(expenses, activeTrip?.id ?? null), [expenses, activeTrip?.id]);
+  const updateExpense = useExpensesStore((state) => state.updateExpense);
+  const [reviewDismissed, setReviewDismissed] = useState(false);
+  const reviewable = scoped.filter((expense) => expense.splitHint?.shares);
+  const confirmSplits = () => {
+    for (const expense of reviewable) {
+      updateExpense(expense.id, { paidBy: SELF_ID, shares: expense.splitHint?.shares, splitHint: undefined });
+    }
+  };
   const sorted = useMemo(() => [...scoped].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()), [scoped]);
   const conversion = useConvertedExpenses(scoped, currency);
   // Aggregates run on amounts converted to the display currency so they match Home.
   const converted: Expense[] = conversion.convertedExpenses.map(({ expense, amount }) => ({ ...expense, amount, currency }));
+  const convertedById = new Map(conversion.convertedExpenses.map(({ expense, amount }) => [expense.id, amount]));
   const total = sumAmount(converted);
   const daysLeft = activeTrip ? daysLeftIn(activeTrip) : 0;
   const unconvertedLabel = conversion.unconvertedTotals.map((entry) => formatMoney(formatCurrency, entry.amount, entry.currency)).join(" + ");
@@ -111,8 +120,17 @@ export default function ExpensesScreen() {
             </PressableScale>
           </View>
 
-          {autoSync.importedCount ? (
-            <Banner icon="mail" text={t("expenses.autoSynced", { count: autoSync.importedCount })} onDismiss={autoSync.dismiss} />
+          {gmailAdded > 0 ? (
+            <Banner icon="mail" text={t("expenses.autoSynced", { count: gmailAdded })} onDismiss={() => activeTrip && dismissGmailSyncBanner(activeTrip.id)} />
+          ) : null}
+          {reviewable.length > 0 && !reviewDismissed ? (
+            <Banner
+              icon="users"
+              tone={auraStatusAccent.live}
+              text={t("split.reviewBanner", { count: reviewable.length })}
+              action={{ label: t("split.confirmAll"), onPress: confirmSplits }}
+              onDismiss={() => setReviewDismissed(true)}
+            />
           ) : null}
           {gmailLostAccess ? (
             <Banner
@@ -171,6 +189,8 @@ export default function ExpensesScreen() {
                 <Animated.View key={expense.id} entering={index < 12 ? FadeInDown.duration(220).delay(index * 25) : undefined}>
                   <ExpenseRow
                     expense={expense}
+                    convertedAmount={convertedById.get(expense.id)}
+                    displayCurrency={currency}
                     onPress={() => {
                       setEditing(expense);
                       setFormOpen(true);
@@ -225,7 +245,7 @@ function Banner({
   action,
   onDismiss,
 }: {
-  icon: "mail";
+  icon: "mail" | "users";
   text: string;
   tone?: string;
   action?: { label: string; onPress: () => void };

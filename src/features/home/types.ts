@@ -39,6 +39,8 @@ export interface HomeData {
   moneyLabel: string;
   moneyValue: string;
   spendDays: HomeSpendDay[];
+  /** False until the trip has its first spend; Home shows the setup card instead of the total. */
+  hasSpends: boolean;
   isSharing: boolean;
   sharingLabel: string;
   travellersLabel: string;
