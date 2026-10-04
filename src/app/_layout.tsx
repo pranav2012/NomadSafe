@@ -246,6 +246,7 @@ function AppStack() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="settings" options={{ presentation: "modal" }} />
         <Stack.Screen name="trips" options={{ presentation: "modal" }} />
+        <Stack.Screen name="plan-trip" options={{ presentation: "fullScreenModal", animation: "fade" }} />
         <Stack.Screen name="join/[code]" options={{ presentation: "modal" }} />
         <Stack.Screen name="emergency-contacts" />
         <Stack.Screen

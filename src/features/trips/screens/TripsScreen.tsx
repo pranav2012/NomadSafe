@@ -94,7 +94,7 @@ export default function TripsScreen() {
   const deleteTrip = useTripsStore((state) => state.deleteTrip);
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [form, setForm] = useState<{ trip: Trip | null } | null>(null);
+  const [editing, setEditing] = useState<Trip | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Trip | null>(null);
   const [confirmText, setConfirmText] = useState("");
   const [peopleFor, setPeopleFor] = useState<string | null>(null);
@@ -174,7 +174,7 @@ export default function TripsScreen() {
         setActiveTrip(trip.id);
         router.back();
       }}
-      onEdit={() => setForm({ trip })}
+      onEdit={() => setEditing(trip)}
       onPeople={() => setPeopleFor(trip.id)}
       onDelete={() => {
         if (trip.shared) {
@@ -222,11 +222,11 @@ export default function TripsScreen() {
           </View>
         ))}
 
-        <AuraButton label={t("trip.addTrip")} icon="plus" variant="secondary" onPress={() => setForm({ trip: null })} style={styles.add} />
+        <AuraButton label={t("trip.addTrip")} icon="plus" variant="secondary" onPress={() => router.push("/plan-trip")} style={styles.add} />
         <AuraButton label={t("groupTrip.joinWithCode")} icon="users" variant="ghost" onPress={() => setJoinOpen(true)} style={styles.join} />
       </ScrollView>
 
-      <TripFormSheet visible={form !== null} editingTrip={form?.trip ?? null} onClose={() => setForm(null)} />
+      <TripFormSheet visible={editing !== null} editingTrip={editing} onClose={() => setEditing(null)} />
       <TripPeopleSheet tripId={peopleFor} onClose={() => setPeopleFor(null)} />
 
       <AuraSheet

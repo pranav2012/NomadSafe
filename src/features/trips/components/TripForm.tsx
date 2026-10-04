@@ -54,8 +54,10 @@ export interface TripFormProps {
   editingTrip?: Trip | null;
   onSave: () => void;
   onCancel?: () => void;
-  /** Destinations to start a new trip with (e.g. picked on the Home globe). */
-  initialDestinations?: string[];
+  /** Cities picked outside the form (the trip planner); hides the form's own destination search. */
+  destinations?: string[];
+  /** Coordinates already resolved for `destinations`, so saving doesn't geocode them again. */
+  knownCoordinates?: ReadonlyMap<string, LatLng | null>;
 }
 
 function getCurrencyAffix(locale: string, currency: string) {
@@ -119,7 +121,7 @@ function tripToFormState(trip: Trip): FormState {
   };
 }
 
-export function TripForm({ editingTrip, onSave, onCancel, initialDestinations }: TripFormProps) {
+export function TripForm({ editingTrip, onSave, onCancel, destinations, knownCoordinates }: TripFormProps) {
   const { c, f } = useAura();
   const { t, locale, formatCurrency } = useLocalization();
   const defaultCurrency = useSettingsStore((state) => state.defaultCurrency);
@@ -137,7 +139,7 @@ export function TripForm({ editingTrip, onSave, onCancel, initialDestinations }:
             defaultCurrency,
             defaultTripMode,
             tripModeEnabled,
-            initialDestinations?.length ? { destinations: initialDestinations, name: defaultTripName(initialDestinations, t) } : undefined,
+            destinations?.length ? { destinations, name: defaultTripName(destinations, t) } : undefined,
           ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [editingTrip, defaultCurrency, defaultTripMode, tripModeEnabled],
@@ -221,6 +223,14 @@ export function TripForm({ editingTrip, onSave, onCancel, initialDestinations }:
     destinations,
     name: current.nameSource === "auto" ? defaultTripName(destinations, t) : current.name,
   });
+
+  const destinationsKey = destinations?.join("|");
+  const [syncedDestinationsKey, setSyncedDestinationsKey] = useState(destinationsKey);
+  if (destinations && destinationsKey !== syncedDestinationsKey) {
+    setSyncedDestinationsKey(destinationsKey);
+    setForm((current) => withDestinations(current, destinations));
+    clearBudgetEstimate();
+  }
 
   const handleSelectDestination = (destination: string) => {
     setForm((current) => {
@@ -485,7 +495,7 @@ export function TripForm({ editingTrip, onSave, onCancel, initialDestinations }:
     setIsSaving(true);
 
     try {
-      const known = new Map<string, LatLng | null>();
+      const known = new Map<string, LatLng | null>(knownCoordinates);
       if (editingTrip) {
         const previous = getDestinationCoordinates(editingTrip);
         editingTrip.destinations.forEach((destination, index) => {
@@ -534,13 +544,15 @@ export function TripForm({ editingTrip, onSave, onCancel, initialDestinations }:
   return (
     <View style={styles.flex}>
       <ScrollView ref={scrollRef} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-        <DestinationSearch
-          label={t("trip.destination")}
-          selected={form.destinations}
-          onSelect={handleSelectDestination}
-          autoFocus={!editingTrip && form.destinations.length === 0}
-        />
-        {form.destinations.length > 0 ? (
+        {destinations ? null : (
+          <DestinationSearch
+            label={t("trip.destination")}
+            selected={form.destinations}
+            onSelect={handleSelectDestination}
+            autoFocus={!editingTrip && form.destinations.length === 0}
+          />
+        )}
+        {!destinations && form.destinations.length > 0 ? (
           <Animated.View layout={LinearTransition.duration(200)} style={styles.wrap}>
             {form.destinations.map((destination) => (
               <AuraChip key={destination} label={destination} icon="mapPin" onRemove={() => handleRemoveDestination(destination)} />
@@ -742,12 +754,10 @@ export function TripFormSheet({
   visible,
   onClose,
   editingTrip,
-  initialDestinations,
 }: {
   visible: boolean;
   onClose: () => void;
   editingTrip?: Trip | null;
-  initialDestinations?: string[];
 }) {
   const { t } = useLocalization();
   return (
@@ -758,7 +768,7 @@ export function TripFormSheet({
       title={editingTrip ? t("trip.editTitle") : t("trip.createTitle")}
       subtitle={editingTrip ? t("trip.editBody") : t("trip.createBody")}
     >
-      <TripForm editingTrip={editingTrip} initialDestinations={initialDestinations} onSave={onClose} />
+      <TripForm editingTrip={editingTrip} onSave={onClose} />
     </AuraSheet>
   );
 }
