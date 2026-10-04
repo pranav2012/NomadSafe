@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Linking, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { ActivityIndicator, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -7,7 +7,7 @@ import { useRouter } from "expo-router";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import Svg, { Path } from "react-native-svg";
 import { AuraSkyHero, consumeSkyIntro, Icon, PressableScale, SKY_INTRO_MS, useAura } from "@/atoms";
-import { LEGAL_URLS } from "@/constants/legal";
+import { LEGAL_URLS, openLegalPage } from "@/constants/legal";
 import { authClient, useAuthStore } from "@/features/auth";
 import { useAmbientLoop } from "@/features/auth/hooks/useAmbientLoop";
 import { useSettingsStore } from "@/features/settings/store/settingsStore";
@@ -171,7 +171,7 @@ export default function SignInScreen() {
             <Text
               accessibilityRole="link"
               style={[styles.legalLink, { color: c.textSoft, fontFamily: f.medium }]}
-              onPress={() => Linking.openURL(LEGAL_URLS.privacy)}
+              onPress={() => openLegalPage(LEGAL_URLS.privacy)}
             >
               {t("auth.privacyPolicy")}
             </Text>

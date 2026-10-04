@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Linking, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AuraButton, AuraCard, AuraSegmented, Icon, PressableScale, showAlert, showToast, useAura } from "@/atoms";
 import { auraStatusColors } from "@/constants/aura";
-import { LEGAL_URLS } from "@/constants/legal";
+import { LEGAL_URLS, openLegalPage } from "@/constants/legal";
 import { useLocalization } from "@/localization";
 import { logger } from "@/modules/logger";
 import { track } from "@/modules/analytics";
@@ -272,13 +272,13 @@ export default function PaywallScreen() {
               <Text style={[styles.link, { color: c.textMuted }]}>·</Text>
             </>
           ) : null}
-          <PressableScale onPress={() => Linking.openURL(LEGAL_URLS.privacy).catch(() => {})} accessibilityRole="link">
+          <PressableScale onPress={() => openLegalPage(LEGAL_URLS.privacy)} accessibilityRole="link">
             <Text style={[styles.link, { color: c.textSoft, fontFamily: f.medium }]}>{t("settings.privacyPolicy")}</Text>
           </PressableScale>
           {Platform.OS === "ios" ? (
             <>
               <Text style={[styles.link, { color: c.textMuted }]}>·</Text>
-              <PressableScale onPress={() => Linking.openURL(LEGAL_URLS.appleEula).catch(() => {})} accessibilityRole="link">
+              <PressableScale onPress={() => openLegalPage(LEGAL_URLS.appleEula)} accessibilityRole="link">
                 <Text style={[styles.link, { color: c.textSoft, fontFamily: f.medium }]}>{t("paywall.termsOfUse")}</Text>
               </PressableScale>
             </>

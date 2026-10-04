@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Linking, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import Constants from "expo-constants";
@@ -17,7 +17,7 @@ import {
   useAura,
 } from "@/atoms";
 import { auraStatusAccent, auraStatusColors } from "@/constants/aura";
-import { LEGAL_URLS } from "@/constants/legal";
+import { LEGAL_URLS, openLegalPage } from "@/constants/legal";
 import { LANGUAGE_OPTIONS, useLocalization, type SupportedLocale } from "@/localization";
 import { currencyCodes, currencyDisplayName } from "@/utils/currency";
 import { confirmDeviceOwner, disconnectGmail, signOutAndCleanup } from "@/features/auth/services/session";
@@ -531,7 +531,7 @@ export default function SettingsScreen() {
             icon="info"
             label={t("settings.privacyPolicy")}
             detail={t("settings.privacyPolicySub")}
-            onPress={() => Linking.openURL(LEGAL_URLS.privacy).catch(() => {})} />
+            onPress={() => openLegalPage(LEGAL_URLS.privacy)} />
         </AuraListGroup>
 
         <AuraListGroup title={t("settings.safetySection")}>

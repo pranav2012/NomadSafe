@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { BackHandler, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { BackHandler, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -14,7 +14,7 @@ import Animated, {
   type SharedValue,
 } from "react-native-reanimated";
 import { AuraButton, Icon, PressableScale, showAlert, springs, useAura } from "@/atoms";
-import { LEGAL_URLS } from "@/constants/legal";
+import { LEGAL_URLS, openLegalPage } from "@/constants/legal";
 import { aiRuntime, useProvisioningStore } from "@/modules/ai";
 import { useAuthStore, useBiometricPresentation } from "@/features/auth";
 import { useSettingsStore } from "@/features/settings";
@@ -154,7 +154,7 @@ export default function OnboardingWelcomeScreen() {
   })();
 
   const openPrivacyPolicy = () => {
-    Linking.openURL(LEGAL_URLS.privacy).catch(() => {});
+    openLegalPage(LEGAL_URLS.privacy);
   };
 
   const forward = direction > 0 !== isRTL;
