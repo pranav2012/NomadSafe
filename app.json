@@ -117,8 +117,7 @@
       [
         "llama.rn",
         {
-          "enableEntitlements": true,
-          "entitlementsProfile": "production",
+          "enableEntitlements": false,
           "forceCxx20": true,
           "enableOpenCLAndHexagon": true
         }
@@ -131,6 +130,7 @@
       "./plugins/withoutPushEntitlement",
       "./plugins/withGoogleMapsApiKey",
       "./plugins/withGradleHeap",
+      "./plugins/withLlamaMemoryEntitlements",
       [
         "expo-build-properties",
         {
