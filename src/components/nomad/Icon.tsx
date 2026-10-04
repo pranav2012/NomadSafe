@@ -49,6 +49,7 @@ export type IconName =
   | "building"
   | "car"
   | "utensils"
+  | "coffee"
   | "plug"
   | "faceId"
   | "download"
@@ -460,6 +461,13 @@ export function Icon({
       body = (
         <G {...p}>
           <Path d="M5 3v8a2 2 0 004 0V3M7 11v10M16 3c-1.5 0-2.5 2-2.5 5s1 4 2.5 4m0-9v18" />
+        </G>
+      );
+      break;
+    case "coffee":
+      body = (
+        <G {...p}>
+          <Path d="M4 9h13v5a5 5 0 01-5 5H9a5 5 0 01-5-5V9zM17 11h1.5a2.5 2.5 0 010 5H17M8 3v3M12 3v3" />
         </G>
       );
       break;

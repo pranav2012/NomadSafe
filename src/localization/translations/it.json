@@ -1047,12 +1047,21 @@
   "places": {
     "nearYou": "Vicino a te",
     "nearYouIn": "Vicino a te · {{city}}",
-    "title": "Ristoranti e caffè ben recensiti",
     "loading": "Ricerca di ottimi posti nelle vicinanze…",
     "unavailable": "I posti nelle vicinanze non sono disponibili al momento.",
-    "empty": "Nessun posto ben recensito trovato nelle vicinanze.",
     "retry": "Riprova",
-    "distanceAway": "a {{distance}}"
+    "categories": {
+      "food": "Cibo",
+      "coffee": "Caffè",
+      "sights": "Da vedere",
+      "essentials": "Essenziali"
+    },
+    "walk_one": "{{count}} min a piedi",
+    "walk_other": "{{count}} min a piedi",
+    "openNow": "Aperto ora",
+    "closed": "Chiuso",
+    "photoBy": "Foto: {{name}}",
+    "nothingNearby": "Nessun risultato nelle vicinanze per questa categoria."
   },
   "emergencyContacts": {
     "confirmRemoveTitle": "Rimuovere {{name}}?",

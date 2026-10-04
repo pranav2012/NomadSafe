@@ -1,6 +1,20 @@
 import { v } from "convex/values";
-import { action } from "./_generated/server";
+import { HOUR, RateLimiter } from "@convex-dev/rate-limiter";
+import { components } from "./_generated/api";
+import { action, type ActionCtx } from "./_generated/server";
 import { authComponent } from "./auth";
+
+// Every action here is one or more billed Google calls; the app caches results, so this only bites abuse.
+const rateLimiter = new RateLimiter(components.rateLimiter, {
+  places: { kind: "token bucket", rate: 60, period: HOUR, capacity: 20 },
+});
+
+/** Signed-in, rate-limited caller; throws otherwise. */
+async function authorize(ctx: ActionCtx) {
+  const user = await authComponent.getAuthUser(ctx);
+  if (!user) throw new Error("Not authenticated");
+  await rateLimiter.limit(ctx, "places", { key: user._id, throws: true });
+}
 
 interface GooglePlace {
   displayName?: { text?: string };
@@ -10,20 +24,68 @@ interface GooglePlace {
   rating?: number;
   shortFormattedAddress?: string;
   userRatingCount?: number;
+  currentOpeningHours?: { openNow?: boolean };
+  regularOpeningHours?: { periods?: OpeningPeriod[] };
+  utcOffsetMinutes?: number;
+  photos?: { name?: string; authorAttributions?: { displayName?: string }[] }[];
+}
+
+interface OpeningPeriod {
+  open?: { day?: number; hour?: number; minute?: number };
+  close?: { day?: number; hour?: number; minute?: number };
+}
+
+const NEARBY_CATEGORIES = {
+  food: { types: ["restaurant"], radius: 1_500, minRating: 4.2, rank: "POPULARITY" },
+  coffee: { types: ["cafe", "coffee_shop", "bakery"], radius: 1_500, minRating: 4.2, rank: "POPULARITY" },
+  sights: { types: ["tourist_attraction", "museum", "park", "historical_landmark"], radius: 3_000, minRating: 4.2, rank: "POPULARITY" },
+  essentials: { types: ["atm", "pharmacy", "supermarket", "convenience_store"], radius: 1_500, minRating: null, rank: "DISTANCE" },
+} as const;
+
+// Older app builds call without a category and get the original food + coffee mix.
+const LEGACY_CATEGORY = { types: ["restaurant", "cafe"], radius: 1_500, minRating: 4.2, rank: "POPULARITY" } as const;
+
+const NEARBY_LIMIT = 6;
+
+const minuteOfWeek = (point: OpeningPeriod["open"]) => ((point?.day ?? 0) * 24 + (point?.hour ?? 0)) * 60 + (point?.minute ?? 0);
+
+/** Weekly opening windows as [open, close] minutes from Sunday 00:00 local, so the app can tell "open now" from a cached result. */
+function hoursOf(place: GooglePlace) {
+  const periods = place.regularOpeningHours?.periods;
+  if (!periods?.length || typeof place.utcOffsetMinutes !== "number") return null;
+  return {
+    utcOffsetMinutes: place.utcOffsetMinutes,
+    windows: periods.map((period) => [minuteOfWeek(period.open), period.close ? minuteOfWeek(period.close) : null] as [number, number | null]),
+  };
+}
+
+/** Resolves a Places photo resource to a short-lived image URL (no API key in it), or null. */
+async function photoUrl(name: string, apiKey: string) {
+  try {
+    const response = await fetch(
+      `https://places.googleapis.com/v1/${name}/media?maxWidthPx=600&skipHttpRedirect=true&key=${encodeURIComponent(apiKey)}`,
+    );
+    if (!response.ok) return null;
+    const body = (await response.json()) as { photoUri?: string };
+    return body.photoUri ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export const searchNearby = action({
   args: {
     latitude: v.number(),
     longitude: v.number(),
+    category: v.optional(v.union(v.literal("food"), v.literal("coffee"), v.literal("sights"), v.literal("essentials"))),
   },
-  handler: async (ctx, { latitude, longitude }) => {
-    const user = await authComponent.getAuthUser(ctx);
-    if (!user) throw new Error("Not authenticated");
+  handler: async (ctx, { latitude, longitude, category }) => {
+    await authorize(ctx);
 
     const apiKey = process.env.GOOGLE_PLACES_API_KEY;
     if (!apiKey) throw new Error("Places search is unavailable");
 
+    const config = category ? NEARBY_CATEGORIES[category] : LEGACY_CATEGORY;
     const response = await fetch("https://places.googleapis.com/v1/places:searchNearby", {
       method: "POST",
       headers: {
@@ -37,18 +99,22 @@ export const searchNearby = action({
           "places.rating",
           "places.shortFormattedAddress",
           "places.userRatingCount",
+          "places.currentOpeningHours.openNow",
+          "places.regularOpeningHours.periods",
+          "places.utcOffsetMinutes",
+          "places.photos",
         ].join(","),
       },
       body: JSON.stringify({
-        includedTypes: ["restaurant", "cafe"],
+        includedTypes: config.types,
         locationRestriction: {
           circle: {
             center: { latitude, longitude },
-            radius: 1_500,
+            radius: config.radius,
           },
         },
         maxResultCount: 20,
-        rankPreference: "POPULARITY",
+        rankPreference: config.rank,
       }),
     });
 
@@ -59,33 +125,39 @@ export const searchNearby = action({
     }
 
     const body = (await response.json()) as { places?: GooglePlace[] };
-    const places = (body.places ?? [])
-      .filter(
-        (place) =>
-          typeof place.displayName?.text === "string" &&
-          typeof place.rating === "number" &&
-          place.rating >= 4.2 &&
-          typeof place.location?.latitude === "number" &&
-          typeof place.location?.longitude === "number",
-      )
-      .sort(
-        (a, b) =>
-          (b.rating ?? 0) - (a.rating ?? 0) ||
-          (b.userRatingCount ?? 0) - (a.userRatingCount ?? 0),
-      )
-      .slice(0, 6)
-      .map((place): { name: string; category: string; rating: number; ratingCount: number; address: string; latitude: number; longitude: number; mapsUrl: string | null } => ({
-        name: place.displayName!.text!,
-        category: place.primaryTypeDisplayName?.text ?? "Restaurant",
-        rating: place.rating!,
-        ratingCount: place.userRatingCount ?? 0,
-        address: place.shortFormattedAddress ?? "",
-        latitude: place.location!.latitude!,
-        longitude: place.location!.longitude!,
-        mapsUrl: place.googleMapsUri ?? null,
-      }));
+    const minRating = config.minRating;
+    const matches = (body.places ?? []).filter(
+      (place) =>
+        typeof place.displayName?.text === "string" &&
+        typeof place.location?.latitude === "number" &&
+        typeof place.location?.longitude === "number" &&
+        (minRating === null || (typeof place.rating === "number" && place.rating >= minRating)),
+    );
+    // Distance-ranked categories keep Google's order; the rest go best-rated first.
+    const ranked =
+      minRating === null
+        ? matches
+        : matches.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0) || (b.userRatingCount ?? 0) - (a.userRatingCount ?? 0));
 
-    return places;
+    return Promise.all(
+      ranked.slice(0, NEARBY_LIMIT).map(async (place) => {
+        const photo = category ? place.photos?.[0] : undefined;
+        return {
+          name: place.displayName!.text!,
+          category: place.primaryTypeDisplayName?.text ?? "Restaurant",
+          rating: place.rating ?? null,
+          ratingCount: place.userRatingCount ?? 0,
+          address: place.shortFormattedAddress ?? "",
+          latitude: place.location!.latitude!,
+          longitude: place.location!.longitude!,
+          mapsUrl: place.googleMapsUri ?? null,
+          openNow: place.currentOpeningHours?.openNow ?? null,
+          hours: hoursOf(place),
+          photoUrl: photo?.name ? await photoUrl(photo.name, apiKey) : null,
+          photoAuthor: photo?.authorAttributions?.[0]?.displayName ?? null,
+        };
+      }),
+    );
   },
 });
 
@@ -109,8 +181,7 @@ export const searchSafetyPlaces = action({
     longitude: v.number(),
   },
   handler: async (ctx, { latitude, longitude }) => {
-    const user = await authComponent.getAuthUser(ctx);
-    if (!user) throw new Error("Not authenticated");
+    await authorize(ctx);
 
     const apiKey = process.env.GOOGLE_PLACES_API_KEY;
     if (!apiKey) throw new Error("Places search is unavailable");
@@ -171,8 +242,7 @@ export const findPlaceByName = action({
     longitude: v.number(),
   },
   handler: async (ctx, { query, latitude, longitude }) => {
-    const user = await authComponent.getAuthUser(ctx);
-    if (!user) throw new Error("Not authenticated");
+    await authorize(ctx);
 
     const apiKey = process.env.GOOGLE_PLACES_API_KEY;
     if (!apiKey) throw new Error("Places search is unavailable");

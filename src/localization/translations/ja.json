@@ -1047,12 +1047,21 @@
   "places": {
     "nearYou": "近くのスポット",
     "nearYouIn": "近くのスポット・{{city}}",
-    "title": "評価の高い飲食店・カフェ",
     "loading": "近くの良いお店を探しています…",
     "unavailable": "現在、近くのスポット情報を取得できません。",
-    "empty": "近くに評価の高いお店が見つかりませんでした。",
     "retry": "再試行",
-    "distanceAway": "{{distance}}先"
+    "categories": {
+      "food": "グルメ",
+      "coffee": "カフェ",
+      "sights": "観光",
+      "essentials": "生活必需"
+    },
+    "walk_one": "徒歩{{count}}分",
+    "walk_other": "徒歩{{count}}分",
+    "openNow": "営業中",
+    "closed": "営業時間外",
+    "photoBy": "写真: {{name}}",
+    "nothingNearby": "このカテゴリでは近くに見つかりませんでした。"
   },
   "emergencyContacts": {
     "confirmRemoveTitle": "{{name}}を削除しますか？",

@@ -1047,12 +1047,21 @@
   "places": {
     "nearYou": "Près de vous",
     "nearYouIn": "Près de vous · {{city}}",
-    "title": "Restaurants et cafés bien notés",
     "loading": "Recherche de bonnes adresses à proximité…",
     "unavailable": "Les lieux à proximité ne sont pas disponibles pour le moment.",
-    "empty": "Aucun lieu bien noté trouvé à proximité.",
     "retry": "Réessayer",
-    "distanceAway": "à {{distance}}"
+    "categories": {
+      "food": "Restos",
+      "coffee": "Café",
+      "sights": "À voir",
+      "essentials": "Essentiels"
+    },
+    "walk_one": "{{count}} min à pied",
+    "walk_other": "{{count}} min à pied",
+    "openNow": "Ouvert",
+    "closed": "Fermé",
+    "photoBy": "Photo : {{name}}",
+    "nothingNearby": "Rien trouvé à proximité dans cette catégorie."
   },
   "emergencyContacts": {
     "confirmRemoveTitle": "Retirer {{name}} ?",

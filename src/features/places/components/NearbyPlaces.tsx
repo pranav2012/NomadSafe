@@ -1,21 +1,19 @@
-import React, { useEffect, useMemo, useState } from "react";
-import {
-  ActivityIndicator,
-  Linking,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { ActivityIndicator, Linking, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
 import { useAction } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { Icon } from "@/components/nomad/Icon";
+import { Icon, type IconName } from "@/components/nomad/Icon";
 import { useAura } from "@/components/aura/useAura";
+import { AuraChip } from "@/components/aura/AuraChip";
 import { AuraSection } from "@/components/aura/AuraSection";
 import { AuraButton } from "@/components/aura/AuraButton";
 import { PressableScale } from "@/components/motion/PressableScale";
 import { useLocalization } from "@/localization";
-import type { NearbyPlace } from "@/features/places/services/nearbyPlaces";
+import type { NearbyCategory, NearbyPlace } from "@/features/places/services/nearbyPlaces";
+import { areaKey, readPlacesCache, writePlacesCache } from "@/features/places/services/placesCache";
+import { isOpenAt } from "@/features/places/utils/openingHours";
 import { logger } from "@/services/logger";
 
 interface UserLocation {
@@ -24,27 +22,32 @@ interface UserLocation {
   longitude?: number;
 }
 
-type LoadState =
-  | { status: "loading" }
-  | { status: "ready"; places: NearbyPlace[] }
-  | { status: "unavailable" };
+type LoadState = { status: "ready"; places: NearbyPlace[] } | { status: "unavailable" };
 
-function distanceInMeters(
-  from: Required<Pick<UserLocation, "latitude" | "longitude">>,
-  place: NearbyPlace,
-) {
+const CATEGORIES: { key: NearbyCategory; icon: IconName; tint: string }[] = [
+  { key: "food", icon: "utensils", tint: "#FFB547" },
+  { key: "coffee", icon: "coffee", tint: "#C98B5B" },
+  { key: "sights", icon: "camera", tint: "#7C8CFF" },
+  { key: "essentials", icon: "wallet", tint: "#3DDC97" },
+];
+
+const CARD_WIDTH = 236;
+const PHOTO_HEIGHT = 136;
+const OPEN = "#3DDC97";
+// Straight-line distance undercounts real streets; ~1.3x at 80 m/min is a fair walking estimate.
+const WALK_DETOUR = 1.3;
+const WALK_METERS_PER_MIN = 80;
+const MAX_WALK_MIN = 25;
+
+function distanceInMeters(from: { latitude: number; longitude: number }, place: NearbyPlace) {
   const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
   const latitudeDelta = toRadians(place.latitude - from.latitude);
   const longitudeDelta = toRadians(place.longitude - from.longitude);
   const value =
     Math.sin(latitudeDelta / 2) ** 2 +
-    Math.cos(toRadians(from.latitude)) *
-      Math.cos(toRadians(place.latitude)) *
-      Math.sin(longitudeDelta / 2) ** 2;
+    Math.cos(toRadians(from.latitude)) * Math.cos(toRadians(place.latitude)) * Math.sin(longitudeDelta / 2) ** 2;
   return 2 * 6_371_000 * Math.asin(Math.sqrt(value));
 }
-
-const SEARCH_RADIUS_KM = 1.5;
 
 function formatDistance(meters: number, locale: string) {
   const inKm = meters >= 1_000;
@@ -68,128 +71,203 @@ function formatRatingCount(count: number, locale: string) {
   }
 }
 
+/** Places around the user by category, as photo cards with walk time, rating and open status. */
 export function NearbyPlaces({ userLocation }: { userLocation: UserLocation | null }) {
   const { c, f } = useAura();
   const { t, locale } = useLocalization();
   const latitude = userLocation?.latitude;
   const longitude = userLocation?.longitude;
-  const hasLocation = latitude != null && longitude != null;
   const searchNearby = useAction(api.places.searchNearby);
-  const [state, setState] = useState<LoadState>({ status: "loading" });
-  const [retryCount, setRetryCount] = useState(0);
+  const [category, setCategory] = useState<NearbyCategory>("food");
+  const [results, setResults] = useState<Record<string, LoadState>>({});
+  const [brokenPhotos, setBrokenPhotos] = useState<ReadonlySet<string>>(new Set());
+  const [now] = useState(Date.now);
+  const inflight = useRef(new Set<string>());
+
+  const key = latitude != null && longitude != null ? `nearby:${category}:${areaKey(latitude, longitude)}` : "";
+  const cached = useMemo<LoadState | undefined>(() => {
+    const places = key ? readPlacesCache<NearbyPlace[]>(key) : undefined;
+    return places ? { status: "ready", places } : undefined;
+  }, [key]);
+  const state = results[key] ?? cached;
 
   useEffect(() => {
-    if (latitude == null || longitude == null) return;
-    let cancelled = false;
-    searchNearby({ latitude, longitude })
+    if (latitude == null || longitude == null || state || inflight.current.has(key)) return;
+    inflight.current.add(key);
+    searchNearby({ latitude, longitude, category })
       .then((places) => {
-        if (!cancelled) setState({ status: "ready", places });
+        if (places.length) writePlacesCache(key, places);
+        setResults((r) => ({ ...r, [key]: { status: "ready", places } }));
       })
       .catch((error) => {
         logger.warn("nearby-places", "failed", error);
-        if (!cancelled) setState({ status: "unavailable" });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [latitude, longitude, retryCount, searchNearby]);
+        setResults((r) => ({ ...r, [key]: { status: "unavailable" } }));
+      })
+      .finally(() => inflight.current.delete(key));
+  }, [category, key, latitude, longitude, searchNearby, state]);
 
   const placeDistances = useMemo(() => {
-    if (latitude == null || longitude == null || state.status !== "ready") return [];
+    if (latitude == null || longitude == null || state?.status !== "ready") return [];
     return state.places.map((place) => ({ place, distance: distanceInMeters({ latitude, longitude }, place) }));
   }, [latitude, longitude, state]);
 
-  if (!hasLocation) return null;
+  if (latitude == null || longitude == null) return null;
+
+  const active = CATEGORIES.find((item) => item.key === category)!;
+  const ratingFormat = new Intl.NumberFormat(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
   return (
     <View>
-      <AuraSection
-        title={userLocation?.city ? t("places.nearYouIn", { city: userLocation.city }) : t("places.title")}
-        action={
-          <View style={[styles.radius, { backgroundColor: c.surfaceStrong }]}>
-            <Icon name="mapPin" size={13} color={c.textSoft} />
-            <Text style={[styles.radiusText, { color: c.textSoft, fontFamily: f.medium }]}>{formatDistance(SEARCH_RADIUS_KM * 1_000, locale)}</Text>
-          </View>
-        }
-      />
+      <AuraSection title={userLocation?.city ? t("places.nearYouIn", { city: userLocation.city }) : t("places.nearYou")} />
 
-      {state.status === "loading" ? (
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.bleed} contentContainerStyle={styles.tabs}>
+        {CATEGORIES.map((item) => (
+          <AuraChip
+            key={item.key}
+            icon={item.icon}
+            label={t(`places.categories.${item.key}`)}
+            selected={item.key === category}
+            onPress={() => setCategory(item.key)}
+          />
+        ))}
+      </ScrollView>
+
+      {!state ? (
         <View style={[styles.status, { backgroundColor: c.surface, borderColor: c.hairline }]}>
           <ActivityIndicator size="small" color={c.textSoft} />
           <Text style={[styles.statusText, { color: c.textSoft, fontFamily: f.regular }]}>{t("places.loading")}</Text>
         </View>
       ) : state.status === "unavailable" || placeDistances.length === 0 ? (
         <View style={[styles.status, { backgroundColor: c.surface, borderColor: c.hairline }]}>
-          <Icon name="utensils" size={18} color={c.textMuted} />
+          <Icon name={active.icon} size={18} color={c.textMuted} />
           <Text style={[styles.statusText, { color: c.textSoft, fontFamily: f.regular }]}>
-            {state.status === "unavailable" ? t("places.unavailable") : t("places.empty")}
+            {state.status === "unavailable" ? t("places.unavailable") : t("places.nothingNearby")}
           </Text>
           <AuraButton
             label={t("places.retry")}
             variant="secondary"
             size="md"
-            onPress={() => {
-              setState({ status: "loading" });
-              setRetryCount((count) => count + 1);
-            }}
+            onPress={() =>
+              setResults((r) => {
+                const { [key]: _stale, ...rest } = r;
+                return rest;
+              })
+            }
           />
         </View>
       ) : (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cards} style={styles.bleed} snapToInterval={CARD_WIDTH + 12} decelerationRate="fast">
-          {placeDistances.map(({ place, distance }) => (
-            <PressableScale
-              key={`${place.name}-${place.latitude}-${place.longitude}`}
-              disabled={!place.mapsUrl}
-              onPress={() => {
-                if (place.mapsUrl) void Linking.openURL(place.mapsUrl);
-              }}
-              pressedScale={0.97}
-              style={[styles.card, { backgroundColor: c.card, borderColor: c.hairline }]}
-            >
-              <View style={[styles.cardHighlight, { backgroundColor: c.highlight }]} />
-              <View style={styles.cardTop}>
-                <View style={[styles.iconTile, { backgroundColor: `${WARM}22` }]}>
-                  <Icon name="utensils" size={18} color={WARM} />
+        <ScrollView
+          key={category}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.cards}
+          style={styles.bleed}
+          snapToInterval={CARD_WIDTH + 12}
+          decelerationRate="fast"
+        >
+          {placeDistances.map(({ place, distance }) => {
+            const photo = place.photoUrl && !brokenPhotos.has(place.photoUrl) ? place.photoUrl : null;
+            const open = place.hours ? isOpenAt(place.hours, now) : place.openNow;
+            const walkMin = Math.max(1, Math.round((distance * WALK_DETOUR) / WALK_METERS_PER_MIN));
+            const away = walkMin <= MAX_WALK_MIN ? t("places.walk", { count: walkMin }) : formatDistance(distance, locale);
+            return (
+              <PressableScale
+                key={`${place.name}-${place.latitude}-${place.longitude}`}
+                disabled={!place.mapsUrl}
+                onPress={() => {
+                  if (place.mapsUrl) void Linking.openURL(place.mapsUrl);
+                }}
+                pressedScale={0.97}
+                accessibilityRole="link"
+                accessibilityLabel={`${place.name}, ${place.category}, ${away}`}
+                style={[styles.card, { backgroundColor: c.card, borderColor: c.hairline }]}
+              >
+                <View style={[styles.photo, { backgroundColor: `${active.tint}22` }]}>
+                  {photo ? (
+                    <Image
+                      source={{ uri: photo }}
+                      style={StyleSheet.absoluteFill}
+                      contentFit="cover"
+                      transition={220}
+                      recyclingKey={photo}
+                      onError={() => setBrokenPhotos((set) => new Set(set).add(photo))}
+                    />
+                  ) : (
+                    <Icon name={active.icon} size={34} color={active.tint} />
+                  )}
+                  {photo ? <LinearGradient pointerEvents="none" colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.55)"]} style={styles.photoFade} /> : null}
+                  {open != null ? (
+                    <View style={styles.openPill}>
+                      <View style={[styles.openDot, { backgroundColor: open ? OPEN : "#FF6B6B" }]} />
+                      <Text style={[styles.openText, { fontFamily: f.semibold }]}>{open ? t("places.openNow") : t("places.closed")}</Text>
+                    </View>
+                  ) : null}
+                  {photo && place.photoAuthor ? (
+                    <Text numberOfLines={1} style={[styles.credit, { fontFamily: f.regular }]}>
+                      {t("places.photoBy", { name: place.photoAuthor })}
+                    </Text>
+                  ) : null}
                 </View>
-                <View style={styles.ratingRow}>
-                  <Icon name="star" size={12} color={WARM} />
-                  <Text style={[styles.rating, { color: c.text, fontFamily: f.semibold }]}>
-                    {new Intl.NumberFormat(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(place.rating)}
+                <View style={styles.cardBody}>
+                  <View style={styles.titleRow}>
+                    <Text style={[styles.placeName, { color: c.text, fontFamily: f.semibold }]} numberOfLines={1}>
+                      {place.name}
+                    </Text>
+                    {place.rating !== null ? (
+                      <View style={styles.ratingRow}>
+                        <Icon name="star" size={12} color="#FFB547" />
+                        <Text style={[styles.rating, { color: c.text, fontFamily: f.semibold }]}>{ratingFormat.format(place.rating)}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                  <Text style={[styles.category, { color: c.textSoft, fontFamily: f.regular }]} numberOfLines={1}>
+                    {place.category}
+                    {place.ratingCount > 0 ? ` · ${formatRatingCount(place.ratingCount, locale)} ★` : ""}
                   </Text>
-                  <Text style={[styles.ratingCount, { color: c.textMuted, fontFamily: f.regular }]}>({formatRatingCount(place.ratingCount, locale)})</Text>
+                  <View style={styles.walkRow}>
+                    <Icon name="mapPin" size={12} color={active.tint} />
+                    <Text style={[styles.walk, { color: c.text, fontFamily: f.medium }]}>{away}</Text>
+                  </View>
                 </View>
-              </View>
-              <Text style={[styles.placeName, { color: c.text, fontFamily: f.semibold }]} numberOfLines={2}>
-                {place.name}
-              </Text>
-              <Text style={[styles.category, { color: c.textSoft, fontFamily: f.regular }]} numberOfLines={1}>
-                {place.category} · {formatDistance(distance, locale)}
-              </Text>
-            </PressableScale>
-          ))}
+              </PressableScale>
+            );
+          })}
         </ScrollView>
       )}
     </View>
   );
 }
 
-const CARD_WIDTH = 196;
-const WARM = "#FFB547";
-
 const styles = StyleSheet.create({
-  radius: { flexDirection: "row", alignItems: "center", gap: 5, height: 30, paddingHorizontal: 11, borderRadius: 15 },
-  radiusText: { fontSize: 12.5 },
+  bleed: { marginHorizontal: -20 },
+  tabs: { paddingHorizontal: 20, gap: 8, paddingBottom: 14 },
   status: { flexDirection: "row", alignItems: "center", gap: 12, padding: 16, borderRadius: 22, borderWidth: StyleSheet.hairlineWidth },
   statusText: { flex: 1, fontSize: 14, lineHeight: 20 },
-  bleed: { marginHorizontal: -20 },
   cards: { paddingHorizontal: 20, gap: 12 },
-  card: { width: CARD_WIDTH, borderRadius: 22, borderWidth: StyleSheet.hairlineWidth, padding: 14, gap: 6, overflow: "hidden" },
-  cardHighlight: { position: "absolute", top: 0, left: 22, right: 22, height: StyleSheet.hairlineWidth },
-  cardTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 },
-  iconTile: { width: 36, height: 36, borderRadius: 11, alignItems: "center", justifyContent: "center" },
+  card: { width: CARD_WIDTH, borderRadius: 22, borderWidth: StyleSheet.hairlineWidth, overflow: "hidden" },
+  photo: { height: PHOTO_HEIGHT, alignItems: "center", justifyContent: "center" },
+  photoFade: { position: "absolute", left: 0, right: 0, bottom: 0, height: 56 },
+  openPill: {
+    position: "absolute",
+    top: 10,
+    left: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    height: 24,
+    paddingHorizontal: 9,
+    borderRadius: 12,
+    backgroundColor: "rgba(10,12,18,0.62)",
+  },
+  openDot: { width: 6, height: 6, borderRadius: 3 },
+  openText: { fontSize: 11.5, color: "#FFFFFF" },
+  credit: { position: "absolute", right: 10, bottom: 7, maxWidth: CARD_WIDTH - 20, fontSize: 9.5, color: "rgba(255,255,255,0.8)" },
+  cardBody: { padding: 13, gap: 4 },
+  titleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  placeName: { flex: 1, fontSize: 15.5, lineHeight: 20 },
   ratingRow: { flexDirection: "row", alignItems: "center", gap: 3 },
   rating: { fontSize: 13 },
-  ratingCount: { fontSize: 12 },
-  placeName: { fontSize: 15, lineHeight: 20 },
   category: { fontSize: 12.5 },
+  walkRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 4 },
+  walk: { fontSize: 12.5 },
 });

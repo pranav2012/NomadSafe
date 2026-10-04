@@ -1047,12 +1047,21 @@
   "places": {
     "nearYou": "你附近",
     "nearYouIn": "你附近 · {{city}}",
-    "title": "高评分餐饮与咖啡馆",
     "loading": "正在查找附近的优质场所…",
     "unavailable": "目前无法获取附近场所信息。",
-    "empty": "附近未找到高评分场所。",
     "retry": "重试",
-    "distanceAway": "{{distance}}外"
+    "categories": {
+      "food": "美食",
+      "coffee": "咖啡",
+      "sights": "景点",
+      "essentials": "生活必需"
+    },
+    "walk_one": "步行{{count}}分钟",
+    "walk_other": "步行{{count}}分钟",
+    "openNow": "营业中",
+    "closed": "已打烊",
+    "photoBy": "照片：{{name}}",
+    "nothingNearby": "附近没有找到该类别的地点。"
   },
   "emergencyContacts": {
     "confirmRemoveTitle": "移除 {{name}}？",

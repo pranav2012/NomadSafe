@@ -1047,12 +1047,21 @@
   "places": {
     "nearYou": "In deiner Nähe",
     "nearYouIn": "In deiner Nähe · {{city}}",
-    "title": "Top bewertetes Essen & Kaffee",
     "loading": "Suche nach tollen Orten in der Nähe…",
     "unavailable": "Orte in der Nähe sind gerade nicht verfügbar.",
-    "empty": "Keine top bewerteten Orte in der Nähe gefunden.",
     "retry": "Erneut versuchen",
-    "distanceAway": "{{distance}} entfernt"
+    "categories": {
+      "food": "Essen",
+      "coffee": "Kaffee",
+      "sights": "Sehenswertes",
+      "essentials": "Wichtiges"
+    },
+    "walk_one": "{{count}} Min. zu Fuß",
+    "walk_other": "{{count}} Min. zu Fuß",
+    "openNow": "Jetzt geöffnet",
+    "closed": "Geschlossen",
+    "photoBy": "Foto: {{name}}",
+    "nothingNearby": "In dieser Kategorie wurde in der Nähe nichts gefunden."
   },
   "emergencyContacts": {
     "confirmRemoveTitle": "{{name}} entfernen?",

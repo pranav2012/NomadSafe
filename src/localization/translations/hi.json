@@ -1047,12 +1047,21 @@
   "places": {
     "nearYou": "आपके पास",
     "nearYouIn": "आपके पास · {{city}}",
-    "title": "बेहतरीन रेटिंग वाले खाने-पीने के स्थान",
     "loading": "आसपास बेहतरीन जगहें ढूंढ रहे हैं…",
     "unavailable": "आसपास की जगहें अभी उपलब्ध नहीं हैं।",
-    "empty": "आसपास कोई बेहतरीन रेटिंग वाली जगह नहीं मिली।",
     "retry": "फिर कोशिश करें",
-    "distanceAway": "{{distance}} दूर"
+    "categories": {
+      "food": "खाना",
+      "coffee": "कॉफ़ी",
+      "sights": "घूमने की जगहें",
+      "essentials": "ज़रूरी"
+    },
+    "walk_one": "{{count}} मिनट पैदल",
+    "walk_other": "{{count}} मिनट पैदल",
+    "openNow": "अभी खुला",
+    "closed": "बंद",
+    "photoBy": "फ़ोटो: {{name}}",
+    "nothingNearby": "इस श्रेणी में आस-पास कुछ नहीं मिला।"
   },
   "emergencyContacts": {
     "confirmRemoveTitle": "{{name}} को हटाएं?",

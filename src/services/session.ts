@@ -8,6 +8,7 @@ import {
   stopLocationBroadcast,
 } from "@/features/location-sharing/services/locationBroadcastTask";
 import { useSharingStore } from "@/features/location-sharing/store/sharingStore";
+import { clearPlacesCache } from "@/features/places/services/placesCache";
 import {
   clearSharedLocalData,
   clearSyncedLocalData,
@@ -65,6 +66,7 @@ export async function signOutAndCleanup() {
     await stopLocationBroadcast();
   } catch {}
   clearBroadcastState();
+  clearPlacesCache();
   useSharingStore.getState().setBroadcasting(false);
 
   await disconnectGmail();

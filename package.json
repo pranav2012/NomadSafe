@@ -10,7 +10,7 @@
     "lint": "expo lint",
     "test:expense-import": "node --test tests/expense-import.test.mjs",
     "build": "expo prebuild --clean",
-    "test": "node --test tests/expense-import.test.mjs tests/gmail-import.test.mjs tests/trip-utils.test.mjs tests/ai-money-facts.test.mjs tests/ai-provisioning.test.mjs tests/expense-split.test.mjs tests/sync-hash.test.mjs",
+    "test": "node --test tests/expense-import.test.mjs tests/gmail-import.test.mjs tests/trip-utils.test.mjs tests/ai-money-facts.test.mjs tests/ai-provisioning.test.mjs tests/expense-split.test.mjs tests/sync-hash.test.mjs tests/opening-hours.test.mjs",
     "update:development": "node scripts/publish-update.mjs development",
     "update:preview": "node scripts/publish-update.mjs preview",
     "update:production": "node scripts/publish-update.mjs production"
@@ -19,6 +19,7 @@
     "@bacons/apple-targets": "5.0.0",
     "@better-auth/expo": "1.6.33",
     "@convex-dev/better-auth": "0.12.3",
+    "@convex-dev/rate-limiter": "^0.4.0",
     "@expo-google-fonts/instrument-sans": "^0.4.2",
     "@expo/dom-webview": "^57.0.1",
     "@expo/ui": "~57.0.20",

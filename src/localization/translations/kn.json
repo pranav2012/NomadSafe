@@ -1047,12 +1047,21 @@
   "places": {
     "nearYou": "ನಿಮ್ಮ ಸಮೀಪದಲ್ಲಿ",
     "nearYouIn": "ನಿಮ್ಮ ಸಮೀಪದಲ್ಲಿ · {{city}}",
-    "title": "ಹೆಚ್ಚು ರೇಟಿಂಗ್ ಪಡೆದ ಆಹಾರ ಮತ್ತು ಕಾಫಿ",
     "loading": "ಹತ್ತಿರದ ಉತ್ತಮ ಸ್ಥಳಗಳನ್ನು ಹುಡುಕಲಾಗುತ್ತಿದೆ…",
     "unavailable": "ಸಮೀಪದ ಸ್ಥಳಗಳು ಸದ್ಯಕ್ಕೆ ಲಭ್ಯವಿಲ್ಲ.",
-    "empty": "ಸಮೀಪದಲ್ಲಿ ಹೆಚ್ಚು ರೇಟಿಂಗ್ ಪಡೆದ ಸ್ಥಳಗಳು ಕಂಡುಬಂದಿಲ್ಲ.",
     "retry": "ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
-    "distanceAway": "{{distance}} ದೂರದಲ್ಲಿ"
+    "categories": {
+      "food": "ಆಹಾರ",
+      "coffee": "ಕಾಫಿ",
+      "sights": "ನೋಡತಕ್ಕವು",
+      "essentials": "ಅಗತ್ಯಗಳು"
+    },
+    "walk_one": "{{count}} ನಿಮಿ ನಡಿಗೆ",
+    "walk_other": "{{count}} ನಿಮಿ ನಡಿಗೆ",
+    "openNow": "ಈಗ ತೆರೆದಿದೆ",
+    "closed": "ಮುಚ್ಚಿದೆ",
+    "photoBy": "ಫೋಟೋ: {{name}}",
+    "nothingNearby": "ಈ ವರ್ಗದಲ್ಲಿ ಹತ್ತಿರ ಏನೂ ಸಿಗಲಿಲ್ಲ."
   },
   "emergencyContacts": {
     "confirmRemoveTitle": "{{name}} ಅನ್ನು ತೆಗೆದುಹಾಕುವುದೇ?",

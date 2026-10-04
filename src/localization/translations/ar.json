@@ -1047,12 +1047,21 @@
   "places": {
     "nearYou": "بالقرب منك",
     "nearYouIn": "بالقرب منك · {{city}}",
-    "title": "أماكن طعام وقهوة عالية التقييم",
     "loading": "جارٍ البحث عن أماكن رائعة قريبة…",
     "unavailable": "الأماكن القريبة غير متاحة الآن.",
-    "empty": "لم يتم العثور على أماكن عالية التقييم قريبة.",
     "retry": "إعادة المحاولة",
-    "distanceAway": "على بُعد {{distance}}"
+    "categories": {
+      "food": "طعام",
+      "coffee": "قهوة",
+      "sights": "معالم",
+      "essentials": "أساسيات"
+    },
+    "walk_one": "{{count}} د سيرًا",
+    "walk_other": "{{count}} د سيرًا",
+    "openNow": "مفتوح الآن",
+    "closed": "مغلق",
+    "photoBy": "تصوير: {{name}}",
+    "nothingNearby": "لم يُعثر على شيء قريب في هذه الفئة."
   },
   "emergencyContacts": {
     "confirmRemoveTitle": "إزالة {{name}}؟",

@@ -1047,12 +1047,21 @@
   "places": {
     "nearYou": "Cerca de ti",
     "nearYouIn": "Cerca de ti · {{city}}",
-    "title": "Comida y café mejor valorados",
     "loading": "Buscando buenos lugares cerca…",
     "unavailable": "Los lugares cercanos no están disponibles ahora mismo.",
-    "empty": "No se encontraron lugares bien valorados cerca.",
     "retry": "Reintentar",
-    "distanceAway": "a {{distance}}"
+    "categories": {
+      "food": "Comida",
+      "coffee": "Café",
+      "sights": "Lugares",
+      "essentials": "Esenciales"
+    },
+    "walk_one": "{{count}} min a pie",
+    "walk_other": "{{count}} min a pie",
+    "openNow": "Abierto ahora",
+    "closed": "Cerrado",
+    "photoBy": "Foto: {{name}}",
+    "nothingNearby": "No se encontró nada cerca en esta categoría."
   },
   "emergencyContacts": {
     "confirmRemoveTitle": "¿Eliminar a {{name}}?",

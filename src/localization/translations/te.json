@@ -1047,12 +1047,21 @@
   "places": {
     "nearYou": "మీ సమీపంలో",
     "nearYouIn": "మీ సమీపంలో · {{city}}",
-    "title": "అత్యధిక రేటింగ్ ఉన్న ఆహారం & కాఫీ",
     "loading": "సమీపంలో మంచి ప్రదేశాలను వెతుకుతోంది…",
     "unavailable": "సమీప ప్రదేశాలు ప్రస్తుతం అందుబాటులో లేవు.",
-    "empty": "సమీపంలో అత్యధిక రేటింగ్ ఉన్న ప్రదేశాలు కనుగొనబడలేదు.",
     "retry": "మళ్లీ ప్రయత్నించు",
-    "distanceAway": "{{distance}} దూరంలో"
+    "categories": {
+      "food": "ఆహారం",
+      "coffee": "కాఫీ",
+      "sights": "చూడదగినవి",
+      "essentials": "అవసరాలు"
+    },
+    "walk_one": "{{count}} నిమి నడక",
+    "walk_other": "{{count}} నిమి నడక",
+    "openNow": "ఇప్పుడు తెరిచి ఉంది",
+    "closed": "మూసివేయబడింది",
+    "photoBy": "ఫోటో: {{name}}",
+    "nothingNearby": "ఈ వర్గంలో సమీపంలో ఏదీ కనుగొనబడలేదు."
   },
   "emergencyContacts": {
     "confirmRemoveTitle": "{{name}}ను తీసివేయాలా?",

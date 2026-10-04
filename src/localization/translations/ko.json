@@ -1047,12 +1047,21 @@
   "places": {
     "nearYou": "내 주변",
     "nearYouIn": "내 주변 · {{city}}",
-    "title": "평점 높은 맛집 & 카페",
     "loading": "주변의 좋은 장소를 찾는 중…",
     "unavailable": "지금은 주변 장소 정보를 불러올 수 없어요.",
-    "empty": "주변에서 평점 높은 장소를 찾지 못했어요.",
     "retry": "다시 시도",
-    "distanceAway": "{{distance}} 거리"
+    "categories": {
+      "food": "음식",
+      "coffee": "카페",
+      "sights": "명소",
+      "essentials": "필수"
+    },
+    "walk_one": "도보 {{count}}분",
+    "walk_other": "도보 {{count}}분",
+    "openNow": "영업 중",
+    "closed": "영업 종료",
+    "photoBy": "사진: {{name}}",
+    "nothingNearby": "이 카테고리에서 근처에 찾은 곳이 없습니다."
   },
   "emergencyContacts": {
     "confirmRemoveTitle": "{{name}}을(를) 제거할까요?",

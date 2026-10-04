@@ -267,12 +267,21 @@
   "places": {
     "nearYou": "Near you",
     "nearYouIn": "Near you · {{city}}",
-    "title": "Highly rated food & coffee",
     "loading": "Finding great places nearby…",
     "unavailable": "Nearby places are unavailable right now.",
-    "empty": "No highly rated places found nearby.",
     "retry": "Retry",
-    "distanceAway": "{{distance}} away"
+    "categories": {
+      "food": "Food",
+      "coffee": "Coffee",
+      "sights": "Sights",
+      "essentials": "Essentials"
+    },
+    "walk_one": "{{count}} min walk",
+    "walk_other": "{{count}} min walk",
+    "openNow": "Open now",
+    "closed": "Closed",
+    "photoBy": "Photo: {{name}}",
+    "nothingNearby": "Nothing found nearby in this category."
   },
   "settings": {
     "title": "Settings",
