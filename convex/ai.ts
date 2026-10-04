@@ -3,7 +3,16 @@ import { HOUR, RateLimiter } from "@convex-dev/rate-limiter";
 import { components, internal } from "./_generated/api";
 import { action, httpAction, internalMutation, query, type ActionCtx } from "./_generated/server";
 import { userHasCloudAi } from "./billing";
-import { CLOUD_AI_LIMITS, remainingQuota, usageMonth, type CloudAiKind } from "./billingRules";
+import {
+  CLOUD_AI_LIMITS,
+  adjustTaskCount,
+  fullTaskCounts,
+  quotaKindFor,
+  remainingQuota,
+  usageMonth,
+  usageResetsAt,
+  type CloudAiTask,
+} from "./billingRules";
 import { getAuthenticatedUser, requireUser } from "./users";
 
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
@@ -18,7 +27,23 @@ const rateLimiter = new RateLimiter(components.rateLimiter, {
   cloudAi: { kind: "token bucket", rate: 240, period: HOUR, capacity: 40 },
 });
 
-const kindValidator = v.union(v.literal("chat"), v.literal("tasks"));
+const taskValidator = v.union(
+  v.literal("chat"),
+  v.literal("chatSummary"),
+  v.literal("tripBudget"),
+  v.literal("tripName"),
+  v.literal("itinerary"),
+  v.literal("voiceExpense"),
+);
+// Structured tasks `complete` accepts; chat replies only stream through /ai/chat.
+const completeTaskValidator = v.union(
+  v.literal("chatSummary"),
+  v.literal("tripBudget"),
+  v.literal("tripName"),
+  v.literal("itinerary"),
+  v.literal("voiceExpense"),
+);
+const STREAM_TASKS: readonly CloudAiTask[] = ["chat"];
 
 type Role = "system" | "user" | "assistant";
 type Reservation = { ok: true; remaining: number } | { ok: false; reason: "no_plan" | "quota" };
@@ -27,10 +52,12 @@ interface Message {
   content: string;
 }
 
+/** Counts one request against the task's monthly allowance and its per-feature counter. */
 export const reserve = internalMutation({
-  args: { userId: v.string(), kind: kindValidator },
-  handler: async (ctx, { userId, kind }): Promise<Reservation> => {
+  args: { userId: v.string(), task: taskValidator },
+  handler: async (ctx, { userId, task }): Promise<Reservation> => {
     if (!(await userHasCloudAi(ctx, userId))) return { ok: false, reason: "no_plan" };
+    const kind = quotaKindFor(task);
     const month = usageMonth(Date.now());
     const row = await ctx.db
       .query("aiUsage")
@@ -38,21 +65,24 @@ export const reserve = internalMutation({
       .unique();
     const used = row?.[kind] ?? 0;
     if (remainingQuota(used, kind) === 0) return { ok: false, reason: "quota" };
-    if (row) await ctx.db.patch(row._id, { [kind]: used + 1 });
-    else await ctx.db.insert("aiUsage", { userId, month, chat: 0, tasks: 0, [kind]: 1 });
+    const byTask = adjustTaskCount(row?.byTask, task, 1);
+    if (row) await ctx.db.patch(row._id, { [kind]: used + 1, byTask });
+    else await ctx.db.insert("aiUsage", { userId, month, chat: 0, tasks: 0, [kind]: 1, byTask });
     return { ok: true, remaining: remainingQuota(used + 1, kind) };
   },
 });
 
 /** Gives back a reserved call when the model request itself failed. */
 export const refund = internalMutation({
-  args: { userId: v.string(), kind: kindValidator },
-  handler: async (ctx, { userId, kind }) => {
+  args: { userId: v.string(), task: taskValidator },
+  handler: async (ctx, { userId, task }) => {
+    const kind = quotaKindFor(task);
     const row = await ctx.db
       .query("aiUsage")
       .withIndex("by_user_month", (q) => q.eq("userId", userId).eq("month", usageMonth(Date.now())))
       .unique();
-    if (row && row[kind] > 0) await ctx.db.patch(row._id, { [kind]: row[kind] - 1 });
+    if (!row) return;
+    await ctx.db.patch(row._id, { [kind]: Math.max(0, row[kind] - 1), byTask: adjustTaskCount(row.byTask, task, -1) });
   },
 });
 
@@ -61,7 +91,8 @@ export const myUsage = query({
   handler: async (ctx) => {
     const user = await getAuthenticatedUser(ctx);
     if (!user) return null;
-    const month = usageMonth(Date.now());
+    const now = Date.now();
+    const month = usageMonth(now);
     const row = await ctx.db
       .query("aiUsage")
       .withIndex("by_user_month", (q) => q.eq("userId", user.id).eq("month", month))
@@ -70,6 +101,8 @@ export const myUsage = query({
       month,
       chat: { used: row?.chat ?? 0, limit: CLOUD_AI_LIMITS.chat },
       tasks: { used: row?.tasks ?? 0, limit: CLOUD_AI_LIMITS.tasks },
+      byTask: fullTaskCounts(row?.byTask),
+      resetsAt: usageResetsAt(now),
     };
   },
 });
@@ -77,12 +110,12 @@ export const myUsage = query({
 /** Signed in, rate limited, Pro and within quota; returns the user id or the reason it can't run. */
 async function authorize(
   ctx: ActionCtx,
-  kind: CloudAiKind,
+  task: CloudAiTask,
 ): Promise<{ userId: string } | { error: "rate_limited" | "no_plan" | "quota" }> {
   const user = await requireUser(ctx);
   const limited = await rateLimiter.limit(ctx, "cloudAi", { key: user.id });
   if (!limited.ok) return { error: "rate_limited" as const };
-  const reserved: Reservation = await ctx.runMutation(internal.ai.reserve, { userId: user.id, kind });
+  const reserved: Reservation = await ctx.runMutation(internal.ai.reserve, { userId: user.id, task });
   if (!reserved.ok) return { error: reserved.reason };
   return { userId: user.id };
 }
@@ -110,17 +143,18 @@ function openAiRequest(body: Record<string, unknown>) {
   });
 }
 
-/** One structured task (budget, trip name, category, itinerary, voice). Returns the model's JSON text. */
+/** One structured task (chat summary, budget, trip name, itinerary, voice). Returns the model's JSON text. */
 export const complete = action({
   args: {
     system: v.string(),
     prompt: v.string(),
     schemaName: v.string(),
     schema: v.any(),
+    task: completeTaskValidator,
   },
-  handler: async (ctx, { system, prompt, schemaName, schema }): Promise<string> => {
+  handler: async (ctx, { system, prompt, schemaName, schema, task }): Promise<string> => {
     if (system.length + prompt.length > MAX_INPUT_CHARS) throw new ConvexError({ code: "too_large" });
-    const auth = await authorize(ctx, "tasks");
+    const auth = await authorize(ctx, task);
     if ("error" in auth) throw new ConvexError({ code: auth.error });
 
     try {
@@ -139,7 +173,7 @@ export const complete = action({
       if (!text) throw new Error("OpenAI returned no content");
       return text;
     } catch (error) {
-      await ctx.runMutation(internal.ai.refund, { userId: auth.userId, kind: "tasks" });
+      await ctx.runMutation(internal.ai.refund, { userId: auth.userId, task });
       console.error("[ai] task failed", error instanceof Error ? error.message : error);
       throw new ConvexError({ code: "upstream" });
     }
@@ -160,11 +194,14 @@ export const chatStream = httpAction(async (ctx, req) => {
   const user = await getAuthenticatedUser(ctx);
   if (!user) return errorResponse("unauthenticated", 401);
 
-  const body = (await req.json().catch(() => null)) as { messages?: unknown } | null;
+  const body = (await req.json().catch(() => null)) as { messages?: unknown; task?: unknown } | null;
   const messages = validMessages(body?.messages);
   if (!messages) return errorResponse("bad_request", 400);
+  const requested = body?.task ?? "chat";
+  const task = STREAM_TASKS.find((id) => id === requested);
+  if (!task) return errorResponse("bad_request", 400);
 
-  const auth = await authorize(ctx, "chat");
+  const auth = await authorize(ctx, task);
   if ("error" in auth) return errorResponse(auth.error, ERROR_STATUS[auth.error]);
 
   let upstream: Response;
@@ -177,7 +214,7 @@ export const chatStream = httpAction(async (ctx, req) => {
     });
     if (!upstream.ok || !upstream.body) throw new Error(`OpenAI HTTP ${upstream.status}`);
   } catch (error) {
-    await ctx.runMutation(internal.ai.refund, { userId: auth.userId, kind: "chat" });
+    await ctx.runMutation(internal.ai.refund, { userId: auth.userId, task });
     console.error("[ai] chat failed", error instanceof Error ? error.message : error);
     return errorResponse("upstream", 502);
   }

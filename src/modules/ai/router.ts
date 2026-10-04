@@ -42,6 +42,7 @@ import { compactChatMemory } from "./chatMemory";
 import { localModelService } from "./local/localModelService";
 import { useProvisioningStore } from "./local/modelProvisioner";
 import { useAiPreferenceStore } from "./preference";
+import { recordAiUsage } from "./usageLog";
 import { byokChat, byokCompleteJson, getByokConfig } from "./remote/byok";
 import { cloudChat, cloudCompleteJson, isCloudExhausted } from "./remote/cloud";
 import type { ByokConfig, RemoteMessage } from "./remote/providers";
@@ -117,10 +118,13 @@ function noRoute(task: AiTask): Error {
 function trackProvider(task: AiTask, provider: AiProvider, fallback: boolean) {
   const tracked = TRACKED_TASKS[task];
   if (tracked) track("ai_provider_used", { provider, task: tracked, fallback });
+  if (provider !== "local") recordAiUsage(task, provider);
 }
 
-function remoteJson(route: RemoteRoute, system: string, prompt: string, schema: JsonTask) {
-  return route.kind === "byok" ? byokCompleteJson(route.config, system, prompt, schema) : cloudCompleteJson(system, prompt, schema);
+function remoteJson(task: AiTask, route: RemoteRoute, system: string, prompt: string, schema: JsonTask) {
+  return route.kind === "byok"
+    ? byokCompleteJson(route.config, system, prompt, schema)
+    : cloudCompleteJson(task, system, prompt, schema);
 }
 
 /**
@@ -138,7 +142,7 @@ async function runTask<T>(
   const routes = await routesFor(task);
   for (const [index, route] of routes.entries()) {
     try {
-      const result = route.kind === "local" ? await local() : parse(await remoteJson(route, system, prompt, schema));
+      const result = route.kind === "local" ? await local() : parse(await remoteJson(task, route, system, prompt, schema));
       trackProvider(task, route.kind, index > 0);
       return result;
     } catch (error) {

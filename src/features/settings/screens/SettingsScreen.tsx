@@ -23,8 +23,8 @@ import { currencyCodes, currencyDisplayName } from "@/utils/currency";
 import { confirmDeviceOwner, disconnectGmail, signOutAndCleanup } from "@/features/auth/services/session";
 import { disableBackup, flushGroupSync, flushSync, hasBackupOwner } from "@/features/sync";
 import { localAuth, useAuthStore, useBiometricPresentation } from "@/features/auth";
-import { AiKeySheet } from "@/features/ai";
-import { byokProviderName, useAiAvailability, useAiSources, useByokStore, useProvisioningStore } from "@/modules/ai";
+import { AiKeySheet, AiUsageSheet } from "@/features/ai";
+import { byokProviderName, useAiAvailability, useAiSources, useAiUsageLog, useByokStore, useProvisioningStore } from "@/modules/ai";
 import { FREE_TRIP_LIMIT, manageSubscriptions, ownedTripCount, restorePurchases, usePlan } from "@/modules/billing";
 import { track } from "@/modules/analytics";
 import { showAdPrivacyOptions, useAdsStore } from "@/modules/ads";
@@ -45,7 +45,7 @@ const [INDIGO, TEAL, VIOLET] = auraStatusColors.calm;
 const AMBER = auraStatusAccent.live;
 
 type ThemeMode = "light" | "dark" | "system";
-type SheetId = "autoLock" | "checkIn" | "appearance" | "language" | "currency" | "sms" | "aiKey";
+type SheetId = "autoLock" | "checkIn" | "appearance" | "language" | "currency" | "sms" | "aiKey" | "aiUsage";
 type Translate = ReturnType<typeof useLocalization>["t"];
 
 function formatShortDuration(seconds: number, t: Translate): string {
@@ -108,6 +108,7 @@ export default function SettingsScreen() {
   const plan = usePlan();
   const adChoicesRequired = useAdsStore((s) => s.privacyOptionsRequired);
   const cloudUsage = useQuery(api.ai.myUsage, plan.cloudAi ? {} : "skip");
+  const byokUses = useAiUsageLog().byokTotal;
   const analyticsEnabled = useSettingsStore((s) => s.analyticsEnabled);
   const setAnalyticsEnabled = useSettingsStore((s) => s.setAnalyticsEnabled);
   const cloudBackupEnabled = useSettingsStore((s) => s.cloudBackupEnabled);
@@ -366,6 +367,16 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleManageSubscription = async () => {
+    try {
+      const outcome = await manageSubscriptions();
+      if (outcome === "lifetime") showAlert(t("settings.lifetimeTitle"), t("settings.lifetimeBody"));
+      else if (outcome === "test") showAlert(t("settings.testPurchaseTitle"), t("settings.testPurchaseBody"));
+    } catch {
+      showAlert(t("settings.manageFailedTitle"), t("settings.manageFailedBody"));
+    }
+  };
+
   const openKeySheet = () => {
     setKeySheetSession((value) => value + 1);
     setSheet("aiKey");
@@ -423,21 +434,23 @@ export default function SettingsScreen() {
             value={plan.tier === "pro" || !plan.billingAvailable ? undefined : t("settings.planUpgrade")}
             onPress={() => router.push({ pathname: "/paywall", params: { reason: "settings" } })}
           />
-          {plan.cloudAi && cloudLeft !== null ? (
+          {plan.cloudAi ? (
             <AuraListRow
               icon="sparkle"
               tone={TEAL}
               label={t("settings.cloudAiUsage")}
               detail={t("settings.cloudAiUsageSub")}
-              value={t("settings.cloudAiLeft", { count: cloudLeft })}
+              value={cloudLeft !== null ? t("settings.cloudAiLeft", { count: cloudLeft }) : undefined}
+              onPress={() => setSheet("aiUsage")}
             />
           ) : null}
           {plan.tier !== "free" ? (
             <AuraListRow
               icon="settings"
               label={t("settings.manageSubscription")}
-              detail={t("settings.manageSubscriptionSub")}
-              onPress={() => void manageSubscriptions().catch(() => {})} />
+              detail={plan.lifetime ? t("settings.manageSubscriptionLifetimeSub") : t("settings.manageSubscriptionSub")}
+              onPress={() => void handleManageSubscription()}
+            />
           ) : null}
           {plan.billingAvailable ? (
             <AuraListRow
@@ -613,6 +626,16 @@ export default function SettingsScreen() {
             value={byok ? byokProviderName(byok) : t("settings.aiKeyNone")}
             onPress={openKeySheet}
           />
+          {!plan.cloudAi && byok ? (
+            <AuraListRow
+              icon="trendUp"
+              tone={TEAL}
+              label={t("settings.aiUsageTitle")}
+              detail={t("settings.aiUsageByokSub", { provider: byokProviderName(byok) })}
+              value={t("settings.aiUsageUses", { count: byokUses })}
+              onPress={() => setSheet("aiUsage")}
+            />
+          ) : null}
         </AuraListGroup>
 
         <AuraListGroup title={t("settings.dataSection")} footer={t("settings.cloudBackupSub")}>
@@ -714,6 +737,7 @@ export default function SettingsScreen() {
       />
       <SmsTemplatesSheet visible={sheet === "sms"} onClose={closeSheet} />
       <AiKeySheet key={keySheetSession} visible={sheet === "aiKey"} onClose={closeSheet} />
+      <AiUsageSheet visible={sheet === "aiUsage"} onClose={closeSheet} />
     </View>
   );
 }

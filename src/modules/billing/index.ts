@@ -12,5 +12,6 @@ export {
   manageSubscriptions,
   purchase,
   restorePurchases,
+  type ManageOutcome,
   type PackageId,
 } from "./purchases";

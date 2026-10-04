@@ -8,6 +8,7 @@ export { AuraField } from "./aura/AuraField";
 export { AuraListGroup, AuraListRow } from "./aura/AuraList";
 export { AuraOptionSheet, type AuraOption } from "./aura/AuraOptionSheet";
 export { AuraOrb, type AuraOrbMode } from "./aura/AuraOrb";
+export { AuraProgressBar } from "./aura/AuraProgressBar";
 export { AuraSection } from "./aura/AuraSection";
 export { AuraSegmented } from "./aura/AuraSegmented";
 export { AuraSheet } from "./aura/AuraSheet";

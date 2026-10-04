@@ -1,5 +1,5 @@
 import { api, backendSiteUrl, convex, ConvexError, getConvexJwt } from "@/modules/backend";
-import type { CloudQuota } from "../policy";
+import type { AiTask, CloudQuota } from "../policy";
 import type { JsonTask } from "../schemas";
 import { RemoteAiError, postStream } from "./http";
 import type { RemoteMessage } from "./providers";
@@ -22,9 +22,11 @@ function noteFailure(kind: CloudQuota, code: string | undefined) {
   if (code === "quota") exhausted[kind] = currentMonth();
 }
 
-export async function cloudCompleteJson(system: string, prompt: string, task: JsonTask): Promise<string> {
+/** Runs one structured task on NomadSafe Cloud; `task` picks the per-feature counter on the server. */
+export async function cloudCompleteJson(task: AiTask, system: string, prompt: string, schema: JsonTask): Promise<string> {
+  if (task === "chat" || task === "expenseCategory") throw new RemoteAiError(`${task} can't use cloud tasks`);
   try {
-    return await convex.action(api.ai.complete, { system, prompt, schemaName: task.name, schema: task.schema });
+    return await convex.action(api.ai.complete, { system, prompt, schemaName: schema.name, schema: schema.schema, task });
   } catch (error) {
     const code = error instanceof ConvexError ? (error.data as { code?: string })?.code : undefined;
     noteFailure("tasks", code);
@@ -42,7 +44,7 @@ export async function cloudChat(messages: RemoteMessage[], onText: (accumulated:
       {
         url: `${backendSiteUrl}/ai/chat`,
         headers: { Authorization: `Bearer ${jwt}`, "content-type": "application/json" },
-        body: JSON.stringify({ messages }),
+        body: JSON.stringify({ messages, task: "chat" }),
       },
       (chunk) => {
         text += chunk;

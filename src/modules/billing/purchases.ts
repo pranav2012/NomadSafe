@@ -1,4 +1,4 @@
-import { Platform } from "react-native";
+import { Linking, Platform } from "react-native";
 import Purchases, {
   INTRO_ELIGIBILITY_STATUS,
   LOG_LEVEL,
@@ -9,6 +9,7 @@ import Purchases, {
 } from "react-native-purchases";
 import { api, convex } from "@/modules/backend";
 import { logger } from "@/modules/logger";
+import { isLifetimePlan, manageTarget } from "./manage";
 import { usePlanStore } from "./planStore";
 import { planFromEntitlements, tierOf, type PlanTier } from "./plan";
 
@@ -36,8 +37,12 @@ const apiKey =
 let configured = false;
 let identifiedUserId: string | null = null;
 
+const ANDROID_PACKAGE = "com.pranav.nomadsafe";
+
 function applyCustomerInfo(info: CustomerInfo) {
-  usePlanStore.getState().setPlan(planFromEntitlements(Object.keys(info.entitlements.active)));
+  const store = usePlanStore.getState();
+  store.setPlan(planFromEntitlements(Object.keys(info.entitlements.active)));
+  store.setLifetime(isLifetimePlan(info));
 }
 
 /** Tells the server to re-read the plan from RevenueCat so cloud AI unlocks without waiting for the webhook. */
@@ -166,6 +171,20 @@ export async function hasActiveSubscription(): Promise<boolean> {
   return info.activeSubscriptions.length > 0;
 }
 
-export function manageSubscriptions() {
-  return Purchases.showManageSubscriptions();
+/** "opened" = the store's subscription page; "lifetime" / "test" = nothing to manage in a store (the caller explains). */
+export type ManageOutcome = "opened" | "lifetime" | "test";
+
+/** Opens the store page for the active subscription. Throws when the plan can't be read or the page can't open. */
+export async function manageSubscriptions(): Promise<ManageOutcome> {
+  try {
+    const info = await Purchases.getCustomerInfo();
+    applyCustomerInfo(info);
+    const target = manageTarget(info, Platform.OS, ANDROID_PACKAGE);
+    if (target.kind !== "url") return target.kind;
+    await Linking.openURL(target.url);
+    return "opened";
+  } catch (error) {
+    logger.warn("purchases", "manage subscription failed", error);
+    throw error;
+  }
 }

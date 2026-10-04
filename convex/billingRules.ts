@@ -69,3 +69,35 @@ export function usageMonth(now: number): string {
 export function remainingQuota(used: number, kind: CloudAiKind): number {
   return Math.max(0, CLOUD_AI_LIMITS[kind] - used);
 }
+
+/** Features that may use NomadSafe Cloud; must match the online tasks in src/modules/ai/policy.ts. */
+export const CLOUD_AI_TASKS = ["chat", "chatSummary", "tripBudget", "tripName", "itinerary", "voiceExpense"] as const;
+
+export type CloudAiTask = (typeof CLOUD_AI_TASKS)[number];
+
+export type CloudAiTaskCounts = Partial<Record<CloudAiTask, number>>;
+
+export function isCloudAiTask(value: unknown): value is CloudAiTask {
+  return typeof value === "string" && (CLOUD_AI_TASKS as readonly string[]).includes(value);
+}
+
+/** The monthly allowance a feature draws from: chat replies, or everything else. */
+export function quotaKindFor(task: CloudAiTask): CloudAiKind {
+  return task === "chat" ? "chat" : "tasks";
+}
+
+/** Per-feature counts with `task` moved by `delta`, never below zero. */
+export function adjustTaskCount(counts: CloudAiTaskCounts | undefined, task: CloudAiTask, delta: number): CloudAiTaskCounts {
+  return { ...counts, [task]: Math.max(0, (counts?.[task] ?? 0) + delta) };
+}
+
+/** Every feature's count for the month, zero when unused. */
+export function fullTaskCounts(counts: CloudAiTaskCounts | undefined): Record<CloudAiTask, number> {
+  return Object.fromEntries(CLOUD_AI_TASKS.map((task) => [task, counts?.[task] ?? 0])) as Record<CloudAiTask, number>;
+}
+
+/** When the monthly allowance resets: the first of next month, 00:00 UTC. */
+export function usageResetsAt(now: number): number {
+  const date = new Date(now);
+  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 1);
+}

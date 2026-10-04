@@ -31,6 +31,8 @@ export { byokProviderName, remoteLabel } from "./labels";
 export { useAiAvailability } from "./hooks/useAiAvailability";
 export { useAiSources, type AiSource } from "./hooks/useAiSources";
 export { resetAiPreference, setPreferredAiSource, useAiPreferenceStore } from "./preference";
+export { clearAiUsageLog, useAiUsageLog } from "./usageLog";
+export type { AiTaskCounts, AiUsageEntry, AiUsageSummary } from "./usageLogRules";
 export { useAiProvisioning, useAiReadyModelId, type AiProvisioning } from "./hooks/useAiProvisioning";
 export { AI_MODELS, findModel, formatBytes, formatModelSize, type AiModel, type AiModelId } from "./local/aiModelService";
 export { modelNotifications } from "./local/modelNotifications";

@@ -9,7 +9,8 @@ export function usePlan() {
   const unlimitedTrips = usePlanStore((s) => s.unlimitedTrips);
   const cloudAi = usePlanStore((s) => s.cloudAi);
   const billingAvailable = usePlanStore((s) => s.billingAvailable);
-  return { unlimitedTrips, cloudAi, billingAvailable, tier: tierOf({ unlimitedTrips, cloudAi }) };
+  const lifetime = usePlanStore((s) => s.lifetime);
+  return { unlimitedTrips, cloudAi, billingAvailable, lifetime, tier: tierOf({ unlimitedTrips, cloudAi }) };
 }
 
 /** Opens trip planning, or the paywall when a free user already owns the maximum number of trips. */

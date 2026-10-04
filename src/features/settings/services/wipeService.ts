@@ -1,7 +1,7 @@
 import { secureStorage } from "@/features/auth/services/secureStorage";
 import { pinAttempts } from "@/features/auth/services/pinAttempts";
 import { useAuthStore } from "@/features/auth/store/authStore";
-import { aiRuntime, aiService, clearByokConfig, clearCloudExhaustion, resetAiPreference } from "@/modules/ai";
+import { aiRuntime, aiService, clearAiUsageLog, clearByokConfig, clearCloudExhaustion, resetAiPreference } from "@/modules/ai";
 import { usePlanStore } from "@/modules/billing";
 import { useChatStore } from "@/features/ai/store/chatStore";
 import { useExpensesStore } from "@/features/expenses/store/expensesStore";
@@ -55,6 +55,7 @@ export async function wipeAllDeviceData({ keepModels = false }: { keepModels?: b
   await attempt(clearByokConfig);
   clearCloudExhaustion();
   resetAiPreference();
+  clearAiUsageLog();
   usePlanStore.getState().reset();
 
   storage.clearAll();

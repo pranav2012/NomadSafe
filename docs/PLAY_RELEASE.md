@@ -125,6 +125,7 @@ npx eas-cli submit -p android --profile production --path <aab or latest>
 | Device or other IDs (PostHog anonymous ID) | Yes, if PostHog is enabled | No | No | Optional | Analytics |
 | Messages → Other in-app messages (AI chat questions, voice-expense text) | Yes, when online AI is used | Yes (OpenAI via our server for Pro; the user's own provider for their key) | Yes | Optional (Settings → Online AI) | App functionality |
 | Financial info → Other financial info (trip budget and spending figures sent with AI requests) | Yes, when online AI is used | Yes (as above) | Yes | Optional (Settings → Online AI) | App functionality |
+| App activity → App interactions (monthly NomadSafe Cloud request counts per AI feature; no content) | Yes, with Pro | No | No | Optional (Settings → Online AI) | App functionality |
 | Financial info → Purchase history | Yes | Yes (RevenueCat) | No | Optional (only with a paid plan) | App functionality, Account management |
 | Device or other IDs (advertising ID) | Yes (Free plan, by the Google Mobile Ads SDK) | Yes (Google AdMob) | No | Required on the Free plan (not collected on paid plans) | Advertising or marketing |
 | App activity → App interactions (ad views and taps) | Yes (Free plan) | Yes (Google AdMob) | No | Required on the Free plan | Advertising or marketing, Analytics |

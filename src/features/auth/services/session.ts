@@ -20,7 +20,7 @@ import {
   unregisterTripPush,
 } from "@/features/sync";
 import { clearServerCheckIn } from "@/features/safety/services/safetyServerAlerts";
-import { clearByokConfig, clearCloudExhaustion, resetAiPreference } from "@/modules/ai";
+import { clearAiUsageLog, clearByokConfig, clearCloudExhaustion, resetAiPreference } from "@/modules/ai";
 
 /** Revokes the Google grant (best-effort) and forgets the local tokens. */
 export async function disconnectGmail() {
@@ -67,7 +67,7 @@ export async function flushBeforeSignOut() {
  * Ends the account session: stops live location sharing (server shares are
  * marked inactive while the session is still valid), revokes Gmail access,
  * sends pending backup changes, then signs out. Backed-up trips and expenses are
- * removed from the phone; with backup off they stay unless wiped. A saved AI API key and AI source choice are forgotten.
+ * removed from the phone; with backup off they stay unless wiped. A saved AI API key, the AI source choice and the on-phone AI usage log are forgotten.
  */
 export async function signOutAndCleanup() {
   try {
@@ -83,6 +83,7 @@ export async function signOutAndCleanup() {
   } catch {}
   clearCloudExhaustion();
   resetAiPreference();
+  clearAiUsageLog();
   // While the session is still valid, so contacts aren't alerted about a check-in nobody can answer.
   await clearServerCheckIn();
 

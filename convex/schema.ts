@@ -159,6 +159,17 @@ export default defineSchema({
     month: v.string(),
     chat: v.number(),
     tasks: v.number(),
+    // Per-feature request counts (never content); rows from before this field have none.
+    byTask: v.optional(
+      v.object({
+        chat: v.optional(v.number()),
+        chatSummary: v.optional(v.number()),
+        tripBudget: v.optional(v.number()),
+        tripName: v.optional(v.number()),
+        itinerary: v.optional(v.number()),
+        voiceExpense: v.optional(v.number()),
+      }),
+    ),
   }).index("by_user_month", ["userId", "month"]),
 
   // Web deletion requests from users who can no longer open the app.
