@@ -17,7 +17,7 @@ function loadModule(entryPoint) {
 }
 
 const catalog = loadModule("src/features/ai/services/modelCatalog.ts");
-const { pickModelForDevice, nominalRamGb, findModel, AI_MODELS, STORAGE_HEADROOM_BYTES, GB } = catalog;
+const { pickModelForDevice, nominalRamGb, findModel, AI_MODELS, RETIRED_MODEL_FILES, STORAGE_HEADROOM_BYTES, GB } = catalog;
 
 const PLENTY = 64 * GB;
 const size = (id) => AI_MODELS.find((m) => m.id === id).sizeBytes;
@@ -30,8 +30,8 @@ test("RAM tiers at the boundaries", () => {
     [3.9, "lite"],
     [4, "base"],
     [7.9, "base"],
-    [8, "pro"],
-    [12, "pro"],
+    [8, "base"],
+    [12, "base"],
   ];
   for (const [totalRamGb, expected] of cases) {
     const pick = pickModelForDevice({ totalRamGb, freeBytes: PLENTY });
@@ -42,13 +42,9 @@ test("RAM tiers at the boundaries", () => {
 });
 
 test("low storage drops one tier at a time", () => {
-  const justUnderPro = pickModelForDevice({ totalRamGb: 8, freeBytes: fits("pro") - 1 });
-  assert.equal(justUnderPro.model.id, "base");
-  assert.equal(justUnderPro.downgraded, true);
-
-  const exactlyPro = pickModelForDevice({ totalRamGb: 8, freeBytes: fits("pro") });
-  assert.equal(exactlyPro.model.id, "pro");
-  assert.equal(exactlyPro.downgraded, false);
+  const exactlyBase = pickModelForDevice({ totalRamGb: 8, freeBytes: fits("base") });
+  assert.equal(exactlyBase.model.id, "base");
+  assert.equal(exactlyBase.downgraded, false);
 
   const onlyLite = pickModelForDevice({ totalRamGb: 8, freeBytes: fits("base") - 1 });
   assert.equal(onlyLite.model.id, "lite");
@@ -75,18 +71,18 @@ test("unsupported RAM wins over storage", () => {
 
 test("unknown free storage assumes the tier fits", () => {
   for (const freeBytes of [null, 0, Number.NaN]) {
-    assert.equal(pickModelForDevice({ totalRamGb: 8, freeBytes }).model.id, "pro");
+    assert.equal(pickModelForDevice({ totalRamGb: 8, freeBytes }).model.id, "base");
   }
 });
 
 test("bytes already on disk are credited to that model", () => {
-  // A finished pro download must not push itself out on the next launch.
+  // A finished download must not push itself out on the next launch.
   const pick = pickModelForDevice({
     totalRamGb: 8,
     freeBytes: STORAGE_HEADROOM_BYTES,
-    presentBytes: { pro: size("pro") },
+    presentBytes: { base: size("base") },
   });
-  assert.equal(pick.model.id, "pro");
+  assert.equal(pick.model.id, "base");
   const other = pickModelForDevice({
     totalRamGb: 8,
     freeBytes: STORAGE_HEADROOM_BYTES,
@@ -107,11 +103,20 @@ test("nominal RAM rounds OS-reported totals up to the marketed size", () => {
 
 test("legacy ids map to the model with the same file", () => {
   assert.equal(findModel("compact").id, "lite");
-  assert.equal(findModel("balanced").id, "pro");
   assert.equal(findModel("base").id, "base");
   assert.equal(findModel("nope"), null);
   for (const model of AI_MODELS) {
     assert.match(model.url, new RegExp(`^https://huggingface\\.co/${model.hfRepoId}/resolve/${model.revision}/${model.hfFilename}$`));
     assert.match(model.sha256, /^[0-9a-f]{64}$/);
   }
+});
+
+test("the retired 4B model is no longer offered and its file is cleaned up", () => {
+  assert.equal(findModel("pro"), null);
+  assert.equal(findModel("balanced"), null);
+  assert.deepEqual(AI_MODELS.map((m) => [m.id, m.name]), [["lite", "NomadBase"], ["base", "NomadPro"]]);
+  const retired = RETIRED_MODEL_FILES.find((f) => f.hfFilename.includes("4B"));
+  assert.ok(retired);
+  assert.deepEqual([...retired.ids].sort(), ["balanced", "pro"]);
+  assert.ok(AI_MODELS.every((m) => m.hfFilename !== retired.hfFilename));
 });

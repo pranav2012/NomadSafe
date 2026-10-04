@@ -1,6 +1,6 @@
 // No React Native imports: node tests bundle this file directly.
 
-export type AiModelId = "lite" | "base" | "pro";
+export type AiModelId = "lite" | "base";
 
 export interface AiModel {
   id: AiModelId;
@@ -31,11 +31,12 @@ function defineModel(
   };
 }
 
-// Qwen 3.5 GGUFs (bartowski mirror), smallest first.
+// Qwen 3.5 GGUFs (bartowski mirror), smallest first. Ids name the files on disk, so they stay put
+// when display names change: the 0.8B is "NomadBase" and the 2B "NomadPro".
 export const AI_MODELS: readonly AiModel[] = [
   defineModel({
     id: "lite",
-    name: "NomadLite",
+    name: "NomadBase",
     sizeBytes: 579615840,
     minRamGb: 3,
     hfRepoId: "bartowski/Qwen_Qwen3.5-0.8B-GGUF",
@@ -45,7 +46,7 @@ export const AI_MODELS: readonly AiModel[] = [
   }),
   defineModel({
     id: "base",
-    name: "NomadBase",
+    name: "NomadPro",
     sizeBytes: 1396198496,
     minRamGb: 4,
     hfRepoId: "bartowski/Qwen_Qwen3.5-2B-GGUF",
@@ -53,23 +54,20 @@ export const AI_MODELS: readonly AiModel[] = [
     revision: "7d26695454df6de5fbcce2e58681e62dae06ce43",
     sha256: "57a1085840f497d764a7fc5d346922dbde961efb54cc792ea81d694fd846a1d8",
   }),
-  defineModel({
-    id: "pro",
-    name: "NomadPro",
-    sizeBytes: 3013027808,
-    minRamGb: 8,
-    hfRepoId: "bartowski/Qwen_Qwen3.5-4B-GGUF",
-    hfFilename: "Qwen_Qwen3.5-4B-Q4_K_M.gguf",
-    revision: "4168f45a16a1290d65a4ec0fa312ae917a4c15d6",
-    sha256: "13c16f426047e2de38cd075bdade4a7bcbc8c774384876f677740cda65f8a983",
-  }),
 ];
 
 /** Ids persisted by older builds, mapped to the model with the same file. */
 export const LEGACY_MODEL_IDS: Readonly<Record<string, AiModelId>> = {
   compact: "lite",
-  balanced: "pro",
 };
+
+/**
+ * Models no longer offered (the 4B was too slow on phones). Devices that downloaded one delete it;
+ * `ids` are the per-model folders it may sit in under current and legacy ids.
+ */
+export const RETIRED_MODEL_FILES: readonly { ids: readonly string[]; hfFilename: string }[] = [
+  { ids: ["pro", "balanced"], hfFilename: "Qwen_Qwen3.5-4B-Q4_K_M.gguf" },
+];
 
 export function findModel(id: string | null | undefined): AiModel | null {
   if (!id) return null;
@@ -94,8 +92,8 @@ export interface DeviceProfileInput {
 }
 
 /**
- * Picks the largest model the RAM tier allows (<3 GB none, 3 lite, 4 base,
- * 8 pro), then drops one tier at a time until it fits in free storage with
+ * Picks the largest model the RAM tier allows (<3 GB none, 3 lite, 4+ base),
+ * then drops one tier at a time until it fits in free storage with
  * STORAGE_HEADROOM_BYTES to spare.
  */
 export function pickModelForDevice({ totalRamGb, freeBytes, presentBytes }: DeviceProfileInput): ModelPick {

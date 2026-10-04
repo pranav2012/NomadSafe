@@ -9,6 +9,7 @@ import {
   AI_MODELS,
   findModel,
   LEGACY_MODEL_IDS,
+  RETIRED_MODEL_FILES,
   nominalRamGb,
   type AiModel,
   type AiModelId,
@@ -177,8 +178,25 @@ async function migrateLegacyCacheFiles(): Promise<void> {
   }
 }
 
+/** Every place a retired model's file (or its partial download) may be on this device. */
+function retiredModelUris(): string[] {
+  const nativeDir = nativeModelsDir();
+  return RETIRED_MODEL_FILES.flatMap(({ ids, hfFilename }) => [
+    ...(nativeDir ? [`file://${nativeDir}/${hfFilename}`, `file://${nativeDir}/${hfFilename}.part`] : []),
+    ...ids.flatMap((id) => [`${Paths.document.uri}models/${id}/${hfFilename}`, `${Paths.document.uri}models/${id}/${hfFilename}.part`]),
+  ]);
+}
+
+/** Frees the space of models no longer offered and forgets them as the active model. */
+async function removeRetiredModels(): Promise<void> {
+  const active = aiModelService.getActiveRecord();
+  if (active && !findModel(active.id)) aiModelService.setActiveRecord(null);
+  for (const uri of retiredModelUris()) await deleteModelFile(uri);
+}
+
 async function migrateLegacyState(): Promise<void> {
   await migrateLegacyCacheFiles();
+  await removeRetiredModels();
 
   // Old partial downloads came from an unpinned revision; drop them and their resume data.
   const rawDownload = storage.getString(AI_DOWNLOAD_STATE_KEY);
@@ -290,6 +308,7 @@ export const aiModelService = {
     for (const { legacyId, model } of legacyEntries()) {
       uris.push(legacyDocumentUri(legacyId, model), `${legacyDocumentUri(legacyId, model)}.part`);
     }
+    uris.push(...retiredModelUris());
     return [...new Set(uris)];
   },
 

@@ -437,6 +437,12 @@ async function evaluate(): Promise<boolean> {
   const profile = aiModelService.getDeviceProfile();
   const deviceSupported = profile.osSupported && smallestModelForRam(profile.totalRamGb) !== null;
   let record = readRecord();
+  // A download of a model that's since been retired: stop it (Android's system downloader would
+  // otherwise finish it in the background) and provision a current model instead.
+  if (record.modelId && !findModel(record.modelId)) {
+    await cancelDownload(record);
+    record = writeRecord({ modelId: null, downloadId: null, errorCode: null, autoRetries: 0 });
+  }
   const active = await validActiveRecord();
   patch({
     deviceSupported,
