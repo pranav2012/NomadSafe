@@ -1,5 +1,6 @@
 import { Appearance } from "react-native";
 import { translate } from "@/localization/translate";
+import { useSettingsStore } from "@/features/settings";
 import { resolveWidgetTrip } from "@/features/widget/widgetTrip";
 import type { SosWidgetProps } from "@/features/widget/SosWidget";
 import type { VoiceExpenseWidgetProps } from "@/features/widget/VoiceExpenseWidget";
@@ -14,13 +15,19 @@ export function buildWidgetProps(): VoiceExpenseWidgetProps {
       speak: translate("voiceExpense.widget.speak"),
       change: translate("voiceExpense.widget.changeTrip"),
     },
-    dark: Appearance.getColorScheme() === "dark",
+    dark: isWidgetDark(),
   };
 }
 
 export function buildSosWidgetProps(): SosWidgetProps {
   return {
     labels: { title: translate("sos.widget.title"), hint: translate("sos.widget.hint") },
-    dark: Appearance.getColorScheme() === "dark",
+    dark: isWidgetDark(),
   };
+}
+
+/** Follows the app's theme setting; "system" falls back to the phone (headless launches have no override). */
+function isWidgetDark(): boolean {
+  const mode = useSettingsStore.getState().themeMode;
+  return (mode === "system" ? Appearance.getColorScheme() : mode) === "dark";
 }

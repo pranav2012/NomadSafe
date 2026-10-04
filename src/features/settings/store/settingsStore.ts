@@ -49,7 +49,7 @@ type PersistedSettingsState = Partial<SettingsState> & { defaultCurrency?: strin
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set) => ({
-      themeMode: "system",
+      themeMode: "dark",
       onboardingCompleted: false,
       onboardingStep: 0,
       currencyOverride: null,
@@ -81,7 +81,7 @@ export const useSettingsStore = create<SettingsState>()(
       setCloudBackupEnabled: (value) => set({ cloudBackupEnabled: value }),
       reset: () =>
         set({
-          themeMode: "system",
+          themeMode: "dark",
           onboardingCompleted: false,
           onboardingStep: 0,
           currencyOverride: null,
