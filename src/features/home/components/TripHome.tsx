@@ -18,7 +18,7 @@ import { emergencyContactsStorage } from "@/features/onboarding/services/emergen
 import { NearbyPlaces } from "@/features/places/components/NearbyPlaces";
 import { useTemperatureUnit, useTripForecast, toUnit } from "@/features/trips/hooks/useTripForecast";
 import { describeWeather } from "@/features/trips/services/weatherService";
-import { WeatherPanel } from "./WeatherPanel";
+import { WeatherSheet } from "./WeatherSheet";
 import type { Trip } from "@/features/trips/store/tripsStore";
 import { useLocalization } from "@/localization";
 import { ActionButton } from "./aura/ActionButton";
@@ -116,13 +116,11 @@ export function TripHome({
     icon?: "mapPin" | "clock" | "users";
     label: string;
     onPress?: () => void;
-    open?: boolean;
   }[] = [
     weatherLabel
       ? {
           label: weatherLabel,
-          onPress: () => setWeatherOpen((v) => !v),
-          open: weatherOpen,
+          onPress: () => setWeatherOpen(true),
         }
       : null,
     globe.distanceLabel ? { icon: "mapPin" as const, label: globe.distanceLabel } : null,
@@ -251,20 +249,13 @@ export function TripHome({
                 onPress={chip.onPress}
                 haptic={Boolean(chip.onPress)}
                 accessibilityRole={chip.onPress ? "button" : undefined}
-                accessibilityState={chip.onPress ? { expanded: !!chip.open } : undefined}
-                style={[
-                  styles.chip,
-                  {
-                    backgroundColor: chip.open ? c.inverse : c.surfaceStrong,
-                    borderColor: c.hairline,
-                  },
-                ]}
+                style={[styles.chip, { backgroundColor: c.surfaceStrong, borderColor: c.hairline }]}
               >
-                {chip.icon ? <Icon name={chip.icon} size={13} color={chip.open ? c.onInverse : c.textSoft} /> : null}
-                <Text numberOfLines={1} style={[styles.chipText, { color: chip.open ? c.onInverse : c.text }]}>
+                {chip.icon ? <Icon name={chip.icon} size={13} color={c.textSoft} /> : null}
+                <Text numberOfLines={1} style={[styles.chipText, { color: c.text }]}>
                   {chip.label}
                 </Text>
-                {chip.onPress ? <Icon name="chevronDown" size={12} color={chip.open ? c.onInverse : c.textMuted} /> : null}
+                {chip.onPress ? <Icon name="chevronRight" size={12} color={c.textMuted} /> : null}
               </PressableScale>
             ))}
           </Animated.View>
@@ -275,9 +266,6 @@ export function TripHome({
         </PostHogMaskView>
 
         <View style={styles.body}>
-          {weatherOpen && forecast.active ? (
-            <WeatherPanel destinations={forecast.destinations} active={forecast.active} unit={tempUnit} onSelect={forecast.select} />
-          ) : null}
           <DayRail
             totalDays={data.totalDays}
             today={data.day}
@@ -348,6 +336,16 @@ export function TripHome({
         </View>
       </Animated.ScrollView>
       <LinearGradient pointerEvents="none" colors={[c.bg, `${c.bg}00`]} style={[styles.topFade, { height: insets.top + 18 }]} />
+      {forecast.active ? (
+        <WeatherSheet
+          visible={weatherOpen}
+          onClose={() => setWeatherOpen(false)}
+          destinations={forecast.destinations}
+          active={forecast.active}
+          unit={tempUnit}
+          onSelect={forecast.select}
+        />
+      ) : null}
     </View>
   );
 }
