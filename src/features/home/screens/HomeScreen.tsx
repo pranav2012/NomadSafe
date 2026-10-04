@@ -12,6 +12,7 @@ import { cancelCheckInNotifications, useSafetyStore } from "@/features/safety";
 import { EmptyHome } from "@/features/home/components/EmptyHome";
 import { selectActiveTrip, useTripsStore } from "@/features/trips/store/tripsStore";
 import { useTheme } from "@/hooks/useTheme";
+import { useStartNewTrip } from "@/features/billing";
 import { track } from "@/services/analytics";
 import { heavyImpact, successNotification } from "@/utils/haptics";
 
@@ -58,6 +59,7 @@ async function resolveUserLocation(): Promise<UserLocation | null> {
 export default function HomeScreen() {
   const { isDark } = useTheme();
   const router = useRouter();
+  const startNewTrip = useStartNewTrip();
   const tripCount = useTripsStore((state) => state.trips.length);
   const activeTrip = useTripsStore(selectActiveTrip);
   const data = useHomeData();
@@ -83,7 +85,7 @@ export default function HomeScreen() {
   }, []);
 
   if (!activeTrip || !data) {
-    return <EmptyHome tripCount={tripCount} onViewTrips={() => router.push("/trips")} onPlanTrip={() => router.push("/plan-trip")} />;
+    return <EmptyHome tripCount={tripCount} onViewTrips={() => router.push("/trips")} onPlanTrip={startNewTrip} />;
   }
 
   const status: AuraStatus = safetyStatus === "emergency" ? "alert" : share.isBroadcasting ? "live" : "calm";

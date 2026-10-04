@@ -12,6 +12,7 @@ import { storage } from "@/stores/storage";
 export const TRIP_NOTIFICATION_SOURCE = "nomadsafe-trip";
 const CHANNEL_ID = "trip-updates";
 const TOKEN_KEY = "trip-push-token";
+const UNREGISTER_TIMEOUT_MS = 8_000;
 
 /**
  * Registers this device for shared-trip notifications. Only prompts for permission when `ask`
@@ -46,6 +47,13 @@ export async function unregisterTripPush(): Promise<void> {
   if (!token) return;
   storage.remove(TOKEN_KEY);
   try {
-    await convex.mutation(api.tripNotifications.removePushToken, { token });
-  } catch {}
+    // Convex queues calls while offline instead of failing, so give up after a while.
+    const removed = await Promise.race([
+      convex.mutation(api.tripNotifications.removePushToken, { token }).then(() => true),
+      new Promise<false>((resolve) => setTimeout(() => resolve(false), UNREGISTER_TIMEOUT_MS)),
+    ]);
+    if (!removed) logger.warn("trip-push", "unregister timed out");
+  } catch (err) {
+    logger.warn("trip-push", "unregister failed", err);
+  }
 }

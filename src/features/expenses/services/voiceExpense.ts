@@ -2,6 +2,7 @@ import type { ExpenseCategory } from "@/features/expenses/constants/categories";
 import {
   isSelfWord,
   matchCompanion,
+  roundMoney,
   SELF_ID,
   type ExpenseShare,
 } from "@/features/expenses/utils/split";
@@ -174,7 +175,9 @@ export function interpretVoiceExtraction(
 ): VoiceDraft {
   const data = (raw && typeof raw === "object" ? raw : {}) as Partial<VoiceExtraction>;
   const now = context.now ?? new Date();
-  const amount = Number(data.amount);
+  const spokenAmount = Number(data.amount);
+  const currency = normalizeCurrency(data.currency, context.tripCurrency);
+  const amount = Number.isFinite(spokenAmount) ? roundMoney(spokenAmount, currency) : NaN;
   if (data.intent === "unclear" || !Number.isFinite(amount) || amount <= 0) {
     return { kind: "unclear", transcript };
   }
@@ -190,8 +193,7 @@ export function interpretVoiceExtraction(
   };
 
   const heard = numbersInTranscript(transcript);
-  const amountUncertain = heard.length > 0 && !heard.includes(amount);
-  const currency = normalizeCurrency(data.currency, context.tripCurrency);
+  const amountUncertain = heard.length > 0 && !heard.includes(spokenAmount);
   const date = dateFromDaysAgo(data.days_ago, now);
 
   if (data.intent === "repayment") {

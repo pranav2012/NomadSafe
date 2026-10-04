@@ -9,8 +9,11 @@
  */
 
 import type * as account from "../account.js";
+import type * as ai from "../ai.js";
 import type * as analytics from "../analytics.js";
 import type * as auth from "../auth.js";
+import type * as billing from "../billing.js";
+import type * as billingRules from "../billingRules.js";
 import type * as groupTrips from "../groupTrips.js";
 import type * as http from "../http.js";
 import type * as legalPages from "../legalPages.js";
@@ -29,8 +32,11 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   account: typeof account;
+  ai: typeof ai;
   analytics: typeof analytics;
   auth: typeof auth;
+  billing: typeof billing;
+  billingRules: typeof billingRules;
   groupTrips: typeof groupTrips;
   http: typeof http;
   legalPages: typeof legalPages;

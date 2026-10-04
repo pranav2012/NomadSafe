@@ -26,6 +26,7 @@ import {
   isVoiceCaptureRoute,
 } from "@/features/expenses/services/voiceCaptureSession";
 import { WidgetSync } from "@/features/widget/WidgetSync";
+import { BillingEffects } from "@/features/billing";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { LocalizationProvider } from "@/localization";
 import { translate } from "@/localization/translate";
@@ -253,6 +254,7 @@ function AppStack() {
         <Stack.Screen name="trips" options={{ presentation: "modal" }} />
         <Stack.Screen name="plan-trip" options={{ presentation: "fullScreenModal", animation: "fade" }} />
         <Stack.Screen name="join/[code]" options={{ presentation: "modal" }} />
+        <Stack.Screen name="paywall" options={{ presentation: "modal" }} />
         <Stack.Screen name="emergency-contacts" />
         <Stack.Screen
           name="voice-expense"
@@ -286,6 +288,7 @@ function RootLayout() {
             <AppStateLock />
             <SessionEffects />
             <BackupEffects />
+            <BillingEffects />
             <AnalyticsEffects />
             <WidgetSync />
             <AppStack />

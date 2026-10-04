@@ -21,6 +21,20 @@ export interface EventFormValues {
 }
 
 const DAY_MS = 86_400_000;
+const HOUR_MS = 3_600_000;
+const DETAIL_SEPARATOR = " · ";
+
+/** Puts back the English sentinel head ("Check-out", "Departure"…) when the user kept its translated form. */
+function restoreDetailHead(edited: string, original: string | undefined, localized: string): string {
+  if (!original) return edited;
+  const originalHead = original.split(DETAIL_SEPARATOR)[0];
+  const localizedHead = localized.split(DETAIL_SEPARATOR)[0];
+  if (originalHead === localizedHead) return edited;
+  if (edited === localizedHead || edited.startsWith(localizedHead + DETAIL_SEPARATOR)) {
+    return originalHead + edited.slice(localizedHead.length);
+  }
+  return edited;
+}
 
 /** Sheet to create or edit a single itinerary event; shows Delete when editing. */
 export function EventForm({
@@ -41,19 +55,32 @@ export function EventForm({
   // The parent remounts this form (via `key`) for each open, so state initializes fresh from props.
   const [type, setType] = useState<EventType>(event?.type ?? "activity");
   const [title, setTitle] = useState(event ? localizeEventTitle(event.title, t) : "");
-  const [detail, setDetail] = useState(event ? (localizeEventDetail(event.detail, t) ?? "") : "");
+  const [initialDetail] = useState(() => (event ? (localizeEventDetail(event.detail, t) ?? "") : ""));
+  const [detail, setDetail] = useState(initialDetail);
   const [when, setWhen] = useState<Date>(event ? new Date(event.startAt) : new Date());
   const [until, setUntil] = useState<Date>(() =>
     event?.endAt ? new Date(event.endAt) : new Date((event ? new Date(event.startAt) : new Date()).getTime() + DAY_MS),
   );
+  const savedDetail = restoreDetailHead(detail.trim(), event?.detail, initialDetail);
+  // A lone check-out (from a booking email) is its own entry and has no separate end.
+  const isLoneCheckOut = type === "stay" && !event?.endAt && savedDetail.split(DETAIL_SEPARATOR)[0] === "Check-out";
   // Stays always have a check-out; a transit shows its arrival only when one is known.
-  const hasEnd = type === "stay" || (type === "transit" && Boolean(event?.endAt));
+  const hasEnd = (type === "stay" && !isLoneCheckOut) || (type === "transit" && Boolean(event?.endAt));
   const canSave = title.trim().length > 0;
+
+  // Moving the start past the end shifts the end by the same duration, so it stays valid.
+  const changeWhen = (next: Date) => {
+    if (hasEnd && next.getTime() >= until.getTime()) {
+      const duration = until.getTime() - when.getTime();
+      setUntil(new Date(next.getTime() + (duration > 0 ? duration : type === "stay" ? DAY_MS : HOUR_MS)));
+    }
+    setWhen(next);
+  };
 
   const save = () => {
     if (!canSave) return;
     const endAt = hasEnd && until.getTime() > when.getTime() ? until.toISOString() : undefined;
-    onSave({ type, title: title.trim(), detail: detail.trim(), startAt: when.toISOString(), endAt });
+    onSave({ type, title: title.trim(), detail: savedDetail, startAt: when.toISOString(), endAt });
   };
 
   return (
@@ -93,7 +120,7 @@ export function EventForm({
         <AuraDateField
           label={type === "stay" ? t("itinerary.defaults.checkIn") : type === "transit" ? t("itinerary.defaults.departure") : t("itinerary.form.when")}
           value={when}
-          onChange={setWhen}
+          onChange={changeWhen}
           withTime
         />
         {hasEnd ? (
@@ -101,6 +128,7 @@ export function EventForm({
             label={type === "stay" ? t("itinerary.defaults.checkOut") : t("itinerary.defaults.arrival")}
             value={until}
             onChange={setUntil}
+            minimumDate={when}
             withTime
           />
         ) : null}

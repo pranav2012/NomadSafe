@@ -13,6 +13,7 @@ export const CHECK_IN_ALERT_GRACE_MS = 5 * 60_000;
 
 const LEDGER_KEY = "safety.server-check-in";
 const SOS_ALERT_TIMEOUT_MS = 8_000;
+const SERVER_CALL_TIMEOUT_MS = 8_000;
 
 /** Android channel for SOS / missed check-in pushes from contacts; created before any can arrive. */
 export async function ensureSafetyAlertChannel(name: string) {
@@ -56,9 +57,19 @@ export function syncCheckInDeadline(): Promise<void> {
 export async function clearServerCheckIn() {
   if ((storage.getString(LEDGER_KEY) ?? "none") === "none") return;
   try {
-    await convex.mutation(api.safetyAlerts.setCheckIn, { endsAt: null });
-  } catch {}
-  storage.remove(LEDGER_KEY);
+    // Convex queues calls while offline instead of failing, so give up after a while.
+    const cleared = await Promise.race([
+      convex.mutation(api.safetyAlerts.setCheckIn, { endsAt: null }).then(() => true),
+      new Promise<false>((resolve) => setTimeout(() => resolve(false), SERVER_CALL_TIMEOUT_MS)),
+    ]);
+    if (cleared) {
+      storage.remove(LEDGER_KEY);
+      return;
+    }
+    logger.warn("safety-alerts", "check-in clear timed out; server deadline may still alert contacts");
+  } catch (err) {
+    logger.warn("safety-alerts", "check-in clear failed; server deadline may still alert contacts", err);
+  }
 }
 
 /** Alerts linked contacts about an SOS. Resolves the number of linked contacts, or null if unreachable. */

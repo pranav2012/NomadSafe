@@ -58,8 +58,7 @@
         "android.permission.READ_CONTACTS",
         "android.permission.POST_NOTIFICATIONS",
         "android.permission.VIBRATE",
-        "android.permission.USE_FINGERPRINT",
-        "android.permission.WRITE_CONTACTS"
+        "android.permission.USE_FINGERPRINT"
       ],
       "allowBackup": false,
       "softwareKeyboardLayoutMode": "resize",
@@ -131,6 +130,7 @@
       "expo-background-task",
       "./plugins/withoutPushEntitlement",
       "./plugins/withGoogleMapsApiKey",
+      "./plugins/withGradleHeap",
       [
         "expo-build-properties",
         {
@@ -138,7 +138,7 @@
             "minSdkVersion": 26,
             "enableMinifyInReleaseBuilds": true,
             "enableShrinkResourcesInReleaseBuilds": true,
-            "extraProguardRules": "-keep class com.rnllama.** { *; }\n-keep class com.margelo.nitro.** { *; }\n-keep class expo.modules.memoryinfo.** { *; }\n-keep class com.reactnative.skia.** { *; }",
+            "extraProguardRules": "-keep class com.rnllama.** { *; }\n-keep class com.margelo.nitro.** { *; }\n-keep class expo.modules.memoryinfo.** { *; }\n-keep class com.reactnative.skia.** { *; }\n-keep class expo.modules.adapters.react.apploader.** { *; }",
             "buildArchs": [
               "armeabi-v7a",
               "arm64-v8a",
@@ -210,7 +210,8 @@
           "enableBackgroundPlayback": false,
           "recordAudioAndroid": false
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true,

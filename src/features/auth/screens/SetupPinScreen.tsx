@@ -2,7 +2,7 @@ import React, { useRef, useState } from "react";
 import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { Redirect, useRouter, useLocalSearchParams } from "expo-router";
 import Animated, { FadeIn, FadeInDown, FadeOut } from "react-native-reanimated";
 import { AuraButton } from "@/components/aura/AuraButton";
 import { AuraOrb } from "@/components/aura/AuraOrb";
@@ -36,6 +36,8 @@ export default function SetupPinScreen() {
   const { height } = useWindowDimensions();
   const { setPinSet, setBiometricEnabled, setUnlocked } = useAuthStore();
   const setOnboardingStep = useSettingsStore((s) => s.setOnboardingStep);
+  const onboardingCompleted = useSettingsStore((s) => s.onboardingCompleted);
+  const isPinSet = useAuthStore((s) => s.isPinSet);
   const biometric = useBiometricPresentation();
 
   const [step, setStep] = useState<"create" | "confirm">("create");
@@ -129,6 +131,11 @@ export default function SetupPinScreen() {
   };
 
   const orbSize = compact ? 92 : 120;
+
+  // Signing in hides the sign-in screen and Expo Router falls back to this one: onboarding comes
+  // first, and an existing PIN is kept (LockGate asks for it).
+  if (!from && !onboardingCompleted) return <Redirect href="/(onboarding)/welcome" />;
+  if (!from && isPinSet && !saved) return <Redirect href="/(tabs)" />;
 
   return (
     <View style={[styles.root, { backgroundColor: c.bg }]}>

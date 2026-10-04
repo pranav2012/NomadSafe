@@ -15,8 +15,8 @@ import { PressableScale } from "@/components/motion/PressableScale";
 import { useFloatingBarBottom, useKeyboardVisible, useTabBarInset } from "@/components/tabbar/tabBarInset";
 import { auraStatusAccent } from "@/constants/aura";
 import { useLocalization } from "@/localization";
-import { selectActiveTrip, type Trip, useTripsStore } from "@/features/trips/store/tripsStore";
-import { countInclusiveDays, fromDateKey, getTripStatus, startOfLocalDay } from "@/features/trips/utils/dates";
+import { selectActiveTrip, useTripsStore } from "@/features/trips/store/tripsStore";
+import { daysLeftInTrip } from "@/features/trips/utils/dates";
 import { useExpensesStore, type Expense } from "@/features/expenses/store/expensesStore";
 import { categoryBreakdown, filterByTrip, sumAmount } from "@/features/expenses/utils/aggregate";
 import { useConvertedExpenses } from "@/features/expenses/hooks/useTripExpenseSummary";
@@ -34,14 +34,6 @@ import { TripBalances } from "@/features/expenses/components/TripBalances";
 const LEDGER_PAGE = 30;
 
 type MoneyView = "spending" | "splits";
-
-/** Days left in the trip, today included. */
-function daysLeftIn(trip: Trip) {
-  const status = getTripStatus(trip);
-  if (status === "complete") return 0;
-  if (status === "upcoming") return countInclusiveDays(fromDateKey(trip.startDate), fromDateKey(trip.endDate));
-  return countInclusiveDays(startOfLocalDay(new Date()), fromDateKey(trip.endDate));
-}
 
 /** Money tab: total-spent hero, the ledger or splits, and a floating capture bar. */
 export default function ExpensesScreen() {
@@ -79,7 +71,7 @@ export default function ExpensesScreen() {
   const converted: Expense[] = conversion.convertedExpenses.map(({ expense, amount }) => ({ ...expense, amount, currency }));
   const convertedById = new Map(conversion.convertedExpenses.map(({ expense, amount }) => [expense.id, amount]));
   const total = sumAmount(converted);
-  const daysLeft = activeTrip ? daysLeftIn(activeTrip) : 0;
+  const daysLeft = activeTrip ? daysLeftInTrip(activeTrip) : 0;
   const unconvertedLabel = conversion.unconvertedTotals.map((entry) => formatMoney(formatCurrency, entry.amount, entry.currency)).join(" + ");
 
   const hasSplits =

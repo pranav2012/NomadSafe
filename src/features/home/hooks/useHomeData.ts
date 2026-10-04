@@ -6,7 +6,7 @@ import { formatMoney } from "@/features/expenses/utils/money";
 import { useEventsStore } from "@/features/itinerary";
 import { useSharingStore } from "@/features/location-sharing";
 import { getDestinationCoordinates, selectActiveTrip, useTripsStore } from "@/features/trips/store/tripsStore";
-import { addDays, countInclusiveDays, fromDateKey, getTripStatus, startOfLocalDay } from "@/features/trips/utils/dates";
+import { addDays, countInclusiveDays, daysLeftInTrip, fromDateKey, getTripStatus, startOfLocalDay } from "@/features/trips/utils/dates";
 import { useLocalization } from "@/localization";
 import type { HomeData, HomeEvent } from "@/features/home/types";
 
@@ -87,7 +87,7 @@ export function useHomeData(): HomeData | null {
         : status === "complete"
           ? t("trip.completed")
           : t("trip.dayProgress", { day, total: totalDays }),
-    daysLeftLabel: t("trip.daysLeft", { count: Math.max(0, totalDays - day) }),
+    daysLeftLabel: t("trip.daysLeft", { count: daysLeftInTrip(trip, now) }),
     moneyLabel: t("trip.spent"),
     moneyValue: formatMoney(formatCurrency, summary.total, trip.currency),
     spendDays,

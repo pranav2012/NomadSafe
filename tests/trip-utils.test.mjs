@@ -19,6 +19,7 @@ function loadModule(entryPoint) {
 const framing = loadModule("src/features/trips/utils/mapFraming.ts");
 const tripName = loadModule("src/features/trips/utils/tripName.ts");
 const money = loadModule("src/features/expenses/utils/money.ts");
+const dates = loadModule("src/features/trips/utils/dates.ts");
 
 const LISBON = { latitude: 38.72, longitude: -9.14 };
 const PORTO = { latitude: 41.15, longitude: -8.61 };
@@ -69,4 +70,12 @@ test("shows cents only when the amount has them", () => {
   assert.equal(money.formatMoney(formatCurrency, 1500.004, "USD"), "$1,500");
   assert.equal(money.formatMoney(formatCurrency, 250000, "USD"), "compact");
   assert.equal(money.formatMoney(formatCurrency, 1200, "JPY"), "¥1,200");
+});
+
+test("days left counts today, so the last day shows 1", () => {
+  const trip = { startDate: "2026-10-10", endDate: "2026-10-14" };
+  assert.equal(dates.daysLeftInTrip(trip, new Date(2026, 9, 1, 9)), 5, "upcoming: the whole trip");
+  assert.equal(dates.daysLeftInTrip(trip, new Date(2026, 9, 10, 9)), 5, "first day");
+  assert.equal(dates.daysLeftInTrip(trip, new Date(2026, 9, 14, 23)), 1, "last day");
+  assert.equal(dates.daysLeftInTrip(trip, new Date(2026, 9, 15, 0)), 0, "over");
 });

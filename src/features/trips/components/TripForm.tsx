@@ -9,8 +9,8 @@ import { AuraDateField } from "@/components/aura/AuraDateField";
 import { AuraField } from "@/components/aura/AuraField";
 import { AuraSheet } from "@/components/aura/AuraSheet";
 import { useAura } from "@/components/aura/useAura";
-import { localModelService, useAiReadyModelId } from "@/features/ai";
-import type { TripBudgetEstimate } from "@/features/ai/services/localModelService";
+import { aiService, localModelService, useAiAvailability } from "@/features/ai";
+import type { TripBudgetEstimate } from "@/features/ai/services/aiPrompts";
 import { useSettingsStore } from "@/features/settings";
 import { normalizeSearchText } from "@/features/trips/data/destinations";
 import {
@@ -105,6 +105,18 @@ function makeInitialForm(
   };
 }
 
+/** Inputs that change the AI budget estimate. */
+function budgetEstimateKeyOf(form: FormState): string {
+  return [
+    form.destinations.join("|"),
+    toDateKey(form.startDate),
+    toDateKey(form.endDate),
+    form.mode,
+    form.companions.length,
+    form.currency,
+  ].join("::");
+}
+
 function tripToFormState(trip: Trip): FormState {
   return {
     name: trip.name,
@@ -127,7 +139,6 @@ export function TripForm({ editingTrip, onSave, onCancel, destinations, knownCoo
   const defaultCurrency = useSettingsStore((state) => state.defaultCurrency);
   const defaultTripMode = useSettingsStore((state) => state.defaultTripMode);
   const tripModeEnabled = useSettingsStore((state) => state.tripModeEnabled);
-  const localAiEnabled = useSettingsStore((state) => state.localAiEnabled);
   const createTrip = useTripsStore((state) => state.createTrip);
   const updateTrip = useTripsStore((state) => state.updateTrip);
 
@@ -147,7 +158,6 @@ export function TripForm({ editingTrip, onSave, onCancel, destinations, knownCoo
 
   const [form, setForm] = useState<FormState>(initialForm);
   const [isCurrencyPickerOpen, setIsCurrencyPickerOpen] = useState(false);
-  const [isBudgetAiAvailable, setIsBudgetAiAvailable] = useState(false);
   const [isEstimatingBudget, setIsEstimatingBudget] = useState(false);
   const [budgetEstimate, setBudgetEstimate] = useState<TripBudgetEstimate | null>(null);
   const [budgetEstimateError, setBudgetEstimateError] = useState<string | null>(null);
@@ -157,43 +167,19 @@ export function TripForm({ editingTrip, onSave, onCancel, destinations, knownCoo
   const [hasEstimatedBudget, setHasEstimatedBudget] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const isSavingRef = useRef(false);
-  // One on-device AI task at a time: auto budget and auto name are chained through this.
+  // One AI task at a time: auto budget and auto name are chained through this.
   const aiTaskRef = useRef<"budget" | "name" | null>(null);
   const parsedBudget = parseAmount(form.budget, locale);
 
-  const aiReadyModelId = useAiReadyModelId();
   const scrollRef = useRef<ScrollView>(null);
   const budgetEstimateKeyRef = useRef<string | null>(null);
   const nameGenerationKeyRef = useRef<string | null>(null);
 
-  const isAiReady = localAiEnabled && isBudgetAiAvailable;
+  const isAiReady = useAiAvailability().available;
   const shouldShowBudgetEstimate = isAiReady && form.destinations.length > 0;
-  const budgetEstimateKey = useMemo(
-    () =>
-      [
-        form.destinations.join("|"),
-        toDateKey(form.startDate),
-        toDateKey(form.endDate),
-        form.mode,
-        form.companions.length,
-        form.currency,
-      ].join("::"),
-    [form.companions.length, form.currency, form.destinations, form.endDate, form.mode, form.startDate],
-  );
-
-  useEffect(() => {
-    let isMounted = true;
-
-    async function checkBudgetAiAvailability() {
-      const model = await localModelService.getReadyModel();
-      if (isMounted) setIsBudgetAiAvailable(model !== null);
-    }
-
-    checkBudgetAiAvailability();
-    return () => {
-      isMounted = false;
-    };
-  }, [aiReadyModelId]);
+  const budgetEstimateKey = budgetEstimateKeyOf(form);
+  // Edit opens with the saved trip's key, so it only re-estimates and scrolls after a change.
+  const [openedEstimateKey] = useState(() => (editingTrip ? budgetEstimateKeyOf(initialForm) : null));
 
   const clearBudgetEstimate = useCallback(() => {
     setBudgetEstimate(null);
@@ -309,7 +295,7 @@ export function TripForm({ editingTrip, onSave, onCancel, destinations, knownCoo
     try {
       for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
         try {
-          const estimate = await localModelService.estimateTripBudget({
+          const estimate = await aiService.estimateTripBudget({
             destinations: form.destinations,
             days: countInclusiveDays(form.startDate, form.endDate),
             travelerCount: form.mode === "group" ? form.companions.length + 1 : 1,
@@ -354,20 +340,20 @@ export function TripForm({ editingTrip, onSave, onCancel, destinations, knownCoo
 
   useEffect(() => {
     if (!shouldShowBudgetEstimate || isAiBusy || hasEstimatedBudget) return;
-    if (budgetEstimateKeyRef.current === budgetEstimateKey) return;
+    if (budgetEstimateKeyRef.current === budgetEstimateKey || openedEstimateKey === budgetEstimateKey) return;
 
     handleEstimateBudget();
-  }, [budgetEstimateKey, handleEstimateBudget, isAiBusy, shouldShowBudgetEstimate, hasEstimatedBudget]);
+  }, [budgetEstimateKey, handleEstimateBudget, isAiBusy, shouldShowBudgetEstimate, hasEstimatedBudget, openedEstimateKey]);
 
   useEffect(() => {
-    if (!shouldShowBudgetEstimate) return;
+    if (!shouldShowBudgetEstimate || openedEstimateKey === budgetEstimateKey) return;
 
     const id = setTimeout(() => {
       scrollRef.current?.scrollToEnd({ animated: true });
     }, 120);
 
     return () => clearTimeout(id);
-  }, [shouldShowBudgetEstimate, budgetEstimateKey]);
+  }, [shouldShowBudgetEstimate, budgetEstimateKey, openedEstimateKey]);
 
   const nameGenerationKey = useMemo(
     () =>
@@ -396,7 +382,7 @@ export function TripForm({ editingTrip, onSave, onCancel, destinations, knownCoo
     try {
       for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
         try {
-          const suggestion = await localModelService.suggestTripName({
+          const suggestion = await aiService.suggestTripName({
             destinations: form.destinations,
             days: countInclusiveDays(form.startDate, form.endDate),
             mode: form.mode,

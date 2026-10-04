@@ -33,6 +33,7 @@ import { TripForm } from "@/features/trips/components/TripForm";
 import { normalizeSearchText } from "@/features/trips/data/destinations";
 import { geocodeDestination, type LatLng } from "@/features/trips/services/geocoding";
 import { useTripsStore } from "@/features/trips/store/tripsStore";
+import { canCreateTrip, usePlanStore } from "@/features/billing";
 import { useLocalization } from "@/localization";
 import { selectionChanged, successNotification } from "@/utils/haptics";
 
@@ -46,6 +47,8 @@ export default function PlanTripScreen() {
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const isFirstTrip = useTripsStore((state) => state.trips.length === 0);
+  // Checked once on open: saving the new trip must not flip this and bounce to the paywall.
+  const [tripAllowed] = useState(() => canCreateTrip(useTripsStore.getState().trips, usePlanStore.getState()));
   const [step, setStep] = useState<Step>("cities");
   const [detailsMounted, setDetailsMounted] = useState(false);
   const [destinations, setDestinations] = useState<string[]>([]);
@@ -92,6 +95,10 @@ export default function PlanTripScreen() {
     opacity: stepIn.get(),
     transform: [{ translateY: (1 - stepIn.get()) * 24 }],
   }));
+
+  useEffect(() => {
+    if (!tripAllowed) router.replace({ pathname: "/paywall", params: { reason: "trips" } });
+  }, [router, tripAllowed]);
 
   const goToCities = () => {
     Keyboard.dismiss();

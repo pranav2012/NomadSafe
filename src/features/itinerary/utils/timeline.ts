@@ -22,6 +22,8 @@ const startOfDay = (value: string | Date) => {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 };
 
+const shiftDays = (date: Date, days: number) => new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
+
 const isLoneCheckOut = (event: BookingLike) => event.detail?.split(" · ")[0] === "Check-out";
 
 export function nightsBetween(startAt: string, endAt: string): number {
@@ -66,11 +68,12 @@ export function buildTimeline<T extends BookingLike>(events: T[]): TimelineSecti
     if (stay.type !== "stay" || !stay.endAt || isLoneCheckOut(stay)) continue;
     let rangeStart: Date | null = null;
     const last = startOfDay(stay.endAt).getTime();
-    for (let day = startOfDay(stay.startAt).getTime() + DAY_MS; day <= last; day += DAY_MS) {
-      const quiet = day < last && !days.has(day);
-      if (quiet && !rangeStart) rangeStart = new Date(day);
+    // Step by calendar day, not 24h, so DST changes don't knock days off local midnight.
+    for (let day = shiftDays(startOfDay(stay.startAt), 1); day.getTime() <= last; day = shiftDays(day, 1)) {
+      const quiet = day.getTime() < last && !days.has(day.getTime());
+      if (quiet && !rangeStart) rangeStart = day;
       if (!quiet && rangeStart) {
-        sections.push({ kind: "staying", from: rangeStart, to: new Date(day - DAY_MS), event: stay });
+        sections.push({ kind: "staying", from: rangeStart, to: shiftDays(day, -1), event: stay });
         rangeStart = null;
       }
     }

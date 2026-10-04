@@ -18,6 +18,9 @@ interface SettingsState {
   defaultTripMode: DefaultTripMode;
   defaultCheckInDuration: number; // seconds
   localAiEnabled: boolean;
+  /** Use the user's own key or NomadSafe Cloud when online; off keeps all AI on the phone. */
+  onlineAiEnabled: boolean;
+  onlineAiNoticeSeen: boolean;
   analyticsEnabled: boolean;
   ambientSoundEnabled: boolean;
   /** Back up trips, expenses and itinerary to the signed-in account. */
@@ -33,6 +36,8 @@ interface SettingsState {
   setDefaultTripMode: (mode: DefaultTripMode) => void;
   setDefaultCheckInDuration: (seconds: number) => void;
   setLocalAiEnabled: (value: boolean) => void;
+  setOnlineAiEnabled: (value: boolean) => void;
+  setOnlineAiNoticeSeen: (value: boolean) => void;
   setAnalyticsEnabled: (value: boolean) => void;
   setAmbientSoundEnabled: (value: boolean) => void;
   setCloudBackupEnabled: (value: boolean) => void;
@@ -54,6 +59,8 @@ export const useSettingsStore = create<SettingsState>()(
       defaultTripMode: "solo",
       defaultCheckInDuration: 2 * 60 * 60,
       localAiEnabled: true,
+      onlineAiEnabled: true,
+      onlineAiNoticeSeen: false,
       analyticsEnabled: true,
       ambientSoundEnabled: true,
       cloudBackupEnabled: true,
@@ -78,6 +85,8 @@ export const useSettingsStore = create<SettingsState>()(
       setDefaultTripMode: (mode) => set({ defaultTripMode: mode }),
       setDefaultCheckInDuration: (seconds) => set({ defaultCheckInDuration: seconds }),
       setLocalAiEnabled: (value) => set({ localAiEnabled: value }),
+      setOnlineAiEnabled: (value) => set({ onlineAiEnabled: value }),
+      setOnlineAiNoticeSeen: (value) => set({ onlineAiNoticeSeen: value }),
       setAnalyticsEnabled: (value) => set({ analyticsEnabled: value }),
       setAmbientSoundEnabled: (value) => set({ ambientSoundEnabled: value }),
       setCloudBackupEnabled: (value) => set({ cloudBackupEnabled: value }),
@@ -93,7 +102,9 @@ export const useSettingsStore = create<SettingsState>()(
           defaultTripMode: "solo",
           defaultCheckInDuration: 2 * 60 * 60,
           localAiEnabled: true,
-      analyticsEnabled: true,
+          onlineAiEnabled: true,
+          onlineAiNoticeSeen: false,
+          analyticsEnabled: true,
           ambientSoundEnabled: true,
           cloudBackupEnabled: true,
         }),

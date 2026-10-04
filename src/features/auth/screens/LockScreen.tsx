@@ -20,7 +20,8 @@ import { PinDots } from "@/features/auth/components/PinDots";
 import { PinPad } from "@/features/auth/components/PinPad";
 import { hashPin, isLegacyPinHash, verifyPin } from "@/features/auth/utils/crypto";
 import { pinAttempts } from "@/features/auth/services/pinAttempts";
-import { signOutAndCleanup } from "@/services/session";
+import { flushBeforeSignOut } from "@/services/session";
+import { wipeAllDeviceData } from "@/features/settings/services/wipeService";
 import { errorNotification, successNotification } from "@/utils/haptics";
 import { useLocalization } from "@/localization";
 
@@ -55,6 +56,7 @@ export default function LockScreen() {
   const [isLocked, setIsLocked] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [pulse, setPulse] = useState(0);
+  const [signingOut, setSigningOut] = useState(false);
 
   const name = user?.name ?? t("auth.welcomeBack");
   const initial = user?.name?.trim()?.[0]?.toUpperCase() ?? "N";
@@ -159,7 +161,7 @@ export default function LockScreen() {
           // PIN missing from the keystore (e.g. restored device): force re-auth.
           setPinSet(false);
           Alert.alert(t("auth.pinMissingTitle"), t("auth.pinMissingBody"), [
-            { text: t("common.ok"), onPress: handleSignOut },
+            { text: t("common.ok"), onPress: () => void eraseAfterSync() },
           ]);
           return;
         }
@@ -188,9 +190,43 @@ export default function LockScreen() {
     }
   };
 
-  async function handleSignOut() {
-    await signOutAndCleanup();
-    router.replace("/(auth)/sign-in");
+  // Without the PIN the owner can't be verified, so leaving the lock screen erases this phone's data.
+  async function eraseNow() {
+    setSigningOut(true);
+    try {
+      await wipeAllDeviceData({ keepModels: true });
+      router.replace("/(auth)/sign-in");
+    } finally {
+      setSigningOut(false);
+    }
+  }
+
+  // Same check as Settings: unsynced changes would be lost with the rest of the data.
+  async function eraseAfterSync() {
+    if (signingOut) return;
+    setSigningOut(true);
+    let synced = false;
+    try {
+      synced = await flushBeforeSignOut();
+    } finally {
+      setSigningOut(false);
+    }
+    if (synced) {
+      await eraseNow();
+      return;
+    }
+    Alert.alert(t("settings.signOutUnsyncedTitle"), t("settings.signOutUnsyncedBody"), [
+      { text: t("common.cancel"), style: "cancel" },
+      { text: t("auth.eraseConfirm"), style: "destructive", onPress: () => void eraseNow() },
+    ]);
+  }
+
+  function handleForgotPin() {
+    if (signingOut) return;
+    Alert.alert(t("auth.eraseTitle"), t("auth.eraseBody"), [
+      { text: t("common.cancel"), style: "cancel" },
+      { text: t("auth.eraseConfirm"), style: "destructive", onPress: () => void eraseAfterSync() },
+    ]);
   }
 
   const toggleMode = () => {
@@ -313,8 +349,8 @@ export default function LockScreen() {
               </Text>
             </PressableScale>
           ) : null}
-          <PressableScale onPress={handleSignOut} accessibilityRole="button" style={styles.footerHit}>
-            <Text style={[styles.footerAction, { color: c.textMuted, fontFamily: f.semibold }]}>{t("auth.signOut")}</Text>
+          <PressableScale onPress={handleForgotPin} disabled={signingOut} accessibilityRole="button" style={styles.footerHit}>
+            <Text style={[styles.footerAction, { color: c.textMuted, fontFamily: f.semibold }]}>{t("auth.forgotPin")}</Text>
           </PressableScale>
         </View>
       </SafeAreaView>

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, Alert, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { Icon } from "@/components/nomad/Icon";
@@ -8,8 +8,7 @@ import { AuraSection } from "@/components/aura/AuraSection";
 import { AuraSheet } from "@/components/aura/AuraSheet";
 import { useAura } from "@/components/aura/useAura";
 import { useLocalization } from "@/localization";
-import { localModelService, useAiReadyModelId } from "@/features/ai";
-import { useSettingsStore } from "@/features/settings";
+import { aiService, localModelService, useAiAvailability } from "@/features/ai";
 import type { Trip } from "@/features/trips/store/tripsStore";
 import { useEventsStore, type TripEvent } from "@/features/itinerary/store/eventsStore";
 import { EventForm, type EventFormValues } from "@/features/itinerary/components/EventForm";
@@ -36,10 +35,8 @@ export function TripItinerary({ trip }: { trip: Trip; accent: string }) {
   const updateEvent = useEventsStore((state) => state.updateEvent);
   const deleteEvent = useEventsStore((state) => state.deleteEvent);
   const deleteEvents = useEventsStore((state) => state.deleteEvents);
-  const localAiEnabled = useSettingsStore((state) => state.localAiEnabled);
-  const aiReadyModelId = useAiReadyModelId();
+  const isAiAvailable = useAiAvailability().available;
 
-  const [isAiAvailable, setIsAiAvailable] = useState(false);
   const [isRefining, setIsRefining] = useState(false);
   const [allOpen, setAllOpen] = useState(false);
   const [review, setReview] = useState<{ keep: number; remove: string[] } | null>(null);
@@ -52,21 +49,6 @@ export function TripItinerary({ trip }: { trip: Trip; accent: string }) {
   );
   const [now] = useState(() => Date.now());
   const next = upNext(ordered, now, UP_NEXT_COUNT);
-
-  useEffect(() => {
-    let mounted = true;
-    localModelService
-      .getReadyModel()
-      .then((model) => {
-        if (mounted) setIsAiAvailable(model !== null);
-      })
-      .catch(() => {
-        if (mounted) setIsAiAvailable(false);
-      });
-    return () => {
-      mounted = false;
-    };
-  }, [aiReadyModelId, localAiEnabled]);
 
   const handleSave = (values: EventFormValues) => {
     if (editing && editing !== "new") {
@@ -96,7 +78,7 @@ export function TripItinerary({ trip }: { trip: Trip; accent: string }) {
     if (isRefining || ordered.length === 0) return;
     setIsRefining(true);
     try {
-      const refinement = await localModelService.refineItinerary(ordered);
+      const refinement = await aiService.refineItinerary(ordered);
       const remove = ordered.filter((event) => !refinement.keepIds.includes(event.id)).map((event) => event.id);
       if (remove.length === 0) {
         Alert.alert(t("itinerary.refineNoneTitle"), t("itinerary.refineNoneBody"));

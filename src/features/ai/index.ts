@@ -9,6 +9,8 @@ export {
   type AiModel,
   type AiModelId,
 } from "./services/aiModelService";
+export { aiService } from "./services/aiService";
+export { useAiAvailability, type RemoteAiRoute } from "./hooks/useAiAvailability";
 export {
   localModelService,
   type ItineraryEventRefinement,

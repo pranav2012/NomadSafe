@@ -14,12 +14,14 @@ import { useSettingsStore } from "@/features/settings";
 import { AiChat } from "../components/AiChat";
 import { AiModelsSheet } from "../components/AiModelsSheet";
 import { useAiProvisioning } from "../hooks/useAiProvisioning";
+import { useAiAvailability } from "../hooks/useAiAvailability";
+import { remoteLabel } from "../utils/remoteLabel";
 import { findModel } from "../services/aiModelService";
 import { provisionPercent } from "../utils/provisionCopy";
 
 const READY = "#3DDC97";
 
-/** AI tab: a chat with the on-device model, with model status in the header. */
+/** AI tab: chat with the on-device model or online AI, with which one answers in the header. */
 export default function AiScreen() {
   const { c, f, isDark, accent } = useAura();
   const { t } = useLocalization();
@@ -28,35 +30,40 @@ export default function AiScreen() {
   const localAiEnabled = useSettingsStore((s) => s.localAiEnabled);
   const provisioning = useAiProvisioning();
   const [modelsOpen, setModelsOpen] = useState(false);
+  const ai = useAiAvailability();
+  const onlineName = ai.remote ? remoteLabel(ai.remote, ai.byok, t("aiTab.cloudName")) : null;
+  const chatEnabled = localAiEnabled || ai.configured !== null;
 
   const activeModel = findModel(provisioning.activeModelId);
   const anyDownloaded = activeModel !== null;
   const downloading = provisioning.phase === "downloading" || provisioning.phase === "verifying";
   const ready = provisioning.phase === "ready" || (anyDownloaded && !downloading);
   const waiting = provisioning.phase === "waitingForWifi";
-  const pillText = ready
-    ? t("aiTab.offlineReady")
-    : downloading
-      ? t("aiTab.provision.pillDownloading", { percent: provisionPercent(provisioning) })
-      : waiting
-        ? t("aiTab.provision.waitingForWifiTitle")
-        : t("aiTab.noModel");
-  const dotColor = ready ? READY : downloading ? accent : waiting ? auraStatusAccent.live : c.textMuted;
+  const pillText = onlineName
+    ? t("aiTab.onlinePill", { provider: onlineName })
+    : ready
+      ? t("aiTab.offlineReady")
+      : downloading
+        ? t("aiTab.provision.pillDownloading", { percent: provisionPercent(provisioning) })
+        : waiting
+          ? t("aiTab.provision.waitingForWifiTitle")
+          : t("aiTab.noModel");
+  const dotColor = onlineName || ready ? READY : downloading ? accent : waiting ? auraStatusAccent.live : c.textMuted;
 
   return (
     <View style={[styles.root, { backgroundColor: c.bg }]}>
       <StatusBar style={isDark ? "light" : "dark"} />
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <Text style={[styles.title, { color: c.text, fontFamily: f.semibold }]}>{t("tabs.ai")}</Text>
-        {localAiEnabled ? (
+        {localAiEnabled || onlineName ? (
           <PressableScale
-            onPress={() => setModelsOpen(true)}
+            onPress={() => (localAiEnabled ? setModelsOpen(true) : router.push("/settings"))}
             accessibilityRole="button"
             accessibilityLabel={pillText}
             accessibilityHint={t("aiTab.modelTab")}
             style={[styles.chip, { backgroundColor: c.surfaceStrong, borderColor: c.hairline }]}
           >
-            <LiveDot color={dotColor} size={7} active={downloading} />
+            <LiveDot color={dotColor} size={7} active={downloading && !onlineName} />
             <Text numberOfLines={1} style={[styles.chipText, { color: c.text, fontFamily: f.medium }]}>
               {pillText}
             </Text>
@@ -65,9 +72,9 @@ export default function AiScreen() {
         ) : null}
       </View>
 
-      {localAiEnabled ? (
+      {chatEnabled ? (
         <>
-          <AiChat activeModelName={activeModel?.name ?? null} />
+          <AiChat activeModelName={localAiEnabled ? (activeModel?.name ?? null) : null} />
           <AiModelsSheet visible={modelsOpen} onClose={() => setModelsOpen(false)} />
         </>
       ) : (

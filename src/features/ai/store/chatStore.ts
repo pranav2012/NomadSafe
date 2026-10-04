@@ -3,6 +3,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { mmkvStateStorage } from "@/stores/storage";
 import { localModelService, type ChatTurn } from "../services/localModelService";
+import { aiService } from "../services/aiService";
 import { modelNotifications } from "../services/modelNotifications";
 import { loadTripMoneySnapshot } from "../services/chatContext";
 import { logger } from "@/services/logger";
@@ -139,14 +140,15 @@ export const useChatStore = create<ChatState>()(
           };
 
           // Every question goes to the model, with the trip's computed money facts in its prompt.
-          loadTripMoneySnapshot()
+          // Gmail merchants are always hidden: saved chat history and summaries can later go online.
+          loadTripMoneySnapshot(new Date(), { hideEmailMerchants: true })
             .catch((error: unknown) => {
               logger.warn("chatStore", "money facts unavailable", error);
               return null;
             })
             .then(async (snapshot) => {
               const systemContext = snapshot?.context;
-              const memory = await localModelService.prepareChatMemory(history, {
+              const memory = await aiService.prepareChatMemory(history, {
                 systemContext,
                 conversationSummary: conversation.summary ?? undefined,
               });
@@ -164,7 +166,7 @@ export const useChatStore = create<ChatState>()(
                 };
               });
               if (stopRequested) return "";
-              const reply = await localModelService.chat(memory.history, {
+              const reply = await aiService.chat(memory.history, {
                 systemContext,
                 conversationSummary: memory.summary ?? undefined,
                 contextTokens: memory.contextTokens,
@@ -230,7 +232,7 @@ export const useChatStore = create<ChatState>()(
         stop: () => {
           if (!get().generatingConversationKey) return;
           stopRequested = true;
-          localModelService.stopChat();
+          void aiService.stopChat();
         },
 
         clear: (conversationKey) =>

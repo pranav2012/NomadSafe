@@ -99,24 +99,47 @@ export type PushMessage = {
   data: Record<string, string>;
 };
 
+type PushTicket = { status: string; details?: { error?: string } };
+
+const PUSH_RETRY_DELAY_MS = 1_000;
+
+/** Posts one chunk to Expo, retrying once after a short pause on 429, 5xx or a network error. */
+async function postPushChunk(chunk: PushMessage[]): Promise<PushTicket[] | null> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, PUSH_RETRY_DELAY_MS));
+    let res: Response;
+    try {
+      res = await fetch(EXPO_PUSH_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(chunk),
+      });
+    } catch (err) {
+      console.error(`Expo push request failed (attempt ${attempt + 1})`, err);
+      continue;
+    }
+    if (res.ok) {
+      const body = (await res.json().catch(() => null)) as { data?: PushTicket[]; errors?: unknown } | null;
+      if (body?.errors) console.error("Expo push returned errors", JSON.stringify(body.errors));
+      return body?.data ?? null;
+    }
+    console.error(`Expo push returned HTTP ${res.status} (attempt ${attempt + 1})`, (await res.text().catch(() => "")).slice(0, 500));
+    if (res.status !== 429 && res.status < 500) return null;
+  }
+  return null;
+}
+
 /** Sends Expo pushes in chunks and drops tokens Expo reports as no longer registered. Best-effort. */
 export async function sendPushMessages(ctx: ActionCtx, messages: PushMessage[]) {
   const gone: string[] = [];
   for (let i = 0; i < messages.length; i += PUSH_CHUNK) {
     const chunk = messages.slice(i, i + PUSH_CHUNK);
-    try {
-      const res = await fetch(EXPO_PUSH_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify(chunk),
-      });
-      const body = (await res.json().catch(() => null)) as { data?: { status: string; details?: { error?: string } }[] } | null;
-      body?.data?.forEach((ticket, index) => {
-        if (ticket.status === "error" && ticket.details?.error === "DeviceNotRegistered") gone.push(chunk[index].to);
-      });
-    } catch {
-      // Best-effort: recipients still see the change next time they open the app.
-    }
+    const tickets = await postPushChunk(chunk);
+    tickets?.forEach((ticket, index) => {
+      if (ticket.status !== "error") return;
+      if (ticket.details?.error === "DeviceNotRegistered") gone.push(chunk[index].to);
+      else console.error("Expo push ticket error", ticket.details?.error ?? "unknown");
+    });
   }
   if (gone.length > 0) await ctx.runMutation(internal.tripNotifications.deleteTokens, { tokens: gone });
 }

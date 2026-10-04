@@ -1,7 +1,7 @@
 import { internal } from "./_generated/api";
 import { httpAction } from "./_generated/server";
 
-const EFFECTIVE_DATE = "4 October 2026";
+const EFFECTIVE_DATE = "5 October 2026";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="120" fill="#072B40"/><path d="M80 300 C140 200 200 200 256 260 C320 330 360 320 400 260" fill="none" stroke="#22D3EE" stroke-width="5.5" stroke-linecap="round" stroke-dasharray="3 12" opacity="0.75"/><g transform="translate(400,260) rotate(-50)"><path d="M-14 -10 L14 0 L-14 10 L-6 0 Z" fill="#E6F6FF"/></g><path d="M196 184 L316 360" stroke="#E6F6FF" stroke-width="40" stroke-linecap="round" opacity="0.32"/><rect x="176" y="168" width="44" height="176" rx="22" fill="#E6F6FF"/><rect x="292" y="168" width="44" height="176" rx="22" fill="#E6F6FF"/><path d="M200 168 L320 344" stroke="#E6F6FF" stroke-width="40" stroke-linecap="round"/></svg>`;
 const FAVICON = `data:image/svg+xml,${encodeURIComponent(LOGO_SVG)}`;
@@ -55,7 +55,7 @@ export const privacyPolicy = httpAction(async () => {
 <ul>
 <li>The original text of messages you paste or import from Gmail to find expenses and bookings.</li>
 <li>Emergency contacts you pick, SMS templates and safety check-in history.</li>
-<li>AI chat history. The AI model runs entirely on your device; prompts and replies are never sent to us.</li>
+<li>AI chat history. With the on-device AI model, prompts and replies never leave your phone. When you use online AI (below), each question is sent to answer it, but the chat history is still stored only on your phone.</li>
 <li>Your app PIN (stored in the Android Keystore / iOS Keychain).</li>
 </ul>
 <p>This data is kept in encrypted app storage and is excluded from cloud backups. Trips, expenses and itinerary are kept in the same encrypted storage on your device as well as in your account backup (below). If you add the NomadSafe home-screen widget, your trip names are also kept in the widget's own storage on your device so it can show them. Uninstalling the app or using <em>Settings → Wipe device data</em> removes it.</p>
@@ -72,8 +72,19 @@ export const privacyPolicy = httpAction(async () => {
 </ul>
 <p>Our backend is hosted by Convex (convex.dev). Data is encrypted in transit (HTTPS).</p>
 
+<h2>Online AI (optional)</h2>
+<p>By default NomadSafe's AI runs on your device. Online AI is used only when you're connected, <em>Settings → Online AI</em> is on, and either you have the Pro plan or you have added your own API key:</p>
+<ul>
+<li><strong>NomadSafe Cloud (Pro):</strong> your AI request is sent through our server to OpenAI to generate the answer. A request contains what that feature needs: your chat message, recent chat turns and a summary of earlier ones, your active trip's dates, budget and spending figures, a spoken expense as text (never audio), trip destinations and length for budget and name suggestions, or the titles and times of itinerary events you added yourself, for tidying the itinerary. Imported message text, and merchant names read from Gmail, are never sent to online AI. We store only a monthly count of your requests, to apply the plan's allowance, and never the content. OpenAI processes requests under its API terms, which do not allow using them to train its models.</li>
+<li><strong>Your own API key:</strong> if you add a key for OpenAI, Anthropic, Google Gemini or another compatible provider, the same requests go directly from your phone to that provider, under your agreement with them. Your key is stored encrypted on your device only and is removed when you sign out.</li>
+</ul>
+<p>Turn off <em>Settings → Online AI</em> at any time to keep all AI on your device.</p>
+
+<h2>Purchases</h2>
+<p>Plans are bought through Google Play (or the App Store). We use RevenueCat to check which plan you have: it receives your NomadSafe account ID and your store purchase records (product, dates, status and price), not your payment details. Our server stores which plan you have and when it ends. Deleting your account deletes this record and your RevenueCat customer.</p>
+
 <h2>Gmail import (optional)</h2>
-<p>If you connect Gmail, NomadSafe requests read-only access to find booking confirmations and receipts for your trips. Emails are fetched and processed on your device only; their contents are not sent to our servers or any third party, not used for advertising, and not read by humans. Access tokens are stored securely on your device, and you can disconnect at any time from the app or at <a href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</a>.</p>
+<p>If you connect Gmail, NomadSafe requests read-only access to find booking confirmations and receipts for your trips. Emails are fetched and read on your device. The email text itself is never sent to our servers or any third party, not used for advertising, and not read by humans. The expenses (merchant, amount, date) and bookings NomadSafe creates from them are trip data like any other: they are saved in your account backup if it is on, and shown to a shared trip's members if you add them there. Merchant names and booking details read from Gmail are never sent to online AI. Access tokens are stored securely on your device, and you can disconnect at any time from the app or at <a href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</a>.</p>
 <p>NomadSafe's use and transfer of information received from Google APIs adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including the Limited Use requirements.</p>
 
 <h2>SOS and emergency messages</h2>
@@ -88,6 +99,9 @@ export const privacyPolicy = httpAction(async () => {
 <li><strong>NASA GIBS</strong>: a rough rectangle around your trip's destinations, to download satellite imagery for the home globe.</li>
 <li><strong>Frankfurter</strong>: currency pairs and dates, for exchange rates.</li>
 <li><strong>Hugging Face</strong>: model download requests (your IP address), if you download an AI model.</li>
+<li><strong>OpenAI</strong> (via our server, Pro with Online AI on): AI requests as described under Online AI.</li>
+<li><strong>The AI provider you choose</strong> (directly from your phone, if you add your own API key): AI requests as described under Online AI.</li>
+<li><strong>RevenueCat and Google Play / the App Store</strong>: your account ID and purchase records, to provide paid plans.</li>
 <li><strong>PostHog</strong> (EU hosting): usage analytics, feature flags, session recordings, crash reports and diagnostic logs, described below.</li>
 </ul>
 
@@ -106,13 +120,13 @@ export const privacyPolicy = httpAction(async () => {
 <ul>
 <li><strong>Location, including background:</strong> live location sharing, SOS location and nearby places. Background location is used only while you have live sharing turned on.</li>
 <li><strong>Contacts:</strong> only to let you pick emergency contacts. We read the contact you pick; your address book is not uploaded.</li>
-<li><strong>Microphone and speech recognition:</strong> only when you tap Speak to add an expense by voice. Your phone's on-device speech recognizer turns speech into text, and the on-device AI reads the text; audio is not recorded, and neither audio nor text is sent to us or anyone else.</li>
-<li><strong>Notifications:</strong> check-in reminders, sharing status and download progress.</li>
+<li><strong>Microphone and speech recognition:</strong> only when you tap Speak to add an expense by voice. Your phone's on-device speech recognizer turns speech into text; audio is never recorded or sent anywhere. The on-device AI reads the text, or, when online AI is in use, the text alone is sent to read the amount and who it is split with, as described under Online AI.</li>
+<li><strong>Notifications:</strong> check-in reminders, sharing status, download progress, SOS and missed check-in alerts from your contacts, and changes to shared trips.</li>
 <li><strong>Biometrics:</strong> to unlock the app. Biometric data never leaves your device's secure hardware.</li>
 </ul>
 
 <h2>Retention and deletion</h2>
-<p>You can delete your account at any time in <em>Settings → Delete account</em>. This immediately deletes your account, sessions, sharing links, location shares and invites from our servers. Your usage analytics, crash reports and session recordings are deleted from PostHog within a few days, and diagnostic logs expire within 14 days. You can also <a href="/delete-account">request deletion on the web</a>. Otherwise, usage analytics and crash reports are retained by PostHog for up to 12 months and session recordings for up to 30 days.</p>
+<p>You can delete your account at any time in <em>Settings → Delete account</em>. This immediately deletes your account, sessions, trip backup, push tokens, check-in and SOS records, sharing links, location shares, invites, plan record and AI usage counts from our servers, and your RevenueCat customer. You leave your shared trips: trips you organize pass to another member who joined, or are deleted if no one else joined, and expenses you added to a trip others still use stay on it under your display name. Store subscriptions are managed by Google Play or the App Store, so cancel any active subscription there. Your usage analytics, crash reports and session recordings are deleted from PostHog within a few days, and diagnostic logs expire within 14 days. You can also <a href="/delete-account">request deletion on the web</a>. Otherwise, usage analytics and crash reports are retained by PostHog for up to 12 months and session recordings for up to 30 days.</p>
 
 <h2>Children</h2>
 <p>NomadSafe is not directed to children under 13 (or the minimum age in your country) and we do not knowingly collect their data.</p>

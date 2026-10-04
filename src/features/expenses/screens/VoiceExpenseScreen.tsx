@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Linking, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -21,7 +21,9 @@ import { logger } from "@/services/logger";
 import { useAuthStore } from "@/features/auth";
 import { useSettingsStore } from "@/features/settings";
 import { localModelService } from "@/features/ai/services/localModelService";
-import { useAiReadyModelId } from "@/features/ai/hooks/useAiProvisioning";
+import { aiService } from "@/features/ai/services/aiService";
+import { useAiAvailability } from "@/features/ai/hooks/useAiAvailability";
+import { remoteLabel } from "@/features/ai/utils/remoteLabel";
 import { useTripsStore } from "@/features/trips/store/tripsStore";
 import { useExpensesStore } from "@/features/expenses/store/expensesStore";
 import { useSpeechCapture } from "@/features/expenses/hooks/useSpeechCapture";
@@ -62,7 +64,7 @@ export default function VoiceExpenseScreen() {
   const addSettlement = useExpensesStore((state) => state.addSettlement);
   const locked = useAuthStore((state) => state.isSignedIn && state.isPinSet && !state.isUnlocked);
   const localAiEnabled = useSettingsStore((state) => state.localAiEnabled);
-  const modelId = useAiReadyModelId();
+  const ai = useAiAvailability();
 
   const [tripId, setTripId] = useState<string | null>(
     () => (params.tripId && trips.some((trip) => trip.id === params.tripId) ? params.tripId : null) ??
@@ -83,7 +85,7 @@ export default function VoiceExpenseScreen() {
       const run = ++runId.current;
       setPhase({ name: "thinking", transcript });
       try {
-        const raw = await localModelService.extractVoiceExpense(transcript, companions);
+        const raw = await aiService.extractVoiceExpense(transcript, companions);
         if (run !== runId.current) return;
         const draft = interpretVoiceExtraction(raw, transcript, {
           companions,
@@ -108,11 +110,13 @@ export default function VoiceExpenseScreen() {
 
   const contextualStrings = useMemo(() => [...companions, "split", "everyone"], [companions]);
   const speech = useSpeechCapture({ onFinal: handleTranscript, contextualStrings });
-  const modelReady = localAiEnabled && modelId !== null;
+  const modelReady = ai.available;
+  const onlineName = ai.remote ? remoteLabel(ai.remote, ai.byok, t("aiTab.cloudName")) : null;
 
   useEffect(() => {
     track("voice_capture_opened", { from_widget: fromWidget, locked });
-    void localModelService.preload();
+    // Warming the on-device model costs memory and battery; skip it when online AI will answer.
+    if (!ai.configured) void localModelService.preload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -227,7 +231,7 @@ export default function VoiceExpenseScreen() {
   const heard = phase.name === "thinking" || phase.name === "unclear" ? phase.transcript : phase.name === "review" ? phase.draft.transcript : partial;
   const status =
     phase.name === "thinking"
-      ? t("voiceExpense.thinking")
+      ? onlineName ? t("voiceExpense.thinkingOnline") : t("voiceExpense.thinking")
       : listening
         ? t("voiceExpense.listening")
         : phase.name === "unclear"
@@ -344,7 +348,9 @@ export default function VoiceExpenseScreen() {
         <View style={styles.spacer} />
         <View style={styles.privacy}>
           <Icon name="lock" size={12} color={c.textMuted} />
-          <Text style={[styles.privacyText, { color: c.textMuted, fontFamily: f.regular }]}>{t("voiceExpense.privacy")}</Text>
+          <Text style={[styles.privacyText, { color: c.textMuted, fontFamily: f.regular }]}>
+            {onlineName ? t("voiceExpense.privacyOnline", { provider: onlineName }) : t("voiceExpense.privacy")}
+          </Text>
         </View>
       </ScrollView>
 
@@ -422,6 +428,16 @@ function SpeechProblem({
   return (
     <AuraCard tone={auraStatusAccent.live} style={styles.problem}>
       <Text style={[styles.cardBody, { color: c.text, fontFamily: f.regular }]}>{t(`voiceExpense.speech.${reason}`)}</Text>
+      {reason === "permission" ? (
+        <AuraButton
+          label={t("safety.openSettings")}
+          icon="settings"
+          variant="secondary"
+          size="md"
+          onPress={() => void Linking.openSettings()}
+          style={styles.start}
+        />
+      ) : null}
       {reason === "language-missing" && locale && process.env.EXPO_OS === "android" ? (
         downloadStatus ? (
           <Text style={[styles.cardBody, { color: c.textSoft, fontFamily: f.regular }]}>{t("voiceExpense.speech.downloadStarted")}</Text>

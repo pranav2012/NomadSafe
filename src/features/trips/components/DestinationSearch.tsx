@@ -53,9 +53,12 @@ export function DestinationSearch({ selected, onSelect, label, placeholder, auto
         autoCorrect={false}
         autoFocus={autoFocus}
         returnKeyType="search"
-        onSubmitEditing={() => {
-          if (offline[0]) pick(offline[0].label);
-          else if (typed) web.search(query);
+        onSubmitEditing={(event) => {
+          // The field's own text: `query` can lag a render behind fast typing.
+          const text = event.nativeEvent.text;
+          const match = searchOfflineDestinations(text, locale, selected)[0];
+          if (match) pick(match.label);
+          else if (text.trim().length >= 2) web.search(text);
         }}
         prefix={<Icon name="search" size={large ? 20 : 16} color={c.textMuted} />}
       />

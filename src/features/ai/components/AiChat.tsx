@@ -27,6 +27,9 @@ import { GENERAL_CHAT_KEY, useChatStore, useChatStreamStore } from "../store/cha
 import { localModelService } from "../services/localModelService";
 import { modelNotifications } from "../services/modelNotifications";
 import { useAiProvisioning } from "../hooks/useAiProvisioning";
+import { useAiAvailability } from "../hooks/useAiAvailability";
+import { remoteLabel } from "../utils/remoteLabel";
+import { useSettingsStore } from "@/features/settings/store/settingsStore";
 import { provisionUnavailableText } from "../utils/provisionCopy";
 import { AiComposer } from "./AiComposer";
 import { AiMessage } from "./AiMessage";
@@ -66,7 +69,12 @@ export function AiChat({ activeModelName }: { activeModelName: string | null }) 
   const stopReply = useChatStore((s) => s.stop);
   const streamingText = useChatStreamStore((s) => (s.conversationKey === conversationKey ? s.text : null));
   const provisioning = useAiProvisioning();
-  const unavailableText = provisioning.isReady ? null : provisionUnavailableText(provisioning, t);
+  const ai = useAiAvailability();
+  const onlineName = ai.remote ? remoteLabel(ai.remote, ai.byok, t("aiTab.cloudName")) : null;
+  const configuredName = ai.configured ? remoteLabel(ai.configured, ai.byok, t("aiTab.cloudName")) : null;
+  const unavailableText = onlineName || provisioning.isReady ? null : provisionUnavailableText(provisioning, t);
+  const onlineNoticeSeen = useSettingsStore((s) => s.onlineAiNoticeSeen);
+  const setOnlineNoticeSeen = useSettingsStore((s) => s.setOnlineAiNoticeSeen);
   const [input, setInput] = useState("");
   const [notifyEnabled, setNotifyEnabled] = useState(() => modelNotifications.isEnabled());
   const [notifyDismissed, setNotifyDismissed] = useState(false);
@@ -85,9 +93,10 @@ export function AiChat({ activeModelName }: { activeModelName: string | null }) 
   const busyElsewhere = busy && !isGenerating;
   const composerBottom = tabBarInset > 0 ? tabBarInset + 2 : 8;
 
+  const preloadLocal = ai.configured === null;
   useEffect(() => {
-    localModelService.preload();
-  }, []);
+    if (preloadLocal) void localModelService.preload();
+  }, [preloadLocal]);
 
   const onScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
@@ -134,7 +143,8 @@ export function AiChat({ activeModelName }: { activeModelName: string | null }) 
     return formatDate(timestamp);
   };
 
-  const showNotifyBanner = !notifyEnabled && !notifyDismissed && !unavailableText;
+  const showOnlineNotice = configuredName !== null && !onlineNoticeSeen;
+  const showNotifyBanner = !notifyEnabled && !notifyDismissed && !unavailableText && !showOnlineNotice;
   const lastIndex = messages.length - 1;
 
   return (
@@ -151,6 +161,24 @@ export function AiChat({ activeModelName }: { activeModelName: string | null }) 
                     color={provisioning.phase === "waitingForWifi" ? auraStatusAccent.live : c.textSoft}
                   />
                   <Text style={[styles.bannerText, { color: c.text, fontFamily: f.regular }]}>{unavailableText}</Text>
+                </View>
+              </AuraCard>
+            ) : null}
+            {showOnlineNotice ? (
+              <AuraCard style={styles.banner}>
+                <View style={styles.bannerRow}>
+                  <Icon name="globe" size={16} color={c.textSoft} />
+                  <Text style={[styles.bannerText, { color: c.text, fontFamily: f.regular }]}>
+                    {t("aiTab.onlineNotice", { provider: configuredName })}
+                  </Text>
+                  <PressableScale
+                    onPress={() => setOnlineNoticeSeen(true)}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("common.close")}
+                  >
+                    <Icon name="x" size={15} color={c.textMuted} />
+                  </PressableScale>
                 </View>
               </AuraCard>
             ) : null}
@@ -211,7 +239,7 @@ export function AiChat({ activeModelName }: { activeModelName: string | null }) 
                 <Animated.View entering={FadeIn.duration(260)} style={styles.empty}>
                   <AuraOrb size={124} mode="idle" isDark={isDark} paused={!animating} />
                   <Text style={[styles.emptyTitle, { color: c.text, fontFamily: f.semibold }]}>{t("aiTab.introTitle")}</Text>
-                  <Text style={[styles.emptyHint, { color: c.textMuted, fontFamily: f.regular }]}>{t("aiTab.introHint")}</Text>
+                  <Text style={[styles.emptyHint, { color: c.textMuted, fontFamily: f.regular }]}>{onlineName ? t("aiTab.introHintOnline") : t("aiTab.introHint")}</Text>
                 </Animated.View>
               ) : null}
             </ScrollView>
@@ -227,7 +255,8 @@ export function AiChat({ activeModelName }: { activeModelName: string | null }) 
             generating={isGenerating}
             busy={busy}
             busyElsewhere={busyElsewhere}
-            modelName={activeModelName}
+            modelName={onlineName ?? activeModelName}
+            online={onlineName !== null}
             blurTarget={Platform.OS === "android" ? blurTarget : undefined}
             onLayout={(event) => setComposerHeight(Math.round(event.nativeEvent.layout.height))}
           />

@@ -113,13 +113,22 @@ async function upsertRow(ctx: MutationCtx, userId: string, row: Doc<"safetyAlert
   else await ctx.db.insert("safetyAlerts", { userId, ...patch });
 }
 
+/** Linked contacts that can actually get a push (at least one registered device). */
 async function countRecipients(ctx: MutationCtx, userId: string) {
   const links = await ctx.db
     .query("contactLinks")
     .withIndex("by_owner", (q) => q.eq("ownerUserId", userId))
     .filter((q) => q.eq(q.field("status"), "accepted"))
     .collect();
-  return links.length;
+  let count = 0;
+  for (const link of links) {
+    const token = await ctx.db
+      .query("pushTokens")
+      .withIndex("by_user", (q) => q.eq("userId", link.linkedUserId))
+      .first();
+    if (token) count++;
+  }
+  return count;
 }
 
 /** Sets or clears the check-in deadline; moving or clearing it after an alert tells contacts the user is safe. */
@@ -168,7 +177,7 @@ export const checkInDeadline = internalMutation({
   },
 });
 
-/** Alerts the user's linked contacts that they triggered SOS. Returns how many contacts are linked. */
+/** Alerts the user's linked contacts that they triggered SOS. Returns how many contacts can get the push. */
 export const triggerSos = mutation({
   args: {},
   handler: async (ctx) => {

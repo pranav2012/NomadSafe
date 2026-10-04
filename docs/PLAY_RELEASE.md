@@ -4,10 +4,10 @@ Status of each step for the first Android release. ✅ = done, 🧑 = you do it 
 
 | # | Step | Status |
 |---|---|---|
-| 1 | Convex production deploy + env vars | ✅ |
-| 2 | Privacy policy and delete-account pages live | ✅ |
+| 1 | Convex production deploy + env vars | 🧑 Redeploy: production predates safety alerts, billing and online AI (`npx convex deploy`) |
+| 2 | Privacy policy and delete-account pages live | ✅ (updated text goes live with step 1) |
 | 3 | EAS project linked, env vars set, upload keystore generated | ✅ |
-| 4 | Production AAB built | ✅ (see the build page on expo.dev) |
+| 4 | Production AAB built | 🧑 Rebuild after step 1: `eas build -p android --profile production` |
 | 5 | App icon, adaptive icon, splash, 512 px icon, feature graphic | ✅ `assets/store/` |
 | 6 | Google Cloud: sign-in redirect, Android OAuth clients, key restrictions | 🧑 |
 | 7 | Play Console account + app + first upload | 🧑 |
@@ -101,7 +101,7 @@ npx eas-cli submit -p android --profile production --path <aab or latest>
 | News app | No |
 | Data safety | See the table below |
 | Government app | No |
-| Financial features | None (expense tracking only, no payments) |
+| Financial features | None (expense tracking only, no payments). In-app subscriptions go through Google Play Billing. |
 | Health | None |
 | Account deletion | In-app: Settings → Delete account. Web: the account deletion URL. |
 
@@ -110,15 +110,21 @@ npx eas-cli submit -p android --profile production --path <aab or latest>
 
 | Data type | Collected | Shared | Processed ephemerally | Required? | Purposes |
 |---|---|---|---|---|---|
-| Location → Precise | Yes | Yes (with contacts the user picks) | No | Optional | App functionality |
-| Location → Approximate | Yes | Yes (Google Places, via our server) | Yes | Optional | App functionality |
+| Location → Precise | Yes (live sharing, SOS, and the place saved with an expense in the trip backup) | Yes (with contacts the user picks) | No | Optional | App functionality |
+| Location → Approximate | Yes | No (Google Places is a service provider, via our server) | Yes | Optional | App functionality |
 | Personal info → Name, Email, User IDs | Yes | No | No | Required | Account management |
 | Contacts | Yes (name + email of people invited to sharing) | No | No | Optional | App functionality |
-| App activity / Emails | No (Gmail is processed on-device only) | No | n/a | n/a | n/a |
+| Messages → Emails | No (email text is read on the device and never uploaded; expenses and bookings created from emails are covered by the trip backup rows) | No | n/a | n/a | n/a |
+| Financial info → Other financial info (trip budgets, expenses, splits and settlements in the trip backup and shared trips) | Yes | No (shown to a shared trip's members only when the user adds them there) | No | Optional (Settings → Back up to my account) | App functionality |
+| App activity → Other user-generated content (trips, destinations, itinerary, companion names) | Yes | No (same as above) | No | Optional (Settings → Back up to my account) | App functionality |
+| Device or other IDs (push notification token) | Yes | No | No | Optional (notifications) | App functionality |
 | App info and performance → Crash logs, Diagnostics | Yes, if PostHog is enabled | No | No | Optional (Settings → Share usage analytics) | Analytics |
 | App activity → App interactions, Other user-generated content (masked session recordings) | Yes, if PostHog is enabled | No | No | Optional (Settings → Share usage analytics) | Analytics |
 | Location → Approximate (country/city from IP, via PostHog GeoIP) | Yes, if PostHog is enabled | No | No | Optional | Analytics |
 | Device or other IDs (PostHog anonymous ID) | Yes, if PostHog is enabled | No | No | Optional | Analytics |
+| Messages → Other in-app messages (AI chat questions, voice-expense text) | Yes, when online AI is used | Yes (OpenAI via our server for Pro; the user's own provider for their key) | Yes | Optional (Settings → Online AI) | App functionality |
+| Financial info → Other financial info (trip budget and spending figures sent with AI requests) | Yes, when online AI is used | Yes (as above) | Yes | Optional (Settings → Online AI) | App functionality |
+| Financial info → Purchase history | Yes | Yes (RevenueCat) | No | Optional (only with a paid plan) | App functionality, Account management |
 
 ### Sensitive permissions (Policy → App content → Sensitive permissions)
 - **Location permissions → background location**
@@ -140,7 +146,7 @@ Personal developer accounts created after Nov 2023 must run a **closed test with
 `gmail.readonly` is a restricted scope. Until it's verified, only the test users from 6c can connect Gmail. Everything else works for everyone.
 
 1. OAuth consent screen → **Publish app** → **Prepare for verification**.
-2. Give a scope justification ("reads booking confirmations and receipts to import trip expenses and itinerary; processed on-device") and a demo video of the Gmail import.
+2. Give a scope justification ("reads booking confirmations and receipts to import trip expenses and itinerary. Emails are read on the device and their text is never uploaded; the expenses and bookings created from them are saved in the user's trip backup") and a demo video of the Gmail import.
 3. Google assigns a **CASA Tier 2** security assessment through an approved lab. It usually takes 2–6 weeks, and some labs charge a fee.
 
 If you want to launch before that finishes, ship with Gmail limited to test users and turn it on for everyone after verification. No new build is needed.
@@ -157,7 +163,7 @@ Crash reports (JS, Android JVM + NDK, iOS) and logs go through the same PostHog 
 ## Store listing (Grow → Store presence → Main store listing)
 
 - **App name:** NomadSafe
-- **Short description (80 chars):** Travel safety: SOS, live location sharing, trip budgets and an on-device AI.
+- **Short description (80 chars):** Travel safety: SOS, live location sharing, trip budgets and an AI travel guide.
 - **Full description:** draft below.
 - **App icon:** `assets/store/play-icon-512.png`
 - **Feature graphic:** `assets/store/feature-graphic-1024x500.png`
@@ -169,13 +175,13 @@ Draft full description:
 > NomadSafe keeps solo and group travellers safe and organised.
 >
 > • SOS in one hold: a 5-second cancel window, then an SMS to your emergency contacts with your location, plus one-tap calling to the local emergency number.
-> • Check-ins: set a timer before a hike or a late ride. If you don't check in, you're reminded and can alert your contacts in one tap.
+> • Check-ins: set a timer before a hike or a late ride. If you don't check in, contacts who use NomadSafe are alerted automatically.
 > • Live location sharing, only with people you choose and who accept. Pause anyone, stop anytime.
 > • Trips and itinerary: destinations, weather, nearby places, and booking details imported from Gmail (optional).
 > • Money: a trip budget in your home currency. Paste a bank alert or import receipts; amounts are converted automatically.
-> • An AI travel guide that runs entirely on your phone: your chats never leave the device.
+> • An AI travel guide that runs on your phone, even offline. Optionally use a more capable online AI with Pro or your own API key.
 >
-> Your trips, expenses and chats are stored encrypted on your phone. Only your account and, while you share, your live location go to our servers. Delete your account at any time in Settings.
+> Your trips, expenses and chats are stored encrypted on your phone. Your trips are backed up to your account (you can turn this off), and your live location goes to our servers only while you share it. Delete your account at any time in Settings.
 
 ---
 

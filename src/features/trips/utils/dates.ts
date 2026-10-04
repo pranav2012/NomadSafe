@@ -41,3 +41,11 @@ export function getTripStatus(
   if (today > fromDateKey(trip.endDate)) return "complete";
   return "active";
 }
+
+/** Days left in the trip with today counted, so the last day shows 1; 0 once it's over. */
+export function daysLeftInTrip(trip: { startDate: string; endDate: string }, now: Date = new Date()): number {
+  const status = getTripStatus(trip, now);
+  if (status === "complete") return 0;
+  const from = status === "upcoming" ? fromDateKey(trip.startDate) : now;
+  return countInclusiveDays(from, fromDateKey(trip.endDate));
+}

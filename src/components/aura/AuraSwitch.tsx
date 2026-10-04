@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { Pressable, StyleSheet } from "react-native";
+import { AppState, Pressable, StyleSheet } from "react-native";
 import Animated, { interpolateColor, useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 import { springs } from "@/components/motion/springs";
 import { selectionChanged } from "@/utils/haptics";
@@ -25,7 +25,13 @@ export function AuraSwitch({
   const on = useSharedValue(value ? 1 : 0);
 
   useEffect(() => {
-    on.set(withSpring(value ? 1 : 0, springs.snappy));
+    const target = value ? 1 : 0;
+    on.set(withSpring(target, springs.snappy));
+    // A value set while paused (e.g. a permission result, delivered before resume) never animates; snap on return.
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") on.set(target);
+    });
+    return () => sub.remove();
   }, [on, value]);
 
   const trackStyle = useAnimatedStyle(() => ({

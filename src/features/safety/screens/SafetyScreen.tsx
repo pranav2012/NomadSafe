@@ -47,6 +47,7 @@ import {
   type BroadcastSnapshot,
 } from "@/features/safety/services/sosService";
 import { readLastKnownFix, saveLastKnownFix } from "@/features/safety/services/lastKnownLocation";
+import { authorizeSosCancel } from "@/features/safety/services/sosOwnerAuth";
 import {
   alertContactsSos,
   CHECK_IN_ALERT_GRACE_MS,
@@ -261,6 +262,18 @@ export default function SafetyScreen() {
         const { status: perm } = await Location.requestForegroundPermissionsAsync();
         void refreshReadiness();
         if (perm !== Location.PermissionStatus.GRANTED) return;
+        // A fresh fix can take a while indoors; show the phone's last known position meanwhile.
+        const recent = await Location.getLastKnownPositionAsync({ maxAge: 30 * 60_000 }).catch(() => null);
+        if (recent && mounted) {
+          setLocation((current) =>
+            current ?? {
+              latitude: recent.coords.latitude,
+              longitude: recent.coords.longitude,
+              accuracy: recent.coords.accuracy ?? null,
+              timestamp: recent.timestamp,
+            },
+          );
+        }
         const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
         const fix = {
           latitude: loc.coords.latitude,
@@ -604,7 +617,9 @@ export default function SafetyScreen() {
       {
         text: t("safety.cancelConfirm"),
         style: "destructive",
-        onPress: () => {
+        onPress: async () => {
+          if (!(await authorizeSosCancel(t("auth.nativeUnlockPrompt"), t("auth.nativeCancelLabel")))) return;
+          if (useSafetyStore.getState().status !== "emergency") return;
           const { previousBroadcast, sosDelivery: delivered } = useSafetyStore.getState();
           const contactsAlerted = delivered?.outcome === "sent" || delivered?.outcome === "opened";
           cancelSos();

@@ -49,7 +49,7 @@ export default function SignInScreen() {
   const { t } = useLocalization();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
-  const { isSignedIn, isPinSet, setUnlocked } = useAuthStore();
+  const { isSignedIn, isPinSet } = useAuthStore();
   const onboardingCompleted = useSettingsStore((s) => s.onboardingCompleted);
 
   const [loading, setLoading] = useState<string | null>(null);
@@ -70,10 +70,10 @@ export default function SignInScreen() {
     } else if (!isPinSet) {
       router.replace("/(auth)/setup-pin");
     } else {
-      setUnlocked(true);
+      // The PIN on this phone still guards it: LockGate asks for it after signing in.
       router.replace("/(tabs)");
     }
-  }, [isSignedIn, isPinSet, onboardingCompleted, router, setUnlocked]);
+  }, [isSignedIn, isPinSet, onboardingCompleted, router]);
 
   const handleGoogleSignIn = async () => {
     if (loading) return;

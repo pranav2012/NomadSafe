@@ -54,8 +54,13 @@ async function rateWithin(base: string, quote: string, date: string): Promise<nu
 /**
  * Computes the money facts for the chat's trip, converting expenses to the trip
  * currency (fetching missing rates briefly). Returns null when there is no trip.
+ * With `hideEmailMerchants`, merchants read from Gmail are left out (the facts fall back to the
+ * category), so Google user data never goes to an online AI provider.
  */
-export async function loadTripMoneySnapshot(now: Date = new Date()): Promise<TripMoneySnapshot | null> {
+export async function loadTripMoneySnapshot(
+  now: Date = new Date(),
+  { hideEmailMerchants = false }: { hideEmailMerchants?: boolean } = {},
+): Promise<TripMoneySnapshot | null> {
   const { trips, activeTripId } = useTripsStore.getState();
   const trip = resolveContextTrip(trips, activeTripId);
   if (!trip) return null;
@@ -70,7 +75,7 @@ export async function loadTripMoneySnapshot(now: Date = new Date()): Promise<Tri
       return {
         amount: expense.amount * rate,
         category: expense.category,
-        merchant: expense.merchant,
+        merchant: hideEmailMerchants && expense.source === "email" ? "" : expense.merchant,
         date: expense.date,
       };
     }),

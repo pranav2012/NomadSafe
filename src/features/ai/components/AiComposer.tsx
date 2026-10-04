@@ -22,6 +22,7 @@ interface Props {
   busy: boolean;
   busyElsewhere: boolean;
   modelName: string | null;
+  online?: boolean;
   blurTarget?: RefObject<View | null>;
   onLayout?: (event: LayoutChangeEvent) => void;
 }
@@ -46,6 +47,7 @@ export function AiComposer({
   busy,
   busyElsewhere,
   modelName,
+  online = false,
   blurTarget,
   onLayout,
 }: Props) {
@@ -98,11 +100,11 @@ export function AiComposer({
             </Text>
           ) : (
             <View style={[styles.metaLeft, styles.flex]}>
-              <Icon name="lock" size={11} color={c.textMuted} strokeWidth={2} />
+              <Icon name={online ? "globe" : "lock"} size={11} color={c.textMuted} strokeWidth={2} />
               <Text numberOfLines={1} style={[styles.metaText, styles.flex, { color: c.textMuted, fontFamily: f.regular }]}>
                 {modelName
-                  ? `${t("aiTab.chatModel", { model: modelName })} · ${t("aiTab.composer.private")}`
-                  : t("aiTab.composer.private")}
+                  ? `${t("aiTab.chatModel", { model: modelName })} · ${t(online ? "aiTab.composer.online" : "aiTab.composer.private")}`
+                  : t(online ? "aiTab.composer.online" : "aiTab.composer.private")}
               </Text>
             </View>
           )}

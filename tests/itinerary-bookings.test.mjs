@@ -124,6 +124,22 @@ test("the timeline shows a stay once at each end and collapses the quiet days be
   ]);
 });
 
+test("quiet stay days step by calendar day across a DST change", () => {
+  const previousTz = process.env.TZ;
+  process.env.TZ = "Europe/Berlin";
+  try {
+    // Clocks go back on 25 Oct 2026 in Berlin, so that day is 25 hours long.
+    const stay = { type: "stay", title: "Pine Lodge", startAt: "2026-10-23T15:00:00", endAt: "2026-10-28T10:00:00" };
+    const summary = timeline.buildTimeline([stay]).map((s) =>
+      s.kind === "day" ? `${s.day.getDate()}:${s.entries[0].role}` : `staying ${s.from.getDate()}-${s.to.getDate()}`,
+    );
+    assert.deepEqual(summary, ["23:check-in", "staying 24-27", "28:check-out"]);
+  } finally {
+    if (previousTz === undefined) delete process.env.TZ;
+    else process.env.TZ = previousTz;
+  }
+});
+
 test("booking numbers decide: same number is one booking, different numbers stay apart", () => {
   const a = { type: "stay", title: "Maple Leaf", startAt: "2026-10-18T15:00:00", endAt: "2026-10-21T10:00:00", bookingRef: "111" };
   assert.ok(!bookings.sameBooking(a, { ...a, endAt: "2026-10-20T10:00:00", bookingRef: "222" }), "two bookings at one hostel");

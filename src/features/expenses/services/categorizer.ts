@@ -14,7 +14,8 @@ export interface CategorizeResult {
 
 /**
  * Categorizes an expense, preferring the fast keyword heuristic and falling
- * back to the local model only for merchants the heuristic can't place. The
+ * back to the local model only for merchants the heuristic can't place. Imports
+ * carry raw email and SMS text, so this never uses online AI. The
  * model is optional: a load or inference failure resolves to the heuristic
  * result with `modelFailed` set so callers can stop consulting it.
  */

@@ -143,6 +143,24 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_token", ["token"]),
 
+  // The user's paid entitlements, copied from RevenueCat (webhook or an in-app refresh).
+  entitlements: defineTable({
+    userId: v.string(),
+    unlimitedTrips: v.boolean(),
+    cloudAi: v.boolean(),
+    expiresAt: v.optional(v.number()),
+    productId: v.optional(v.string()),
+    updatedAt: v.number(),
+  }).index("by_user", ["userId"]),
+
+  // Cloud AI calls per user per calendar month (UTC, "YYYY-MM").
+  aiUsage: defineTable({
+    userId: v.string(),
+    month: v.string(),
+    chat: v.number(),
+    tasks: v.number(),
+  }).index("by_user_month", ["userId", "month"]),
+
   // Web deletion requests from users who can no longer open the app.
   deletionRequests: defineTable({
     email: v.string(),

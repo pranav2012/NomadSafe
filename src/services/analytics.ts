@@ -6,6 +6,10 @@ import { storage } from "@/stores/storage";
 type ExpenseSourceKind = "manual" | "paste" | "gmail" | "gmail_auto" | "voice";
 type VoiceCaptureFailure = "no_model" | "speech_unavailable" | "unclear" | "model_error";
 type SmsResult = "sent" | "cancelled" | "opened" | "failed";
+type PaidTier = "plus" | "pro";
+type BillingPeriod = "monthly" | "annual" | "lifetime";
+type AiProvider = "local" | "cloud" | "byok";
+type AiTask = "chat" | "budget" | "trip_name" | "itinerary" | "voice";
 
 /** Custom events. Properties are counts, enums and booleans only, never user content. */
 export interface AnalyticsEvents {
@@ -27,6 +31,12 @@ export interface AnalyticsEvents {
   voice_capture_opened: { from_widget: boolean; locked: boolean };
   voice_capture_failed: { reason: VoiceCaptureFailure };
   voice_draft_saved: { kind: "expense" | "settlement"; split: boolean; edited: boolean; auto: boolean };
+  trip_limit_reached: undefined;
+  paywall_viewed: { reason: "trips" | "ai" | "settings" };
+  purchase_completed: { tier: PaidTier; period: BillingPeriod; trial: boolean };
+  purchases_restored: { tier: "free" | PaidTier };
+  ai_provider_used: { provider: AiProvider; task: AiTask; fallback: boolean };
+  ai_key_saved: { provider: "openai" | "anthropic" | "gemini" | "openai_compatible" };
 }
 
 export interface FeatureFlags {

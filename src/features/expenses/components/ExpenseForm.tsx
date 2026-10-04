@@ -14,7 +14,7 @@ import { useLocalization } from "@/localization";
 import { CURRENCY_OPTIONS } from "@/utils/currency";
 import { EXPENSE_CATEGORIES, type ExpenseCategory } from "@/features/expenses/constants/categories";
 import { type Expense, type ExpenseLocation, type ExpenseSource, useExpensesStore } from "@/features/expenses/store/expensesStore";
-import { SELF_ID, type ExpenseShare } from "@/features/expenses/utils/split";
+import { roundMoney, SELF_ID, type ExpenseShare } from "@/features/expenses/utils/split";
 import { initialSplitValue, SplitEditor, splitValueToShares, type SplitValue } from "@/features/expenses/components/SplitEditor";
 import { categorizeHeuristic } from "@/features/expenses/services/categorizer";
 import { getCurrentExpenseLocation } from "@/features/expenses/services/locationTagging";
@@ -200,7 +200,8 @@ function ExpenseFormBody({
   };
 
   const handleSave = () => {
-    const numericAmount = parseAmountInput(amount, decimalSeparator);
+    const parsedAmount = parseAmountInput(amount, decimalSeparator);
+    const numericAmount = Number.isFinite(parsedAmount) ? roundMoney(parsedAmount, currency) : parsedAmount;
     const trimmedMerchant = merchant.trim();
     if (!Number.isFinite(numericAmount) || numericAmount <= 0 || !trimmedMerchant) {
       Alert.alert(t("expenses.validationTitle"), t("expenses.validationBody"));

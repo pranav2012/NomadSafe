@@ -15,6 +15,7 @@ import { AuraSheet } from "@/components/aura/AuraSheet";
 import { useAura } from "@/components/aura/useAura";
 import { auraStatusColors } from "@/constants/aura";
 import { useLocalization } from "@/localization";
+import { useStartNewTrip } from "@/features/billing";
 import { TripFormSheet } from "@/features/trips/components/TripForm";
 import { isArchived, TripPeopleSheet } from "@/features/trips/components/TripPeopleSheet";
 import { selectActiveTrip, type Trip, useTripsStore } from "@/features/trips/store/tripsStore";
@@ -87,6 +88,7 @@ export default function TripsScreen() {
   const { c, f } = useAura();
   const { t, locale } = useLocalization();
   const router = useRouter();
+  const startNewTrip = useStartNewTrip();
   const insets = useSafeAreaInsets();
   const trips = useTripsStore((state) => state.trips);
   const activeTrip = useTripsStore(selectActiveTrip);
@@ -222,7 +224,7 @@ export default function TripsScreen() {
           </View>
         ))}
 
-        <AuraButton label={t("trip.addTrip")} icon="plus" variant="secondary" onPress={() => router.push("/plan-trip")} style={styles.add} />
+        <AuraButton label={t("trip.addTrip")} icon="plus" variant="secondary" onPress={startNewTrip} style={styles.add} />
         <AuraButton label={t("groupTrip.joinWithCode")} icon="users" variant="ghost" onPress={() => setJoinOpen(true)} style={styles.join} />
       </ScrollView>
 

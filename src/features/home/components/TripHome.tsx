@@ -434,10 +434,11 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 11,
     height: 30,
+    maxWidth: "100%",
     borderRadius: 15,
     borderWidth: StyleSheet.hairlineWidth,
   },
-  chipText: { fontFamily: f.medium, fontSize: 12.5 },
+  chipText: { flexShrink: 1, fontFamily: f.medium, fontSize: 12.5 },
   passWrap: { marginTop: 16, marginBottom: 8 },
   body: { paddingHorizontal: 20 },
   railLabels: {

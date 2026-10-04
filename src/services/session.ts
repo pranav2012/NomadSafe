@@ -20,6 +20,8 @@ import {
   unregisterTripPush,
 } from "@/features/sync";
 import { clearServerCheckIn } from "@/features/safety/services/safetyServerAlerts";
+import { clearByokConfig } from "@/features/ai/services/remote/byok";
+import { clearCloudExhaustion } from "@/features/ai/services/remote/cloud";
 
 /** Revokes the Google grant (best-effort) and forgets the local tokens. */
 export async function disconnectGmail() {
@@ -56,11 +58,17 @@ export async function confirmDeviceOwner(promptMessage: string, cancelLabel: str
   }
 }
 
+/** Sends pending shared-trip and backup changes; false when some couldn't reach the server in time. */
+export async function flushBeforeSignOut() {
+  const backedUp = hasBackupOwner();
+  return (await flushGroupSync()) && (!backedUp || (await flushSync()));
+}
+
 /**
  * Ends the account session: stops live location sharing (server shares are
  * marked inactive while the session is still valid), revokes Gmail access,
  * sends pending backup changes, then signs out. Backed-up trips and expenses are
- * removed from the phone; with backup off they stay unless wiped.
+ * removed from the phone; with backup off they stay unless wiped. A saved AI API key is forgotten.
  */
 export async function signOutAndCleanup() {
   try {
@@ -71,6 +79,10 @@ export async function signOutAndCleanup() {
   useSharingStore.getState().setBroadcasting(false);
 
   await disconnectGmail();
+  try {
+    await clearByokConfig();
+  } catch {}
+  clearCloudExhaustion();
   // While the session is still valid, so contacts aren't alerted about a check-in nobody can answer.
   await clearServerCheckIn();
 

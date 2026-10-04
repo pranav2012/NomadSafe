@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import Constants from "expo-constants";
 import { useFocusEffect, useRouter } from "expo-router";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { AuraListGroup, AuraListRow } from "@/components/aura/AuraList";
 import { AuraSwitch } from "@/components/aura/AuraSwitch";
@@ -18,6 +18,12 @@ import { confirmDeviceOwner, disconnectGmail, signOutAndCleanup } from "@/servic
 import { disableBackup, flushGroupSync, flushSync, hasBackupOwner } from "@/features/sync";
 import { localAuth, useAuthStore, useBiometricPresentation } from "@/features/auth";
 import { useProvisioningStore } from "@/features/ai";
+import { AiKeySheet } from "@/features/ai/components/AiKeySheet";
+import { useByokStore } from "@/features/ai/services/remote/byok";
+import { byokProviderName } from "@/features/ai/utils/remoteLabel";
+import { FREE_TRIP_LIMIT, ownedTripCount, usePlan } from "@/features/billing";
+import { manageSubscriptions, restorePurchases } from "@/features/billing/services/purchases";
+import { track } from "@/services/analytics";
 import { useTripsStore } from "@/features/trips/store/tripsStore";
 import { hasGmailGrant, hydrateGmailConnection, useGmailConnectionStore } from "@/features/expenses/store/gmailConnectionStore";
 import { ensureGmailAccountEmail } from "@/features/expenses/services/gmailAuth";
@@ -36,7 +42,7 @@ const [INDIGO, TEAL, VIOLET] = auraStatusColors.calm;
 const AMBER = auraStatusAccent.live;
 
 type ThemeMode = "light" | "dark" | "system";
-type SheetId = "autoLock" | "checkIn" | "appearance" | "language" | "sms";
+type SheetId = "autoLock" | "checkIn" | "appearance" | "language" | "sms" | "aiKey";
 type Translate = ReturnType<typeof useLocalization>["t"];
 
 function formatShortDuration(seconds: number, t: Translate): string {
@@ -89,6 +95,11 @@ export default function SettingsScreen() {
   const setDefaultCheckInDuration = useSettingsStore((s) => s.setDefaultCheckInDuration);
   const localAiEnabled = useSettingsStore((s) => s.localAiEnabled);
   const setLocalAiEnabled = useSettingsStore((s) => s.setLocalAiEnabled);
+  const onlineAiEnabled = useSettingsStore((s) => s.onlineAiEnabled);
+  const setOnlineAiEnabled = useSettingsStore((s) => s.setOnlineAiEnabled);
+  const byok = useByokStore((s) => s.summary);
+  const plan = usePlan();
+  const cloudUsage = useQuery(api.ai.myUsage, plan.cloudAi ? {} : "skip");
   const analyticsEnabled = useSettingsStore((s) => s.analyticsEnabled);
   const setAnalyticsEnabled = useSettingsStore((s) => s.setAnalyticsEnabled);
   const cloudBackupEnabled = useSettingsStore((s) => s.cloudBackupEnabled);
@@ -107,6 +118,9 @@ export default function SettingsScreen() {
   const [deleting, setDeleting] = useState(false);
   const [backupBusy, setBackupBusy] = useState(false);
   const [sheet, setSheet] = useState<SheetId | null>(null);
+  const [restoring, setRestoring] = useState(false);
+  // Remounts the key sheet on each open so it starts from what's saved.
+  const [keySheetSession, setKeySheetSession] = useState(0);
   const closeSheet = () => setSheet(null);
 
   useEffect(() => {
@@ -320,6 +334,43 @@ export default function SettingsScreen() {
     ]);
   };
 
+  const handleRestore = async () => {
+    if (restoring) return;
+    setRestoring(true);
+    try {
+      const restored = await restorePurchases();
+      track("purchases_restored", { tier: restored });
+      Alert.alert(
+        restored === "free" ? t("paywall.restoreNoneTitle") : t("paywall.restoreDoneTitle"),
+        restored === "free" ? t("paywall.restoreNoneBody") : t(restored === "pro" ? "paywall.restoreDonePro" : "paywall.restoreDonePlus"),
+      );
+    } catch {
+      Alert.alert(t("paywall.failedTitle"), t("paywall.restoreFailedBody"));
+    } finally {
+      setRestoring(false);
+    }
+  };
+
+  const openKeySheet = () => {
+    setKeySheetSession((value) => value + 1);
+    setSheet("aiKey");
+  };
+
+  const planDetail =
+    plan.tier === "pro"
+      ? t("settings.planProDetail")
+      : plan.tier === "plus"
+        ? t("settings.planPlusDetail")
+        : t("settings.planFreeDetail", { count: Math.min(ownedTripCount(trips), FREE_TRIP_LIMIT), limit: FREE_TRIP_LIMIT });
+  const cloudLeft = cloudUsage ? Math.max(0, cloudUsage.chat.limit - cloudUsage.chat.used) : null;
+  const onlineAiDetail = !onlineAiEnabled
+    ? t("settings.onlineAiOff")
+    : byok
+      ? t("settings.onlineAiByok", { provider: byokProviderName(byok) })
+      : plan.cloudAi
+        ? t("settings.onlineAiCloud")
+        : t("settings.onlineAiNone");
+
   const spinner = (color: string) => <ActivityIndicator color={color} />;
 
   return (
@@ -345,6 +396,36 @@ export default function SettingsScreen() {
         </View>
 
         <SettingsProfileHeader name={name} email={user?.email ?? user?.phone} avatarUrl={user?.avatarUrl} stats={stats} />
+
+        <AuraListGroup title={t("settings.planSection")}>
+          <AuraListRow
+            icon="star"
+            tone={VIOLET}
+            label={t(`paywall.tierName_${plan.tier}`)}
+            detail={planDetail}
+            value={plan.tier === "pro" || !plan.billingAvailable ? undefined : t("settings.planUpgrade")}
+            onPress={() => router.push({ pathname: "/paywall", params: { reason: "settings" } })}
+          />
+          {plan.cloudAi && cloudLeft !== null ? (
+            <AuraListRow
+              icon="sparkle"
+              tone={TEAL}
+              label={t("settings.cloudAiUsage")}
+              value={t("settings.cloudAiLeft", { count: cloudLeft })}
+            />
+          ) : null}
+          {plan.tier !== "free" ? (
+            <AuraListRow icon="settings" label={t("settings.manageSubscription")} onPress={() => void manageSubscriptions().catch(() => {})} />
+          ) : null}
+          {plan.billingAvailable ? (
+            <AuraListRow
+              icon="download"
+              label={t("paywall.restore")}
+              trailing={restoring ? spinner(c.textMuted) : undefined}
+              onPress={() => void handleRestore()}
+            />
+          ) : null}
+        </AuraListGroup>
 
         <AuraListGroup title={t("settings.privacySection")}>
           <AuraListRow
@@ -457,6 +538,20 @@ export default function SettingsScreen() {
               />
             }
           />
+          <AuraListRow
+            icon="globe"
+            tone={INDIGO}
+            label={t("settings.onlineAi")}
+            detail={onlineAiDetail}
+            trailing={<AuraSwitch value={onlineAiEnabled} onValueChange={setOnlineAiEnabled} accessibilityLabel={t("settings.onlineAi")} />}
+          />
+          <AuraListRow
+            icon="lock"
+            tone={AMBER}
+            label={t("settings.aiKey")}
+            value={byok ? byokProviderName(byok) : t("settings.aiKeyNone")}
+            onPress={openKeySheet}
+          />
         </AuraListGroup>
 
         <AuraListGroup title={t("settings.dataSection")} footer={t("settings.cloudBackupSub")}>
@@ -547,6 +642,7 @@ export default function SettingsScreen() {
         footnote={t("settings.languageRtlNote")}
       />
       <SmsTemplatesSheet visible={sheet === "sms"} onClose={closeSheet} />
+      <AiKeySheet key={keySheetSession} visible={sheet === "aiKey"} onClose={closeSheet} />
     </View>
   );
 }
