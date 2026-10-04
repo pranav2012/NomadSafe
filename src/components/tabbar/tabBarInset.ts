@@ -1,9 +1,22 @@
 import { useEffect, useState } from "react";
-import { Keyboard, Platform } from "react-native";
+import { Keyboard, Platform, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export const TAB_BAR_HEIGHT = 64;
 export const TAB_BAR_GAP = 10;
+// The bar is designed for a 402 dp-wide screen (iPhone 16 Pro) and scales down on narrower ones,
+// including Android's larger display-zoom settings, so it keeps iOS proportions.
+const REFERENCE_WIDTH = 402;
+
+export function tabBarScale(windowWidth: number) {
+  return Math.max(0.8, Math.min(1, windowWidth / REFERENCE_WIDTH));
+}
+
+/** Height of the floating Android tab bar on this screen. */
+export function useTabBarHeight() {
+  const { width } = useWindowDimensions();
+  return Math.round(TAB_BAR_HEIGHT * tabBarScale(width));
+}
 /** iOS uses the system UITabBar, which is already part of the bottom safe area; Android floats the glass bar. */
 export const NATIVE_TAB_BAR = Platform.OS === "ios";
 
@@ -25,12 +38,14 @@ export function useKeyboardVisible() {
 export function useTabBarInset() {
   const insets = useSafeAreaInsets();
   const keyboardVisible = useKeyboardVisible();
+  const barHeight = useTabBarHeight();
   if (keyboardVisible) return 0;
-  return NATIVE_TAB_BAR ? insets.bottom + 8 : insets.bottom + TAB_BAR_GAP + TAB_BAR_HEIGHT + 8;
+  return NATIVE_TAB_BAR ? insets.bottom + 8 : insets.bottom + TAB_BAR_GAP + barHeight + 8;
 }
 
 /** Bottom offset for chrome that floats just above the tab bar (capture bar, AI composer). */
 export function useFloatingBarBottom() {
   const insets = useSafeAreaInsets();
-  return NATIVE_TAB_BAR ? insets.bottom + 10 : insets.bottom + TAB_BAR_GAP + TAB_BAR_HEIGHT + 10;
+  const barHeight = useTabBarHeight();
+  return NATIVE_TAB_BAR ? insets.bottom + 10 : insets.bottom + TAB_BAR_GAP + barHeight + 10;
 }
