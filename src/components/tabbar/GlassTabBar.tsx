@@ -228,6 +228,8 @@ export function GlassTabBar({
   const prevX = useSharedValue(0);
   const prevV = useSharedValue(0);
   const liquidRunning = useSharedValue(false);
+  // Read by the lens uniforms so bumping it forces a repaint without moving anything.
+  const repaint = useSharedValue(0);
   // Set once the frame callback exists; the callback stops itself through this on the JS thread.
   const liquidRef = useRef<{ setActive: (active: boolean) => void } | null>(null);
   const stopLiquid = () => {
@@ -351,6 +353,7 @@ export function GlassTabBar({
   });
 
   const uniforms = useDerivedValue(() => {
+    repaint.get();
     const l = lift.get();
     const { scaleX, scaleY, lagX, motion } = shape.get();
     const halfY = (PILL_H / 2) * (1 + l * GROW_Y) * scaleY;
@@ -450,6 +453,15 @@ export function GlassTabBar({
         </Group>
       );
     });
+  const canvasReady = slot > 0 && labels !== null;
+  // Android can drop the canvas's first frame on a cold start (the surface isn't attached yet), and
+  // an idle bar never draws again, so it stays empty until touched. Repaint once it's on screen.
+  useEffect(() => {
+    if (!canvasReady) return;
+    const timers = [100, 500].map((ms) => setTimeout(() => repaint.set(repaint.get() + 1), ms));
+    return () => timers.forEach(clearTimeout);
+  }, [canvasReady, repaint]);
+
   const pillTint = isDark ? "rgba(255,255,255,0.12)" : "rgba(14,16,24,0.06)";
 
   return (
