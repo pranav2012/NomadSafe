@@ -37,7 +37,13 @@ uniform float2 tilt;
 
 const float WATER = 0.68;
 
-float hash(float2 p) { return fract(sin(dot(p, float2(127.1, 311.7))) * 43758.5453); }
+// sin()-free hash (Dave Hoskins): many Android GPUs evaluate sin() of large values with low
+// precision, which turns the classic fract(sin(...)) hash into visible square blocks.
+float hash(float2 p) {
+  float3 p3 = fract(float3(p.xyx) * 0.1031);
+  p3 += dot(p3, p3.yzx + 33.33);
+  return fract((p3.x + p3.y) * p3.z);
+}
 
 float noise(float2 p) {
   float2 i = floor(p);

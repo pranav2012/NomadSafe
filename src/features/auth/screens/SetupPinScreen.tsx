@@ -25,6 +25,7 @@ import { logger } from "@/services/logger";
 
 const PIN_LENGTH = 6;
 const DANGER = "#FF4D5E";
+const BIOMETRIC_CHECK_TIMEOUT_MS = 2000;
 
 export default function SetupPinScreen() {
   const router = useRouter();
@@ -61,8 +62,16 @@ export default function SetupPinScreen() {
     await secureStorage.setPin(hashed);
     setPinSet(true);
 
-    const { available } = await localAuth.checkBiometricAvailability();
-    if (available) setBiometricEnabled(true);
+    // Some devices never settle the biometric availability check, so it can't hold up navigation:
+    // turn biometric unlock on in the background once it answers, or give up after a moment.
+    void Promise.race([
+      localAuth.checkBiometricAvailability(),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), BIOMETRIC_CHECK_TIMEOUT_MS)),
+    ])
+      .then((result) => {
+        if (result?.available) setBiometricEnabled(true);
+      })
+      .catch(() => {});
 
     if (fromOnboarding) {
       // Back to onboarding's lock step, which now shows the recap; finishing

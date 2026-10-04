@@ -1,0 +1,20 @@
+diff --git a/android/README.md b/android/README.md
+deleted file mode 100644
+index ac2fbda377ad1213c02f090138f48054e5660547..0000000000000000000000000000000000000000
+diff --git a/cpp/rnskia/RNDawnContext.h b/cpp/rnskia/RNDawnContext.h
+index a80c17ca4ae65a667346a37a8f8098ad74d7a0b4..ff650c8b17def235f4d13b017dbcfb3bc46a9854 100644
+--- a/cpp/rnskia/RNDawnContext.h
++++ b/cpp/rnskia/RNDawnContext.h
+@@ -480,6 +480,12 @@ private:
+     skgpu::graphite::ContextOptionsPriv contextOptionsPriv;
+     ctxOptions.fOptionsPriv = &contextOptionsPriv;
+     ctxOptions.fOptionsPriv->fStoreContextRefInRecorder = true;
++#ifdef __ANDROID__
++    // NomadSafe: Adreno's Vulkan driver crashes in vkCreateFramebuffer when Graphite opens the
++    // multisampled render pass it uses for large paths. Without internal MSAA, Graphite renders
++    // paths through its anti-aliased coverage atlas instead.
++    ctxOptions.fInternalMultisampleCount = skgpu::graphite::SampleCount::k1;
++#endif
+     fGraphiteContext =
+         skgpu::graphite::ContextFactory::MakeDawn(backendContext, ctxOptions);
+ 

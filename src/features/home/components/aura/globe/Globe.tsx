@@ -2,14 +2,12 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
 import {
   AlphaType,
-  BlurMask,
   Canvas,
   DashPathEffect,
   Circle,
   ColorType,
   FilterMode,
   Fill,
-  Group,
   ImageShader,
   MipmapMode,
   Path,
@@ -54,8 +52,10 @@ const DEFAULT_SPAN_KM = 400;
 // Overview spin: one turn every 2.5 minutes, eastward like the real Earth.
 const SPIN_RAD_PER_MS = (2 * Math.PI) / 150_000;
 const SPIN_RESUME_MS = 2000;
-// The shader is the expensive part, and clouds drift slowly: redraw it at ~15 fps, pins and arcs at full rate.
-const SHADER_TICK_MS = 66;
+// The globe redraws at ~30 fps rather than the display rate: clouds drift slowly and the comet and pin
+// pulses still read smoothly. It's one canvas on purpose: two full-size Skia surfaces created together
+// crash the Adreno Vulkan driver under Graphite (Snapdragon phones).
+const SHADER_TICK_MS = 33;
 const EARTH_RADIUS_KM = 6371;
 // Below this zoom the bundled 2048px textures are sharp enough; above it, regional NASA imagery fades in.
 const DETAIL_ZOOM = 2.5;
@@ -198,7 +198,13 @@ uniform float moon;
 const float PI = 3.14159265;
 const float3 ATMO = float3(0.36, 0.6, 1.0);
 
-float hash(float2 p) { return fract(sin(dot(p, float2(127.1, 311.7))) * 43758.5453); }
+// sin()-free hash (Dave Hoskins): many Android GPUs evaluate sin() of large values with low
+// precision, which turns the classic fract(sin(...)) hash into visible square blocks.
+float hash(float2 p) {
+  float3 p3 = fract(float3(p.xyx) * 0.1031);
+  p3 += dot(p3, p3.yzx + 33.33);
+  return fract((p3.x + p3.y) * p3.z);
+}
 
 float noise(float2 p) {
   float2 i = floor(p);
@@ -480,15 +486,18 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
   const touching = useSharedValue(false);
   const resumeAt = useSharedValue(0);
 
-  // One clock for clouds, comet, pin pulses and the overview spin. It only runs while the globe is
-  // visible and holds still during page scrolls; the shader and spin advance in coarse ticks.
+  // One clock for clouds, comet, pin pulses and the overview spin, advanced in ~30 fps ticks. It only
+  // runs while the globe is visible and holds still during page scrolls.
   const ticker = useFrameCallback((info) => {
     if (scrolling?.get()) return;
-    const dt = info.timeSincePreviousFrame ?? 16;
-    clock.set(clock.get() + dt);
-    if (clock.get() - shaderTickAt.get() < SHADER_TICK_MS) return;
-    const step = clock.get() - shaderTickAt.get();
-    shaderTickAt.set(clock.get());
+    const elapsed = shaderTickAt.get() + (info.timeSincePreviousFrame ?? 16);
+    if (elapsed < SHADER_TICK_MS) {
+      shaderTickAt.set(elapsed);
+      return;
+    }
+    const step = elapsed;
+    shaderTickAt.set(0);
+    clock.set(clock.get() + step);
     if (!reduceMotion) shaderTime.set(clock.get() / 1000);
     // Overview spin, paused while touched and for a moment after, so drags and momentum aren't fought.
     if (!spinning || touching.get()) return;
@@ -634,13 +643,16 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
       zoom.set(withSpring(Math.min(maxZoom, Math.max(MIN_ZOOM, zoom.get())), springs.sheet));
     });
 
+  const fadeStyle = useAnimatedStyle(() => ({ opacity: fade.get() }));
+
+  // No Skia layers here (group opacity, blur): under Graphite the off-screen render pass they need
+  // crashes the Adreno Vulkan driver, so the fade is a native opacity and glows are plain strokes.
   return (
     <GestureDetector gesture={Gesture.Simultaneous(pinch, pan)}>
       <View style={{ width, height }}>
         {textures && dayImage && nightImage ? (
-          <>
+          <Animated.View style={[StyleSheet.absoluteFill, fadeStyle]}>
           <Canvas style={StyleSheet.absoluteFill}>
-            <Group opacity={fade}>
             <Fill>
               <Shader source={GLOBE} uniforms={uniforms}>
                 <ImageShader image={dayImage} fit="fill" x={0} y={0} width={TEX_W} height={TEX_H} sampling={SMOOTH} />
@@ -677,19 +689,13 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
                 <ImageShader image={textures.sky} fit="fill" x={0} y={0} width={SKY_W} height={SKY_H} tx="repeat" ty="clamp" sampling={SMOOTH} />
               </Shader>
             </Fill>
-            </Group>
-          </Canvas>
-          {/* Separate surface so per-frame comet and pin pulses don't re-run the globe shader. */}
-          <Canvas style={StyleSheet.absoluteFill}>
-            <Group opacity={fade}>
             <Path path={homeArc} style="stroke" strokeWidth={1.4} color={isDark ? "#EDEFF5" : "#0E1018"} opacity={0.55} strokeCap="round">
               <DashPathEffect intervals={[3, 5]} />
             </Path>
             <Path path={otherLegs} style="stroke" strokeWidth={1.2} color={accent} opacity={0.3} strokeCap="round" />
             <Path path={arcs} style="stroke" strokeWidth={1.8} color={accent} opacity={0.7} strokeCap="round" />
-            <Path path={arcs} style="stroke" strokeWidth={2.6} color={accent} start={cometStart} end={cometEnd} strokeCap="round">
-              <BlurMask blur={4} style="solid" />
-            </Path>
+            <Path path={arcs} style="stroke" strokeWidth={7} color={accent} opacity={0.25} start={cometStart} end={cometEnd} strokeCap="round" />
+            <Path path={arcs} style="stroke" strokeWidth={2.6} color={accent} start={cometStart} end={cometEnd} strokeCap="round" />
             {origin ? (
               <GlobePin stop={origin} focused={false} rotLng={rotLng} rotLat={rotLat} cx={cx} cy={cy} radius={radius} accent={isDark ? "#EDEFF5" : "#0E1018"} pulse={pulse} quiet />
             ) : null}
@@ -710,9 +716,8 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
                 pulse={pulse}
               />
             ))}
-            </Group>
           </Canvas>
-          </>
+          </Animated.View>
         ) : null}
         {dayImage && nightImage && focusOnly[0] && stopWeather[0] ? (
           <WeatherBadge
@@ -762,12 +767,13 @@ function GlobePin({
   const ringR = useDerivedValue(() => 4 + pulse.get() * (focused ? 18 : 10));
   const ringOpacity = useDerivedValue(() => (quiet ? 0 : visible.get() * (1 - pulse.get()) * 0.7));
 
+  // Per-circle opacity rather than a Group opacity, which would need an off-screen layer.
   return (
-    <Group opacity={visible}>
+    <>
       <Circle cx={x} cy={y} r={ringR} color={accent} style="stroke" strokeWidth={1.4} opacity={ringOpacity} />
-      <Circle cx={x} cy={y} r={focused ? 5.5 : 3.5} color="#FFFFFF" />
-      <Circle cx={x} cy={y} r={focused ? 3.5 : 2.2} color={accent} />
-    </Group>
+      <Circle cx={x} cy={y} r={focused ? 5.5 : 3.5} color="#FFFFFF" opacity={visible} />
+      <Circle cx={x} cy={y} r={focused ? 3.5 : 2.2} color={accent} opacity={visible} />
+    </>
   );
 }
 
