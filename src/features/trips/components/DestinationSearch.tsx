@@ -1,10 +1,16 @@
-import React, { useMemo, useState } from "react";
+import React, { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
-import Animated, { FadeIn, FadeOut, LinearTransition } from "react-native-reanimated";
+import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { AuraField, Icon, PressableScale, useAura } from "@/atoms";
 import { useLocalization } from "@/localization";
-import { searchOfflineDestinations, type DestinationOption } from "@/features/trips/data/destinations";
-import { useWebDestinationSearch } from "@/features/trips/hooks/useWebDestinationSearch";
+import {
+  DESTINATION_RESULT_LIMIT,
+  foldSearchText,
+  searchOfflineDestinations,
+  warmDestinationIndex,
+  type DestinationOption,
+} from "@/features/trips/data/destinations";
+import { useOnlineDestinationSearch } from "@/features/trips/hooks/useOnlineDestinationSearch";
 
 interface DestinationSearchProps {
   selected: string[];
@@ -16,87 +22,108 @@ interface DestinationSearchProps {
 }
 
 /**
- * City/country search: instant offline matches as you type, with a "search the web" fallback when
- * nothing matches. Clears itself after a pick.
+ * City/country search: instant matches from the bundled cities, topped up with Google suggestions
+ * when those run short. A pick's coordinates are remembered for geocoding. Clears itself after a pick.
  */
 export function DestinationSearch({ selected, onSelect, label, placeholder, autoFocus, large }: DestinationSearchProps) {
   const { c, f } = useAura();
   const { t, locale } = useLocalization();
   const [query, setQuery] = useState("");
-  const web = useWebDestinationSearch(selected);
-  const offline = useMemo(() => searchOfflineDestinations(query, locale, selected), [locale, query, selected]);
-  const typed = query.trim().length >= 2;
-  const showLookup = typed && offline.length === 0 && web.results.length === 0;
-  const showDropdown = typed || web.results.length > 0 || Boolean(web.error);
+  // Typing stays responsive; results follow a frame behind under load.
+  const searchQuery = useDeferredValue(query);
+  const offline = useMemo(() => searchOfflineDestinations(searchQuery, locale, selected), [locale, searchQuery, selected]);
+  const online = useOnlineDestinationSearch(searchQuery, offline.length, locale);
 
-  const pick = (destination: string) => {
-    onSelect(destination);
+  useEffect(() => {
+    const timer = setTimeout(() => warmDestinationIndex(locale), 0);
+    return () => clearTimeout(timer);
+  }, [locale]);
+
+  const options = useMemo(() => {
+    const taken = new Set([...selected, ...offline.map((option) => option.label)].map(foldSearchText));
+    const extra = online.results.filter((option) => !taken.has(foldSearchText(option.label)));
+    return [...offline, ...extra].slice(0, DESTINATION_RESULT_LIMIT);
+  }, [offline, online.results, selected]);
+  const showsOnline = options.some((option) => option.kind === "online");
+
+  const typed = query.trim().length >= 2;
+  const empty = options.length === 0;
+  const message =
+    !empty ? null
+    : online.status === "loading" ? t("trip.searchingDestinations")
+    : online.status === "error" ? t("trip.destinationSearchUnavailable")
+    : online.status === "done" ? t("trip.noDestinationMatches")
+    : null;
+
+  const pick = (option: DestinationOption) => {
+    online.choose(option);
+    onSelect(option.label);
     setQuery("");
-    web.reset();
   };
 
   return (
-    <Animated.View layout={LinearTransition.duration(200)} style={styles.wrap}>
+    <View style={styles.wrap}>
       <AuraField
         label={label}
         large={large}
         value={query}
-        onChangeText={(value) => {
-          web.reset();
-          setQuery(value);
-        }}
+        onChangeText={setQuery}
         placeholder={placeholder ?? t("trip.destinationPlaceholder")}
         autoCapitalize="words"
         autoCorrect={false}
         autoFocus={autoFocus}
         returnKeyType="search"
         onSubmitEditing={(event) => {
-          // The field's own text: `query` can lag a render behind fast typing.
-          const text = event.nativeEvent.text;
-          const match = searchOfflineDestinations(text, locale, selected)[0];
-          if (match) pick(match.label);
-          else if (text.trim().length >= 2) web.search(text);
+          // The field's own text: the deferred results can lag a render behind fast typing.
+          const best = searchOfflineDestinations(event.nativeEvent.text, locale, selected, 1)[0] ?? options[0];
+          if (best) pick(best);
         }}
         prefix={<Icon name="search" size={large ? 20 : 16} color={c.textMuted} />}
       />
-      {showDropdown ? (
+      {typed && (!empty || message) ? (
         <Animated.View entering={FadeIn.duration(160)} exiting={FadeOut.duration(120)} style={[styles.dropdown, { backgroundColor: c.card, borderColor: c.hairline }]}>
-          {[...offline, ...web.results].map((option) => (
-            <OptionRow key={option.id} option={option} onPress={() => pick(option.label)} />
+          {options.map((option) => (
+            <OptionRow key={option.id} option={option} onPress={() => pick(option)} />
           ))}
-          {showLookup ? (
-            <PressableScale onPress={() => web.search(query)} disabled={web.isSearching} pressedScale={0.98} style={styles.row}>
+          {message ? (
+            <View style={styles.row}>
               <View style={[styles.rowIcon, { backgroundColor: c.surfaceStrong }]}>
-                {web.isSearching ? <ActivityIndicator size="small" color={c.textSoft} /> : <Icon name="globe" size={16} color={c.textSoft} />}
+                {online.status === "loading" ? <ActivityIndicator size="small" color={c.textSoft} /> : <Icon name="globe" size={16} color={c.textSoft} />}
               </View>
-              <Text numberOfLines={1} style={[styles.rowTitle, { color: c.text, fontFamily: f.medium }]}>
-                {t("trip.searchWebForDestination", { query: query.trim() })}
+              <Text numberOfLines={2} style={[styles.rowSub, styles.rowText, { color: c.textMuted, fontFamily: f.regular }]}>
+                {message}
               </Text>
-            </PressableScale>
+            </View>
           ) : null}
-          {web.error ? <Text style={[styles.error, { color: "#FF4D5E", fontFamily: f.regular }]}>{web.error}</Text> : null}
+          {showsOnline ? <Text style={[styles.attribution, { color: c.textMuted, fontFamily: f.medium }]}>Google Maps</Text> : null}
         </Animated.View>
       ) : null}
-    </Animated.View>
+    </View>
   );
 }
 
+const KIND_LABELS = {
+  city: "trip.destinationCity",
+  place: "trip.destinationPlace",
+  country: "trip.destinationCountry",
+  online: "trip.destinationOnline",
+} as const;
+
 function OptionRow({ option, onPress }: { option: DestinationOption; onPress: () => void }) {
   const { c, f } = useAura();
+  const { t } = useLocalization();
   return (
     <PressableScale onPress={onPress} pressedScale={0.98} style={styles.row} accessibilityRole="button" accessibilityLabel={option.label}>
       <View style={[styles.rowIcon, { backgroundColor: c.surfaceStrong }]}>
-        <Icon name="mapPin" size={16} color={c.textSoft} />
+        <Icon name={option.kind === "country" ? "globe" : "mapPin"} size={16} color={c.textSoft} />
       </View>
       <View style={styles.rowText}>
         <Text numberOfLines={1} style={[styles.rowTitle, { color: c.text, fontFamily: f.semibold }]}>
           {option.label}
         </Text>
-        {option.detail ? (
-          <Text numberOfLines={1} style={[styles.rowSub, { color: c.textMuted, fontFamily: f.regular }]}>
-            {option.detail}
-          </Text>
-        ) : null}
+        <Text numberOfLines={1} style={[styles.rowSub, { color: c.textMuted, fontFamily: f.regular }]}>
+          {option.detail ?? t(KIND_LABELS[option.kind])}
+        </Text>
       </View>
     </PressableScale>
   );
@@ -110,5 +137,5 @@ const styles = StyleSheet.create({
   rowText: { flex: 1 },
   rowTitle: { fontSize: 15, flexShrink: 1 },
   rowSub: { fontSize: 12.5 },
-  error: { fontSize: 12.5, paddingHorizontal: 14, paddingBottom: 8 },
+  attribution: { fontSize: 11, textAlign: "right", paddingHorizontal: 14, paddingBottom: 8 },
 });

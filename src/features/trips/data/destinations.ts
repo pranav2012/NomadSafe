@@ -1,352 +1,185 @@
+import type { LatLng } from "@/features/trips/services/geocoding";
+import { CITY_ROWS, COUNTRY_ROWS } from "./cities";
+
+export type DestinationKind = "city" | "place" | "country" | "online";
+
 export interface DestinationOption {
   id: string;
   label: string;
-  detail: string;
+  kind: DestinationKind;
+  detail?: string;
+  coordinates?: LatLng;
+  placeId?: string;
 }
 
-const countryCodes = [
-  "AF",
-  "AX",
-  "AL",
-  "DZ",
-  "AS",
-  "AD",
-  "AO",
-  "AI",
-  "AQ",
-  "AG",
-  "AR",
-  "AM",
-  "AW",
-  "AU",
-  "AT",
-  "AZ",
-  "BS",
-  "BH",
-  "BD",
-  "BB",
-  "BY",
-  "BE",
-  "BZ",
-  "BJ",
-  "BM",
-  "BT",
-  "BO",
-  "BQ",
-  "BA",
-  "BW",
-  "BV",
-  "BR",
-  "IO",
-  "BN",
-  "BG",
-  "BF",
-  "BI",
-  "CV",
-  "KH",
-  "CM",
-  "CA",
-  "KY",
-  "CF",
-  "TD",
-  "CL",
-  "CN",
-  "CX",
-  "CC",
-  "CO",
-  "KM",
-  "CG",
-  "CD",
-  "CK",
-  "CR",
-  "CI",
-  "HR",
-  "CU",
-  "CW",
-  "CY",
-  "CZ",
-  "DK",
-  "DJ",
-  "DM",
-  "DO",
-  "EC",
-  "EG",
-  "SV",
-  "GQ",
-  "ER",
-  "EE",
-  "SZ",
-  "ET",
-  "FK",
-  "FO",
-  "FJ",
-  "FI",
-  "FR",
-  "GF",
-  "PF",
-  "TF",
-  "GA",
-  "GM",
-  "GE",
-  "DE",
-  "GH",
-  "GI",
-  "GR",
-  "GL",
-  "GD",
-  "GP",
-  "GU",
-  "GT",
-  "GG",
-  "GN",
-  "GW",
-  "GY",
-  "HT",
-  "HM",
-  "VA",
-  "HN",
-  "HK",
-  "HU",
-  "IS",
-  "IN",
-  "ID",
-  "IR",
-  "IQ",
-  "IE",
-  "IM",
-  "IL",
-  "IT",
-  "JM",
-  "JP",
-  "JE",
-  "JO",
-  "KZ",
-  "KE",
-  "KI",
-  "KP",
-  "KR",
-  "KW",
-  "KG",
-  "LA",
-  "LV",
-  "LB",
-  "LS",
-  "LR",
-  "LY",
-  "LI",
-  "LT",
-  "LU",
-  "MO",
-  "MG",
-  "MW",
-  "MY",
-  "MV",
-  "ML",
-  "MT",
-  "MH",
-  "MQ",
-  "MR",
-  "MU",
-  "YT",
-  "MX",
-  "FM",
-  "MD",
-  "MC",
-  "MN",
-  "ME",
-  "MS",
-  "MA",
-  "MZ",
-  "MM",
-  "NA",
-  "NR",
-  "NP",
-  "NL",
-  "NC",
-  "NZ",
-  "NI",
-  "NE",
-  "NG",
-  "NU",
-  "NF",
-  "MK",
-  "MP",
-  "NO",
-  "OM",
-  "PK",
-  "PW",
-  "PS",
-  "PA",
-  "PG",
-  "PY",
-  "PE",
-  "PH",
-  "PN",
-  "PL",
-  "PT",
-  "PR",
-  "QA",
-  "RE",
-  "RO",
-  "RU",
-  "RW",
-  "BL",
-  "SH",
-  "KN",
-  "LC",
-  "MF",
-  "PM",
-  "VC",
-  "WS",
-  "SM",
-  "ST",
-  "SA",
-  "SN",
-  "RS",
-  "SC",
-  "SL",
-  "SG",
-  "SX",
-  "SK",
-  "SI",
-  "SB",
-  "SO",
-  "ZA",
-  "GS",
-  "SS",
-  "ES",
-  "LK",
-  "SD",
-  "SR",
-  "SJ",
-  "SE",
-  "CH",
-  "SY",
-  "TW",
-  "TJ",
-  "TZ",
-  "TH",
-  "TL",
-  "TG",
-  "TK",
-  "TO",
-  "TT",
-  "TN",
-  "TR",
-  "TM",
-  "TC",
-  "TV",
-  "UG",
-  "UA",
-  "AE",
-  "GB",
-  "US",
-  "UM",
-  "UY",
-  "UZ",
-  "VU",
-  "VE",
-  "VN",
-  "VG",
-  "VI",
-  "WF",
-  "EH",
-  "YE",
-  "ZM",
-  "ZW",
-];
-
-const citySeeds = [
-  ["Amsterdam", "Netherlands"],
-  ["Athens", "Greece"],
-  ["Auckland", "New Zealand"],
-  ["Bangkok", "Thailand"],
-  ["Barcelona", "Spain"],
-  ["Berlin", "Germany"],
-  ["Bengaluru", "India"],
-  ["Buenos Aires", "Argentina"],
-  ["Cairo", "Egypt"],
-  ["Cape Town", "South Africa"],
-  ["Chicago", "United States"],
-  ["Copenhagen", "Denmark"],
-  ["Delhi", "India"],
-  ["Doha", "Qatar"],
-  ["Dubai", "United Arab Emirates"],
-  ["Dublin", "Ireland"],
-  ["Edinburgh", "United Kingdom"],
-  ["Florence", "Italy"],
-  ["Hong Kong", "Hong Kong"],
-  ["Istanbul", "Turkey"],
-  ["Jakarta", "Indonesia"],
-  ["Kyoto", "Japan"],
-  ["Lisbon", "Portugal"],
-  ["London", "United Kingdom"],
-  ["Los Angeles", "United States"],
-  ["Madrid", "Spain"],
-  ["Mexico City", "Mexico"],
-  ["Miami", "United States"],
-  ["Milan", "Italy"],
-  ["Mumbai", "India"],
-  ["New York", "United States"],
-  ["Osaka", "Japan"],
-  ["Paris", "France"],
-  ["Prague", "Czechia"],
-  ["Reykjavik", "Iceland"],
-  ["Rio de Janeiro", "Brazil"],
-  ["Rome", "Italy"],
-  ["San Francisco", "United States"],
-  ["Seoul", "South Korea"],
-  ["Singapore", "Singapore"],
-  ["Stockholm", "Sweden"],
-  ["Sydney", "Australia"],
-  ["Tokyo", "Japan"],
-  ["Toronto", "Canada"],
-  ["Vancouver", "Canada"],
-  ["Vienna", "Austria"],
-] as const;
-
-export function getOfflineDestinations(locale: string): DestinationOption[] {
-  const displayNames =
-    typeof Intl.DisplayNames === "function"
-      ? new Intl.DisplayNames([locale], { type: "region" })
-      : null;
-  const countries = countryCodes
-    .map((code) => {
-      const name = displayNames?.of(code) ?? code;
-      return name ? { id: `country-${code}`, label: name, detail: "Country" } : null;
-    })
-    .filter((country): country is DestinationOption => country !== null);
-  const cities = citySeeds.map(([city, country]) => ({
-    id: `city-${city}-${country}`,
-    label: `${city}, ${country}`,
-    detail: "City",
-  }));
-
-  return [...cities, ...countries].sort((first, second) =>
-    first.label.localeCompare(second.label, locale),
-  );
+interface City {
+  name: string;
+  popular: boolean;
+  keys: string[];
+  country: string;
+  coordinates: LatLng;
 }
 
-export function searchOfflineDestinations(
-  query: string,
-  locale: string,
-  selected: string[],
-) {
-  const normalizedQuery = normalizeSearchText(query);
-  if (normalizedQuery.length < 2) return [];
+interface IndexEntry {
+  option: DestinationOption;
+  keys: string[];
+  label: string;
+}
 
-  const selectedSet = new Set(selected.map(normalizeSearchText));
-  return getOfflineDestinations(locale)
-    .filter((destination) => {
-      const normalizedLabel = normalizeSearchText(destination.label);
-      return (
-        !selectedSet.has(normalizedLabel) &&
-        normalizedLabel.includes(normalizedQuery)
-      );
-    })
-    .slice(0, 8);
+const MIN_QUERY_LENGTH = 2;
+export const DESTINATION_RESULT_LIMIT = 8;
+
+/** Lowercases, strips accents and collapses spaces so "São  Paulo" matches "sao paulo". */
+export function foldSearchText(value: string) {
+  return value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLocaleLowerCase().replace(/\s+/g, " ").trim();
 }
 
 export function normalizeSearchText(value: string) {
   return value.trim().toLocaleLowerCase();
+}
+
+let cities: City[] | null = null;
+let englishCountryNames: Map<string, string> | null = null;
+
+function getCities(): City[] {
+  if (cities) return cities;
+  cities = CITY_ROWS.split("\n").map((row) => {
+    const [name, alternates, country, lat, lon, flag] = row.split("|");
+    return {
+      name,
+      popular: flag === "p",
+      keys: [foldSearchText(name), ...(alternates ? alternates.split(";") : [])],
+      country,
+      coordinates: { latitude: Number(lat), longitude: Number(lon) },
+    };
+  });
+  return cities;
+}
+
+function getEnglishCountryNames() {
+  englishCountryNames ??= new Map(
+    COUNTRY_ROWS.split("\n").map((row) => row.split("|") as [string, string]),
+  );
+  return englishCountryNames;
+}
+
+function countryNamer(locale: string) {
+  const english = getEnglishCountryNames();
+  let displayNames: Intl.DisplayNames | null = null;
+  try {
+    displayNames = typeof Intl.DisplayNames === "function" ? new Intl.DisplayNames([locale], { type: "region" }) : null;
+  } catch {
+    displayNames = null;
+  }
+  const names = new Map<string, string>();
+  return (code: string) => {
+    let name = names.get(code);
+    if (name === undefined) {
+      const localized = displayNames?.of(code);
+      name = localized && localized !== code ? localized : (english.get(code) ?? code);
+      names.set(code, name);
+    }
+    return name;
+  };
+}
+
+let index: { locale: string; entries: IndexEntry[] } | null = null;
+
+/** Countries, then cities by population, labelled in `locale`; city-states (Singapore) appear once. */
+function getIndex(locale: string): IndexEntry[] {
+  if (index?.locale === locale) return index.entries;
+
+  const nameOf = countryNamer(locale);
+  const cityStates = new Set<string>();
+  const cityEntries = getCities().map((city): IndexEntry => {
+    const countryName = nameOf(city.country);
+    const foldedCountry = foldSearchText(countryName);
+    const isCityState = foldedCountry === city.keys[0] || foldedCountry.startsWith(`${city.keys[0]} `);
+    if (isCityState) cityStates.add(city.country);
+    const label = isCityState ? city.name : `${city.name}, ${countryName}`;
+    return {
+      option: {
+        id: `city-${city.country}-${city.name}`,
+        label,
+        kind: city.popular ? "place" : "city",
+        coordinates: city.coordinates,
+      },
+      keys: city.keys,
+      label: foldSearchText(label),
+    };
+  });
+  const countryEntries = [...getEnglishCountryNames().keys()]
+    .filter((code) => !cityStates.has(code))
+    .map((code): IndexEntry => {
+      const label = nameOf(code);
+      const english = foldSearchText(getEnglishCountryNames().get(code) ?? label);
+      return {
+        option: { id: `country-${code}`, label, kind: "country" },
+        keys: [...new Set([foldSearchText(label), english])],
+        label: foldSearchText(label),
+      };
+    })
+    .sort((first, second) => first.option.label.localeCompare(second.option.label));
+
+  const entries = [...countryEntries, ...cityEntries];
+  index = { locale, entries };
+  return entries;
+}
+
+/** Builds the search index ahead of the first keystroke. */
+export function warmDestinationIndex(locale: string) {
+  getIndex(locale);
+}
+
+/** 0 exact name, 1 name or full-label prefix, 2 word prefix inside a name; -1 none. */
+function matchScore(entry: IndexEntry, query: string) {
+  let best = entry.label.startsWith(query) ? 1 : -1;
+  for (const key of entry.keys) {
+    if (key === query) return 0;
+    if (key.startsWith(query)) best = 1;
+    else if (best === -1 && key.includes(` ${query}`)) best = 2;
+  }
+  return best;
+}
+
+/** Offline matches ranked by `matchScore`, then index order; stops once enough prefix matches exist. */
+export function searchOfflineDestinations(
+  query: string,
+  locale: string,
+  selected: string[],
+  limit = DESTINATION_RESULT_LIMIT,
+): DestinationOption[] {
+  const folded = foldSearchText(query);
+  if (folded.length < MIN_QUERY_LENGTH) return [];
+
+  const selectedSet = new Set(selected.map(foldSearchText));
+  const buckets: DestinationOption[][] = [[], [], []];
+  for (const entry of getIndex(locale)) {
+    const score = matchScore(entry, folded);
+    if (score === -1 || buckets[score].length >= limit || selectedSet.has(entry.label)) continue;
+    buckets[score].push(entry.option);
+    if (buckets[0].length + buckets[1].length >= limit) break;
+  }
+  return buckets.flat().slice(0, limit);
+}
+
+/** Bundled coordinates for a label like "Lisbon, Portugal"; the country part (any language) only breaks ties. */
+export function findOfflineCoordinates(label: string, locale = "en"): LatLng | null {
+  const [cityPart, ...rest] = label.split(",");
+  const cityKey = foldSearchText(cityPart);
+  if (!cityKey) return null;
+
+  const candidates = getCities().filter((city) => city.keys.includes(cityKey));
+  if (candidates.length === 0) return null;
+  if (candidates.length === 1 || rest.length === 0) return candidates[0].coordinates;
+
+  const countryKey = foldSearchText(rest.join(","));
+  const localName = countryNamer(locale);
+  const english = getEnglishCountryNames();
+  const match = candidates.find(
+    (city) =>
+      foldSearchText(localName(city.country)) === countryKey ||
+      foldSearchText(english.get(city.country) ?? "") === countryKey,
+  );
+  return (match ?? candidates[0]).coordinates;
 }

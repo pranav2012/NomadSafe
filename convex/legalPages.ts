@@ -96,9 +96,8 @@ export const privacyPolicy = httpAction(async () => {
 
 <h2>Services that receive limited data</h2>
 <ul>
-<li><strong>Google Places</strong> (via our server): your approximate coordinates, to suggest nearby places and emergency services, and the names of places from your itinerary (such as your hotel), to show them on the map.</li>
+<li><strong>Google Places</strong> (via our server): your approximate coordinates, to suggest nearby places and emergency services; the names of places from your itinerary (such as your hotel), to show them on the map; and destination search text, to suggest and locate places not in the app's built-in city list.</li>
 <li><strong>Google Maps</strong>: map tiles for locations shown in the app.</li>
-<li><strong>OpenStreetMap Nominatim</strong>: destination search text and coordinates, for geocoding.</li>
 <li><strong>Open-Meteo</strong>: trip coordinates, for weather forecasts and current conditions, and a fixed worldwide grid of points, for the globe's live cloud cover.</li>
 <li><strong>NASA GIBS</strong>: a rough rectangle around your trip's destinations, to download satellite imagery for the home globe.</li>
 <li><strong>Frankfurter</strong>: currency pairs and dates, for exchange rates.</li>
@@ -109,6 +108,7 @@ export const privacyPolicy = httpAction(async () => {
 <li><strong>Google AdMob</strong> (free plan only): advertising ID, IP-derived approximate location, device and app information and ad interactions, to show ads, as described under Advertising.</li>
 <li><strong>PostHog</strong> (EU hosting): usage analytics, feature flags, session recordings, crash reports and diagnostic logs, described below.</li>
 </ul>
+<p class="muted">The built-in city list uses data from GeoNames (geonames.org), licensed under CC BY 4.0. It ships with the app and receives no data.</p>
 
 <h2>Usage analytics</h2>
 <p>To see which features work and which don't, and to test changes, NomadSafe sends usage analytics to PostHog, hosted in the EU. They are linked to your account ID once you sign in. They include:</p>
