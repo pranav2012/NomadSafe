@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { AuraChip, AuraSheet, useAura } from "@/atoms";
 import { describeWeather } from "@/features/trips/services/weatherService";
-import { buildOutlook, todayKey, toUnit, weekday, type DestinationForecast, type TemperatureUnit } from "@/features/trips/hooks/useTripForecast";
+import { buildOutlook, dayRain, todayKey, toUnit, weekday, type DestinationForecast, type TemperatureUnit } from "@/features/trips/hooks/useTripForecast";
 import { useLocalization } from "@/localization";
 
 interface WeatherSheetProps {
@@ -74,7 +74,7 @@ export function WeatherSheet({ visible, onClose, destinations, active, unit, onS
         <View style={styles.days}>
           {active.days.map((day) => {
             const low = day.tempMin ?? day.tempMax;
-            const rain = day.precipProbability != null && day.precipProbability >= 30 ? day.precipProbability : null;
+            const rain = dayRain(day, locale);
             return (
               <View key={day.date} style={[styles.day, { borderBottomColor: c.hairline }]}>
                 <Text numberOfLines={1} style={[styles.dayLabel, { color: day.date === today ? c.text : c.textSoft, fontFamily: f.medium }]}>
@@ -82,7 +82,7 @@ export function WeatherSheet({ visible, onClose, destinations, active, unit, onS
                 </Text>
                 <View style={styles.dayIcon}>
                   <Text style={styles.dayEmoji}>{describeWeather(day.weatherCode).emoji}</Text>
-                  {rain != null ? <Text style={[styles.rain, { fontFamily: f.semibold }]}>{rain}%</Text> : null}
+                  {rain != null ? <Text style={[styles.rain, { fontFamily: f.semibold }]}>{rain}</Text> : null}
                 </View>
                 <Text style={[styles.low, { color: c.textMuted, fontFamily: f.medium }]}>{`${toUnit(low, unit)}°`}</Text>
                 <View style={[styles.track, { backgroundColor: c.surfaceStrong }]}>
@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
   days: { marginTop: 2 },
   day: { flexDirection: "row", alignItems: "center", gap: 10, height: 52, borderBottomWidth: StyleSheet.hairlineWidth },
   dayLabel: { width: 54, fontSize: 14.5 },
-  dayIcon: { width: 40, alignItems: "center" },
+  dayIcon: { width: 46, alignItems: "center" },
   dayEmoji: { fontSize: 20 },
   rain: { fontSize: 10.5, color: RAIN, marginTop: -2 },
   low: { width: 34, fontSize: 14.5, textAlign: "right", fontVariant: ["tabular-nums"] },

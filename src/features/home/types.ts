@@ -1,4 +1,5 @@
 import type { EventType } from "@/features/itinerary";
+import type { TripStatus } from "@/features/trips/utils/dates";
 
 export interface HomeEvent {
   id: string;
@@ -28,6 +29,7 @@ export interface HomeData {
   stops: HomeStop[];
   /** 0..1 position of today within the trip. */
   progress: number;
+  phase: TripStatus;
   day: number;
   totalDays: number;
   /** Days until the trip starts, or null once it has started. */

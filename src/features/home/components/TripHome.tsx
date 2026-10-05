@@ -11,6 +11,7 @@ import { auraDark, auraFonts as f, auraLight, auraStatusAccent, auraStatusColors
 import { useGlobeContext } from "@/features/home/hooks/useGlobeContext";
 import { useHotelPin, useSafetyPlaces } from "@/features/home/hooks/useTripSafety";
 import type { HomeData } from "@/features/home/types";
+import { todayStopIndex } from "@/features/home/utils/globeTiles";
 import { TripItinerary } from "@/features/itinerary";
 import { emergencyContactsStorage } from "@/features/onboarding/services/emergencyContactsStorage";
 import { NearbyPlaces } from "@/features/places/components/NearbyPlaces";
@@ -87,7 +88,8 @@ export function TripHome({
 
   const globeHeight = Math.round(width * 0.8);
   const headerSpace = insets.top + 62;
-  const focusIndex = Math.min(data.stops.length - 1, Math.max(0, Math.round(data.progress * (data.stops.length - 1))));
+  const here = userLocation?.latitude != null && userLocation.longitude != null ? { latitude: userLocation.latitude, longitude: userLocation.longitude } : null;
+  const focusIndex = todayStopIndex(data.stops, data.phase, data.day, data.totalDays, here);
   const focusStop = data.stops[focusIndex];
   const globe = useGlobeContext(focusStop);
   const safetyPlaces = useSafetyPlaces(focusStop);
@@ -213,6 +215,7 @@ export function TripHome({
                 entry={hero.entry}
                 onTouchActive={setHeroTouched}
                 scrolling={scrolling}
+                showRoute={data.phase !== "active"}
                 onZoomThrough={(center, radiusPx) => setHero({ mode: "map", center, radiusPx })}
               />
             </Animated.View>

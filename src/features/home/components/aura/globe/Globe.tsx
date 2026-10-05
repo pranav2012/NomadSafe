@@ -34,11 +34,12 @@ import { scheduleOnRN } from "react-native-worklets";
 import { springs, useAura } from "@/atoms";
 import { useAnimationsActive } from "@/hooks/useAnimationsActive";
 import { useGlobeWeather } from "@/features/home/hooks/useGlobeWeather";
-import { detailBoxFor, getRegionImagery, type DetailBox } from "@/features/home/services/globeImagery";
+import { GLOBE_MAX_TILES, getRegionImagery, prefetchRegionImagery } from "@/features/home/services/globeImagery";
+import { tileBoxFor, tileBoxKey, type DetailBox, type TileBox } from "@/features/home/utils/globeTiles";
 import { CLOUD_COLS, CLOUD_ROWS, CLOUD_STEP, type StopWeather } from "@/features/home/services/globeWeather";
 import { toUnit, useTemperatureUnit } from "@/features/trips/hooks/useTripForecast";
 import { selectionChanged } from "@/utils/haptics";
-import { moonIllumination, sunVector } from "./sun";
+import { distanceKm, moonIllumination, sunVector } from "./sun";
 
 // NASA Visible Earth (public domain): Blue Marble Next Generation (Sep 2004, least seasonal snow) and Black Marble 2016.
 const DAY_TEXTURE = require("../../../../../../assets/images/globe/earth-day.jpg");
@@ -48,6 +49,9 @@ const SKY_TEXTURE = require("../../../../../../assets/images/globe/milky-way.jpg
 
 const MIN_ZOOM = 1;
 const DEFAULT_SPAN_KM = 400;
+const MIN_ROUTE_KM = 500;
+// Sharp imagery reaches this far past a stop, a little more than the focused view shows, so a drag stays sharp.
+const FOCUS_MARGIN_DEG = 2;
 // Overview spin: one turn every 2.5 minutes, eastward like the real Earth.
 const SPIN_RAD_PER_MS = (2 * Math.PI) / 150_000;
 const SPIN_RESUME_MS = 2000;
@@ -56,8 +60,6 @@ const SPIN_RESUME_MS = 2000;
 // crash the Adreno Vulkan driver under Graphite (Snapdragon phones).
 const SHADER_TICK_MS = 33;
 const EARTH_RADIUS_KM = 6371;
-// Below this zoom the bundled 2048px textures are sharp enough; above it, regional NASA imagery fades in.
-const DETAIL_ZOOM = 2.5;
 const MIN_HANDOFF_ZOOM = 3.2;
 const TEX_W = 2048;
 const TEX_H = 1024;
@@ -113,34 +115,72 @@ interface RegionDetail {
   night: SkImage;
 }
 
-let detailCache: RegionDetail | null = null;
+const regionCache = new Map<string, RegionDetail>();
 
-/** Sharp NASA imagery around the fitted trip once zoomed in past the bundled textures' resolution. */
-function useRegionDetail(stops: GlobeStop[], frame: { lng: number; zoom: number }) {
-  const box = frame.zoom < DETAIL_ZOOM ? null : detailBoxFor(stops, frame.lng / DEG, Math.asin(Math.min(1, 1 / (0.9 * frame.zoom))) / DEG);
-  const key = box ? `${box.west},${box.south},${box.width},${box.height}` : null;
-  const sameBox = (d: RegionDetail | null) => (d && key === `${d.box.west},${d.box.south},${d.box.width},${d.box.height}` ? d : null);
-  const [detail, setDetail] = useState<RegionDetail | null>(() => sameBox(detailCache));
+async function loadRegion(tiles: TileBox) {
+  const key = tileBoxKey(tiles);
+  const cached = regionCache.get(key);
+  if (cached) return cached;
+  const imagery = await getRegionImagery(tiles);
+  if (!imagery) return null;
+  const [day, night] = await Promise.all([Skia.Data.fromURI(imagery.dayUri), Skia.Data.fromURI(imagery.nightUri)]);
+  const dayImage = Skia.Image.MakeImageFromEncoded(day);
+  const nightImage = Skia.Image.MakeImageFromEncoded(night);
+  if (!dayImage || !nightImage) return null;
+  const detail = { box: imagery.box, day: dayImage, night: nightImage };
+  regionCache.set(key, detail);
+  return detail;
+}
+
+/** Margin around the route box: the fitted route view shows about a third of the spread beyond the outer stops. */
+function routeMargin(stops: GlobeStop[]) {
+  const ref = stops[0]?.longitude ?? 0;
+  const rel = stops.map((s) => ((((s.longitude - ref) % 360) + 540) % 360) - 180);
+  const lats = stops.map((s) => s.latitude);
+  return Math.max(FOCUS_MARGIN_DEG, 0.35 * Math.max(Math.max(...rel) - Math.min(...rel), Math.max(...lats) - Math.min(...lats)));
+}
+
+/**
+ * Sharp NASA imagery for the whole route, with the focused stop's sharper box on top. Only those two
+ * stay decoded; the other stops' boxes are downloaded in the background so switching days is instant.
+ */
+function useTripImagery(stops: GlobeStop[], focusIndex: number, enabled: boolean) {
+  const route = useMemo(() => (enabled && stops.length > 1 ? tileBoxFor(stops, routeMargin(stops), GLOBE_MAX_TILES) : null), [enabled, stops]);
+  const stopBoxes = useMemo(() => (enabled ? stops.map((stop) => tileBoxFor([stop], FOCUS_MARGIN_DEG, GLOBE_MAX_TILES)) : []), [enabled, stops]);
+  const focus = stopBoxes[focusIndex] ?? null;
+  const routeKey = route ? tileBoxKey(route) : null;
+  const focusKey = focus ? tileBoxKey(focus) : null;
+  const [regions, setRegions] = useState<Record<string, RegionDetail>>(() => Object.fromEntries(regionCache));
 
   useEffect(() => {
-    if (!box || sameBox(detail)) return;
+    const wanted = [focus, route].filter((box): box is TileBox => box !== null);
+    if (!wanted.length) return;
+    const wantedKeys = wanted.map(tileBoxKey);
+    for (const key of [...regionCache.keys()]) if (!wantedKeys.includes(key)) regionCache.delete(key);
     let mounted = true;
-    void getRegionImagery(box).then(async (imagery) => {
-      if (!imagery) return;
-      const [day, night] = await Promise.all([Skia.Data.fromURI(imagery.dayUri), Skia.Data.fromURI(imagery.nightUri)]);
-      const dayImage = Skia.Image.MakeImageFromEncoded(day);
-      const nightImage = Skia.Image.MakeImageFromEncoded(night);
-      if (!dayImage || !nightImage) return;
-      detailCache = { box: imagery.box, day: dayImage, night: nightImage };
-      if (mounted) setDetail(detailCache);
-    });
+    void (async () => {
+      for (const tiles of wanted) {
+        const detail = await loadRegion(tiles);
+        if (!mounted) return;
+        if (detail) {
+          setRegions((prev) => ({
+            ...Object.fromEntries(Object.entries(prev).filter(([key]) => wantedKeys.includes(key))),
+            [tileBoxKey(tiles)]: detail,
+          }));
+        }
+      }
+      void prefetchRegionImagery(stopBoxes.filter((box, i): box is TileBox => box !== null && i !== focusIndex));
+    })();
     return () => {
       mounted = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key]);
+  }, [routeKey, focusKey]);
 
-  return sameBox(detail);
+  return {
+    route: routeKey ? (regions[routeKey] ?? null) : null,
+    focus: focusKey ? (regions[focusKey] ?? null) : null,
+  };
 }
 
 /**
@@ -155,6 +195,26 @@ function frameFocus(focus: GlobeStop) {
     lng: focus.longitude * DEG,
     zoom: 1 / (0.9 * Math.sin(halfBoxAngle)),
   };
+}
+
+/** Fits every stop: centred on their mean direction, zoomed so the farthest sits about 80% of the way out. */
+function frameRoute(stops: GlobeStop[]) {
+  let x = 0;
+  let y = 0;
+  let z = 0;
+  for (const stop of stops) {
+    const la = stop.latitude * DEG;
+    const lo = stop.longitude * DEG;
+    x += Math.cos(la) * Math.sin(lo);
+    y += Math.sin(la);
+    z += Math.cos(la) * Math.cos(lo);
+  }
+  const lat = Math.atan2(y, Math.hypot(x, z));
+  const lng = Math.atan2(x, z);
+  const center = { latitude: lat / DEG, longitude: lng / DEG };
+  const reach = Math.max(MIN_ROUTE_KM, ...stops.map((stop) => distanceKm(center, stop))) / EARTH_RADIUS_KM;
+  const zoom = reach >= Math.PI / 2 ? MIN_ZOOM : Math.min(frameFocus(stops[0]).zoom, Math.max(MIN_ZOOM, 0.8 / (0.9 * Math.sin(reach))));
+  return { lat: Math.max(-1.3, Math.min(1.3, lat)), lng, zoom };
 }
 
 /** Same angle shifted by whole turns to be closest to `from`, so the spin takes the short way round. */
@@ -179,11 +239,16 @@ const GLOBE = Skia.RuntimeEffect.Make(`
 uniform shader day;
 uniform shader night;
 uniform shader clouds;
-uniform shader dayDetail;
-uniform shader nightDetail;
-uniform float4 detailBox;
-uniform float2 detailSize;
-uniform float detailOn;
+uniform shader routeDay;
+uniform shader routeNight;
+uniform float4 routeBox;
+uniform float2 routeSize;
+uniform float routeOn;
+uniform shader focusDay;
+uniform shader focusNight;
+uniform float4 focusBox;
+uniform float2 focusSize;
+uniform float focusOn;
 uniform shader sky;
 uniform float skyScale;
 uniform float2 center;
@@ -258,6 +323,15 @@ float driftingClouds(float3 w, float lat) {
   return (n0 * k0 + n1 * k1 - 0.5) / sqrt(k0 * k0 + k1 * k1) + 0.5;
 }
 
+// Position inside a high-res box (x = west, y = south, z = width, w = height, radians) and how much
+// of it to show there, feathered at its edges.
+float3 boxUv(float lng, float lat, float4 box, float on) {
+  float du = mod(lng - box.x, 2.0 * PI) / box.z;
+  float dv = (box.y + box.w - lat) / box.w;
+  float inBox = step(0.0, du) * step(du, 1.0) * step(0.0, dv) * step(dv, 1.0);
+  return float3(du, dv, smoothstep(0.0, 0.08, min(min(du, 1.0 - du), min(dv, 1.0 - dv))) * inBox * on);
+}
+
 half4 main(float2 p) {
   float2 q = (p - center) / radius;
   float r = length(q);
@@ -296,15 +370,18 @@ half4 main(float2 p) {
   float3 dayTex = float3(day.eval(uv).rgb);
   float3 nightTex = float3(night.eval(uv).rgb);
 
-  // Regional high-res imagery (x = west, y = south, z = width, w = height, radians), feathered at its edges.
-  float du = mod(lng - detailBox.x, 2.0 * PI) / detailBox.z;
-  float dv = (detailBox.y + detailBox.w - lat) / detailBox.w;
-  float inBox = step(0.0, du) * step(du, 1.0) * step(0.0, dv) * step(dv, 1.0);
-  float feather = smoothstep(0.0, 0.08, min(min(du, 1.0 - du), min(dv, 1.0 - dv))) * inBox * detailOn;
-  if (feather > 0.0) {
-    float2 duv = float2(du, dv) * detailSize;
-    dayTex = mix(dayTex, float3(dayDetail.eval(duv).rgb), feather);
-    nightTex = mix(nightTex, float3(nightDetail.eval(duv).rgb), feather);
+  // Regional NASA imagery: the whole route, then the focused stop's sharper box on top.
+  float3 rb = boxUv(lng, lat, routeBox, routeOn);
+  if (rb.z > 0.0) {
+    float2 ruv = rb.xy * routeSize;
+    dayTex = mix(dayTex, float3(routeDay.eval(ruv).rgb), rb.z);
+    nightTex = mix(nightTex, float3(routeNight.eval(ruv).rgb), rb.z);
+  }
+  float3 fb = boxUv(lng, lat, focusBox, focusOn);
+  if (fb.z > 0.0) {
+    float2 fuv = fb.xy * focusSize;
+    dayTex = mix(dayTex, float3(focusDay.eval(fuv).rgb), fb.z);
+    nightTex = mix(nightTex, float3(focusNight.eval(fuv).rgb), fb.z);
   }
 
   float sunDot = dot(w, sun);
@@ -389,6 +466,8 @@ interface GlobeProps {
   scrolling?: SharedValue<boolean>;
   /** No trip: show the whole globe, slowly spinning until a stop is picked, never zoomed in. */
   overview?: boolean;
+  /** Open on the whole route, every stop on screen, rather than zoomed in on the focused stop. */
+  showRoute?: boolean;
 }
 
 /** Projects a lat/lng onto the globe's disc; z < 0 means it is on the far side. */
@@ -436,7 +515,7 @@ function arcPoint(a: GlobeStop, b: GlobeStop, t: number) {
  * On mount it spins and zooms in on the current stop; drag to spin it, pinch out for the route and
  * the whole globe or in to hand off to the map.
  */
-export function Globe({ stops, focusIndex, width, height, origin, contacts = [], contactColor, accent, isDark, onZoomThrough, entry, topInset = 0, onTouchActive, scrolling, overview = false }: GlobeProps) {
+export function Globe({ stops, focusIndex, width, height, origin, contacts = [], contactColor, accent, isDark, onZoomThrough, entry, topInset = 0, onTouchActive, scrolling, overview = false, showRoute = false }: GlobeProps) {
   const textures = useGlobeTextures();
   const dayImage = textures?.day ?? null;
   const nightImage = textures?.night ?? null;
@@ -456,17 +535,21 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
     () =>
       overview
         ? { lat: Math.max(-0.6, Math.min(0.6, focus.latitude * DEG * 0.8)), lng: focus.longitude * DEG, zoom: MIN_ZOOM }
-        : frameFocus(focus),
+        : showRoute && stops.length > 0
+          ? frameRoute(stops)
+          : frameFocus(focus),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [overview, focus.latitude, focus.longitude],
+    [overview, showRoute, stops, focus.latitude, focus.longitude],
   );
   const spinning = overview && stops.length === 0 && !reduceMotion;
   const restZoom = frame.zoom;
-  const detail = useRegionDetail(focusOnly, frame);
-  const detailBox = detail
-    ? [detail.box.west * DEG, detail.box.south * DEG, detail.box.width * DEG, detail.box.height * DEG]
-    : [0, 0, 1, 1];
-  const detailSize = detail ? [detail.day.width(), detail.day.height()] : [1, 1];
+  const imagery = useTripImagery(stops, focusIndex, !overview);
+  const boxUniform = (d: RegionDetail | null) => (d ? [d.box.west * DEG, d.box.south * DEG, d.box.width * DEG, d.box.height * DEG] : [0, 0, 1, 1]);
+  const sizeOf = (d: RegionDetail | null) => (d ? [d.day.width(), d.day.height()] : [1, 1]);
+  const routeBox = boxUniform(imagery.route);
+  const routeSize = sizeOf(imagery.route);
+  const focusBox = boxUniform(imagery.focus);
+  const focusSize = sizeOf(imagery.focus);
   // Hand-off and max zoom sit relative to the fitted view, so a tight trip still needs a real pinch.
   const handoffZoom = Math.max(MIN_HANDOFF_ZOOM, restZoom * 2.2);
   const maxZoom = handoffZoom * 1.4;
@@ -548,9 +631,12 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
     sun,
     time: shaderTime.get(),
     moon,
-    detailBox,
-    detailSize,
-    detailOn: detail ? 1 : 0,
+    routeBox,
+    routeSize,
+    routeOn: imagery.route ? 1 : 0,
+    focusBox,
+    focusSize,
+    focusOn: imagery.focus ? 1 : 0,
   }));
 
   const currentLeg = Math.max(0, focusIndex - 1);
@@ -667,24 +753,10 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
                   ty="clamp"
                   sampling={{ filter: FilterMode.Linear, mipmap: MipmapMode.None }}
                 />
-                <ImageShader
-                  image={detail?.day ?? NO_CLOUDS}
-                  fit="fill"
-                  x={0}
-                  y={0}
-                  width={detailSize[0]}
-                  height={detailSize[1]}
-                  sampling={SMOOTH}
-                />
-                <ImageShader
-                  image={detail?.night ?? NO_CLOUDS}
-                  fit="fill"
-                  x={0}
-                  y={0}
-                  width={detailSize[0]}
-                  height={detailSize[1]}
-                  sampling={SMOOTH}
-                />
+                <ImageShader image={imagery.route?.day ?? NO_CLOUDS} fit="fill" x={0} y={0} width={routeSize[0]} height={routeSize[1]} sampling={SMOOTH} />
+                <ImageShader image={imagery.route?.night ?? NO_CLOUDS} fit="fill" x={0} y={0} width={routeSize[0]} height={routeSize[1]} sampling={SMOOTH} />
+                <ImageShader image={imagery.focus?.day ?? NO_CLOUDS} fit="fill" x={0} y={0} width={focusSize[0]} height={focusSize[1]} sampling={SMOOTH} />
+                <ImageShader image={imagery.focus?.night ?? NO_CLOUDS} fit="fill" x={0} y={0} width={focusSize[0]} height={focusSize[1]} sampling={SMOOTH} />
                 <ImageShader image={textures.sky} fit="fill" x={0} y={0} width={SKY_W} height={SKY_H} tx="repeat" ty="clamp" sampling={SMOOTH} />
               </Shader>
             </Fill>

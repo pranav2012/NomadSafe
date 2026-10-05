@@ -179,4 +179,22 @@ export default defineSchema({
     requestedAt: v.number(),
     status: v.union(v.literal("pending"), v.literal("completed")),
   }).index("by_email", ["email"]),
+
+  // MET Norway forecast summaries per ~11 km cell (key "lat,lng" at 0.1°), shared by every user asking about that place.
+  weatherCells: defineTable({
+    key: v.string(),
+    summary: v.string(),
+    lastModified: v.optional(v.string()),
+    expiresAt: v.number(),
+    fetchedAt: v.number(),
+  })
+    .index("by_key", ["key"])
+    .index("by_fetched", ["fetchedAt"]),
+
+  // The globe's live cloud grid (one row), refreshed hourly by convex/crons.ts.
+  globeClouds: defineTable({
+    cover: v.array(v.number()),
+    storm: v.array(v.boolean()),
+    updatedAt: v.number(),
+  }),
 });

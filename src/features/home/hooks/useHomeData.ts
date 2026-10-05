@@ -77,6 +77,7 @@ export function useHomeData(): HomeData | null {
     destinations: trip.destinations,
     stops,
     progress: totalDays > 0 ? day / totalDays : 0,
+    phase: status,
     day,
     totalDays,
     countdown: status === "upcoming" ? Math.max(1, countInclusiveDays(now, start) - 1) : null,

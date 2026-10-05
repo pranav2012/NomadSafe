@@ -1,3 +1,4 @@
+import { api, convex } from "@/modules/backend";
 import { storage } from "@/modules/storage";
 import type { LatLng } from "@/features/trips/store/tripsStore";
 
@@ -7,8 +8,8 @@ export interface DailyForecast {
   tempMax: number;
   tempMin: number | null;
   feelsLike: number | null; // apparent temperature (max), rounded
-  uvIndex: number | null; // UV index (max), rounded
-  precipProbability: number | null;
+  uvIndex: number | null; // clear-sky UV index (max), rounded; only for the next ~2.5 days
+  precipMm: number | null; // total rain/snow (mm)
 }
 
 export interface WeatherCondition {
@@ -16,10 +17,8 @@ export interface WeatherCondition {
   labelKey: string; // i18n key under `trip.weatherConditions`
 }
 
-const FORECAST_URL = "https://api.open-meteo.com/v1/forecast";
-
-// Open-Meteo forecast covers a limited window: recent past through ~16 days ahead.
-const MAX_FORECAST_DAYS_AHEAD = 15;
+// MET Norway forecasts about 9.5 days ahead; the last half day is too partial to show.
+const MAX_FORECAST_DAYS_AHEAD = 8;
 
 /** Maps WMO weather interpretation codes to an emoji + i18n condition label. */
 export function describeWeather(code: number): WeatherCondition {
@@ -48,8 +47,8 @@ function fromDateKey(value: string) {
 }
 
 /**
- * Clamps a trip's date range to the window Open-Meteo can forecast (today through
- * ~16 days out). Returns null when no part of the trip falls inside that window,
+ * Clamps a trip's date range to the window MET Norway can forecast (today through
+ * ~8 days out). Returns null when no part of the trip falls inside that window,
  * so callers can show a "forecast available closer to your trip" note instead.
  */
 export function clampToForecastWindow(
@@ -71,79 +70,92 @@ export function clampToForecastWindow(
   return { start: toDateKey(start), end: toDateKey(end) };
 }
 
-interface CachedForecast {
-  day: string; // YYYY-MM-DD the forecast was fetched on
-  data: DailyForecast[];
+export interface HourWeather {
+  t: number; // epoch ms the hour starts
+  temperature: number;
+  weatherCode: number;
+  isDay: boolean;
 }
 
-// Persisted (MMKV) forecast cache, valid for the calendar day it was fetched.
-// Survives app restarts but is refreshed once the date rolls over. An in-memory
-// map dedupes concurrent in-flight requests within a session.
-const inflight = new Map<string, Promise<DailyForecast[] | null>>();
+export interface PlaceWeather {
+  days: DailyForecast[];
+  hours: HourWeather[];
+}
 
+// Each place is fetched at most every 6 hours per phone (kept low for the Convex free plan); the stored
+// 24-hour outlook covers "now" in between.
+const PLACE_FRESH_MS = 6 * 3_600_000;
+const PLACE_KEEP_MS = 24 * 3_600_000;
 const CACHE_PREFIX = "weather:";
-const CACHE_VERSION_PREFIX = `${CACHE_PREFIX}v3:`;
+const CACHE_VERSION_PREFIX = `${CACHE_PREFIX}v5:`;
 
-function cacheKey(coords: LatLng, start: string, end: string) {
-  return `${CACHE_VERSION_PREFIX}${coords.latitude.toFixed(3)},${coords.longitude.toFixed(3)}|${start}|${end}`;
+interface CachedPlace {
+  fetchedAt: number;
+  data: PlaceWeather;
 }
 
-/** Drops forecast entries from older cache versions or previous days. */
-function evictStaleCache(today: string) {
+const inflight = new Map<string, Promise<PlaceWeather | null>>();
+
+/** ~11 km is all the server needs: it caches and asks MET Norway per 0.1° cell. */
+function roundedArgs(coords: LatLng) {
+  const round = (deg: number) => Math.round(deg * 10) / 10;
+  return { latitude: round(coords.latitude), longitude: round(coords.longitude) };
+}
+
+/** The shared server copy (a cached Convex query) if it's current, else a refresh from MET Norway. */
+async function fetchPlaceWeather(coords: LatLng): Promise<PlaceWeather | null> {
+  const args = roundedArgs(coords);
+  try {
+    const cached = await convex.query(api.weather.cell, args);
+    if (cached && cached.expiresAt > Date.now()) return cached.summary;
+    return (await convex.action(api.weather.refresh, { ...args, lastModified: cached?.lastModified })) ?? cached?.summary ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function cacheKey(coords: LatLng) {
+  const { latitude, longitude } = roundedArgs(coords);
+  return `${CACHE_VERSION_PREFIX}${latitude},${longitude}`;
+}
+
+function readCache(key: string): CachedPlace | null {
+  try {
+    const raw = storage.getString(key);
+    return raw ? (JSON.parse(raw) as CachedPlace) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Drops places from older cache versions or not fetched for a day. */
+function evictStaleCache() {
   try {
     for (const key of storage.getAllKeys()) {
       if (!key.startsWith(CACHE_PREFIX)) continue;
-      if (!key.startsWith(CACHE_VERSION_PREFIX)) {
-        storage.remove(key);
-        continue;
-      }
-      const raw = storage.getString(key);
-      const day = raw ? (JSON.parse(raw) as Partial<CachedForecast>).day : undefined;
-      if (day !== today) storage.remove(key);
+      const cached = key.startsWith(CACHE_VERSION_PREFIX) ? readCache(key) : null;
+      if (!cached || Date.now() - cached.fetchedAt > PLACE_KEEP_MS) storage.remove(key);
     }
   } catch {
     // Eviction is housekeeping; a failure must not block the forecast.
   }
 }
 
-function readCache(key: string): DailyForecast[] | null {
-  const raw = storage.getString(key);
-  if (!raw) return null;
-  try {
-    const cached = JSON.parse(raw) as CachedForecast;
-    return cached.day === toDateKey(new Date()) ? cached.data : null;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Day-cached wrapper around {@link fetchDailyForecast}. Returns the persisted
- * forecast when it was fetched today; otherwise fetches once, caches it for the
- * rest of the day, and dedupes concurrent in-flight requests. Failed lookups are
- * not cached, so they can retry.
- */
-export function getDailyForecast(
-  coords: LatLng,
-  start: string,
-  end: string,
-): Promise<DailyForecast[] | null> {
-  const key = cacheKey(coords, start, end);
-
+/** A place's forecast and hourly outlook, kept on the phone (MMKV) for 6 hours; falls back to an older copy offline. */
+export function getPlaceWeather(coords: LatLng): Promise<PlaceWeather | null> {
+  const key = cacheKey(coords);
   const cached = readCache(key);
-  if (cached) return Promise.resolve(cached);
+  if (cached && Date.now() - cached.fetchedAt < PLACE_FRESH_MS) return Promise.resolve(cached.data);
 
   const pending = inflight.get(key);
   if (pending) return pending;
 
-  const request = fetchDailyForecast(coords, start, end)
-    .then((result) => {
-      if (result) {
-        const today = toDateKey(new Date());
-        evictStaleCache(today);
-        storage.set(key, JSON.stringify({ day: today, data: result }));
-      }
-      return result;
+  const request = fetchPlaceWeather(coords)
+    .then((data) => {
+      if (!data?.days.length) return cached && Date.now() - cached.fetchedAt < PLACE_KEEP_MS ? cached.data : null;
+      evictStaleCache();
+      storage.set(key, JSON.stringify({ fetchedAt: Date.now(), data } satisfies CachedPlace));
+      return data;
     })
     .finally(() => {
       inflight.delete(key);
@@ -152,71 +164,16 @@ export function getDailyForecast(
   return request;
 }
 
-interface ForecastResponse {
-  daily?: {
-    time?: string[];
-    weather_code?: (number | null)[];
-    temperature_2m_max?: (number | null)[];
-    temperature_2m_min?: (number | null)[];
-    apparent_temperature_max?: (number | null)[];
-    uv_index_max?: (number | null)[];
-    precipitation_probability_max?: (number | null)[];
-  };
+/** Conditions now from a place's hourly outlook; null if the outlook doesn't cover now. */
+export function weatherNow(place: PlaceWeather, now = Date.now()) {
+  const started = place.hours.filter((hour) => hour.t <= now);
+  const hour = started[started.length - 1] ?? (place.hours[0] && place.hours[0].t - now < 3_600_000 ? place.hours[0] : undefined);
+  return hour && now - hour.t <= 2 * 3_600_000 ? hour : null;
 }
 
-/**
- * Fetches the daily forecast for a destination across the given date range.
- * Returns null on network failure, an empty range, or malformed data so the UI
- * can degrade gracefully.
- */
-export async function fetchDailyForecast(
-  coords: LatLng,
-  start: string,
-  end: string,
-): Promise<DailyForecast[] | null> {
-  try {
-    const params = new URLSearchParams({
-      latitude: `${coords.latitude}`,
-      longitude: `${coords.longitude}`,
-      daily:
-        "weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,uv_index_max,precipitation_probability_max",
-      timezone: "auto",
-      start_date: start,
-      end_date: end,
-    });
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 10_000);
-    const response = await fetch(`${FORECAST_URL}?${params.toString()}`, {
-      signal: controller.signal,
-    }).finally(() => clearTimeout(timer));
-    if (!response.ok) return null;
-
-    const json = (await response.json()) as ForecastResponse;
-    const daily = json.daily;
-    if (!daily?.time?.length) return null;
-
-    const round = (value: number | null | undefined) =>
-      typeof value === "number" && Number.isFinite(value) ? Math.round(value) : null;
-
-    // Days without a weather code or max temperature are dropped rather than
-    // rendered as a fake "Clear 0°".
-    const days: DailyForecast[] = [];
-    daily.time.forEach((date, i) => {
-      const weatherCode = daily.weather_code?.[i];
-      const tempMax = round(daily.temperature_2m_max?.[i]);
-      if (typeof weatherCode !== "number" || tempMax == null) return;
-      days.push({
-        date,
-        weatherCode,
-        tempMax,
-        tempMin: round(daily.temperature_2m_min?.[i]),
-        feelsLike: round(daily.apparent_temperature_max?.[i]),
-        uvIndex: round(daily.uv_index_max?.[i]),
-        precipProbability: daily.precipitation_probability_max?.[i] ?? null,
-      });
-    });
-    return days.length ? days : null;
-  } catch {
-    return null;
-  }
+/** Daily forecast for a destination within `start`..`end` (YYYY-MM-DD); null when unavailable. */
+export async function getDailyForecast(coords: LatLng, start: string, end: string): Promise<DailyForecast[] | null> {
+  const place = await getPlaceWeather(coords);
+  const inRange = place?.days.filter((day) => day.date >= start && day.date <= end) ?? [];
+  return inRange.length ? inRange : null;
 }

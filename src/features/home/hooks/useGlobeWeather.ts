@@ -1,6 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AlphaType, ColorType, Skia, type SkImage } from "react-native-skia";
-import { CLOUD_COLS, CLOUD_ROWS, getGlobalClouds, getStopsWeather, type CloudGrid, type StopWeather } from "@/features/home/services/globeWeather";
+import { api, useQuery } from "@/modules/backend";
+import {
+  CLOUD_COLS,
+  CLOUD_ROWS,
+  getStopsWeather,
+  isCloudGrid,
+  readCachedClouds,
+  saveCachedClouds,
+  type CloudGrid,
+  type StopWeather,
+} from "@/features/home/services/globeWeather";
 
 /** Packs the cloud grid into a tiny opaque image (R = cover, G = thunderstorm) for the globe shader. */
 function cloudImage({ cover, storm }: CloudGrid): SkImage | null {
@@ -18,25 +28,32 @@ function cloudImage({ cover, storm }: CloudGrid): SkImage | null {
 }
 
 // Last decoded grid, so a remounted globe shows clouds on its first frame.
-let lastClouds: SkImage | null = null;
+let lastClouds: { updatedAt: number; image: SkImage } | null = null;
 
-/** Live cloud cover for the whole globe and current weather at each stop, both from Open-Meteo. */
+/**
+ * Live cloud cover for the whole globe (a Convex subscription the server refreshes hourly from MET
+ * Norway, so it updates in place) and current weather at each stop.
+ */
 export function useGlobeWeather(stops: { latitude: number; longitude: number }[]) {
-  const [clouds, setClouds] = useState<SkImage | null>(lastClouds);
+  const live = useQuery(api.weather.globeClouds);
+  const [offline] = useState<SkImage | null>(() => {
+    if (lastClouds) return lastClouds.image;
+    const cached = readCachedClouds();
+    return cached ? cloudImage(cached) : null;
+  });
+  const liveImage = useMemo(
+    () => (!isCloudGrid(live) ? null : lastClouds?.updatedAt === live.updatedAt ? lastClouds.image : cloudImage(live)),
+    [live],
+  );
+  const clouds = liveImage ?? offline;
   const [stopWeather, setStopWeather] = useState<{ key: string; data: (StopWeather | null)[] } | null>(null);
   const stopsKey = stops.map((s) => `${s.latitude},${s.longitude}`).join("|");
 
   useEffect(() => {
-    let mounted = true;
-    void getGlobalClouds().then((grid) => {
-      if (!grid) return;
-      lastClouds = cloudImage(grid);
-      if (mounted) setClouds(lastClouds);
-    });
-    return () => {
-      mounted = false;
-    };
-  }, []);
+    if (!isCloudGrid(live) || !liveImage || lastClouds?.updatedAt === live.updatedAt) return;
+    lastClouds = { updatedAt: live.updatedAt, image: liveImage };
+    saveCachedClouds(live, live.updatedAt);
+  }, [live, liveImage]);
 
   useEffect(() => {
     let mounted = true;

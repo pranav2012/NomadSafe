@@ -5,6 +5,7 @@ import { aiRuntime, aiService, clearAiUsageLog, clearByokConfig, clearCloudExhau
 import { usePlanStore } from "@/modules/billing";
 import { useChatStore } from "@/features/ai/store/chatStore";
 import { useExpensesStore } from "@/features/expenses/store/expensesStore";
+import { clearGlobeImagery } from "@/features/home/services/globeImagery";
 import { clearLegacyGmailCheckpoints } from "@/features/expenses/services/legacyGmailCheckpoints";
 import { useEventsStore } from "@/features/itinerary/store/eventsStore";
 import { resetBackgroundDisclosure } from "@/features/location-sharing/components/BackgroundLocationDisclosure";
@@ -50,6 +51,7 @@ export async function wipeAllDeviceData({ keepModels = false }: { keepModels?: b
   emergencyContactsStorage.clear();
   resetBackgroundDisclosure();
   await attempt(clearLegacyGmailCheckpoints);
+  await attempt(clearGlobeImagery);
   await attempt(() => secureStorage.resetPin());
   await attempt(() => pinAttempts.reset());
   await attempt(clearByokConfig);

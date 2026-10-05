@@ -14,6 +14,7 @@ import type * as analytics from "../analytics.js";
 import type * as auth from "../auth.js";
 import type * as billing from "../billing.js";
 import type * as billingRules from "../billingRules.js";
+import type * as crons from "../crons.js";
 import type * as groupTrips from "../groupTrips.js";
 import type * as http from "../http.js";
 import type * as legalPages from "../legalPages.js";
@@ -23,6 +24,8 @@ import type * as sharing from "../sharing.js";
 import type * as sync from "../sync.js";
 import type * as tripNotifications from "../tripNotifications.js";
 import type * as users from "../users.js";
+import type * as weather from "../weather.js";
+import type * as weatherRules from "../weatherRules.js";
 
 import type {
   ApiFromModules,
@@ -37,6 +40,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   billing: typeof billing;
   billingRules: typeof billingRules;
+  crons: typeof crons;
   groupTrips: typeof groupTrips;
   http: typeof http;
   legalPages: typeof legalPages;
@@ -46,6 +50,8 @@ declare const fullApi: ApiFromModules<{
   sync: typeof sync;
   tripNotifications: typeof tripNotifications;
   users: typeof users;
+  weather: typeof weather;
+  weatherRules: typeof weatherRules;
 }>;
 
 /**

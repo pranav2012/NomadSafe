@@ -98,8 +98,8 @@ export const privacyPolicy = httpAction(async () => {
 <ul>
 <li><strong>Google Places</strong> (via our server): your approximate coordinates, to suggest nearby places and emergency services; the names of places from your itinerary (such as your hotel), to show them on the map; and destination search text, to suggest and locate places not in the app's built-in city list.</li>
 <li><strong>Google Maps</strong>: map tiles for locations shown in the app.</li>
-<li><strong>Open-Meteo</strong>: trip coordinates, for weather forecasts and current conditions, and a fixed worldwide grid of points, for the globe's live cloud cover.</li>
-<li><strong>NASA GIBS</strong>: a rough rectangle around your trip's destinations, to download satellite imagery for the home globe.</li>
+<li><strong>MET Norway</strong> (via our server): trip coordinates rounded to about 10 km, for weather forecasts and current conditions. Our server keeps a shared copy of each forecast, not linked to you, and asks MET Norway for a fixed worldwide grid of points for the globe's live cloud cover.</li>
+<li><strong>Cloudflare and NASA GIBS</strong>: a rough rectangle around your trip's destinations, to download satellite imagery for the home globe from our copy on Cloudflare, or from NASA if that is unavailable.</li>
 <li><strong>Frankfurter</strong>: currency pairs and dates, for exchange rates.</li>
 <li><strong>Hugging Face</strong>: model download requests (your IP address), if you download an AI model.</li>
 <li><strong>OpenRouter and the AI model provider it uses</strong> (via our server, Pro with Online AI on): AI requests as described under Online AI.</li>

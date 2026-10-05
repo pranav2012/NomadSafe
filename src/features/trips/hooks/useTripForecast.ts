@@ -20,7 +20,7 @@ type LoadState =
 
 export type TemperatureUnit = "C" | "F";
 
-/** Device temperature preference; Open-Meteo data is always Celsius. */
+/** Device temperature preference; forecasts are always Celsius. */
 export function useTemperatureUnit(): TemperatureUnit {
   const deviceLocale = Localization.useLocales()[0];
   if (deviceLocale?.temperatureUnit) return deviceLocale.temperatureUnit === "fahrenheit" ? "F" : "C";
@@ -49,26 +49,45 @@ function distanceKm(a: LatLng, b: LatLng) {
   return 2 * 6371 * Math.asin(Math.sqrt(h));
 }
 
+// A day with at least SHOWER_MM reads as showers; RAIN_MM or more as a rainy day.
+const SHOWER_MM = 1;
+const RAIN_MM = 5;
+
+/** "4 mm" in the user's locale, whole millimetres. */
+export function formatRainMm(mm: number, locale: string) {
+  const value = Math.max(1, Math.round(mm));
+  try {
+    return new Intl.NumberFormat(locale, { style: "unit", unit: "millimeter", unitDisplay: "short" }).format(value);
+  } catch {
+    return `${value} mm`;
+  }
+}
+
+/** Rain amount to show under a day's icon, or null for a dry day. */
+export function dayRain(day: DailyForecast, locale: string) {
+  return day.precipMm != null && day.precipMm >= SHOWER_MM ? formatRainMm(day.precipMm, locale) : null;
+}
+
 /** Summarises rain across the forecast into a short headline and sub line. */
 export function buildOutlook(days: DailyForecast[], locale: string, t: ReturnType<typeof useLocalization>["t"]) {
-  const probs = days.map((d) => d.precipProbability).filter((p): p is number => p != null);
-  if (!probs.length) return null;
-  const maxProb = Math.max(...probs);
-  const rainy = days.filter((d) => d.precipProbability != null && d.precipProbability >= 50);
+  const amounts = days.map((d) => d.precipMm).filter((mm): mm is number => mm != null);
+  if (!amounts.length) return null;
+  const amount = formatRainMm(Math.max(...amounts), locale);
+  const rainy = days.filter((d) => d.precipMm != null && d.precipMm >= RAIN_MM);
   if (rainy.length) {
     const first = weekday(rainy[0].date, locale);
     const last = weekday(rainy[rainy.length - 1].date, locale);
     return {
       title: t("trip.weatherOutlookRain"),
-      subtitle: t("trip.weatherRainDays", { days: first === last ? first : `${first}–${last}`, prob: maxProb }),
+      subtitle: t("trip.weatherRainDays", { days: first === last ? first : `${first}–${last}`, amount }),
     };
   }
-  if (maxProb >= 20) return { title: t("trip.weatherOutlookShowers"), subtitle: t("trip.weatherShowersSub", { prob: maxProb }) };
+  if (Math.max(...amounts) >= SHOWER_MM) return { title: t("trip.weatherOutlookShowers"), subtitle: t("trip.weatherShowersSub", { amount }) };
   return { title: t("trip.weatherOutlookDry"), subtitle: t("trip.weatherDrySub") };
 }
 
 /**
- * Daily forecasts for each trip destination within Open-Meteo's window. The default destination
+ * Daily forecasts for each trip destination within the forecast window. The default destination
  * is the one nearest the user; `select` switches it.
  */
 export function useTripForecast(trip: Trip, userLocation: { latitude?: number; longitude?: number } | null) {
