@@ -11,6 +11,7 @@ import { TimelineList, UpNextList } from "@/features/itinerary/components/Itiner
 import { upNext } from "@/features/itinerary/utils/timeline";
 import { fromDateKey } from "@/features/trips/utils/dates";
 import { logger } from "@/modules/logger";
+import { showInterstitial } from "@/modules/ads";
 import { useGmailImport } from "@/features/expenses/hooks/useGmailImport";
 import { useGmailProgressLabel, useGmailStatus } from "@/features/expenses/hooks/useGmailStatus";
 import { syncTripGmail } from "@/features/expenses/services/tripGmailSync";
@@ -67,6 +68,14 @@ export function TripItinerary({ trip }: { trip: Trip; accent: string }) {
       });
     }
     setEditing(null);
+    if (editing === "new") showInterstitial("itinerary_event_added");
+  };
+
+  // The refine result is a natural break once the user has dealt with it.
+  const closeReview = () => {
+    if (!review) return;
+    setReview(null);
+    showInterstitial("itinerary_refined");
   };
 
   const handleRefine = useCallback(async () => {
@@ -140,17 +149,17 @@ export function TripItinerary({ trip }: { trip: Trip; accent: string }) {
 
       <AuraSheet
         visible={review !== null}
-        onClose={() => setReview(null)}
+        onClose={closeReview}
         title={t("itinerary.refineReviewTitle")}
         footer={
           <View style={styles.reviewActions}>
-            <AuraButton label={t("common.cancel")} variant="secondary" onPress={() => setReview(null)} style={styles.flex} />
+            <AuraButton label={t("common.cancel")} variant="secondary" onPress={closeReview} style={styles.flex} />
             <AuraButton
               label={t("itinerary.refineApply")}
               variant="danger"
               onPress={() => {
                 if (review) deleteEvents(review.remove);
-                setReview(null);
+                closeReview();
               }}
               style={styles.flex}
             />

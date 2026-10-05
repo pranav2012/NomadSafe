@@ -96,7 +96,7 @@ npx eas-cli submit -p android --profile production --path <aab or latest>
 |---|---|
 | Privacy policy | `https://gregarious-crocodile-599.convex.site/privacy` |
 | App access | Restricted. Add a Google test account (email + password) for reviewers. Note: "Sign in with Google, create any 6-digit PIN." |
-| Ads | **Yes, the app contains ads** (Free plan only; AdMob interstitial after creating a trip) |
+| Ads | **Yes, the app contains ads** (Free plan only; AdMob interstitials after finished actions) |
 | Content rating | Complete the IARC questionnaire. It's a utility app with no user-generated public content; location sharing is only with contacts the user chose. Expect Everyone / PEGI 3. |
 | Target audience | 18 and over (or 13+). Not designed for children. |
 | News app | No |
@@ -214,6 +214,6 @@ Draft full description:
 - [ ] AI model: download on Wi-Fi, pause, kill the app → it doesn't auto-resume. Resume → completes. Chat, then stop mid-reply.
 - [ ] Expenses: paste `EUR 1.234,56` and an OTP message → correct amount, OTP ignored. Gmail import with a test user.
 - [ ] Settings → Export (share sheet), Wipe, Delete account (rows gone in the Convex dashboard).
-- [ ] Ads (Free plan): the first trip shows no ad; the next new trip shows a test interstitial after the planner closes; another within 4 hours shows none. With a VPN in the EU, the consent form appears once after unlock, and Settings shows **Ad privacy choices**. After buying Plus, no more ads and the row is gone.
+- [ ] Ads (Free plan): set the `ad_frequency` flag payload to `{"graceHours":0,"graceSessions":0,"sessionDelaySeconds":0}` for the test account. The first trip shows no ad; the next new trip shows a test interstitial after the planner closes; another action within 3 minutes shows none; every 4th hand-entered expense and a Gmail/paste import show one; nothing ever appears on SOS, voice capture or the lock screen. With a VPN in the EU, the consent form appears once after unlock, and Settings shows **Ad privacy choices**. After buying Plus, no more ads and the row is gone.
 - [ ] Switch to Arabic → the app reloads right-to-left, and chevrons are mirrored.
 - [ ] Airplane mode on each tab → no crashes, readable errors.

@@ -24,6 +24,7 @@ import { getCurrentExpenseLocation } from "@/features/expenses/services/location
 import { useGmailStatus } from "@/features/expenses/hooks/useGmailStatus";
 import { localeDecimalSeparator, parseAmountInput } from "@/features/expenses/utils/amountInput";
 import { track } from "@/modules/analytics";
+import { showInterstitial } from "@/modules/ads";
 
 export interface ExpenseDraftValues {
   amount: number;
@@ -236,6 +237,7 @@ function ExpenseFormBody({
       track("expense_added", { source: source === "voice" ? "voice" : "manual", count: 1 });
     }
     onSave();
+    if (!editingExpense && source !== "voice") showInterstitial("expense_saved");
   };
 
   const affixText = (text: string) => <Text style={[styles.affix, { color: c.textSoft, fontFamily: f.semibold }]}>{text}</Text>;

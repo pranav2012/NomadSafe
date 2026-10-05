@@ -257,11 +257,44 @@ test("AI policy: a preferred source goes first, then the rest in route order", (
   assert.deepEqual(policy.onlineProvidersFor("expenseCategory", { ...all, preferred: "byok" }), []);
 });
 
-test("ads: never on the first trip, only when loaded, at most once every 4 hours", () => {
-  const base = { now: NOW, lastShownAt: null, firstTrip: false, loaded: true };
+test("ads: shared frequency rules (grace, session delay, gap, session and daily caps)", () => {
+  const config = adRules.DEFAULT_AD_CONFIG;
+  const DAY = 24 * 60 * 60 * 1000;
+  const base = {
+    now: NOW,
+    config,
+    installedAt: NOW - 2 * DAY,
+    sessions: 5,
+    sessionStartedAt: NOW - 10 * 60 * 1000,
+    shownThisSession: 0,
+    recentShows: [],
+    loaded: true,
+  };
   assert.equal(adRules.canShowAd(base), true);
-  assert.equal(adRules.canShowAd({ ...base, firstTrip: true }), false);
   assert.equal(adRules.canShowAd({ ...base, loaded: false }), false);
-  assert.equal(adRules.canShowAd({ ...base, lastShownAt: NOW - adRules.AD_INTERVAL_MS + 1 }), false);
-  assert.equal(adRules.canShowAd({ ...base, lastShownAt: NOW - adRules.AD_INTERVAL_MS }), true);
+  assert.equal(adRules.canShowAd({ ...base, installedAt: NOW - DAY + 1 }), false);
+  assert.equal(adRules.canShowAd({ ...base, sessions: config.graceSessions }), false);
+  assert.equal(adRules.canShowAd({ ...base, sessionStartedAt: NOW - 30 * 1000 }), false);
+  assert.equal(adRules.canShowAd({ ...base, shownThisSession: config.perSession }), false);
+  assert.equal(adRules.canShowAd({ ...base, recentShows: [NOW - config.gapSeconds * 1000 + 1] }), false);
+  assert.equal(adRules.canShowAd({ ...base, recentShows: [NOW - config.gapSeconds * 1000] }), true);
+  const fullDay = Array.from({ length: config.perDay }, (_, i) => NOW - (config.perDay - i) * 3600_000);
+  assert.equal(adRules.canShowAd({ ...base, recentShows: fullDay }), false);
+  assert.equal(adRules.canShowAd({ ...base, recentShows: [NOW - DAY, ...fullDay.slice(1)] }), true);
+  assert.deepEqual(adRules.pruneShows([NOW - DAY, NOW - DAY + 1], NOW), [NOW - DAY + 1]);
+});
+
+test("ads: every-Nth placements and remote config overrides", () => {
+  assert.equal(adRules.placementDue(3, 4), false);
+  assert.equal(adRules.placementDue(4, 4), true);
+  assert.equal(adRules.placementDue(9, 0), false);
+  assert.deepEqual(adRules.resolveAdConfig(null), adRules.DEFAULT_AD_CONFIG);
+  const remote = adRules.resolveAdConfig({ gapSeconds: 300, perDay: -1, perSession: "3", every: { expense_saved: 6, ai_chat_exit: 0, bogus: 1 } });
+  assert.equal(remote.gapSeconds, 300);
+  assert.equal(remote.perDay, adRules.DEFAULT_AD_CONFIG.perDay);
+  assert.equal(remote.perSession, adRules.DEFAULT_AD_CONFIG.perSession);
+  assert.equal(remote.every.expense_saved, 6);
+  assert.equal(remote.every.ai_chat_exit, 0);
+  assert.equal(remote.every.trip_created, 1);
+  assert.equal("bogus" in remote.every, false);
 });

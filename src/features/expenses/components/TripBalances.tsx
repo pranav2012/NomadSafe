@@ -14,6 +14,7 @@ import {
 import { auraStatusAccent } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { track } from "@/modules/analytics";
+import { showInterstitial } from "@/modules/ads";
 import type { Trip } from "@/features/trips/store/tripsStore";
 import { useExpensesStore } from "@/features/expenses/store/expensesStore";
 import { useConvertedExpenses } from "@/features/expenses/hooks/useTripExpenseSummary";
@@ -219,6 +220,7 @@ function SettleUpSheet({
     });
     track("settlement_recorded", { source: "manual" });
     onClose();
+    showInterstitial("settlement_recorded");
   };
 
   const picker = (label: string, selected: string, onSelect: (person: string) => void) => (

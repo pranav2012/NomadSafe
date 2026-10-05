@@ -45,11 +45,24 @@ Voice expenses use online AI too. Only the transcribed text is sent, never audio
 
 - Google AdMob through `react-native-google-mobile-ads`, wrapped by `src/modules/ads` (nothing else imports the library).
 - **Who sees ads:** Free only. Any paid plan (`unlimitedTrips` in the plan store, so Plus monthly/yearly/lifetime and Pro) never starts the consent flow or the SDK. Upgrading mid-session drops the preloaded ad and stops loading (the SDK can't be shut down until the next launch, but it requests nothing).
-- **Placement:** one interstitial, shown after a *new* trip is saved (`TripForm` → `showTripCreatedAd()`), fire and forget, about 0.6 s after the planner closes and only if the app is active. Never on safety flows (SOS, check-in, live location, lock screen, voice capture).
-- **Frequency:** at most once every 4 hours (`ads:lastShownAt` in MMKV) and never for the user's first trip ever on this install (`ads:firstTripCreated`). Free users own at most 2 trips, so in practice this is the second trip and later ones after deleting a trip.
+- **Placements:** interstitials only (no banners), shown only after the user finishes an action, through `showInterstitial(placement)`. It's fire and forget: the ad appears about 0.6 s later, only if the app is active and ads aren't suspended.
+
+  | Placement | When | Default: every Nth |
+  |---|---|---|
+  | `trip_created` | A new trip is saved (`TripForm`); never the first trip on the install | 1 |
+  | `expenses_imported` | Gmail or pasted expenses are confirmed (`ImportSheet`) | 1 |
+  | `expense_saved` | A new expense is saved by hand (`ExpenseForm`, not voice) | 4 |
+  | `settlement_recorded` | A settle-up payment is saved (`TripBalances`) | 1 |
+  | `itinerary_refined` | The AI refine review is applied or dismissed (`TripItinerary`) | 1 |
+  | `itinerary_event_added` | A new itinerary event is saved (`TripItinerary`) | 3 |
+  | `ai_chat_exit` | Leaving the AI tab after 3 or more replies in that visit (`AiScreen`) | 1 |
+
+  Never on safety flows (SOS, check-in, live location, lock screen, voice capture): `AdsGate` suspends ads there (`setAdsSuspended`), and the check runs again just before the ad shows.
+- **Frequency (shared by all placements, `src/modules/ads/rules.ts`):** no ads in a new install's first 24 hours or first 2 sessions; none in the first 60 s of a session; at least 3 minutes between ads; at most 2 per session and 6 in any rolling 24 hours. A session is a launch, or a return after 30 minutes or more in the background. Each placement keeps its own action counter (`ads:actions:<placement>`); it resets only when an ad actually shows. Other MMKV keys: `ads:shownAt`, `ads:installedAt`, `ads:sessions`, `ads:firstTripCreated`.
+- **Remote tuning:** the `ad_frequency` PostHog flag's JSON payload overrides any of `graceHours`, `graceSessions`, `gapSeconds`, `sessionDelaySeconds`, `perSession`, `perDay` and `every.<placement>` (0 turns a placement off). Invalid fields fall back to the defaults, and so does everything in dev builds, where PostHog is off.
 - **Consent:** `AdsGate` in `src/app/_layout.tsx` starts ads only when the user is in the app, unlocked and not on SOS or voice capture. `AdsConsent.gatherConsent()` (UMP) runs once per launch; `mobileAds().initialize()` runs once, as soon as `canRequestAds` is true (from this session's form or a previous one). Where GDPR applies and the user didn't consent to personalised ads, requests are non-personalised. When UMP requires privacy options, Settings shows **Ad privacy choices** (`showPrivacyOptionsForm`).
 - **IDs:** AdMob app IDs are static in `app.json` (currently Google's sample IDs; replace before production, see `docs/PLAY_RELEASE.md` step 12). Interstitial unit ids come from `EXPO_PUBLIC_ADMOB_ANDROID_INTERSTITIAL_ID` / `EXPO_PUBLIC_ADMOB_IOS_INTERSTITIAL_ID`; dev builds and builds without them use `TestIds.INTERSTITIAL`.
-- **Analytics:** `ad_shown` and `ad_failed` (`placement`, `stage`), enums only.
+- **Analytics:** `ad_shown` (`placement`) and `ad_failed` (`placement`, which is `preload` for load errors; `stage`), enums only.
 
 ## NomadSafe Cloud AI (Pro)
 

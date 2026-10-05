@@ -11,6 +11,7 @@ import { useLocalization } from "@/localization";
 import { useSettingsStore } from "@/features/settings";
 import { useTripsStore } from "@/features/trips/store/tripsStore";
 import { track } from "@/modules/analytics";
+import { showInterstitial } from "@/modules/ads";
 import { TEMP_CHAT_KEY, useChatStore } from "../store/chatStore";
 import { useChatConversationKey } from "../hooks/useChatConversationKey";
 import { AiChat, HERO_DOCK_DISTANCE } from "../components/AiChat";
@@ -19,6 +20,8 @@ import { AiKeySheet } from "../components/AiKeySheet";
 import { AiModelsSheet } from "../components/AiModelsSheet";
 import { findModel, remoteLabel, useAiAvailability, useAiProvisioning } from "@/modules/ai";
 import { provisionPercent } from "../utils/provisionCopy";
+
+const AD_MIN_CHAT_REPLIES = 3;
 
 const READY = "#3DDC97";
 // Lets the models sheet finish closing before the key sheet's modal opens.
@@ -99,6 +102,20 @@ export default function AiScreen() {
   useEffect(() => {
     if (!focused) setTemporary(false);
   }, [focused, setTemporary]);
+
+  // Leaving the tab after a real conversation is a natural break for an ad.
+  const generating = useChatStore((s) => s.generatingConversationKey !== null);
+  const wasGenerating = useRef(false);
+  const repliesThisVisit = useRef(0);
+  useEffect(() => {
+    if (wasGenerating.current && !generating && focused) repliesThisVisit.current += 1;
+    wasGenerating.current = generating;
+  }, [generating, focused]);
+  useEffect(() => {
+    if (focused) return;
+    if (repliesThisVisit.current >= AD_MIN_CHAT_REPLIES) showInterstitial("ai_chat_exit");
+    repliesThisVisit.current = 0;
+  }, [focused]);
 
   const toggleTemporary = () => {
     if (!temporary) track("ai_temporary_chat_started");

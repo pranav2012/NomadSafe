@@ -34,7 +34,7 @@ import { useDefaultCurrency, useLocalization } from "@/localization";
 import { currencyCodes } from "@/utils/currency";
 import { track } from "@/modules/analytics";
 import { logger } from "@/modules/logger";
-import { showTripCreatedAd } from "@/modules/ads";
+import { showInterstitial } from "@/modules/ads";
 
 type DateField = "start" | "end";
 /** Who set the name: "auto" names follow the destinations; "user"/"ai" names are never overwritten by the default. */
@@ -518,7 +518,7 @@ export function TripForm({ editingTrip, onSave, onCancel, destinations, knownCoo
       }
 
       onSave();
-      if (!editingTrip) showTripCreatedAd();
+      if (!editingTrip) showInterstitial("trip_created");
     } finally {
       isSavingRef.current = false;
       setIsSaving(false);

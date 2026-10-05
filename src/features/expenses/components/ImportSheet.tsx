@@ -18,6 +18,7 @@ import { syncTripGmail, type TripGmailSyncResult } from "@/features/expenses/ser
 import type { Trip } from "@/features/trips/store/tripsStore";
 import { track } from "@/modules/analytics";
 import { logger } from "@/modules/logger";
+import { showInterstitial } from "@/modules/ads";
 
 type Tab = "paste" | "gmail";
 
@@ -147,6 +148,7 @@ function ImportBody({ tripId, trip, initialTab = "paste", onImported }: Omit<Imp
       const added = addExpenses(inputs);
       track("expense_added", { source: "paste", count: added.length });
       onImported(added.length);
+      if (added.length > 0) showInterstitial("expenses_imported");
     } catch (err) {
       logger.warn("expense-import", "confirm failed", err);
       setError(t(`expenses.importErrors.${importErrorCode(err)}`));

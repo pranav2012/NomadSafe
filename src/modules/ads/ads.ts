@@ -7,12 +7,15 @@ import mobileAds, {
   TestIds,
 } from "react-native-google-mobile-ads";
 import { create } from "zustand";
-import { track } from "@/modules/analytics";
+import { getFlagPayload, track } from "@/modules/analytics";
 import { logger } from "@/modules/logger";
 import { storage } from "@/modules/storage";
-import { canShowAd } from "./rules";
+import { canShowAd, placementDue, pruneShows, resolveAdConfig, SESSION_TIMEOUT_MS, type AdPlacement } from "./rules";
 
-const LAST_SHOWN_KEY = "ads:lastShownAt";
+const SHOWS_KEY = "ads:shownAt";
+const INSTALLED_KEY = "ads:installedAt";
+const SESSIONS_KEY = "ads:sessions";
+const ACTIONS_KEY_PREFIX = "ads:actions:";
 const FIRST_TRIP_KEY = "ads:firstTripCreated";
 // Loaded interstitials expire after an hour.
 const AD_MAX_AGE_MS = 55 * 60 * 1000;
@@ -36,6 +39,13 @@ let sdkStart: Promise<void> | null = null;
 let interstitial: InterstitialAd | null = null;
 let loadedAt = 0;
 let removeListeners: (() => void)[] = [];
+let showingPlacement: AdPlacement | "preload" = "preload";
+// Set while the user is on a screen where ads must never appear (SOS, voice capture, locked).
+let suspended = false;
+let sessionsTracked = false;
+let sessionStartedAt = 0;
+let shownThisSession = 0;
+let backgroundedAt: number | null = null;
 
 async function refreshConsentState(): Promise<boolean> {
   const info = await AdsConsent.getConsentInfo();
@@ -94,7 +104,7 @@ function preload() {
         }),
         ad.addAdEventListener(AdEventType.ERROR, (error) => {
           const stage = error.phase === "show" ? "show" : "load";
-          track("ad_failed", { placement: "trip_created", stage });
+          track("ad_failed", { placement: stage === "show" ? showingPlacement : "preload", stage });
           logger.info("ads", "interstitial failed", { stage, reason: error.reason ?? null });
         }),
       ];
@@ -103,10 +113,47 @@ function preload() {
     });
 }
 
+function startSession(now: number) {
+  sessionStartedAt = now;
+  shownThisSession = 0;
+  storage.set(SESSIONS_KEY, (storage.getNumber(SESSIONS_KEY) ?? 0) + 1);
+}
+
+/** Counts sessions (launch, or back after 30 min in the background) for the grace period and session cap. */
+function trackSessions() {
+  if (sessionsTracked) return;
+  sessionsTracked = true;
+  const now = Date.now();
+  if (storage.getNumber(INSTALLED_KEY) === undefined) storage.set(INSTALLED_KEY, now);
+  startSession(now);
+  AppState.addEventListener("change", (state) => {
+    if (state === "background") backgroundedAt ??= Date.now();
+    else if (state === "active") {
+      if (backgroundedAt !== null && Date.now() - backgroundedAt >= SESSION_TIMEOUT_MS) startSession(Date.now());
+      backgroundedAt = null;
+    }
+  });
+}
+
+function readShows(): number[] {
+  try {
+    const parsed: unknown = JSON.parse(storage.getString(SHOWS_KEY) ?? "[]");
+    return Array.isArray(parsed) ? parsed.filter((at): at is number => typeof at === "number") : [];
+  } catch {
+    return [];
+  }
+}
+
+function recordShow(now: number) {
+  shownThisSession += 1;
+  storage.set(SHOWS_KEY, JSON.stringify([...pruneShows(readShows(), now), now]));
+}
+
 /** Free plan: gathers UMP consent, then starts the SDK and preloads. Safe to call repeatedly. */
 export function startAds() {
   if (enabled) return;
   enabled = true;
+  trackSessions();
   if (!consentStarted) {
     consentStarted = true;
     AdsConsent.gatherConsent()
@@ -123,17 +170,42 @@ export function stopAds() {
   useAdsStore.setState({ privacyOptionsRequired: false });
 }
 
-/** Shows the interstitial after a new trip when allowed; never throws or waits on the ad. */
-export function showTripCreatedAd() {
+/** Blocks showing ads while the user is on a safety, capture or locked screen. */
+export function setAdsSuspended(value: boolean) {
+  suspended = value;
+}
+
+/** True only the first time a trip is ever created on this install, so that trip never gets an ad. */
+function consumeFirstTrip(): boolean {
+  if (storage.getBoolean(FIRST_TRIP_KEY)) return false;
+  storage.set(FIRST_TRIP_KEY, true);
+  return true;
+}
+
+/**
+ * Call after the user finishes an action at a natural break. Counts the action for the placement's
+ * "every Nth" rule and shows the interstitial when the shared frequency rules allow it.
+ * Fire and forget: never throws or waits on the ad.
+ */
+export function showInterstitial(placement: AdPlacement) {
   try {
-    const firstTrip = !storage.getBoolean(FIRST_TRIP_KEY);
-    if (firstTrip) storage.set(FIRST_TRIP_KEY, true);
-    if (!enabled) return;
+    if (placement === "trip_created" && consumeFirstTrip()) return;
+    if (!enabled || suspended) return;
+    const config = resolveAdConfig(getFlagPayload("ad_frequency"));
+    const actionsKey = ACTIONS_KEY_PREFIX + placement;
+    const actions = (storage.getNumber(actionsKey) ?? 0) + 1;
+    storage.set(actionsKey, actions);
+    if (!placementDue(actions, config.every[placement])) return;
+
     const ad = interstitial;
     const allowed = canShowAd({
       now: Date.now(),
-      lastShownAt: storage.getNumber(LAST_SHOWN_KEY) ?? null,
-      firstTrip,
+      config,
+      installedAt: storage.getNumber(INSTALLED_KEY) ?? Date.now(),
+      sessions: storage.getNumber(SESSIONS_KEY) ?? 0,
+      sessionStartedAt,
+      shownThisSession,
+      recentShows: readShows(),
       loaded: !!ad?.loaded && Date.now() - loadedAt <= AD_MAX_AGE_MS,
     });
     if (!ad || !allowed) {
@@ -141,10 +213,12 @@ export function showTripCreatedAd() {
       return;
     }
     setTimeout(() => {
-      if (!enabled || interstitial !== ad || !ad.loaded || AppState.currentState !== "active") return;
-      storage.set(LAST_SHOWN_KEY, Date.now());
+      if (!enabled || suspended || interstitial !== ad || !ad.loaded || AppState.currentState !== "active") return;
+      recordShow(Date.now());
+      storage.set(actionsKey, 0);
+      showingPlacement = placement;
       ad.show()
-        .then(() => track("ad_shown", { placement: "trip_created" }))
+        .then(() => track("ad_shown", { placement }))
         .catch((error: unknown) => logger.info("ads", "interstitial not shown", { reason: error instanceof Error ? error.name : null }));
     }, SHOW_DELAY_MS);
   } catch (error) {

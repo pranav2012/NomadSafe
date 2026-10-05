@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Constants from "expo-constants";
 import PostHog, { type PostHogCustomStorage } from "posthog-react-native";
+import type { AdPlacement } from "@/modules/ads";
 import { storage } from "@/modules/storage";
 
 type ExpenseSourceKind = "manual" | "paste" | "gmail" | "gmail_auto" | "voice";
@@ -10,7 +11,6 @@ type PaidTier = "plus" | "pro";
 type BillingPeriod = "monthly" | "annual" | "lifetime";
 type AiProvider = "local" | "cloud" | "byok";
 type AiTask = "chat" | "budget" | "trip_name" | "itinerary" | "voice";
-type AdPlacement = "trip_created";
 
 /** Custom events. Properties are counts, enums and booleans only, never user content. */
 export interface AnalyticsEvents {
@@ -43,11 +43,13 @@ export interface AnalyticsEvents {
   ai_provider_used: { provider: AiProvider; task: AiTask; fallback: boolean };
   ai_key_saved: { provider: "openai" | "anthropic" | "gemini" | "openai_compatible" };
   ad_shown: { placement: AdPlacement };
-  ad_failed: { placement: AdPlacement; stage: "load" | "show" };
+  ad_failed: { placement: AdPlacement | "preload"; stage: "load" | "show" };
 }
 
 export interface FeatureFlags {
   example_flag: boolean;
+  /** Payload overrides the ad frequency limits (`AdConfig` in `@/modules/ads`). */
+  ad_frequency: boolean;
 }
 
 type EventArgs<K extends keyof AnalyticsEvents> = AnalyticsEvents[K] extends undefined
@@ -149,6 +151,11 @@ export function setReplayRecording(record: boolean) {
       else await client.stopSessionRecording();
     } catch {}
   });
+}
+
+/** A flag's JSON payload, read synchronously from PostHog's cache; undefined when unset or offline. */
+export function getFlagPayload(flag: keyof FeatureFlags): unknown {
+  return posthog?.getFeatureFlagPayload(flag) ?? undefined;
 }
 
 export function useFlag<K extends keyof FeatureFlags>(flag: K): FeatureFlags[K] | undefined {
