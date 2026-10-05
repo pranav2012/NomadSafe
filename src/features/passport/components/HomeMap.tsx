@@ -1,10 +1,12 @@
 import React, { useMemo } from "react";
 import Svg, { Defs, LinearGradient, Path, Stop } from "react-native-svg";
+import { useBoundaryStore } from "@/features/recap/utils/boundaries";
 import { frameRoute } from "@/features/recap/utils/recapMap";
 import { countryRegions, mainlandBox, regionRings } from "../utils/regions";
 
 /** The home country's mainland states, with the visited ones filled in aurora. */
 export function HomeMap({ country, visited, width, height }: { country: string; visited: Set<string>; width: number; height: number }) {
+  const view = useBoundaryStore((state) => state.view);
   const shapes = useMemo(() => {
     const box = mainlandBox(country);
     if (!box) return [];
@@ -28,7 +30,8 @@ export function HomeMap({ country, visited, width, height }: { country: string; 
           )
           .join(""),
       }));
-  }, [country, width, height]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [country, width, height, view]);
 
   return (
     <Svg width={width} height={height}>

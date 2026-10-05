@@ -31,6 +31,7 @@ import { checkDeferredInvite } from "@/features/trips/services/deferredInvite";
 import { WidgetSync } from "@/features/widget/WidgetSync";
 import { BillingEffects } from "@/modules/billing";
 import { useRecapEffects } from "@/features/recap";
+import { useBoundaryViewSync } from "@/features/passport";
 import { AdsEffects } from "@/modules/ads";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { useTheme } from "@/hooks/useTheme";
@@ -233,6 +234,7 @@ function SessionEffects() {
   useSafetyServerSync();
   useTripNotificationRouting();
   useRecapEffects();
+  useBoundaryViewSync();
 
   useEffect(() => {
     void checkDeferredInvite();

@@ -1,6 +1,7 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import * as Localization from "expo-localization";
 import { COUNTRY_SHAPES } from "@/features/recap/data/countryShapes";
+import { useBoundaryStore } from "@/features/recap/utils/boundaries";
 import { countryAt } from "@/features/recap/utils/countryShapes";
 import { useSettingsStore } from "@/features/settings/store/settingsStore";
 import { nearestCityCountry } from "@/features/trips/data/destinations";
@@ -29,11 +30,21 @@ export function useHomeCountry(): { code: string | null; automatic: boolean; dev
   return { code: picked ?? device, automatic: picked === null, device };
 }
 
+/** India's official borders for people in India (phone region or home country), the default otherwise. Mount once at the root. */
+export function useBoundaryViewSync() {
+  const picked = useSettingsStore((state) => state.homeCountry);
+  useEffect(() => {
+    const device = deviceCountry();
+    useBoundaryStore.getState().setView(picked === "IN" || device === "IN" ? "IN" : "default");
+  }, [picked]);
+}
+
 /** Stamps and state seals from every trip and past entry. */
 export function usePassport(): Passport {
   const trips = useTripsStore((state) => state.trips);
   const entries = usePassportStore((state) => state.entries);
   const { code: home } = useHomeCountry();
+  const view = useBoundaryStore((state) => state.view);
 
   return useMemo(() => {
     const passportTrips: PassportTrip[] = trips
@@ -56,5 +67,7 @@ export function usePassport(): Passport {
         };
       });
     return buildPassport({ trips: passportTrips, past: entries, home, continentOf });
-  }, [trips, entries, home]);
+    // `view` changes which country and state a stop falls in.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trips, entries, home, view]);
 }

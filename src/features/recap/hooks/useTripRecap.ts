@@ -5,11 +5,13 @@ import { useEventsStore } from "@/features/itinerary/store/eventsStore";
 import type { TransitMode } from "@/features/itinerary/constants/eventTypes";
 import { placeCountry } from "@/features/passport/hooks/usePassport";
 import { countryDisplayName } from "@/features/trips/data/destinations";
+import { airportCoordinates } from "@/features/itinerary/utils/airports";
 import { getOfflineCoordinates } from "@/features/trips/services/geocoding";
 import { getDestinationCoordinates, useTripsStore, type Trip } from "@/features/trips/store/tripsStore";
 import { fromDateKey } from "@/features/trips/utils/dates";
 import { useLocalization } from "@/localization";
 import type { RecapCardContent } from "../components/recapCard";
+import { useBoundaryStore } from "../utils/boundaries";
 import { countryBox } from "../utils/countryShapes";
 import { computeRecapFacts, type RecapFacts, type RecapMode } from "../utils/recapFacts";
 
@@ -48,12 +50,16 @@ function listFormat(items: string[], locale: string) {
   }
 }
 
+/** A route end from an itinerary event: an airport code ("NRT") or a place name ("Hue"). */
+const locateRouteEnd = (place: string) => airportCoordinates(place) ?? getOfflineCoordinates(place);
+
 /** Everything the replay and share card show for one trip, formatted; null when the trip is gone. */
 export function useTripRecap(tripId: string | undefined) {
   const { t, locale, formatDistance, formatCurrency } = useLocalization();
   const trip = useTripsStore((state) => state.trips.find((item) => item.id === tripId) ?? null);
   const allEvents = useEventsStore((state) => state.events);
   const summary = useTripExpenseSummary(trip);
+  const view = useBoundaryStore((state) => state.view);
 
   const facts = useMemo<RecapFacts | null>(
     () =>
@@ -62,11 +68,13 @@ export function useTripRecap(tripId: string | undefined) {
             trip,
             coordinates: getDestinationCoordinates(trip),
             events: allEvents.filter((event) => event.tripId === trip.id),
-            locate: getOfflineCoordinates,
+            locate: locateRouteEnd,
             countryOf: placeCountry,
           })
         : null,
-    [trip, allEvents],
+    // `view` changes which country a stop falls in.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [trip, allEvents, view],
   );
 
   if (!trip || !facts) return null;

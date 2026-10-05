@@ -1,4 +1,5 @@
-import { COUNTRY_SHAPES } from "../data/countryShapes";
+import { COUNTRY_SHAPES, COUNTRY_SHAPES_IN_VIEW } from "../data/countryShapes";
+import { boundaryView } from "./boundaries";
 
 /** [longitude, latitude] */
 export type LonLat = [number, number];
@@ -37,18 +38,24 @@ export function decodePolyline(value: string): LonLat[] {
   return points;
 }
 
+/** The outline row for a country in the current border view. */
+function entryOf(code: string) {
+  return (boundaryView() === "IN" ? COUNTRY_SHAPES_IN_VIEW[code] : undefined) ?? COUNTRY_SHAPES[code];
+}
+
 /** Outer rings of a country's outline; empty for an unknown code. */
 export function countryRings(code: string): LonLat[][] {
-  const cached = decoded.get(code);
+  const id = `${boundaryView()}|${code}`;
+  const cached = decoded.get(id);
   if (cached) return cached;
-  const entry = COUNTRY_SHAPES[code];
+  const entry = entryOf(code);
   const rings = entry ? entry[1].split(";").map(decodePolyline) : [];
-  decoded.set(code, rings);
+  decoded.set(id, rings);
   return rings;
 }
 
 export function countryBox(code: string): GeoBox | null {
-  const entry = COUNTRY_SHAPES[code];
+  const entry = entryOf(code);
   if (!entry) return null;
   const [west, south, east, north] = entry[0];
   return { west, south, east, north };

@@ -1,5 +1,6 @@
 import { decodePolyline, type GeoBox, type LonLat } from "@/features/recap/utils/countryShapes";
-import { REGION_SHAPES } from "../data/regionShapes";
+import { boundaryView } from "@/features/recap/utils/boundaries";
+import { REGION_SHAPES, REGION_SHAPES_IN_VIEW } from "../data/regionShapes";
 
 export interface Region {
   key: string;
@@ -12,25 +13,31 @@ export interface Region {
 const decoded = new Map<string, LonLat[][]>();
 const listed = new Map<string, Region[]>();
 
+/** A country's region rows in the current border view. */
+function rowsOf(country: string) {
+  return (boundaryView() === "IN" ? REGION_SHAPES_IN_VIEW[country] : undefined) ?? REGION_SHAPES[country] ?? [];
+}
+
 /** A country's states or provinces; empty when the data has none. */
 export function countryRegions(country: string): Region[] {
-  const cached = listed.get(country);
+  const id = `${boundaryView()}|${country}`;
+  const cached = listed.get(id);
   if (cached) return cached;
-  const regions = (REGION_SHAPES[country] ?? []).map(([key, name, [west, south, east, north], far]) => ({
+  const regions = rowsOf(country).map(([key, name, [west, south, east, north], far]) => ({
     key,
     name,
     box: { west, south, east, north },
     far: far === 1,
   }));
-  listed.set(country, regions);
+  listed.set(id, regions);
   return regions;
 }
 
 export function regionRings(country: string, key: string): LonLat[][] {
-  const id = `${country}|${key}`;
+  const id = `${boundaryView()}|${country}|${key}`;
   const cached = decoded.get(id);
   if (cached) return cached;
-  const row = REGION_SHAPES[country]?.find((entry) => entry[0] === key);
+  const row = rowsOf(country).find((entry) => entry[0] === key);
   const rings = row ? row[4].split(";").map(decodePolyline) : [];
   decoded.set(id, rings);
   return rings;

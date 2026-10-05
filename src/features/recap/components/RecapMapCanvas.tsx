@@ -3,6 +3,7 @@ import { StyleSheet } from "react-native";
 import { BlurMask, Canvas, Circle, DashPathEffect, Fill, Group, LinearGradient, Path, RadialGradient, vec } from "react-native-skia";
 import { useDerivedValue, type DerivedValue, type SharedValue } from "react-native-reanimated";
 import { auraDark } from "@/constants/aura";
+import { useBoundaryStore } from "../utils/boundaries";
 import type { GeoBox } from "../utils/countryShapes";
 import type { Camera, MapFrame } from "../utils/recapMap";
 import type { RecapLeg, RecapStop } from "../utils/recapFacts";
@@ -54,7 +55,9 @@ type RecapGeometryLeg = ReturnType<typeof buildRecapGeometry>["legs"][number];
 
 /** The replay's map: aurora sky, country outlines and the route, panned and zoomed by `camera`. */
 export function RecapMapCanvas({ width, height, frame, stops, legs, countries, camera, reveal, current, opacity }: Props) {
-  const geometry = useMemo(() => buildRecapGeometry(frame, stops, legs, countries, grow(frame.box, 3)), [frame, stops, legs, countries]);
+  const view = useBoundaryStore((state) => state.view);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const geometry = useMemo(() => buildRecapGeometry(frame, stops, legs, countries, grow(frame.box, 3)), [frame, stops, legs, countries, view]);
   const zoom = useDerivedValue(() => camera.get().zoom);
   const transform = useDerivedValue(() => {
     const { x, y, zoom: z } = camera.get();

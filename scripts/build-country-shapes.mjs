@@ -2,8 +2,11 @@
 // Builds src/features/recap/data/countryShapes.ts: simplified country outlines for the trip recap map
 // and share card, keyed by ISO 3166-1 alpha-2 (the codes in features/trips/data/cities.ts).
 //
-// Source: Natural Earth 1:50m admin-0 countries (public domain).
-// Usage: node scripts/build-country-shapes.mjs [path-to-ne_50m_admin_0_countries.geojson]
+// Also builds an India view (COUNTRY_SHAPES_IN_VIEW) of India, Pakistan and China for people in
+// India, from Natural Earth's India point-of-view countries.
+//
+// Sources: Natural Earth 1:50m admin-0 countries and 1:10m India point-of-view countries (public domain).
+// Usage: node scripts/build-country-shapes.mjs [ne_50m_admin_0_countries.geojson] [ne_10m_admin_0_countries_ind.geojson]
 // Without a path it downloads the file from the natural-earth-vector repository.
 
 import { readFile, writeFile } from "node:fs/promises";
@@ -18,10 +21,12 @@ const TOLERANCE = 0.02;
 const MIN_RING_AREA = 0.004;
 const PRECISION = 100;
 
-async function loadSource() {
-  const path = process.argv[2];
+const INDIA_VIEW_URL = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_admin_0_countries_ind.geojson";
+const INDIA_VIEW_CODES = ["IN", "PK", "CN"];
+
+async function loadSource(path = process.argv[2], url = SOURCE_URL) {
   if (path) return JSON.parse(await readFile(path, "utf8"));
-  const response = await fetch(SOURCE_URL);
+  const response = await fetch(url);
   if (!response.ok) throw new Error(`download failed: ${response.status}`);
   return response.json();
 }
@@ -89,40 +94,50 @@ function encode(points) {
   return out;
 }
 
-const source = await loadSource();
-const shapes = {};
-let total = 0;
-for (const feature of source.features) {
-  const code = feature.properties.ISO_A2_EH;
-  if (!code || code === "-99" || !feature.geometry) continue;
-  const polygons = feature.geometry.type === "Polygon" ? [feature.geometry.coordinates] : feature.geometry.coordinates;
-  const outers = polygons.map((polygon) => polygon[0]).sort((a, b) => ringArea(b) - ringArea(a));
-  const rings = outers
-    .filter((ring, i) => i === 0 || ringArea(ring) >= MIN_RING_AREA)
-    .map(simplify)
-    .filter((ring) => ring.length >= 4);
-  if (rings.length === 0) continue;
-  // Several features can share a code (e.g. Australia's small external territories); keep the biggest.
-  const area = outers.reduce((sum, ring) => sum + ringArea(ring), 0);
-  if (shapes[code] && shapes[code].area >= area) continue;
-  const all = rings.flat();
-  const bbox = [
-    Math.min(...all.map((p) => p[0])),
-    Math.min(...all.map((p) => p[1])),
-    Math.max(...all.map((p) => p[0])),
-    Math.max(...all.map((p) => p[1])),
-  ].map((v) => Math.round(v * PRECISION) / PRECISION);
-  shapes[code] = { bbox, area, continent: feature.properties.CONTINENT, rings: rings.map(encode), points: rings.reduce((sum, ring) => sum + ring.length, 0) };
+/** Simplified, encoded outlines per country code; several features can share a code (e.g. Australia's small external territories), so the biggest wins. */
+function buildShapes(features, codes = null) {
+  const shapes = {};
+  for (const feature of features) {
+    const code = feature.properties.ISO_A2_EH;
+    if (!code || code === "-99" || !feature.geometry || (codes && !codes.includes(code))) continue;
+    const polygons = feature.geometry.type === "Polygon" ? [feature.geometry.coordinates] : feature.geometry.coordinates;
+    const outers = polygons.map((polygon) => polygon[0]).sort((a, b) => ringArea(b) - ringArea(a));
+    const rings = outers
+      .filter((ring, i) => i === 0 || ringArea(ring) >= MIN_RING_AREA)
+      .map(simplify)
+      .filter((ring) => ring.length >= 4);
+    if (rings.length === 0) continue;
+    const area = outers.reduce((sum, ring) => sum + ringArea(ring), 0);
+    if (shapes[code] && shapes[code].area >= area) continue;
+    const all = rings.flat();
+    const bbox = [
+      all.reduce((m, p) => Math.min(m, p[0]), Infinity),
+      all.reduce((m, p) => Math.min(m, p[1]), Infinity),
+      all.reduce((m, p) => Math.max(m, p[0]), -Infinity),
+      all.reduce((m, p) => Math.max(m, p[1]), -Infinity),
+    ].map((v) => Math.round(v * PRECISION) / PRECISION);
+    shapes[code] = { bbox, area, continent: feature.properties.CONTINENT, rings: rings.map(encode), points: rings.reduce((sum, ring) => sum + ring.length, 0) };
+  }
+  return shapes;
 }
 
+const shapes = buildShapes((await loadSource()).features);
+const indiaView = buildShapes((await loadSource(process.argv[3], INDIA_VIEW_URL)).features, INDIA_VIEW_CODES);
+let total = 0;
 for (const shape of Object.values(shapes)) total += shape.points;
-const rows = Object.keys(shapes)
-  .sort()
-  .map((code) => `  ${code}: [${JSON.stringify(shapes[code].bbox)}, ${JSON.stringify(shapes[code].rings.join(";"))}, ${JSON.stringify(shapes[code].continent)}],`);
+const rowsOf = (set) =>
+  Object.keys(set)
+    .sort()
+    .map((code) => `  ${code}: [${JSON.stringify(set[code].bbox)}, ${JSON.stringify(set[code].rings.join(";"))}, ${JSON.stringify(set[code].continent)}],`);
+const rows = rowsOf(shapes);
 const file = `// Generated by scripts/build-country-shapes.mjs from Natural Earth 1:50m admin-0 countries (public domain). Do not edit.
 // Each entry: [west, south, east, north] bounds, outer rings as 0.01° polylines joined by ";", continent.
 export const COUNTRY_SHAPES: Record<string, [number[], string, string]> = {
 ${rows.join("\n")}
+};
+// India's official view of India, Pakistan and China, used when the phone or home country is India.
+export const COUNTRY_SHAPES_IN_VIEW: Record<string, [number[], string, string]> = {
+${rowsOf(indiaView).join("\n")}
 };
 `;
 await writeFile(OUT, file);
