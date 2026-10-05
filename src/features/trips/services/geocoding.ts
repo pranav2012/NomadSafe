@@ -1,4 +1,5 @@
 import { api, convex } from "@/modules/backend";
+import { withAppCheck } from "@/modules/appCheck";
 import { findOfflineCoordinates } from "@/features/trips/data/destinations";
 
 export interface LatLng {
@@ -32,10 +33,12 @@ export async function geocodeDestination(label: string): Promise<LatLng | null> 
   const offline = findOfflineCoordinates(label);
   if (offline) return offline;
 
-  const lookup = convex.action(api.places.geocodeDestination, { query: label }).catch(() => {
-    known.delete(key);
-    return null;
-  });
+  const lookup = withAppCheck({ query: label })
+    .then((args) => convex.action(api.places.geocodeDestination, args))
+    .catch(() => {
+      known.delete(key);
+      return null;
+    });
   known.set(key, lookup);
   return lookup;
 }

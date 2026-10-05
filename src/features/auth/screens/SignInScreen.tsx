@@ -13,6 +13,7 @@ import { useAmbientLoop } from "@/features/auth/hooks/useAmbientLoop";
 import { useSettingsStore } from "@/features/settings/store/settingsStore";
 import { useLocalization } from "@/localization";
 import { track } from "@/modules/analytics";
+import { withSystemPrompt } from "@/utils/systemPrompt";
 
 const DANGER = "#FF4D5E";
 const AMBIENCE = require("../../../../assets/audio/aurora-ambience.m4a");
@@ -78,10 +79,12 @@ export default function SignInScreen() {
     try {
       setLoading("google");
       track("sign_in_started");
-      const result = await authClient.signIn.social({
-        provider: "google",
-        callbackURL: "nomadsafe://",
-      });
+      const result = await withSystemPrompt(() =>
+        authClient.signIn.social({
+          provider: "google",
+          callbackURL: "nomadsafe://",
+        }),
+      );
       if (result?.error) {
         track("sign_in_failed");
         setError(t("auth.signInFailed"));

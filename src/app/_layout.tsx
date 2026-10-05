@@ -16,7 +16,7 @@ import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 import { registerTripPush, startGroupSync, startSync, stopGroupSync, stopSync, useTripNotificationRouting } from "@/features/sync";
 import { AURA_FONT_FILES, auraDark, auraLight } from "@/constants/aura";
-import { useAuthStore, useSyncAuthSession } from "@/features/auth";
+import { PrivacyCover, useAuthStore, usePrivacyShield, useSyncAuthSession } from "@/features/auth";
 import LockScreen from "@/features/auth/screens/LockScreen";
 import { useChatStore } from "@/features/ai";
 import { aiRuntime, modelNotifications } from "@/modules/ai";
@@ -76,6 +76,7 @@ function AppStateLock() {
   }, [pathname]);
   const appState = useRef(AppState.currentState);
   const backgroundedAt = useRef<number | null>(null);
+  const backgroundedAtMono = useRef(0);
 
   useEffect(() => {
     const subscription = AppState.addEventListener(
@@ -87,6 +88,7 @@ function AppStateLock() {
         // iOS goes active → inactive → background, so key off "background" alone.
         if (nextState === "background" && backgroundedAt.current === null) {
           backgroundedAt.current = Date.now();
+          backgroundedAtMono.current = performance.now();
           useAuthStore.getState().updateLastActive();
           // Keep the model loaded if a chat reply is still streaming; the chat
           // store releases it once the reply finishes (and notifies the user).
@@ -120,7 +122,10 @@ function AppStateLock() {
         const since = backgroundedAt.current;
         backgroundedAt.current = null;
         if (!since || !auth.isSignedIn || !auth.isPinSet) return;
-        if (Date.now() - since > auth.autoLockTimeout) {
+        // The wall clock can be moved back; the monotonic clock may pause while the phone sleeps.
+        const wallElapsed = Date.now() - since;
+        const monoElapsed = performance.now() - backgroundedAtMono.current;
+        if (wallElapsed < 0 || Math.max(wallElapsed, monoElapsed) > auth.autoLockTimeout) {
           // Widget taps open voice capture or the SOS countdown, which work while locked.
           const capturing = isVoiceCaptureRoute(pathnameRef.current) || isCaptureLinkRecent();
           if (router.canDismiss() && !capturing) router.dismissAll();
@@ -152,20 +157,24 @@ function useLockRequired() {
   return onboardingCompleted && isSignedIn && isPinSet && !isUnlocked && !isVoiceCaptureRoute(pathname) && !sosOnScreen;
 }
 
-/** Renders the lock screen above every route (including native modals); at launch it fades in over the splash. */
+/**
+ * Renders the lock screen above every route (including native modals); at launch it fades in over the splash.
+ * The same modal carries the iOS app-switcher cover, so going from cover to lock screen never re-presents it.
+ */
 function LockGate({ fadeIn, onShow }: { fadeIn: boolean; onShow: () => void }) {
   const locked = useLockRequired();
+  const shielded = usePrivacyShield();
 
   return (
     <Modal
-      visible={locked}
+      visible={locked || shielded}
       animationType={fadeIn ? "fade" : "none"}
       onShow={onShow}
       statusBarTranslucent
       navigationBarTranslucent
       onRequestClose={() => {}}
     >
-      <LockScreen />
+      {locked ? <LockScreen /> : <PrivacyCover />}
     </Modal>
   );
 }

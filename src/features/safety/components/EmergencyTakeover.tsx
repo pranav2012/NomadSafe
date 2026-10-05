@@ -8,6 +8,7 @@ import { PrivateView } from "@/modules/analytics";
 import { MapView, Marker } from "@/modules/location";
 import { AuraButton, AuraCard, Icon, LiveDot, useAura, useTabBarInset } from "@/atoms";
 import { auraStatusAccent, auraStatusColors } from "@/constants/aura";
+import { useAppLocked } from "@/features/auth";
 import { quietMapStyle } from "@/features/home/components/aura/mapStyles";
 import { useLocalization } from "@/localization";
 
@@ -167,9 +168,11 @@ interface SosCountdownOverlayProps {
 export function SosCountdownOverlay({ seconds, body, onCancel, onSendNow }: SosCountdownOverlayProps) {
   const { c, f } = useAura();
   const { t } = useLocalization();
+  // While PIN-locked the Safety screen behind must not show through.
+  const locked = useAppLocked();
   return (
     <Modal visible={seconds !== null} transparent animationType="fade" statusBarTranslucent onRequestClose={onCancel}>
-      <View style={styles.scrim}>
+      <View style={[styles.scrim, locked && { backgroundColor: c.bg }]}>
         <View style={[styles.sheet, { backgroundColor: c.card, borderColor: `${ALERT}66` }]}>
           <LinearGradient pointerEvents="none" colors={[`${GLOW_A}40`, `${c.card}00`]} style={StyleSheet.absoluteFill} />
           <Text style={[styles.eyebrow, { fontFamily: f.semibold }]}>{t("sos.codeRed")}</Text>

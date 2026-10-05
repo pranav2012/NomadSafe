@@ -110,6 +110,7 @@ export async function publishLocation(
         longitude,
         mode,
         battery: await readBattery(),
+        endsAt: readBroadcastState().expiresAt ?? undefined,
       });
       recipients = result.recipients;
       ok = true;

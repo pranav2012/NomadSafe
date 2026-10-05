@@ -1,4 +1,5 @@
 import * as Location from "expo-location";
+import { withSystemPrompt } from "@/utils/systemPrompt";
 
 export type LocationPermissionStatus = "granted" | "denied" | "undetermined";
 
@@ -19,7 +20,7 @@ export async function getForegroundPermission(): Promise<LocationPermission> {
 }
 
 export async function requestForegroundPermission(): Promise<LocationPermission> {
-  return toPermission(await Location.requestForegroundPermissionsAsync());
+  return toPermission(await withSystemPrompt(() => Location.requestForegroundPermissionsAsync()));
 }
 
 /** "Allow all the time" permission, without prompting. */
@@ -29,5 +30,5 @@ export async function getBackgroundPermission(): Promise<LocationPermission> {
 
 /** Prompts for "Allow all the time". Callers must show BackgroundLocationDisclosure first (Play policy). */
 export async function requestBackgroundPermission(): Promise<LocationPermission> {
-  return toPermission(await Location.requestBackgroundPermissionsAsync());
+  return toPermission(await withSystemPrompt(() => Location.requestBackgroundPermissionsAsync()));
 }

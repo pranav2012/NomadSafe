@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { api, useAction } from "@/modules/backend";
+import { withAppCheck } from "@/modules/appCheck";
 import { areaKey, readPlacesCache, writePlacesCache } from "@/features/places/services/placesCache";
 import { logger } from "@/modules/logger";
 import type { HomeStop } from "@/features/home/types";
@@ -36,7 +37,8 @@ export function useSafetyPlaces(stop: HomeStop | undefined) {
   useEffect(() => {
     if (!stop || !key || cached) return;
     let mounted = true;
-    search({ latitude: stop.latitude, longitude: stop.longitude })
+    withAppCheck({ latitude: stop.latitude, longitude: stop.longitude })
+      .then(search)
       .then((result) => {
         writePlacesCache(key, result);
         if (mounted) setFetched({ key, places: result });
@@ -64,7 +66,8 @@ export function useHotelPin(stop: HomeStop | undefined, hotelName: string | unde
   useEffect(() => {
     if (!stop || !hotelName || !key || cached) return;
     let mounted = true;
-    find({ query: hotelName, latitude: stop.latitude, longitude: stop.longitude })
+    withAppCheck({ query: hotelName, latitude: stop.latitude, longitude: stop.longitude })
+      .then(find)
       .then((result) => {
         writePlacesCache(key, { hotel: result });
         if (mounted) setFetched({ key, hotel: result });

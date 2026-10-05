@@ -3,8 +3,10 @@ import { ActivityIndicator, Linking, ScrollView, StyleSheet, Text, View } from "
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { api, useAction } from "@/modules/backend";
+import { withAppCheck } from "@/modules/appCheck";
 import { AuraButton, AuraChip, AuraSection, Icon, type IconName, PressableScale, useAura } from "@/atoms";
 import { useLocalization } from "@/localization";
+import { isSafeMapsUrl } from "@/utils/safeUrl";
 import type { NearbyCategory, NearbyPlace } from "@/features/places/services/nearbyPlaces";
 import { areaKey, readPlacesCache, writePlacesCache } from "@/features/places/services/placesCache";
 import { isOpenAt } from "@/features/places/utils/openingHours";
@@ -66,7 +68,8 @@ export function NearbyPlaces({ userLocation }: { userLocation: UserLocation | nu
   useEffect(() => {
     if (latitude == null || longitude == null || state || inflight.current.has(key)) return;
     inflight.current.add(key);
-    searchNearby({ latitude, longitude, category })
+    withAppCheck({ latitude, longitude, category })
+      .then(searchNearby)
       .then((places) => {
         if (places.length) writePlacesCache(key, places);
         setResults((r) => ({ ...r, [key]: { status: "ready", places } }));
@@ -145,9 +148,9 @@ export function NearbyPlaces({ userLocation }: { userLocation: UserLocation | nu
             return (
               <PressableScale
                 key={`${place.name}-${place.latitude}-${place.longitude}`}
-                disabled={!place.mapsUrl}
+                disabled={!isSafeMapsUrl(place.mapsUrl)}
                 onPress={() => {
-                  if (place.mapsUrl) void Linking.openURL(place.mapsUrl);
+                  if (isSafeMapsUrl(place.mapsUrl)) void Linking.openURL(place.mapsUrl).catch(() => {});
                 }}
                 pressedScale={0.97}
                 accessibilityRole="link"

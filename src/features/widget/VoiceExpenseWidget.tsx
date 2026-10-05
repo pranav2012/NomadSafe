@@ -13,13 +13,14 @@ export interface VoiceExpenseWidgetProps {
   tripName: string;
   labels: { eyebrow: string; speak: string; change: string };
   dark: boolean;
+  token: string;
 }
 
 const micSvg = (color: string) =>
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg>`;
 
 /** Android home-screen widget (RemoteViews): trip row opens the picker, Speak starts listening. */
-export function VoiceExpenseWidget({ tripId, tripName, labels, dark }: VoiceExpenseWidgetProps) {
+export function VoiceExpenseWidget({ tripId, tripName, labels, dark, token }: VoiceExpenseWidgetProps) {
   // Aura palettes are plain strings; RemoteViews styles want hex/rgba literal types.
   const c = (dark ? auraDark : auraLight) as unknown as Record<keyof AuraPalette, `#${string}`>;
 
@@ -37,7 +38,7 @@ export function VoiceExpenseWidget({ tripId, tripName, labels, dark }: VoiceExpe
     >
       <FlexWidget
         clickAction="OPEN_URI"
-        clickActionData={{ uri: voiceCaptureUrl({ tripId, pickTrip: true }) }}
+        clickActionData={{ uri: voiceCaptureUrl({ tripId, pickTrip: true, token }) }}
         accessibilityLabel={labels.change}
         style={{ width: "match_parent", flexDirection: "column" }}
       >
@@ -58,7 +59,7 @@ export function VoiceExpenseWidget({ tripId, tripName, labels, dark }: VoiceExpe
 
       <FlexWidget
         clickAction="OPEN_URI"
-        clickActionData={{ uri: voiceCaptureUrl({ tripId, autostart: true }) }}
+        clickActionData={{ uri: voiceCaptureUrl({ tripId, autostart: true, token }) }}
         accessibilityLabel={labels.speak}
         style={{
           width: "match_parent",

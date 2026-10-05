@@ -8,7 +8,7 @@ import { syncWidgets } from "@/features/widget/syncWidgets";
 import { logger } from "@/modules/logger";
 import { storage } from "@/modules/storage";
 import { hashOf } from "../utils/hash";
-import { clearGroupLedgers, groupLedgerKey, makeSharedScope, stripRaw, type SharedKind } from "../utils/sharedScope";
+import { clearGroupLedgers, groupLedgerKey, keepLocalOnly, makeSharedScope, stripRaw, type SharedKind } from "../utils/sharedScope";
 
 type LocalRecord = Expense | Settlement | TripEvent;
 
@@ -48,6 +48,8 @@ const PUSH_DEBOUNCE_MS = 1200;
 const PUSH_BATCH = 100;
 const PULL_PAGE = 200;
 const FLUSH_TIMEOUT_MS = 8000;
+const MAX_MEMBER_NAME = 80;
+const MAX_NEW_MEMBERS = 50;
 
 /** Local id for a shared trip, the same on every member's phones. */
 export function localTripId(serverTripId: string) {
@@ -304,8 +306,8 @@ async function pullTrip(owner: string, server: ServerTrip, local: Trip): Promise
       blockedSeq = Math.min(blockedSeq ?? record.seq, record.seq);
       continue;
     }
-    const kept = previous as { rawText?: string; externalId?: string; sourceIds?: string[] } | undefined;
-    if (kept?.rawText !== undefined) (next as { rawText?: string }).rawText = kept.rawText;
+    const kept = previous as { rawText?: string; note?: string; source?: string; externalId?: string; sourceIds?: string[] } | undefined;
+    keepLocalOnly(next as { rawText?: string; note?: string; source?: string }, kept);
     if (kept?.externalId !== undefined) (next as { externalId?: string }).externalId = kept.externalId;
     if (kept?.sourceIds !== undefined) (next as { sourceIds?: string[] }).sourceIds = kept.sourceIds;
     map.set(record.clientId, next);
@@ -346,6 +348,8 @@ async function pushTrip(owner: string, local: Trip): Promise<boolean> {
     }
   }
 
+  // A failed details or companions push is retried later but doesn't hold back the records.
+  let detailsOk = true;
   try {
     const details = tripDetails(local);
     const detailsHash = hashOf(details);
@@ -356,12 +360,20 @@ async function pushTrip(owner: string, local: Trip): Promise<boolean> {
       ledger.detailsUpdatedAt = now;
       writeLedger(owner, info.tripId, ledger);
     }
-    const memberNames = new Set(info.members.map((member) => member.name.trim().toLowerCase()));
-    const newNames = local.companions.filter((name) => !memberNames.has(name.trim().toLowerCase()));
-    if (newNames.length > 0) await convex.mutation(api.groupTrips.addCompanions, { tripId: serverTripId, names: newNames });
   } catch (err) {
     logger.warn("group-sync", "details push failed", err);
-    return false;
+    detailsOk = false;
+  }
+  try {
+    const memberNames = new Set(info.members.map((member) => member.name.trim().toLowerCase()));
+    // Names the server would reject (MAX_NAME in convex/groupTrips.ts) stay local-only.
+    const newNames = local.companions
+      .filter((name) => name.trim() && name.length <= MAX_MEMBER_NAME && !memberNames.has(name.trim().toLowerCase()))
+      .slice(0, MAX_NEW_MEMBERS);
+    if (newNames.length > 0) await convex.mutation(api.groupTrips.addCompanions, { tripId: serverTripId, names: newNames });
+  } catch (err) {
+    logger.warn("group-sync", "companions push failed", err);
+    detailsOk = false;
   }
 
   const { toServer } = makeTranslator(info);
@@ -406,7 +418,7 @@ async function pushTrip(owner: string, local: Trip): Promise<boolean> {
     }
     writeLedger(owner, info.tripId, ledger);
   }
-  return true;
+  return detailsOk;
 }
 
 /** Pull whatever changed on the server, then push local changes, for every shared trip. */

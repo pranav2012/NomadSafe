@@ -272,7 +272,12 @@
     "createPinTitle": "6桁のPINを作成",
     "confirmPinTitle": "PINを確認",
     "attemptsRemaining_one": "PINが間違っています。残り{{count}}回です。",
-    "attemptsRemaining_other": "PINが間違っています。残り{{count}}回です。"
+    "attemptsRemaining_other": "PINが間違っています。残り{{count}}回です。",
+    "currentPinTitle": "現在のPINを入力",
+    "currentPinSub": "新しいPINを設定する前に本人確認をしてください。",
+    "enterPinTitle": "PINを入力",
+    "confirmOwnerSub": "NomadSafeのロック解除方法を変更するには本人確認をしてください。",
+    "pinUnavailable": "PINを確認できませんでした。もう一度お試しください。"
   },
   "biometric": {
     "touchId": "Touch ID",

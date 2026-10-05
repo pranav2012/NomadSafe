@@ -272,7 +272,12 @@
     "createPinTitle": "6 అంకెల PIN‌ను సృష్టించండి",
     "confirmPinTitle": "మీ PIN‌ను ధృవీకరించండి",
     "attemptsRemaining_one": "తప్పు PIN. ఇంకా {{count}} ప్రయత్నం మిగిలి ఉంది.",
-    "attemptsRemaining_other": "తప్పు PIN. ఇంకా {{count}} ప్రయత్నాలు మిగిలాయి."
+    "attemptsRemaining_other": "తప్పు PIN. ఇంకా {{count}} ప్రయత్నాలు మిగిలాయి.",
+    "currentPinTitle": "మీ ప్రస్తుత PIN నమోదు చేయండి",
+    "currentPinSub": "కొత్త PIN ఎంచుకునే ముందు ఇది మీరేనని నిర్ధారించండి.",
+    "enterPinTitle": "మీ PIN నమోదు చేయండి",
+    "confirmOwnerSub": "NomadSafe అన్‌లాక్ అయ్యే విధానాన్ని మార్చడానికి ఇది మీరేనని నిర్ధారించండి.",
+    "pinUnavailable": "మీ PINను తనిఖీ చేయలేకపోయాం. మళ్లీ ప్రయత్నించండి."
   },
   "biometric": {
     "touchId": "Touch ID",

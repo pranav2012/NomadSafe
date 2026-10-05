@@ -1,10 +1,29 @@
-import { internal } from "./_generated/api";
+import { DAY, HOUR, RateLimiter } from "@convex-dev/rate-limiter";
+import { components, internal } from "./_generated/api";
 import { httpAction } from "./_generated/server";
 
 const EFFECTIVE_DATE = "5 October 2026";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="ns-aurora" x1="96" y1="420" x2="416" y2="92" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#22C7B8"/><stop offset="0.55" stop-color="#5B6CFF"/><stop offset="1" stop-color="#9B7BFF"/></linearGradient></defs><rect width="512" height="512" rx="120" fill="#0B0D12"/><g transform="translate(256 256) scale(0.92) translate(-256 -285)"><path d="M184 340 V172 L328 340 V172" fill="none" stroke="url(#ns-aurora)" stroke-width="46" stroke-linecap="round" stroke-linejoin="round"/><path d="M92 380 C170 430 342 430 420 380" fill="none" stroke="#EDEFF5" stroke-width="6" stroke-linecap="round" stroke-dasharray="2 14" opacity="0.55"/></g></svg>`;
 const FAVICON = `data:image/svg+xml,${encodeURIComponent(LOGO_SVG)}`;
+const MAX_FORM_BYTES = 4096;
+const MAX_REASON = 1000;
+
+// The deletion form is unauthenticated, so it is limited per IP and overall.
+const rateLimiter = new RateLimiter(components.rateLimiter, {
+  deletionRequestIp: { kind: "token bucket", rate: 5, period: HOUR, capacity: 3 },
+  deletionRequestGlobal: { kind: "token bucket", rate: 200, period: DAY, capacity: 50 },
+});
+
+interface PageOptions {
+  status?: number;
+  // Pages that differ per visitor (the join page reads the User-Agent and carries an invite code) aren't cached.
+  personal?: boolean;
+}
+
+function randomNonce() {
+  return btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(16))));
+}
 
 function escapeHtml(value: string) {
   return value
@@ -21,13 +40,15 @@ function contactLine() {
     : "the developer contact email listed on our Google Play page";
 }
 
-function page(title: string, body: string, status = 200) {
+/** HTML page with a strict CSP: only this response's own inline script and style blocks may run. */
+function page(title: string, body: string, { status = 200, personal = false }: PageOptions = {}) {
+  const nonce = randomNonce();
   const html = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${escapeHtml(title)} · NomadSafe</title>
 <link rel="icon" href="${FAVICON}">
-<style>
+<style nonce="${nonce}">
 body{font:16px/1.6 -apple-system,system-ui,Segoe UI,Roboto,sans-serif;max-width:760px;margin:0 auto;padding:32px 20px;color:#1d2327;background:#faf7f2}
 h1{font-size:28px;margin:0 0 4px}h2{font-size:19px;margin:28px 0 8px}
 .muted{color:#5f6b72;font-size:14px}ul{padding-left:20px}li{margin:4px 0}
@@ -37,10 +58,19 @@ button{background:#1d4d4f;color:#fff;border:0;cursor:pointer}
 .card{background:#fff;border:1px solid #e6dfd3;border-radius:14px;padding:16px 18px;margin-top:16px}
 .brand{display:flex;align-items:center;gap:10px;margin-bottom:24px;font-weight:600;font-size:18px;color:#0E1018}
 .brand svg{width:40px;height:40px}
-</style></head><body><div class="brand">${LOGO_SVG}<span>NomadSafe</span></div>${body}</body></html>`;
+.card h2:first-child{margin-top:0}
+</style></head><body><div class="brand">${LOGO_SVG}<span>NomadSafe</span></div>${body.replaceAll("<script>", `<script nonce="${nonce}">`)}</body></html>`;
   return new Response(html, {
     status,
-    headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=300" },
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": personal ? "private, no-store" : "public, max-age=300",
+      ...(personal ? { Vary: "User-Agent" } : {}),
+      "Content-Security-Policy": `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; img-src data:; form-action 'self'; base-uri 'none'; frame-ancestors 'none'`,
+      "X-Frame-Options": "DENY",
+      "Referrer-Policy": "no-referrer",
+      "X-Content-Type-Options": "nosniff",
+    },
   });
 }
 
@@ -105,6 +135,7 @@ export const privacyPolicy = httpAction(async () => {
 <li><strong>OpenRouter and the AI model provider it uses</strong> (via our server, Pro with Online AI on): AI requests as described under Online AI.</li>
 <li><strong>The AI provider you choose</strong> (directly from your phone, if you add your own API key): AI requests as described under Online AI.</li>
 <li><strong>RevenueCat and Google Play / the App Store</strong>: your account ID and purchase records, to provide paid plans.</li>
+<li><strong>Google Play Integrity and Firebase App Check</strong>: device and app integrity signals (no trip, contact or location data), so our server only answers genuine copies of the app.</li>
 <li><strong>Google AdMob</strong> (free plan only): advertising ID, IP-derived approximate location, device and app information and ad interactions, to show ads, as described under Advertising.</li>
 <li><strong>PostHog</strong> (EU hosting): usage analytics, feature flags, session recordings, crash reports and diagnostic logs, described below.</li>
 </ul>
@@ -147,7 +178,7 @@ export const deleteAccountPage = httpAction(async () => {
     `<h1>Delete your NomadSafe account</h1>
 <p class="muted">NomadSafe · com.pranav.nomadsafe</p>
 <div class="card">
-<h2 style="margin-top:0">Fastest: delete in the app</h2>
+<h2>Fastest: delete in the app</h2>
 <ol><li>Open NomadSafe and unlock it.</li><li>Go to <strong>Settings</strong>.</li><li>Tap <strong>Delete account</strong> and confirm.</li></ol>
 <p>Deletion is immediate.</p>
 </div>
@@ -170,11 +201,21 @@ export const deleteAccountPage = httpAction(async () => {
 });
 
 export const submitDeletionRequest = httpAction(async (ctx, req) => {
-  const form = new URLSearchParams(await req.text().catch(() => ""));
+  const raw = await req.text().catch(() => "");
+  if (raw.length > MAX_FORM_BYTES) {
+    return page("Request too large", `<h1>Request too large</h1><p><a href="/delete-account">Go back</a></p>`, { status: 413 });
+  }
+  const form = new URLSearchParams(raw);
   const email = (form.get("email") ?? "").trim();
-  const reason = (form.get("reason") ?? "").trim();
+  const reason = (form.get("reason") ?? "").trim().slice(0, MAX_REASON);
   if (!EMAIL_RE.test(email) || email.length > 254) {
-    return page("Invalid email", `<h1>Please enter a valid email</h1><p><a href="/delete-account">Go back</a></p>`, 400);
+    return page("Invalid email", `<h1>Please enter a valid email</h1><p><a href="/delete-account">Go back</a></p>`, { status: 400 });
+  }
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim().slice(0, 64);
+  const perIp = ip ? await rateLimiter.limit(ctx, "deletionRequestIp", { key: ip }) : { ok: true };
+  const overall = perIp.ok ? await rateLimiter.limit(ctx, "deletionRequestGlobal", { key: "global" }) : { ok: false };
+  if (!overall.ok) {
+    return page("Try again later", `<h1>Too many requests</h1><p>Please try again in an hour, or contact ${contactLine()}.</p>`, { status: 429 });
   }
   await ctx.runMutation(internal.account.requestDeletionByEmail, {
     email,
@@ -183,6 +224,7 @@ export const submitDeletionRequest = httpAction(async (ctx, req) => {
   return page(
     "Request received",
     `<h1>Request received</h1><p>We've recorded a deletion request for <strong>${escapeHtml(email)}</strong>. We'll confirm by email and complete it within 30 days.</p>`,
+    { personal: true },
   );
 });
 
@@ -207,15 +249,15 @@ function joinStoreLink(url: URL, code: string, ios: boolean) {
   // text/uri-list makes the copy a URL on iOS, so the app can check for it without a paste prompt.
   const copyAndGo = `async function getApp(){var u=${JSON.stringify(inviteUrl)};try{await navigator.clipboard.write([new ClipboardItem({"text/plain":new Blob([u],{type:"text/plain"}),"text/uri-list":new Blob([u],{type:"text/uri-list"})})]);}catch(e){try{await navigator.clipboard.writeText(u);}catch(e2){}}location.href=${JSON.stringify(appStoreUrl)};}`;
   return `<p>Don't have the app yet?</p>
-<p><button type="button" onclick="getApp()">Get NomadSafe on the App Store</button></p>
+<p><button type="button" id="get-app">Get NomadSafe on the App Store</button></p>
 <p class="muted">This copies your invite so NomadSafe can open it after you install. Allow the paste prompt when the app asks.</p>
-<script>${copyAndGo}</script>`;
+<script>${copyAndGo}document.getElementById("get-app").addEventListener("click",getApp);</script>`;
 }
 
 /** Invite link landing page: opens the app on the join screen, or points to the store. */
 export const joinTripPage = httpAction(async (_ctx, req) => {
   const url = new URL(req.url);
-  const code = url.pathname.split("/").pop()?.replace(/[^A-Za-z0-9]/g, "").toUpperCase() ?? "";
+  const code = url.pathname.split("/").pop()?.replace(/[^A-Za-z0-9]/g, "").slice(0, 16).toUpperCase() ?? "";
   const appLink = `nomadsafe://join/${code}`;
   const ios = IOS_UA.test(req.headers.get("user-agent") ?? "");
   return page(
@@ -228,5 +270,6 @@ export const joinTripPage = httpAction(async (_ctx, req) => {
 </div>
 ${joinStoreLink(url, code, ios)}
 <script>location.href=${JSON.stringify(appLink)};</script>`,
+    { personal: true },
   );
 });

@@ -1,4 +1,5 @@
 import { api, convex } from "@/modules/backend";
+import { withAppCheck } from "@/modules/appCheck";
 import { storage } from "@/modules/storage";
 import type { LatLng } from "@/features/trips/store/tripsStore";
 
@@ -108,7 +109,8 @@ async function fetchPlaceWeather(coords: LatLng): Promise<PlaceWeather | null> {
   try {
     const cached = await convex.query(api.weather.cell, args);
     if (cached && cached.expiresAt > Date.now()) return cached.summary;
-    return (await convex.action(api.weather.refresh, { ...args, lastModified: cached?.lastModified })) ?? cached?.summary ?? null;
+    const refreshArgs = await withAppCheck({ ...args, lastModified: cached?.lastModified });
+    return (await convex.action(api.weather.refresh, refreshArgs)) ?? cached?.summary ?? null;
   } catch {
     return null;
   }

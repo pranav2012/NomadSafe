@@ -11,6 +11,7 @@
 import type * as account from "../account.js";
 import type * as ai from "../ai.js";
 import type * as analytics from "../analytics.js";
+import type * as appCheck from "../appCheck.js";
 import type * as auth from "../auth.js";
 import type * as billing from "../billing.js";
 import type * as billingRules from "../billingRules.js";
@@ -18,8 +19,10 @@ import type * as crons from "../crons.js";
 import type * as groupTrips from "../groupTrips.js";
 import type * as http from "../http.js";
 import type * as legalPages from "../legalPages.js";
+import type * as migrations from "../migrations.js";
 import type * as places from "../places.js";
 import type * as safetyAlerts from "../safetyAlerts.js";
+import type * as securityRules from "../securityRules.js";
 import type * as sharing from "../sharing.js";
 import type * as sync from "../sync.js";
 import type * as tripNotifications from "../tripNotifications.js";
@@ -37,6 +40,7 @@ declare const fullApi: ApiFromModules<{
   account: typeof account;
   ai: typeof ai;
   analytics: typeof analytics;
+  appCheck: typeof appCheck;
   auth: typeof auth;
   billing: typeof billing;
   billingRules: typeof billingRules;
@@ -44,8 +48,10 @@ declare const fullApi: ApiFromModules<{
   groupTrips: typeof groupTrips;
   http: typeof http;
   legalPages: typeof legalPages;
+  migrations: typeof migrations;
   places: typeof places;
   safetyAlerts: typeof safetyAlerts;
+  securityRules: typeof securityRules;
   sharing: typeof sharing;
   sync: typeof sync;
   tripNotifications: typeof tripNotifications;

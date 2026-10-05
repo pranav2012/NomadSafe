@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, convex } from "@/modules/backend";
+import { withAppCheck } from "@/modules/appCheck";
 import { type DestinationOption, foldSearchText } from "@/features/trips/data/destinations";
 import { type LatLng, rememberDestination } from "@/features/trips/services/geocoding";
 
@@ -41,8 +42,8 @@ export function useOnlineDestinationSearch(query: string, offlineCount: number, 
     setState((current) => ({ query: folded, status: "loading", results: current.results }));
     const timer = setTimeout(() => {
       sessionRef.current ??= newSessionToken();
-      convex
-        .action(api.places.autocompleteDestinations, { input: folded, sessionToken: sessionRef.current, language: locale })
+      withAppCheck({ input: folded, sessionToken: sessionRef.current, language: locale })
+        .then((args) => convex.action(api.places.autocompleteDestinations, args))
         .then((suggestions) => {
           const results = suggestions.map(({ placeId, label }) => ({ id: `online-${placeId}`, label, kind: "online" as const, placeId }));
           cacheRef.current.set(cacheKey, results);
@@ -62,10 +63,9 @@ export function useOnlineDestinationSearch(query: string, offlineCount: number, 
   const choose = useCallback((option: DestinationOption) => {
     if (option.coordinates) rememberDestination(option.label, option.coordinates);
     else if (option.placeId && sessionRef.current) {
-      const lookup: Promise<LatLng | null> = convex.action(api.places.resolveDestination, {
-        placeId: option.placeId,
-        sessionToken: sessionRef.current,
-      });
+      const lookup: Promise<LatLng | null> = withAppCheck({ placeId: option.placeId, sessionToken: sessionRef.current }).then(
+        (args) => convex.action(api.places.resolveDestination, args),
+      );
       rememberDestination(option.label, lookup);
     }
     sessionRef.current = null;

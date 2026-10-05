@@ -28,7 +28,14 @@ struct SosProvider: TimelineProvider {
 }
 
 // Opens the app's 5-second cancellable SOS countdown (see src/features/safety/store/quickSosStore.ts).
-private let sosURL = URL(string: "nomadsafe://sos?trigger=widget")!
+// Without the app's token (not synced yet) the link only opens the Safety tab.
+private var sosURL: URL {
+  var components = URLComponents(string: "nomadsafe://sos")!
+  var items = [URLQueryItem(name: "trigger", value: "widget")]
+  if let token = widgetToken() { items.append(URLQueryItem(name: "t", value: token)) }
+  components.queryItems = items
+  return components.url!
+}
 private let sosRed = Color(red: 1, green: 0.302, blue: 0.369)
 
 struct SosWidgetView: View {

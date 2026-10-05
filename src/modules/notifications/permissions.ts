@@ -1,4 +1,5 @@
 import * as Notifications from "expo-notifications";
+import { withSystemPrompt } from "@/utils/systemPrompt";
 
 export type NotificationPermissionStatus = "granted" | "denied" | "undetermined";
 
@@ -20,5 +21,5 @@ export async function getPermission(): Promise<NotificationPermission> {
 
 /** Shows the OS prompt (on Android 13+ a notification channel must exist first). Throws if the OS call fails. */
 export async function requestPermission(): Promise<NotificationPermission> {
-  return toPermission(await Notifications.requestPermissionsAsync());
+  return toPermission(await withSystemPrompt(() => Notifications.requestPermissionsAsync()));
 }

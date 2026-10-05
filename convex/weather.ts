@@ -2,6 +2,8 @@ import { v } from "convex/values";
 import { HOUR, RateLimiter } from "@convex-dev/rate-limiter";
 import { components, internal } from "./_generated/api";
 import { action, internalAction, internalMutation, internalQuery, query, type ActionCtx } from "./_generated/server";
+import { requireAppCheck } from "./appCheck";
+import { assertMaxLength, isValidCoordinate } from "./securityRules";
 import { cloudCell, dailyForecast, hourlyOutlook, parseMetSteps, weatherCell, type PlaceSummary } from "./weatherRules";
 
 const MET_URL = "https://api.met.no/weatherapi/locationforecast/2.0";
@@ -86,9 +88,22 @@ export const cell = query({
 
 /** Refreshes a missing or expired cell. Signed-in callers only, with a per-user limit, so nobody can drain MET's allowance. */
 export const refresh = action({
-  args: { latitude: v.number(), longitude: v.number(), lastModified: v.optional(v.string()) },
-  handler: async (ctx, { latitude, longitude, lastModified }) => {
-    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+  args: {
+    latitude: v.number(),
+    longitude: v.number(),
+    lastModified: v.optional(v.string()),
+    appCheckToken: v.optional(v.string()),
+  },
+  handler: async (ctx, { latitude, longitude, lastModified, appCheckToken }) => {
+    // An HTTP date is 29 characters.
+    assertMaxLength(lastModified, 64, "lastModified");
+    if (!isValidCoordinate(latitude, longitude)) return null;
+    // Failing app check gives no fresh data, like any other miss; the app keeps its copy.
+    try {
+      await requireAppCheck(appCheckToken);
+    } catch {
+      return null;
+    }
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
     const { ok } = await rateLimiter.limit(ctx, "weatherUser", { key: identity.subject });

@@ -39,6 +39,8 @@ export default defineSchema({
     ),
     active: v.boolean(),
     paused: v.optional(v.boolean()),
+    // When the owner's share stops itself; unset for shares with no end and SOS.
+    endsAt: v.optional(v.number()),
     updatedAt: v.number(),
   })
     .index("by_owner", ["ownerUserId"])
@@ -78,6 +80,8 @@ export default defineSchema({
   syncState: defineTable({
     userId: v.string(),
     seq: v.number(),
+    // Stored records (tombstones included), for the per-user cap. Missing on rows from before the cap.
+    records: v.optional(v.number()),
   }).index("by_user", ["userId"]),
 
   // Group trips shared through an invite link. `data` holds the trip details (no companions;
@@ -89,6 +93,8 @@ export default defineSchema({
     dataUpdatedAt: v.number(),
     seq: v.number(),
     createdAt: v.number(),
+    // tripRecords rows (tombstones included), for the per-trip cap. Missing on trips from before the cap.
+    recordCount: v.optional(v.number()),
   }).index("by_code", ["inviteCode"]),
 
   // People on a shared trip. `memberId` is what expenses and settlements refer to; members without
@@ -117,11 +123,31 @@ export default defineSchema({
     data: v.optional(v.any()),
     deleted: v.boolean(),
     updatedAt: v.number(),
-    updatedBy: v.string(),
+    // Cleared when that user deletes their account.
+    updatedBy: v.optional(v.string()),
     seq: v.number(),
   })
     .index("by_trip_record", ["tripId", "kind", "clientId"])
     .index("by_trip_seq", ["tripId", "seq"]),
+
+  // Money-change push throttle per member per trip: changes made within a minute of the last push are
+  // counted here and sent as one summary push when the minute is up.
+  tripNotifyState: defineTable({
+    tripId: v.id("sharedTrips"),
+    actorMemberId: v.string(),
+    lastSentAt: v.number(),
+    pendingCount: v.number(),
+    pendingFirst: v.optional(
+      v.object({
+        kind: v.union(v.literal("expense"), v.literal("settlement")),
+        action: v.union(v.literal("added"), v.literal("updated"), v.literal("deleted")),
+        title: v.string(),
+        amount: v.number(),
+        currency: v.string(),
+      }),
+    ),
+    flushScheduled: v.boolean(),
+  }).index("by_trip_actor", ["tripId", "actorMemberId"]),
 
   // Server side of SOS and check-in: the check-in deadline (and its scheduled alert) and which
   // alert linked contacts were last sent, so they hear when the user is safe again.

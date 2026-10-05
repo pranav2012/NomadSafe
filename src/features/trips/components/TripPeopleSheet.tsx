@@ -19,6 +19,7 @@ import { useAuthStore } from "@/features/auth/store/authStore";
 import { isSettledUp, registerTripPush, shareTrip } from "@/features/sync";
 import { useTripsStore, type Trip, type TripMember } from "@/features/trips/store/tripsStore";
 import { useLocalization } from "@/localization";
+import { PrivateView } from "@/modules/analytics";
 
 const [INDIGO, TEAL] = auraStatusColors.calm;
 
@@ -155,6 +156,7 @@ export function TripPeopleSheet({ tripId, onClose }: { tripId: string | null; on
               ) : null}
             </AuraListGroup>
 
+            <PrivateView>
             <AuraListGroup title={t("groupTrip.membersSection")}>
               {shared.members
                 .filter((member) => member.status === "active" || member.linked)
@@ -191,6 +193,7 @@ export function TripPeopleSheet({ tripId, onClose }: { tripId: string | null; on
                   );
                 })}
             </AuraListGroup>
+            </PrivateView>
 
             <AuraListGroup footer={t("groupTrip.notificationsSub")}>
               <AuraListRow

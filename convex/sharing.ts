@@ -1,4 +1,6 @@
 import { v } from "convex/values";
+import { DAY, HOUR, RateLimiter } from "@convex-dev/rate-limiter";
+import { components } from "./_generated/api";
 import { query, mutation } from "./_generated/server";
 import {
   findAuthUserByEmail,
@@ -12,6 +14,17 @@ const MAX_NAME = 80;
 const MAX_EMAIL = 254;
 const MAX_PHONE = 32;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const DECLINE_COOLDOWN_MS = 7 * DAY;
+// A share shows until its end time. One with no end (or an SOS) is hidden after this long without an
+// update: the phone stopped publishing without saying so. Phones publish only when they move.
+const SHARE_STALE_MS = 48 * HOUR;
+// Longest share the app offers is 24 h (SHARE_DURATIONS in src/features/location-sharing/store/sharingStore.ts).
+const MAX_SHARE_MS = 25 * HOUR;
+
+// Each lookup reveals whether an email has an account, so it is metered per user.
+const rateLimiter = new RateLimiter(components.rateLimiter, {
+  emailLookup: { kind: "token bucket", rate: 20, period: HOUR, capacity: 10 },
+});
 
 const modeValidator = v.union(
   v.literal("normal"),
@@ -36,12 +49,13 @@ export const me = query({
  * Checks whether an email belongs to a NomadSafe user. Auth-only and returns
  * just the display name so it can't be used to harvest profiles.
  */
-export const findUserByEmail = query({
+export const findUserByEmail = mutation({
   args: { email: v.string() },
   handler: async (ctx, { email }) => {
     const user = await getAuthenticatedUser(ctx);
     if (!user) return null;
     if (email.length > MAX_EMAIL || !EMAIL_RE.test(email.trim())) return null;
+    await rateLimiter.limit(ctx, "emailLookup", { key: user.id, throws: true });
     const match = await findAuthUserByEmail(ctx, email);
     if (!match || match.id === user.id) return null;
     return { id: match.id, name: match.name };
@@ -116,9 +130,11 @@ export const requestContactLink = mutation({
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx);
+    if (args.name.length > MAX_NAME * 4 || (args.phone?.length ?? 0) > MAX_PHONE * 4) throw new Error("Input too long");
     const name = cleanName(args.name);
     const email = normalizeEmail(args.email);
     if (email.length > MAX_EMAIL || !EMAIL_RE.test(email)) throw new Error("Invalid email");
+    await rateLimiter.limit(ctx, "emailLookup", { key: user.id, throws: true });
     const phone = args.phone?.trim().slice(0, MAX_PHONE) || undefined;
     if (email === user.email) throw new Error("Cannot link to yourself");
 
@@ -131,7 +147,8 @@ export const requestContactLink = mutation({
     if (target && target.id === user.id) throw new Error("Cannot link to yourself");
 
     if (existingLink) {
-      if (existingLink.status === "declined") {
+      // After a decline the requester has to wait before asking again, so a "no" can't be spammed.
+      if (existingLink.status === "declined" && Date.now() - existingLink.updatedAt >= DECLINE_COOLDOWN_MS) {
         await ctx.db.patch(existingLink._id, { status: "pending", updatedAt: Date.now() });
         return { linkId: existingLink._id, status: "pending" as const, linkedUserId: existingLink.linkedUserId };
       }
@@ -276,8 +293,9 @@ export const publishLocation = mutation({
     longitude: v.number(),
     battery: v.optional(v.number()),
     mode: modeValidator,
+    endsAt: v.optional(v.number()),
   },
-  handler: async (ctx, { latitude, longitude, battery, mode }) => {
+  handler: async (ctx, { latitude, longitude, battery, mode, endsAt }) => {
     const user = await requireUser(ctx);
     if (
       !Number.isFinite(latitude) ||
@@ -289,6 +307,8 @@ export const publishLocation = mutation({
     }
     const safeBattery =
       typeof battery === "number" && battery >= 0 && battery <= 1 ? battery : undefined;
+    const now = Date.now();
+    const safeEndsAt = endsAt !== undefined && endsAt > now ? Math.min(endsAt, now + MAX_SHARE_MS) : undefined;
 
     const acceptedLinks = await ctx.db
       .query("contactLinks")
@@ -296,7 +316,6 @@ export const publishLocation = mutation({
       .filter((q) => q.eq(q.field("status"), "accepted"))
       .collect();
 
-    const now = Date.now();
     let recipients = 0;
     for (const link of acceptedLinks) {
       const existing = await ctx.db
@@ -314,6 +333,7 @@ export const publishLocation = mutation({
           longitude,
           battery: safeBattery,
           mode,
+          endsAt: safeEndsAt,
           updatedAt: now,
           active: true,
         });
@@ -325,6 +345,7 @@ export const publishLocation = mutation({
           longitude,
           battery: safeBattery,
           mode,
+          endsAt: safeEndsAt,
           active: true,
           paused: false,
           updatedAt: now,
@@ -339,6 +360,12 @@ export const setSharePaused = mutation({
   args: { recipientUserId: v.string(), paused: v.boolean() },
   handler: async (ctx, { recipientUserId, paused }) => {
     const user = await requireUser(ctx);
+    const link = await ctx.db
+      .query("contactLinks")
+      .withIndex("by_owner", (q) => q.eq("ownerUserId", user.id))
+      .filter((q) => q.and(q.eq(q.field("linkedUserId"), recipientUserId), q.eq(q.field("status"), "accepted")))
+      .first();
+    if (!link) throw new Error("Link not found");
     const existing = await ctx.db
       .query("locationShares")
       .withIndex("by_owner_recipient", (q) =>
@@ -391,11 +418,17 @@ export const getIncomingShares = query({
     const user = await getAuthenticatedUser(ctx);
     if (!user) return [];
 
-    const shares = await ctx.db
-      .query("locationShares")
-      .withIndex("by_recipient", (q) => q.eq("recipientUserId", user.id))
-      .filter((q) => q.eq(q.field("active"), true))
-      .take(50);
+    // Re-applied whenever the caller's shares change, so a quiet share can linger until then.
+    const now = Date.now();
+    const shares = (
+      await ctx.db
+        .query("locationShares")
+        .withIndex("by_recipient", (q) => q.eq("recipientUserId", user.id))
+        .filter((q) => q.eq(q.field("active"), true))
+        .collect()
+    )
+      .filter((share) => (share.endsAt !== undefined ? share.endsAt > now : share.updatedAt > now - SHARE_STALE_MS))
+      .slice(0, 50);
 
     return Promise.all(
       shares.map(async (share) => {

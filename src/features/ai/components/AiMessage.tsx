@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
 import { useAura } from "@/atoms";
+import { PrivateView } from "@/modules/analytics";
 import { auraStatusColors } from "@/constants/aura";
 import type { ChatMessage } from "../store/chatStore";
 import { AiPlasmaOrb } from "./AiPlasmaOrb";
@@ -144,14 +145,14 @@ export function AiMessage({ msg, label, streamingText }: { msg: ChatMessage; lab
 
   if (!isAssistant) {
     return (
-      <View style={[styles.userBubble, { backgroundColor: c.inverse }]}>
+      <PrivateView style={[styles.userBubble, { backgroundColor: c.inverse }]}>
         <Text style={[styles.body, { color: c.onInverse, fontFamily: f.regular }]}>{text}</Text>
-      </View>
+      </PrivateView>
     );
   }
 
   return (
-    <View style={styles.assistant}>
+    <PrivateView style={styles.assistant}>
       <View style={styles.nameRow}>
         {streaming ? (
           <View style={styles.dotWrap}>
@@ -165,7 +166,7 @@ export function AiMessage({ msg, label, streamingText }: { msg: ChatMessage; lab
         <Text style={[styles.name, { color: c.textMuted, fontFamily: f.medium }]}>{label}</Text>
       </View>
       {streaming && !text ? <AiThinking /> : <MarkdownText text={text} streaming={streaming} />}
-    </View>
+    </PrivateView>
   );
 }
 

@@ -22,6 +22,9 @@ func decode<T: Decodable>(_ key: String, as type: T.Type) -> T? {
   return try? JSONDecoder().decode(T.self, from: data)
 }
 
+// Per-install secret the app checks on widget links, so other apps can't arm SOS or start the mic.
+func widgetToken() -> String? { appGroup?.string(forKey: "widgetToken") }
+
 private func sharedTrips() -> [SharedTrip] { decode("trips", as: [SharedTrip].self) ?? [] }
 private func sharedLabels() -> SharedLabels { decode("labels", as: SharedLabels.self) ?? SharedLabels() }
 
@@ -85,6 +88,7 @@ struct VoiceProvider: AppIntentTimelineProvider {
 private func captureURL(tripId: String?, autostart: Bool, pickTrip: Bool = false) -> URL {
   var components = URLComponents(string: "nomadsafe://voice-expense")!
   var items = [URLQueryItem(name: "source", value: "widget")]
+  if let token = widgetToken() { items.append(URLQueryItem(name: "t", value: token)) }
   if let tripId { items.append(URLQueryItem(name: "tripId", value: tripId)) }
   if autostart { items.append(URLQueryItem(name: "autostart", value: "1")) }
   if pickTrip { items.append(URLQueryItem(name: "pickTrip", value: "1")) }

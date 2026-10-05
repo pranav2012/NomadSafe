@@ -2,6 +2,7 @@ import * as Contacts from "expo-contacts";
 import { getForegroundPermission, requestForegroundPermission } from "@/modules/location";
 import { logger } from "@/modules/logger";
 import { notifications as notificationService } from "@/modules/notifications";
+import { withSystemPrompt } from "@/utils/systemPrompt";
 
 export type PermissionKind = "location" | "contacts" | "notifications";
 
@@ -56,7 +57,7 @@ export const permissionsService = {
   },
 
   requestContacts(): Promise<PermissionStatus> {
-    return safely("contacts", () => Contacts.requestPermissionsAsync());
+    return safely("contacts", () => withSystemPrompt(() => Contacts.requestPermissionsAsync()));
   },
 
   requestNotifications(): Promise<PermissionStatus> {

@@ -21,10 +21,22 @@ export function isGroupExpense(expense: Pick<Expense, "shares" | "paidBy">): boo
   return (expense.shares?.length ?? 0) > 0 || (expense.paidBy !== undefined && expense.paidBy !== SELF_ID);
 }
 
-// Raw imported message text never leaves the device.
-export function stripRaw<T extends { rawText?: string }>(record: T): Omit<T, "rawText"> {
+type LocalOnly = { rawText?: string; note?: string; source?: string };
+
+/** Raw imported text, and the note of an email import (sender, subject, body), never leave the device. */
+export function stripRaw<T extends LocalOnly>(record: T): Omit<T, "rawText"> {
   const { rawText: _raw, ...rest } = record;
-  return rest;
+  if (record.source !== "email" || rest.note === undefined) return rest;
+  const { note: _note, ...withoutNote } = rest;
+  return withoutNote as Omit<T, "rawText">;
+}
+
+/** Copies the fields `stripRaw` kept off the server from the local copy onto an incoming record. */
+export function keepLocalOnly<T extends LocalOnly>(next: T, previous: LocalOnly | undefined): T {
+  if (!previous) return next;
+  if (previous.rawText !== undefined) next.rawText = previous.rawText;
+  if (next.source === "email" && next.note === undefined && previous.note !== undefined) next.note = previous.note;
+  return next;
 }
 
 /**

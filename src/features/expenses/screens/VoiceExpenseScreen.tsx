@@ -160,8 +160,9 @@ export default function VoiceExpenseScreen() {
 
   const updateDraft = (next: VoiceExpenseDraft | VoiceSettlementDraft) => setPhase({ name: "review", draft: next });
 
+  // Locked capture only adds expenses; changing who is on the trip needs the PIN.
   const addPerson = (name: string) => {
-    if (!trip || !draft) return;
+    if (!trip || !draft || locked) return;
     updateTrip(trip.id, { companions: [...trip.companions, name], mode: "group" });
     updateDraft(replaceDraftPerson(draft, name, name));
   };
@@ -314,7 +315,7 @@ export default function VoiceExpenseScreen() {
                     draft={draft}
                     shares={shares}
                     tripName={trip?.name ?? null}
-                    canAddPeople={trip !== null}
+                    canAddPeople={trip !== null && !locked}
                     onAddPerson={addPerson}
                     onLeaveOut={(name) => updateDraft(replaceDraftPerson(draft, name, null))}
                     onSave={saveDraft}

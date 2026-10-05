@@ -2,6 +2,7 @@ import { noteIncomingLink } from "@/features/expenses/services/voiceCaptureSessi
 import { isQuickSosLink, useQuickSosStore } from "@/features/safety/store/quickSosStore";
 import { usePendingJoinStore } from "@/features/trips/store/pendingJoinStore";
 import { inviteCodeFromPath } from "@/features/trips/utils/inviteLinks";
+import { isWidgetToken, linkParam, WIDGET_TOKEN_PARAM, withoutLinkParams } from "@/features/widget/widgetToken";
 
 // Google OAuth callback (`com.pranav.nomadsafe:/oauthredirect?...`), consumed by expo-auth-session.
 const OAUTH_REDIRECT = /^(?:[\w.+-]+:\/{1,2}|\/)oauthredirect(?:[/?#]|$)/;
@@ -9,11 +10,18 @@ const OAUTH_REDIRECT = /^(?:[\w.+-]+:\/{1,2}|\/)oauthredirect(?:[/?#]|$)/;
 export function redirectSystemPath({ path }: { path: string; initial: boolean }) {
   // Not a screen: navigating would unmount the sheet waiting for the auth result.
   if (OAUTH_REDIRECT.test(path)) return null;
-  // The SOS widget: the Safety tab starts the cancel countdown once it's on screen.
+  const fromWidget = isWidgetToken(linkParam(path, WIDGET_TOKEN_PARAM));
+  // The SOS widget: the Safety tab starts the cancel countdown once it's on screen. The same link
+  // from another app (no matching token) only opens the Safety tab.
   if (isQuickSosLink(path)) {
+    if (!fromWidget) return "/sos";
     noteIncomingLink(path, true);
     useQuickSosStore.getState().request();
     return "/sos";
+  }
+  // Voice capture works while PIN-locked, so only our widget may start the mic straight away.
+  if (path.includes("voice-expense")) {
+    path = withoutLinkParams(path, fromWidget ? [WIDGET_TOKEN_PARAM] : [WIDGET_TOKEN_PARAM, "autostart", "source"]);
   }
   noteIncomingLink(path);
   // Invite links wait until the user is signed in and onboarded; the tabs layout picks them up.

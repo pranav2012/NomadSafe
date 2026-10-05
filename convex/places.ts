@@ -1,21 +1,53 @@
 import { v } from "convex/values";
-import { HOUR, RateLimiter } from "@convex-dev/rate-limiter";
+import { DAY, HOUR, RateLimiter } from "@convex-dev/rate-limiter";
 import { components } from "./_generated/api";
 import { action, type ActionCtx } from "./_generated/server";
+import { requireAppCheck } from "./appCheck";
 import { authComponent } from "./auth";
+import { assertMaxLength, isValidCoordinate } from "./securityRules";
+
+// Whole-app daily ceilings on billed Google calls, so a botnet of accounts can't run up the bill.
+const PLACES_DAILY_BUDGET = 2_000;
+// Hospitals, police and the trip's hotel: kept apart so nearby browsing can't use them up.
+const SAFETY_DAILY_BUDGET = 3_000;
+const DESTINATIONS_DAILY_BUDGET = 10_000;
+const MAX_QUERY_CHARS = 200;
+const MAX_LANGUAGE_CHARS = 35;
 
 // Every action here is one or more billed Google calls; the app caches results, so this only bites abuse.
 const rateLimiter = new RateLimiter(components.rateLimiter, {
   places: { kind: "token bucket", rate: 60, period: HOUR, capacity: 20 },
+  safety: { kind: "token bucket", rate: 60, period: HOUR, capacity: 20 },
   // Destination search sends a few suggestion requests per search while typing.
   destinations: { kind: "token bucket", rate: 300, period: HOUR, capacity: 60 },
+  placesGlobal: { kind: "token bucket", rate: PLACES_DAILY_BUDGET, period: DAY },
+  safetyGlobal: { kind: "token bucket", rate: SAFETY_DAILY_BUDGET, period: DAY },
+  destinationsGlobal: { kind: "token bucket", rate: DESTINATIONS_DAILY_BUDGET, period: DAY },
 });
 
-/** Signed-in, rate-limited caller; throws otherwise. */
-async function authorize(ctx: ActionCtx, bucket: "places" | "destinations" = "places") {
+type Bucket = "places" | "safety" | "destinations";
+const GLOBAL_BUCKET = { places: "placesGlobal", safety: "safetyGlobal", destinations: "destinationsGlobal" } as const;
+const appCheckArg = v.optional(v.string());
+
+/** Takes `count` billed calls from the caller's and the app-wide budget; false when either is spent. */
+async function consume(ctx: ActionCtx, bucket: Bucket, userId: string, count: number) {
+  const mine = await rateLimiter.limit(ctx, bucket, { key: userId, count });
+  if (!mine.ok) return false;
+  const global = await rateLimiter.limit(ctx, GLOBAL_BUCKET[bucket], { key: "global", count });
+  return global.ok;
+}
+
+/** Signed-in, app-checked, rate-limited caller; throws otherwise. Returns the user id. */
+async function authorize(ctx: ActionCtx, appCheckToken: string | undefined, bucket: Bucket = "places", count = 1) {
+  await requireAppCheck(appCheckToken);
   const user = await authComponent.getAuthUser(ctx);
   if (!user) throw new Error("Not authenticated");
-  await rateLimiter.limit(ctx, bucket, { key: user._id, throws: true });
+  if (!(await consume(ctx, bucket, user._id, count))) throw new Error("Too many requests, try again later");
+  return user._id;
+}
+
+function assertCoordinate(latitude: number, longitude: number) {
+  if (!isValidCoordinate(latitude, longitude)) throw new Error("Invalid coordinates");
 }
 
 interface GooglePlace {
@@ -80,9 +112,11 @@ export const searchNearby = action({
     latitude: v.number(),
     longitude: v.number(),
     category: v.optional(v.union(v.literal("food"), v.literal("coffee"), v.literal("sights"), v.literal("essentials"))),
+    appCheckToken: appCheckArg,
   },
-  handler: async (ctx, { latitude, longitude, category }) => {
-    await authorize(ctx);
+  handler: async (ctx, { latitude, longitude, category, appCheckToken }) => {
+    assertCoordinate(latitude, longitude);
+    const userId = await authorize(ctx, appCheckToken);
 
     const apiKey = process.env.GOOGLE_PLACES_API_KEY;
     if (!apiKey) throw new Error("Places search is unavailable");
@@ -141,9 +175,14 @@ export const searchNearby = action({
         ? matches
         : matches.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0) || (b.userRatingCount ?? 0) - (a.userRatingCount ?? 0));
 
+    const shown = ranked.slice(0, NEARBY_LIMIT);
+    // Each photo is another billed call; when the budget can't cover them the list comes back without photos.
+    const photoCount = category ? shown.filter((place) => place.photos?.[0]?.name).length : 0;
+    const withPhotos = photoCount > 0 && (await consume(ctx, "places", userId, photoCount));
+
     return Promise.all(
-      ranked.slice(0, NEARBY_LIMIT).map(async (place) => {
-        const photo = category ? place.photos?.[0] : undefined;
+      shown.map(async (place) => {
+        const photo = withPhotos ? place.photos?.[0] : undefined;
         return {
           name: place.displayName!.text!,
           category: place.primaryTypeDisplayName?.text ?? "Restaurant",
@@ -181,9 +220,11 @@ export const searchSafetyPlaces = action({
   args: {
     latitude: v.number(),
     longitude: v.number(),
+    appCheckToken: appCheckArg,
   },
-  handler: async (ctx, { latitude, longitude }) => {
-    await authorize(ctx);
+  handler: async (ctx, { latitude, longitude, appCheckToken }) => {
+    assertCoordinate(latitude, longitude);
+    await authorize(ctx, appCheckToken, "safety");
 
     const apiKey = process.env.GOOGLE_PLACES_API_KEY;
     if (!apiKey) throw new Error("Places search is unavailable");
@@ -242,9 +283,12 @@ export const findPlaceByName = action({
     query: v.string(),
     latitude: v.number(),
     longitude: v.number(),
+    appCheckToken: appCheckArg,
   },
-  handler: async (ctx, { query, latitude, longitude }) => {
-    await authorize(ctx);
+  handler: async (ctx, { query, latitude, longitude, appCheckToken }) => {
+    assertMaxLength(query, MAX_QUERY_CHARS, "Query");
+    assertCoordinate(latitude, longitude);
+    await authorize(ctx, appCheckToken, "safety");
 
     const apiKey = process.env.GOOGLE_PLACES_API_KEY;
     if (!apiKey) throw new Error("Places search is unavailable");
@@ -354,10 +398,13 @@ export const autocompleteDestinations = action({
     input: v.string(),
     sessionToken: v.string(),
     language: v.optional(v.string()),
+    appCheckToken: appCheckArg,
   },
-  handler: async (ctx, { input, sessionToken, language }) => {
+  handler: async (ctx, { input, sessionToken, language, appCheckToken }) => {
+    assertMaxLength(input, MAX_QUERY_CHARS, "Input");
+    assertMaxLength(language, MAX_LANGUAGE_CHARS, "Language");
     if (input.trim().length < 2 || !SESSION_TOKEN.test(sessionToken)) return [];
-    await authorize(ctx, "destinations");
+    await authorize(ctx, appCheckToken, "destinations");
     const suggestions = await autocompleteRegions(placesApiKey(), input, language, sessionToken);
     return suggestions.slice(0, DESTINATION_SUGGESTIONS);
   },
@@ -368,10 +415,11 @@ export const resolveDestination = action({
   args: {
     placeId: v.string(),
     sessionToken: v.string(),
+    appCheckToken: appCheckArg,
   },
-  handler: async (ctx, { placeId, sessionToken }) => {
-    if (!SESSION_TOKEN.test(sessionToken)) return null;
-    await authorize(ctx, "destinations");
+  handler: async (ctx, { placeId, sessionToken, appCheckToken }) => {
+    if (!SESSION_TOKEN.test(sessionToken) || !PLACE_ID.test(placeId)) return null;
+    await authorize(ctx, appCheckToken, "destinations");
     return placeLocation(placesApiKey(), placeId, sessionToken);
   },
 });
@@ -381,10 +429,14 @@ export const geocodeDestination = action({
   args: {
     query: v.string(),
     language: v.optional(v.string()),
+    appCheckToken: appCheckArg,
   },
-  handler: async (ctx, { query, language }) => {
+  handler: async (ctx, { query, language, appCheckToken }) => {
+    assertMaxLength(query, MAX_QUERY_CHARS, "Query");
+    assertMaxLength(language, MAX_LANGUAGE_CHARS, "Language");
     if (query.trim().length < 2) return null;
-    await authorize(ctx, "destinations");
+    // Autocomplete plus Place Details.
+    await authorize(ctx, appCheckToken, "destinations", 2);
     const apiKey = placesApiKey();
     const sessionToken = crypto.randomUUID();
     const [top] = await autocompleteRegions(apiKey, query, language, sessionToken);

@@ -8,10 +8,12 @@ import Purchases, {
   type PurchasesPackage,
 } from "react-native-purchases";
 import { api, convex } from "@/modules/backend";
+import { withAppCheck } from "@/modules/appCheck";
 import { logger } from "@/modules/logger";
 import { isLifetimePlan, manageTarget } from "./manage";
 import { usePlanStore } from "./planStore";
 import { planFromEntitlements, tierOf, type PlanTier } from "./plan";
+import { withSystemPrompt } from "@/utils/systemPrompt";
 
 export const PACKAGE_IDS = {
   plusMonthly: "plus_monthly",
@@ -47,9 +49,11 @@ function applyCustomerInfo(info: CustomerInfo) {
 
 /** Tells the server to re-read the plan from RevenueCat so cloud AI unlocks without waiting for the webhook. */
 function refreshServerPlan() {
-  convex.action(api.billing.refreshMyPlan, {}).catch((error: unknown) => {
-    logger.warn("purchases", "server plan refresh failed", error);
-  });
+  withAppCheck({})
+    .then((args) => convex.action(api.billing.refreshMyPlan, args))
+    .catch((error: unknown) => {
+      logger.warn("purchases", "server plan refresh failed", error);
+    });
 }
 
 /** Configures RevenueCat once. Builds without a key run as Free with the paywall disabled. */
@@ -146,7 +150,7 @@ export type PurchaseOutcome = "purchased" | "cancelled";
 
 export async function purchase(pkg: PurchasesPackage): Promise<PurchaseOutcome> {
   try {
-    const { customerInfo } = await Purchases.purchasePackage(pkg, null, await productChangeFor(pkg));
+    const { customerInfo } = await withSystemPrompt(async () => Purchases.purchasePackage(pkg, null, await productChangeFor(pkg)));
     applyCustomerInfo(customerInfo);
     refreshServerPlan();
     return "purchased";
@@ -159,7 +163,7 @@ export async function purchase(pkg: PurchasesPackage): Promise<PurchaseOutcome> 
 
 /** Restores store purchases onto this account; returns the resulting tier. */
 export async function restorePurchases(): Promise<PlanTier> {
-  const info = await Purchases.restorePurchases();
+  const info = await withSystemPrompt(() => Purchases.restorePurchases());
   applyCustomerInfo(info);
   refreshServerPlan();
   return tierOf(planFromEntitlements(Object.keys(info.entitlements.active)));

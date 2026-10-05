@@ -21,6 +21,7 @@ import {
 } from "@/features/sync";
 import { clearServerCheckIn } from "@/features/safety/services/safetyServerAlerts";
 import { clearAiUsageLog, clearByokConfig, clearCloudExhaustion, resetAiPreference } from "@/modules/ai";
+import { withSystemPrompt } from "@/utils/systemPrompt";
 
 /** Revokes the Google grant (best-effort) and forgets the local tokens. */
 export async function disconnectGmail() {
@@ -46,11 +47,13 @@ export async function confirmDeviceOwner(promptMessage: string, cancelLabel: str
   try {
     const level = await LocalAuthentication.getEnrolledLevelAsync();
     if (level === LocalAuthentication.SecurityLevel.NONE) return true;
-    const result = await LocalAuthentication.authenticateAsync({
-      promptMessage,
-      cancelLabel,
-      disableDeviceFallback: false,
-    });
+    const result = await withSystemPrompt(() =>
+      LocalAuthentication.authenticateAsync({
+        promptMessage,
+        cancelLabel,
+        disableDeviceFallback: false,
+      }),
+    );
     return result.success;
   } catch {
     return false;

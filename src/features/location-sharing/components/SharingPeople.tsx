@@ -6,6 +6,7 @@ import { distanceKm } from "@/features/home/components/aura/globe/sun";
 import { emergencyContactsStorage, normalizeEmail } from "@/features/onboarding/services/emergencyContactsStorage";
 import { registerTripPush } from "@/features/sync";
 import { useLocalization } from "@/localization";
+import { PrivateView } from "@/modules/analytics";
 import { AddPersonSheet } from "./AddPersonSheet";
 
 const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.pranav.nomadsafe";
@@ -117,7 +118,7 @@ export function SharingPeople({ isBroadcasting, location, accent }: SharingPeopl
   };
 
   return (
-    <View>
+    <PrivateView>
       <AuraSection
         title={t("safety.people")}
         action={<AuraChip label={t("sharing.addShort")} icon="plus" onPress={() => setAddVisible(true)} />}
@@ -237,7 +238,7 @@ export function SharingPeople({ isBroadcasting, location, accent }: SharingPeopl
         onSubmit={handleAddPerson}
         existingEmails={new Set([...outgoing.map((l) => l.email), ...invites.map((i) => i.email ?? "")])}
       />
-    </View>
+    </PrivateView>
   );
 }
 

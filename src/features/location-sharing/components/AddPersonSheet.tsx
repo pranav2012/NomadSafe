@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { AuraButton, AuraChip, AuraField, AuraSheet } from "@/atoms";
+import { PrivateView } from "@/modules/analytics";
 import { emergencyContactsStorage, normalizeEmail } from "@/features/onboarding/services/emergencyContactsStorage";
 import { useLocalization } from "@/localization";
 
@@ -63,6 +64,7 @@ export function AddPersonSheet({ visible, onClose, onSubmit, existingEmails }: A
       subtitle={t("sharing.addBody")}
       footer={<AuraButton label={t("sharing.sendRequest")} onPress={submit} loading={saving} />}
     >
+      <PrivateView>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.body}>
         {suggestions.length > 0 ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.suggestions}>
@@ -101,6 +103,7 @@ export function AddPersonSheet({ visible, onClose, onSubmit, existingEmails }: A
           />
         </View>
       </ScrollView>
+      </PrivateView>
     </AuraSheet>
   );
 }

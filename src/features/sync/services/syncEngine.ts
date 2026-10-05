@@ -7,7 +7,7 @@ import { syncWidgets } from "@/features/widget/syncWidgets";
 import { logger } from "@/modules/logger";
 import { storage } from "@/modules/storage";
 import { hashOf } from "../utils/hash";
-import { clearGroupLedgers, makeSharedScope, stripRaw } from "../utils/sharedScope";
+import { clearGroupLedgers, keepLocalOnly, makeSharedScope, stripRaw } from "../utils/sharedScope";
 
 type Kind = "trip" | "expense" | "settlement" | "event";
 
@@ -196,8 +196,8 @@ async function pullChanges(uid: string): Promise<boolean> {
   return true;
 }
 
-/** Merges one kind of record: upserts by id (keeping local raw text) and drops deleted ones. */
-function merge<T extends { id: string; rawText?: string; createdAt?: string }>(
+/** Merges one kind of record: upserts by id (keeping local-only fields) and drops deleted ones. */
+function merge<T extends { id: string; rawText?: string; note?: string; source?: string; createdAt?: string }>(
   current: T[],
   kind: Kind,
   incoming: Map<string, RemoteRecord>,
@@ -211,9 +211,7 @@ function merge<T extends { id: string; rawText?: string; createdAt?: string }>(
       continue;
     }
     const previous = byId.get(record.clientId);
-    const next = { ...(record.data as T) };
-    if (previous?.rawText !== undefined) next.rawText = previous.rawText;
-    byId.set(record.clientId, next);
+    byId.set(record.clientId, keepLocalOnly({ ...(record.data as T) }, previous));
   }
   return [...byId.values()].sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
 }

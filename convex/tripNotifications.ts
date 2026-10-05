@@ -1,9 +1,21 @@
-import { v } from "convex/values";
-import { internal } from "./_generated/api";
-import { internalAction, internalMutation, mutation, type ActionCtx } from "./_generated/server";
+import { v, type Infer } from "convex/values";
+import { HOUR, RateLimiter } from "@convex-dev/rate-limiter";
+import { components, internal } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
+import { internalAction, internalMutation, mutation, type ActionCtx, type MutationCtx } from "./_generated/server";
+import { assertMaxLength, isExpoPushToken, truncate } from "./securityRules";
 import { requireUser } from "./users";
 
 const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
+export const NOTIFY_TITLE_CHARS = 60;
+const NOTIFY_INTERVAL_MS = 60_000;
+const MAX_TOKENS_PER_USER = 10;
+const MAX_LOCALE = 35;
+
+// Only new or reassigned tokens count; the legitimate case is a sign-in on a new or shared phone.
+const rateLimiter = new RateLimiter(components.rateLimiter, {
+  pushTokenClaim: { kind: "token bucket", rate: 6, period: HOUR, capacity: 3 },
+});
 const PUSH_CHUNK = 100;
 // Must match the Android channel and `data.source` the app registers for trip updates.
 const CHANNEL_ID = "trip-updates";
@@ -54,12 +66,28 @@ export const savePushToken = mutation({
   args: { token: v.string(), locale: v.string() },
   handler: async (ctx, { token, locale }) => {
     const user = await requireUser(ctx);
+    if (!isExpoPushToken(token)) throw new Error("Invalid push token");
+    assertMaxLength(locale, MAX_LOCALE, "Locale");
     const existing = await ctx.db
       .query("pushTokens")
       .withIndex("by_token", (q) => q.eq("token", token))
       .unique();
+    if (existing?.userId === user.id) {
+      await ctx.db.patch(existing._id, { locale, updatedAt: Date.now() });
+      return;
+    }
+    // A token held by another account moves to the caller: one phone, whoever signed in last. Tokens
+    // are never readable by clients, and the claim limit keeps anyone from cycling through guesses.
+    await rateLimiter.limit(ctx, "pushTokenClaim", { key: user.id, throws: true });
     if (existing) await ctx.db.patch(existing._id, { userId: user.id, locale, updatedAt: Date.now() });
     else await ctx.db.insert("pushTokens", { userId: user.id, token, locale, updatedAt: Date.now() });
+
+    const tokens = await ctx.db
+      .query("pushTokens")
+      .withIndex("by_user", (q) => q.eq("userId", user.id))
+      .collect();
+    const oldestFirst = tokens.sort((a, b) => a.updatedAt - b.updatedAt);
+    for (const stale of oldestFirst.slice(0, Math.max(0, tokens.length - MAX_TOKENS_PER_USER))) await ctx.db.delete(stale._id);
   },
 });
 
@@ -68,6 +96,7 @@ export const removePushToken = mutation({
   args: { token: v.string() },
   handler: async (ctx, { token }) => {
     const user = await requireUser(ctx);
+    if (token.length > 200) return;
     const existing = await ctx.db
       .query("pushTokens")
       .withIndex("by_token", (q) => q.eq("token", token))
@@ -111,7 +140,12 @@ async function postPushChunk(chunk: PushMessage[]): Promise<PushTicket[] | null>
     try {
       res = await fetch(EXPO_PUSH_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          // With Expo's enhanced push security on, only requests carrying this token are accepted.
+          ...(process.env.EXPO_ACCESS_TOKEN ? { Authorization: `Bearer ${process.env.EXPO_ACCESS_TOKEN}` } : {}),
+        },
         body: JSON.stringify(chunk),
       });
     } catch (err) {
@@ -152,24 +186,78 @@ const changeValidator = v.object({
   currency: v.string(),
 });
 
+type Change = Infer<typeof changeValidator>;
+
+/**
+ * Sends a member's money changes right away, or, within a minute of their last push on this trip,
+ * counts them and sends one summary when the minute is up, so a burst of edits is one notification.
+ */
+export async function queueTripNotification(ctx: MutationCtx, tripId: Id<"sharedTrips">, actorMemberId: string, changes: Change[]) {
+  const now = Date.now();
+  const state = await ctx.db
+    .query("tripNotifyState")
+    .withIndex("by_trip_actor", (q) => q.eq("tripId", tripId).eq("actorMemberId", actorMemberId))
+    .unique();
+  if (!state || (!state.flushScheduled && now - state.lastSentAt >= NOTIFY_INTERVAL_MS)) {
+    await ctx.scheduler.runAfter(0, internal.tripNotifications.notifyTrip, {
+      tripId,
+      actorMemberId,
+      changes: changes.slice(0, 1),
+      count: changes.length,
+    });
+    if (state) await ctx.db.patch(state._id, { lastSentAt: now, pendingCount: 0, pendingFirst: undefined });
+    else await ctx.db.insert("tripNotifyState", { tripId, actorMemberId, lastSentAt: now, pendingCount: 0, flushScheduled: false });
+    return;
+  }
+  await ctx.db.patch(state._id, {
+    pendingCount: state.pendingCount + changes.length,
+    pendingFirst: state.pendingFirst ?? changes[0],
+    flushScheduled: true,
+  });
+  if (!state.flushScheduled) {
+    await ctx.scheduler.runAt(state.lastSentAt + NOTIFY_INTERVAL_MS, internal.tripNotifications.flushTripNotification, {
+      stateId: state._id,
+    });
+  }
+}
+
+export const flushTripNotification = internalMutation({
+  args: { stateId: v.id("tripNotifyState") },
+  handler: async (ctx, { stateId }) => {
+    const state = await ctx.db.get(stateId);
+    if (!state) return;
+    if (state.pendingCount > 0 && state.pendingFirst) {
+      await ctx.scheduler.runAfter(0, internal.tripNotifications.notifyTrip, {
+        tripId: state.tripId,
+        actorMemberId: state.actorMemberId,
+        changes: [state.pendingFirst],
+        count: state.pendingCount,
+      });
+    }
+    await ctx.db.patch(stateId, { lastSentAt: Date.now(), pendingCount: 0, pendingFirst: undefined, flushScheduled: false });
+  },
+});
+
 /** Sends one notification per device about a member's money changes; drops tokens Expo reports as gone. */
 export const notifyTrip = internalAction({
-  args: { tripId: v.id("sharedTrips"), actorMemberId: v.string(), changes: v.array(changeValidator) },
-  handler: async (ctx, { tripId, actorMemberId, changes }) => {
+  // `count` is how many changes `changes[0]` stands for; older scheduled jobs pass every change instead.
+  args: { tripId: v.id("sharedTrips"), actorMemberId: v.string(), changes: v.array(changeValidator), count: v.optional(v.number()) },
+  handler: async (ctx, { tripId, actorMemberId, changes, count }) => {
     const info = await ctx.runQuery(internal.groupTrips.notificationTargets, { tripId, actorMemberId });
     if (!info || info.targets.length === 0 || changes.length === 0) return;
+    const total = count ?? changes.length;
 
     const messages = info.targets.map(({ token, locale }) => {
       const t = TEMPLATES[locale] ?? TEMPLATES[locale.split("-")[0]] ?? TEMPLATES.en;
       const change = changes[0];
       const values = {
-        actor: info.actorName,
-        title: change.title,
+        actor: truncate(info.actorName, NOTIFY_TITLE_CHARS),
+        title: truncate(change.title, NOTIFY_TITLE_CHARS),
         amount: formatAmount(change.amount, change.currency, locale),
-        count: String(changes.length),
+        count: String(total),
       };
       const template =
-        changes.length > 1
+        total > 1
           ? t.many
           : change.kind === "settlement"
             ? change.action === "deleted"
@@ -178,7 +266,7 @@ export const notifyTrip = internalAction({
             : t[change.action];
       return {
         to: token,
-        title: info.tripName,
+        title: truncate(info.tripName, NOTIFY_TITLE_CHARS),
         body: fill(template, values),
         sound: "default" as const,
         channelId: CHANNEL_ID,

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import Constants from "expo-constants";
 import PostHog, { type PostHogCustomStorage } from "posthog-react-native";
 import type { AdPlacement } from "@/modules/ads";
+import { scrubErrorMessage } from "@/modules/logger";
 import { storage } from "@/modules/storage";
 
 type ExpenseSourceKind = "manual" | "paste" | "gmail" | "gmail_auto" | "voice";
@@ -68,6 +69,23 @@ const encryptedStorage: PostHogCustomStorage = {
 // Deep links can carry invite tokens, so URLs never leave the device.
 const URL_PROPERTIES = ["url", "$current_url", "$referring_link", "$deep_link_url"];
 
+/** Scrubs exception messages (logger.error and autocaptured crashes) like log messages; stack frames stay. */
+function scrubException(properties: Record<string, unknown>) {
+  const list = properties.$exception_list;
+  if (Array.isArray(list)) {
+    for (const item of list) {
+      if (item && typeof item === "object" && typeof (item as { value?: unknown }).value === "string") {
+        (item as { value: string }).value = scrubErrorMessage((item as { value: string }).value, 500);
+      }
+    }
+  }
+  for (const key of ["$exception_message", "$exception_values"]) {
+    const value = properties[key];
+    if (typeof value === "string") properties[key] = scrubErrorMessage(value, 500);
+    else if (Array.isArray(value)) properties[key] = value.map((entry) => (typeof entry === "string" ? scrubErrorMessage(entry, 500) : entry));
+  }
+}
+
 export const posthog: PostHog | null =
   apiKey && !__DEV__
     ? new PostHog(apiKey, {
@@ -105,6 +123,7 @@ export const posthog: PostHog | null =
         before_send: (event) => {
           if (!event?.properties) return event;
           for (const key of URL_PROPERTIES) delete event.properties[key];
+          if (event.event === "$exception") scrubException(event.properties);
           return event;
         },
       })

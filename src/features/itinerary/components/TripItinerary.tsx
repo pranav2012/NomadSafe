@@ -3,6 +3,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { AuraButton, AuraSection, AuraSheet, Icon, PressableScale, showAlert, showToast, useAura } from "@/atoms";
 import { useLocalization } from "@/localization";
+import { PrivateView } from "@/modules/analytics";
 import { aiRuntime, aiService, useAiAvailability } from "@/modules/ai";
 import type { Trip } from "@/features/trips/store/tripsStore";
 import { useEventsStore, type TripEvent } from "@/features/itinerary/store/eventsStore";
@@ -99,7 +100,7 @@ export function TripItinerary({ trip }: { trip: Trip; accent: string }) {
   }, [isRefining, ordered, t]);
 
   return (
-    <View>
+    <PrivateView>
       <AuraSection
         title={t("itinerary.title")}
         action={
@@ -137,14 +138,16 @@ export function TripItinerary({ trip }: { trip: Trip; accent: string }) {
       )}
 
       <AuraSheet visible={allOpen} onClose={() => setAllOpen(false)} title={t("itinerary.title")} subtitle={trip.name} full>
-        <TimelineList
-          events={ordered}
-          tripStart={fromDateKey(trip.startDate)}
-          onPress={(event) => {
-            setAllOpen(false);
-            setEditing(event);
-          }}
-        />
+        <PrivateView style={styles.flex}>
+          <TimelineList
+            events={ordered}
+            tripStart={fromDateKey(trip.startDate)}
+            onPress={(event) => {
+              setAllOpen(false);
+              setEditing(event);
+            }}
+          />
+        </PrivateView>
       </AuraSheet>
 
       <AuraSheet
@@ -188,7 +191,7 @@ export function TripItinerary({ trip }: { trip: Trip; accent: string }) {
           onClose={() => setEditing(null)}
         />
       ) : null}
-    </View>
+    </PrivateView>
   );
 }
 

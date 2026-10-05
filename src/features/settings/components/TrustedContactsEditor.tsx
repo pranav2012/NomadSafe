@@ -15,9 +15,11 @@ import {
 } from "@/atoms";
 import { auraStatusAccent, auraStatusColors } from "@/constants/aura";
 import { useLocalization } from "@/localization";
+import { PrivateView } from "@/modules/analytics";
 import { logger } from "@/modules/logger";
 import { emergencyContactsStorage, type EmergencyContact } from "@/features/onboarding/services/emergencyContactsStorage";
 import { isValidPhone, normalizePhone } from "@/features/safety/utils/phone";
+import { withSystemPrompt } from "@/utils/systemPrompt";
 
 export const MAX_TRUSTED_CONTACTS = 3;
 
@@ -76,7 +78,7 @@ export function TrustedContactsEditor({ onChange }: { onChange?: (summary: Trust
   // Android reads the picked contact via a Data query that needs READ_CONTACTS at runtime.
   const ensureContactsPermission = async (): Promise<boolean> => {
     if (Platform.OS !== "android") return true;
-    const { granted } = await Contacts.requestPermissionsAsync();
+    const { granted } = await withSystemPrompt(() => Contacts.requestPermissionsAsync());
     if (granted) return true;
     showAlert(t("emergencyContacts.permissionTitle"), t("emergencyContacts.permissionBody"), [
       { text: t("common.cancel"), style: "cancel" },
@@ -141,7 +143,7 @@ export function TrustedContactsEditor({ onChange }: { onChange?: (summary: Trust
     ]);
 
   return (
-    <View>
+    <PrivateView>
       {contacts.length > 0 && withPhone === 0 ? (
         <AuraCard tone={auraStatusAccent.alert} style={styles.warning}>
           <View style={styles.warningRow} accessibilityRole="alert">
@@ -221,7 +223,7 @@ export function TrustedContactsEditor({ onChange }: { onChange?: (summary: Trust
           />
         </ScrollView>
       </AuraSheet>
-    </View>
+    </PrivateView>
   );
 }
 

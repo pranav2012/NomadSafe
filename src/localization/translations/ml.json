@@ -272,7 +272,12 @@
     "createPinTitle": "6 അക്ക PIN സൃഷ്ടിക്കുക",
     "confirmPinTitle": "നിങ്ങളുടെ PIN സ്ഥിരീകരിക്കുക",
     "attemptsRemaining_one": "തെറ്റായ PIN. {{count}} ശ്രമം ശേഷിക്കുന്നു.",
-    "attemptsRemaining_other": "തെറ്റായ PIN. {{count}} ശ്രമങ്ങൾ ശേഷിക്കുന്നു."
+    "attemptsRemaining_other": "തെറ്റായ PIN. {{count}} ശ്രമങ്ങൾ ശേഷിക്കുന്നു.",
+    "currentPinTitle": "നിലവിലെ PIN നൽകുക",
+    "currentPinSub": "പുതിയ PIN തിരഞ്ഞെടുക്കുന്നതിന് മുമ്പ് ഇത് നിങ്ങളാണെന്ന് സ്ഥിരീകരിക്കുക.",
+    "enterPinTitle": "നിങ്ങളുടെ PIN നൽകുക",
+    "confirmOwnerSub": "NomadSafe അൺലോക്ക് ചെയ്യുന്ന രീതി മാറ്റാൻ ഇത് നിങ്ങളാണെന്ന് സ്ഥിരീകരിക്കുക.",
+    "pinUnavailable": "PIN പരിശോധിക്കാനായില്ല. വീണ്ടും ശ്രമിക്കുക."
   },
   "biometric": {
     "touchId": "ടച്ച് ഐഡി",

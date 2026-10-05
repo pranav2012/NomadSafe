@@ -20,6 +20,7 @@ import {
 } from "@/atoms";
 import { auraStatusAccent } from "@/constants/aura";
 import { useLocalization } from "@/localization";
+import { PrivateView } from "@/modules/analytics";
 import { selectActiveTrip, useTripsStore } from "@/features/trips/store/tripsStore";
 import { daysLeftInTrip } from "@/features/trips/utils/dates";
 import { useExpensesStore, type Expense } from "@/features/expenses/store/expensesStore";
@@ -139,6 +140,7 @@ export default function ExpensesScreen() {
             />
           ) : null}
 
+          <PrivateView>
           <SpendHero
             label={activeTrip?.name ?? null}
             currency={currency}
@@ -206,6 +208,7 @@ export default function ExpensesScreen() {
               ) : null}
             </Animated.View>
           )}
+          </PrivateView>
         </ScrollView>
         <AuraTopFade />
       </BlurTargetView>

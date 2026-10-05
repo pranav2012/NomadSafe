@@ -24,11 +24,11 @@ import { currencyCodes, currencyDisplayName } from "@/utils/currency";
 import type { TimeFormat, UnitPrefs, UnitSystem } from "@/utils/units";
 import { confirmDeviceOwner, disconnectGmail, signOutAndCleanup } from "@/features/auth/services/session";
 import { disableBackup, flushGroupSync, flushSync, hasBackupOwner } from "@/features/sync";
-import { localAuth, useAuthStore, useBiometricPresentation } from "@/features/auth";
+import { localAuth, useAuthStore, useBiometricPresentation, useOwnerConfirm } from "@/features/auth";
 import { AiKeySheet, AiUsageSheet } from "@/features/ai";
 import { byokProviderName, useAiAvailability, useAiSources, useAiUsageLog, useByokStore, useProvisioningStore } from "@/modules/ai";
 import { FREE_TRIP_LIMIT, manageSubscriptions, ownedTripCount, restorePurchases, usePlan } from "@/modules/billing";
-import { track } from "@/modules/analytics";
+import { track, PrivateView } from "@/modules/analytics";
 import { showAdPrivacyOptions, useAdsStore } from "@/modules/ads";
 import { useTripsStore } from "@/features/trips/store/tripsStore";
 import { hasGmailGrant, hydrateGmailConnection, useGmailConnectionStore } from "@/features/expenses/store/gmailConnectionStore";
@@ -91,6 +91,7 @@ export default function SettingsScreen() {
   const setAutoLockTimeout = useAuthStore((s) => s.setAutoLockTimeout);
   const deleteAccount = useMutation(api.account.deleteAccount);
   const biometric = useBiometricPresentation();
+  const { confirmOwner, sheet: ownerConfirmSheet } = useOwnerConfirm();
 
   const themeMode = useSettingsStore((s) => s.themeMode);
   const setThemeMode = useSettingsStore((s) => s.setThemeMode);
@@ -217,9 +218,10 @@ export default function SettingsScreen() {
   ];
   const timeFormatValue = timeFormatOptions.find((option) => option.value === timeFormat)?.label;
 
-  const toggleBiometric = (value: boolean) => {
+  const toggleBiometric = async (value: boolean) => {
+    const subtitle = t("auth.confirmOwnerSub");
     if (!value) {
-      setBiometricEnabled(false);
+      if (await confirmOwner({ subtitle, allowBiometric: true })) setBiometricEnabled(false);
       return;
     }
     if (!biometricAvailable) {
@@ -233,7 +235,7 @@ export default function SettingsScreen() {
       ]);
       return;
     }
-    setBiometricEnabled(true);
+    if (await confirmOwner({ subtitle, allowBiometric: false })) setBiometricEnabled(true);
   };
 
   const handleExport = () => {
@@ -497,7 +499,7 @@ export default function SettingsScreen() {
             trailing={
               <AuraSwitch
                 value={biometricEnabled}
-                onValueChange={toggleBiometric}
+                onValueChange={(value) => void toggleBiometric(value)}
                 disabled={!biometricAvailable && !biometricEnabled}
                 accessibilityLabel={t("settings.biometricUnlock", { name: biometric.name })}
               />
@@ -560,7 +562,9 @@ export default function SettingsScreen() {
         </AuraListGroup>
 
         <AuraListGroup title={t("settings.safetySection")}>
-          <AuraListRow icon="users" tone={DANGER} label={t("settings.emergencyContacts")} detail={contactSub} onPress={() => router.push("/emergency-contacts")} />
+          <PrivateView>
+            <AuraListRow icon="users" tone={DANGER} label={t("settings.emergencyContacts")} detail={contactSub} onPress={() => router.push("/emergency-contacts")} />
+          </PrivateView>
           <AuraListRow
             icon="clock"
             tone={TEAL}
@@ -733,6 +737,7 @@ export default function SettingsScreen() {
       </ScrollView>
       <AuraTopFade sheet />
 
+      {ownerConfirmSheet}
       <AuraOptionSheet
         visible={sheet === "autoLock"}
         onClose={closeSheet}

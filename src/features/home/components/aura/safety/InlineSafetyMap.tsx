@@ -7,6 +7,7 @@ import type { HomeStop } from "@/features/home/types";
 import type { PlacePin, SafetyPlace } from "@/features/home/hooks/useTripSafety";
 import { isCompactFrame, regionForPoints } from "@/features/trips/utils/mapFraming";
 import { useLocalization } from "@/localization";
+import { isSafeMapsUrl } from "@/utils/safeUrl";
 import { MapView, Marker, Polyline, type MapViewHandle, type Region } from "@/modules/location";
 import { distanceKm } from "../globe/sun";
 import { quietMapStyle } from "../mapStyles";
@@ -273,8 +274,8 @@ export function InlineSafetyMap({
                 <Text style={[styles.actionText, { color: c.onInverse }]}>{t("home.call")}</Text>
               </PressableScale>
             ) : null}
-            {selected.mapsUrl ? (
-              <PressableScale onPress={() => void Linking.openURL(selected.mapsUrl!)} style={[styles.action, { backgroundColor: c.surfaceStrong }]}>
+            {isSafeMapsUrl(selected.mapsUrl) ? (
+              <PressableScale onPress={() => void Linking.openURL(selected.mapsUrl!).catch(() => {})} style={[styles.action, { backgroundColor: c.surfaceStrong }]}>
                 <Icon name="send" size={13} color={c.text} />
                 <Text style={[styles.actionText, { color: c.text }]}>{t("home.directions")}</Text>
               </PressableScale>

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useAura } from "@/atoms";
+import { PrivateView } from "@/modules/analytics";
 import { auraStatusColors } from "@/constants/aura";
 
 const SIZE = 64;
@@ -15,7 +16,7 @@ export function SettingsProfileHeader({ name, email, avatarUrl, stats }: { name:
   const showImage = !!avatarUrl && !imageFailed;
 
   return (
-    <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.hairline }]}>
+    <PrivateView style={[styles.card, { backgroundColor: c.surface, borderColor: c.hairline }]}>
       <View style={[styles.highlight, { backgroundColor: c.highlight }]} />
       <View style={styles.avatarWrap}>
         <LinearGradient colors={[CALM_A, CALM_C, CALM_B]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.ring}>
@@ -44,7 +45,7 @@ export function SettingsProfileHeader({ name, email, avatarUrl, stats }: { name:
           {stats}
         </Text>
       </View>
-    </View>
+    </PrivateView>
   );
 }
 

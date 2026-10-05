@@ -272,7 +272,12 @@
     "createPinTitle": "6 अंकों का PIN बनाएं",
     "confirmPinTitle": "अपना PIN कन्फ़र्म करें",
     "attemptsRemaining_one": "गलत PIN। {{count}} प्रयास शेष है।",
-    "attemptsRemaining_other": "गलत PIN। {{count}} प्रयास शेष हैं।"
+    "attemptsRemaining_other": "गलत PIN। {{count}} प्रयास शेष हैं।",
+    "currentPinTitle": "अपना मौजूदा PIN डालें",
+    "currentPinSub": "नया PIN चुनने से पहले पुष्टि करें कि यह आप ही हैं।",
+    "enterPinTitle": "अपना PIN डालें",
+    "confirmOwnerSub": "NomadSafe को अनलॉक करने का तरीका बदलने के लिए पुष्टि करें कि यह आप ही हैं।",
+    "pinUnavailable": "आपका PIN जाँचा नहीं जा सका। फिर से कोशिश करें।"
   },
   "biometric": {
     "touchId": "टच आईडी",

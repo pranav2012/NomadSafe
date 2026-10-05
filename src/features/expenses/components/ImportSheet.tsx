@@ -16,7 +16,7 @@ import { useGmailImport } from "@/features/expenses/hooks/useGmailImport";
 import { useGmailProgressLabel } from "@/features/expenses/hooks/useGmailStatus";
 import { syncTripGmail, type TripGmailSyncResult } from "@/features/expenses/services/tripGmailSync";
 import type { Trip } from "@/features/trips/store/tripsStore";
-import { track } from "@/modules/analytics";
+import { track, PrivateView } from "@/modules/analytics";
 import { logger } from "@/modules/logger";
 import { showInterstitial } from "@/modules/ads";
 
@@ -160,7 +160,7 @@ function ImportBody({ tripId, trip, initialTab = "paste", onImported }: Omit<Imp
   const selectedCount = candidates?.filter((item) => item.selected).length ?? 0;
 
   return (
-    <View style={styles.root}>
+    <PrivateView style={styles.root}>
       {candidates === null ? (
         <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
           <Text style={[styles.intro, { color: c.textSoft, fontFamily: f.regular }]}>{t("expenses.importIntro")}</Text>
@@ -312,7 +312,7 @@ function ImportBody({ tripId, trip, initialTab = "paste", onImported }: Omit<Imp
           </View>
         </>
       )}
-    </View>
+    </PrivateView>
   );
 }
 

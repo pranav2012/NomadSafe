@@ -272,7 +272,12 @@
     "createPinTitle": "6 இலக்க PIN-ஐ உருவாக்கவும்",
     "confirmPinTitle": "உங்கள் PIN-ஐ உறுதிப்படுத்தவும்",
     "attemptsRemaining_one": "தவறான PIN. இன்னும் {{count}} முயற்சி உள்ளது.",
-    "attemptsRemaining_other": "தவறான PIN. இன்னும் {{count}} முயற்சிகள் உள்ளன."
+    "attemptsRemaining_other": "தவறான PIN. இன்னும் {{count}} முயற்சிகள் உள்ளன.",
+    "currentPinTitle": "தற்போதைய PIN-ஐ உள்ளிடவும்",
+    "currentPinSub": "புதிய PIN-ஐத் தேர்வுசெய்யும் முன் இது நீங்கள்தான் என்பதை உறுதிசெய்யவும்.",
+    "enterPinTitle": "உங்கள் PIN-ஐ உள்ளிடவும்",
+    "confirmOwnerSub": "NomadSafe திறக்கும் முறையை மாற்ற இது நீங்கள்தான் என்பதை உறுதிசெய்யவும்.",
+    "pinUnavailable": "உங்கள் PIN-ஐச் சரிபார்க்க முடியவில்லை. மீண்டும் முயலவும்."
   },
   "biometric": {
     "touchId": "Touch ID",

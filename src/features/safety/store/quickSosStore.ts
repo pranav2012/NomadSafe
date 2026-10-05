@@ -1,6 +1,9 @@
 import { create } from "zustand";
 
-export const QUICK_SOS_URL = "nomadsafe://sos?trigger=widget";
+/** The SOS widget's link; the per-install token (see widgetToken.ts) keeps other apps from arming it. */
+export function quickSosUrl(token: string) {
+  return `nomadsafe://sos?trigger=widget&t=${encodeURIComponent(token)}`;
+}
 const QUICK_SOS_LINK = /(^|\/)sos\?(.*&)?trigger=/;
 // A request older than this (e.g. made before sign-in finished) is ignored rather than arming later.
 const REQUEST_TTL_MS = 30_000;

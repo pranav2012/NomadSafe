@@ -9,6 +9,7 @@ import { VOICE_WIDGET_NAME, VoiceExpenseWidget } from "@/features/widget/VoiceEx
 import { SOS_WIDGET_NAME, SosWidget } from "@/features/widget/SosWidget";
 import { buildSosWidgetProps, buildWidgetProps } from "@/features/widget/widgetContent";
 import { resolveWidgetTrip } from "@/features/widget/widgetTrip";
+import { getWidgetToken } from "@/features/widget/widgetToken";
 
 export const APP_GROUP = "group.com.pranav.NomadSafe";
 const IOS_WIDGET_KIND = "VoiceExpenseWidget";
@@ -16,7 +17,8 @@ const IOS_SOS_WIDGET_KIND = "SosWidget";
 
 /**
  * Pushes trip names and labels to the home-screen widgets (voice expense and SOS). iOS reads
- * them from the App Group (plain UserDefaults), so only ids, names and UI labels are shared.
+ * them from the App Group (plain UserDefaults), so only ids, names, UI labels and the widget link
+ * token are shared.
  */
 export async function syncWidgets() {
   try {
@@ -45,6 +47,8 @@ export async function syncWidgets() {
           defaultTrip: translate("voiceExpense.widget.defaultTrip"),
         }),
       );
+      // Widget links carry it so the app can tell them from links other apps open.
+      shared.set("widgetToken", getWidgetToken());
       shared.set("sosLabels", JSON.stringify({ title: translate("sos.widget.title"), hint: translate("sos.widget.hint") }));
       ExtensionStorage.reloadWidget(IOS_WIDGET_KIND);
       ExtensionStorage.reloadWidget(IOS_SOS_WIDGET_KIND);

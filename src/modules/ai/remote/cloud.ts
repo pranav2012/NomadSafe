@@ -1,4 +1,5 @@
 import { api, backendSiteUrl, convex, ConvexError, getConvexJwt } from "@/modules/backend";
+import { getAppCheckToken, withAppCheck } from "@/modules/appCheck";
 import type { AiTask, CloudQuota } from "../policy";
 import type { JsonTask } from "../schemas";
 import { RemoteAiError, postStream } from "./http";
@@ -26,7 +27,8 @@ function noteFailure(kind: CloudQuota, code: string | undefined) {
 export async function cloudCompleteJson(task: AiTask, system: string, prompt: string, schema: JsonTask): Promise<string> {
   if (task === "chat" || task === "expenseCategory") throw new RemoteAiError(`${task} can't use cloud tasks`);
   try {
-    return await convex.action(api.ai.complete, { system, prompt, schemaName: schema.name, schema: schema.schema, task });
+    const args = await withAppCheck({ system, prompt, schemaName: schema.name, schema: schema.schema, task });
+    return await convex.action(api.ai.complete, args);
   } catch (error) {
     const code = error instanceof ConvexError ? (error.data as { code?: string })?.code : undefined;
     noteFailure("tasks", code);
@@ -38,12 +40,17 @@ export async function cloudCompleteJson(task: AiTask, system: string, prompt: st
 export async function cloudChat(messages: RemoteMessage[], onText: (accumulated: string) => void, signal?: AbortSignal): Promise<string> {
   const jwt = await getConvexJwt();
   if (!jwt || !backendSiteUrl) throw new RemoteAiError("not signed in", 401, "unauthenticated");
+  const appCheckToken = await getAppCheckToken();
   let text = "";
   try {
     await postStream(
       {
         url: `${backendSiteUrl}/ai/chat`,
-        headers: { Authorization: `Bearer ${jwt}`, "content-type": "application/json" },
+        headers: {
+          Authorization: `Bearer ${jwt}`,
+          "content-type": "application/json",
+          ...(appCheckToken ? { "X-Firebase-AppCheck": appCheckToken } : {}),
+        },
         body: JSON.stringify({ messages, task: "chat" }),
       },
       (chunk) => {

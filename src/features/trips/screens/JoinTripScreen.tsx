@@ -7,7 +7,7 @@ import { AuraButton, AuraCard, AuraChip, AuraField, AuraLoader, Icon, PressableS
 import { useAuthStore } from "@/features/auth/store/authStore";
 import { registerTripPush } from "@/features/sync";
 import { useTripsStore } from "@/features/trips/store/tripsStore";
-import { track } from "@/modules/analytics";
+import { track, PrivateView } from "@/modules/analytics";
 import { fromDateKey } from "@/features/trips/utils/dates";
 import { useLocalization } from "@/localization";
 import { useSheetTopInset } from "@/hooks/useSheetTopInset";
@@ -128,12 +128,12 @@ export default function JoinTripScreen() {
                   <View style={styles.section}>
                     <Text style={[styles.cardTitle, { color: c.text, fontFamily: f.semibold }]}>{t("groupTrip.joinWhoAreYou")}</Text>
                     <Text style={[styles.body, { color: c.textSoft, fontFamily: f.regular }]}>{t("groupTrip.joinWhoAreYouBody")}</Text>
-                    <View style={styles.chips} accessibilityRole="radiogroup">
+                    <PrivateView style={styles.chips} accessibilityRole="radiogroup">
                       {preview.unclaimed.map((member) => (
                         <AuraChip key={member.memberId} label={member.name} icon="users" selected={selected === member.memberId} onPress={() => setChoice(member.memberId)} />
                       ))}
                       <AuraChip label={t("groupTrip.joinAsNew")} icon="plus" selected={selected === NEW_MEMBER} onPress={() => setChoice(NEW_MEMBER)} />
-                    </View>
+                    </PrivateView>
                   </View>
                 ) : null}
                 {selected === NEW_MEMBER ? (

@@ -4,4 +4,4 @@ export { useSafetyNotificationRouting } from "./hooks/useSafetyNotificationRouti
 export { cancelCheckInNotifications } from "./services/checkInNotifications";
 export { useSafetyServerSync } from "./hooks/useSafetyServerSync";
 export { clearServerCheckIn } from "./services/safetyServerAlerts";
-export { isQuickSosLink, isSosRoute, QUICK_SOS_URL, useQuickSosStore } from "./store/quickSosStore";
+export { isQuickSosLink, isSosRoute, quickSosUrl, useQuickSosStore } from "./store/quickSosStore";

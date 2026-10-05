@@ -96,7 +96,7 @@ export const deleteAccount = mutation({
         .query("deletionRequests")
         .withIndex("by_email", (q) => q.eq("email", normalizeEmail(user.email!)))
         .collect();
-      for (const request of requests) await ctx.db.patch(request._id, { status: "completed" });
+      for (const request of requests) await ctx.db.delete(request._id);
     }
     return { ok: true };
   },
@@ -136,7 +136,8 @@ export const processDeletionRequest = internalMutation({
       .query("deletionRequests")
       .withIndex("by_email", (q) => q.eq("email", normalized))
       .collect();
-    for (const request of requests) await ctx.db.patch(request._id, { status: "completed" });
+    // The web page promises nothing is kept, so the request itself goes too.
+    for (const request of requests) await ctx.db.delete(request._id);
     return { deletedUser: !!user };
   },
 });

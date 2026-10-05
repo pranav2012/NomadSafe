@@ -272,7 +272,12 @@
     "createPinTitle": "创建 6 位 PIN 码",
     "confirmPinTitle": "确认你的 PIN 码",
     "attemptsRemaining_one": "PIN 错误。还剩 {{count}} 次尝试机会。",
-    "attemptsRemaining_other": "PIN 错误。还剩 {{count}} 次尝试机会。"
+    "attemptsRemaining_other": "PIN 错误。还剩 {{count}} 次尝试机会。",
+    "currentPinTitle": "输入当前 PIN",
+    "currentPinSub": "设置新 PIN 前，请先确认是你本人。",
+    "enterPinTitle": "输入 PIN",
+    "confirmOwnerSub": "更改 NomadSafe 的解锁方式前，请先确认是你本人。",
+    "pinUnavailable": "无法验证你的 PIN，请重试。"
   },
   "biometric": {
     "touchId": "Touch ID",

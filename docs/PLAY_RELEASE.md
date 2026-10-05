@@ -16,6 +16,8 @@ Status of each step for the first Android release. ✅ = done, 🧑 = you do it 
 | 10 | Gmail restricted-scope verification (CASA) | 🧑 (can run in parallel) |
 | 11 | PostHog error tracking and logs | 🧑 |
 | 12 | AdMob app, real app/ad unit IDs, app-ads.txt, consent message | 🧑 Before the production build (step 4) |
+| 13 | Firebase App Check (Play Integrity) for billed backend calls | 🧑 Before enforcing it on the server |
+| 14 | EAS Update code signing key backed up | 🧑 Before the first `eas update` |
 
 ## Reference values
 
@@ -200,13 +202,36 @@ Draft full description:
 5. **app-ads.txt**: AdMob → Apps → app-ads.txt gives a line like `google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0`. Host it at `https://<developer website>/app-ads.txt`, where the developer website is the one in the Play store listing (Play Console → Store settings → Website).
 6. Test on a real phone with the test ad unit (or a registered test device) only; clicking your own live ads can get the AdMob account suspended.
 
+## 13. Firebase App Check 🧑
+
+The app sends an App Check token with billed backend calls (Places, cloud AI, weather refresh, plan refresh) as the `appCheckToken` argument, and as the `X-Firebase-AppCheck` header on the streamed `/ai/chat` request. `@/modules/appCheck` uses Play Integrity on Android release builds and the debug provider in development builds. Without a token the request still goes out; the server decides whether to accept it.
+
+1. Firebase console → the project that owns `google-services.json` → **App Check** → Apps → the Android app → **Play Integrity**. Add the **app signing key** SHA-256 (Play Console → Test and release → App integrity → App signing) and, for internal builds installed outside Play, the EAS upload key SHA-256 (expo.dev → Credentials → Android).
+2. Play Console → App integrity → **Play Integrity API**: link the same Google Cloud project.
+3. Development builds: set `EXPO_PUBLIC_APP_CHECK_DEBUG_TOKEN` to a UUID in `.env.local` (and the EAS `development` environment), then add that token under App Check → Apps → ⋮ → **Manage debug tokens**. Without it, the native debug provider logs a generated token to logcat (`DebugAppCheckProvider`) that you can register instead. Never put debug tokens in preview or production environments.
+4. Watch App Check → **Metrics** for a few days of real traffic (verified vs. unverified requests) before the server starts rejecting requests without a valid token.
+
+**iOS (later):** App Check is skipped on iOS until Firebase is configured there. To turn it on: add `GoogleService-Info.plist` and set `ios.googleServicesFile` in `app.json` (`plugins/withFirebaseAppCheck.js` then applies the React Native Firebase plugins), remove the iOS exclusions from `react-native.config.js`, and make the Firebase pods build: either `expo-build-properties` → `ios.useFrameworks: "dynamic"` (needed for Firebase via Swift Package Manager, the default) or the RN Firebase `ios.disableSPM` option with `useFrameworks: "static"`. Check both against llama.rn, Skia and Nitro before shipping. Register the app for **App Attest** (DeviceCheck fallback) in App Check, and add the App Attest entitlement.
+
+## 14. EAS Update code signing 🧑
+
+Updates are signed, and builds reject unsigned or wrongly signed updates (`updates.codeSigningCertificate` in `app.json`). The certificate (`certs/certificate.pem`, valid 10 years) is public and committed; the private key (`keys/private-key.pem`) is gitignored.
+
+1. Back up `keys/private-key.pem` somewhere safe (a password manager or an encrypted vault), not in the repo. Without it, no update can reach builds that carry this certificate; a new key means a new store build.
+2. Publish with `pnpm update:<channel>`, which passes `--private-key-path keys/private-key.pem`. Calling `eas update` directly needs the same flag.
+3. A new machine needs the key copied into `keys/` before it can publish.
+
+The certificate changes the runtime fingerprint, so builds made before it can't take signed updates; ship a store build first.
+
 ---
 
 ## Device test checklist (internal-test build, real Android phone)
 
 - [ ] Fresh install → onboarding → Google sign-in → PIN → tabs.
 - [ ] Kill and reopen → lock screen. Back button and a deep link (`nomadsafe:///settings`) don't bypass it.
-- [ ] 5 wrong PINs → lockout survives an app restart.
+- [ ] 5 wrong PINs → lockout survives an app restart, and moving the phone's clock forward doesn't end it.
+- [ ] Settings → Change PIN asks for the current PIN first; turning biometric unlock on or off asks for the PIN.
+- [ ] The recents screen shows a blank card for NomadSafe (Android 13+); screenshots inside the app still work.
 - [ ] Live sharing: disclosure → "Allow all the time" → notification → a second account sees updates with the screen off.
 - [ ] Pause one contact → their updates stop. Stop sharing → both sides show "not sharing".
 - [ ] SOS: releasing early does nothing. The full hold → 5 s countdown → SMS composer with a map link. Cancel works.

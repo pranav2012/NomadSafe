@@ -11,15 +11,19 @@ function client(): PostHog | null {
   return (require("@/modules/analytics") as typeof import("@/modules/analytics")).posthog;
 }
 
-/** Error name plus a scrubbed message; URLs and quoted text can carry tokens or user content. */
+/** Drops URLs and quoted text from an error message, since they can carry tokens or user content. */
+export function scrubErrorMessage(message: string, maxLength = 200): string {
+  return message
+    .replace(/https?:\/\/\S+/g, "<url>")
+    .replace(/"[^"]*"|'[^']*'|`[^`]*`/g, "<redacted>")
+    .slice(0, maxLength);
+}
+
+/** Error name plus a scrubbed message. */
 function describeError(error: unknown): LogAttributes {
   if (error === undefined) return {};
   if (!(error instanceof Error)) return { error_name: typeof error };
-  const message = error.message
-    .replace(/https?:\/\/\S+/g, "<url>")
-    .replace(/"[^"]*"|'[^']*'|`[^`]*`/g, "<redacted>")
-    .slice(0, 200);
-  return { error_name: error.name, error_message: message };
+  return { error_name: error.name, error_message: scrubErrorMessage(error.message) };
 }
 
 function emit(level: Level, tag: string, message: string, error?: unknown, attributes?: LogAttributes) {

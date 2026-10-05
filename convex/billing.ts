@@ -1,5 +1,6 @@
 import { v } from "convex/values";
-import { internal } from "./_generated/api";
+import { HOUR, RateLimiter } from "@convex-dev/rate-limiter";
+import { components, internal } from "./_generated/api";
 import {
   action,
   httpAction,
@@ -10,10 +11,17 @@ import {
   type MutationCtx,
   type QueryCtx,
 } from "./_generated/server";
+import { requireAppCheck } from "./appCheck";
 import { hasActiveCloudAi, planFromSubscriber, type PlanSnapshot } from "./billingRules";
+import { constantTimeEqual } from "./securityRules";
 import { getAuthenticatedUser, requireUser } from "./users";
 
 const REVENUECAT_API = "https://api.revenuecat.com/v1";
+
+// Purchases and restores are rare; this keeps a leaked session from hammering RevenueCat's API through us.
+const rateLimiter = new RateLimiter(components.rateLimiter, {
+  planRefresh: { kind: "token bucket", rate: 20, period: HOUR, capacity: 5 },
+});
 
 export async function getEntitlement(ctx: QueryCtx | MutationCtx, userId: string) {
   return ctx.db
@@ -87,10 +95,13 @@ export const planForUser = internalQuery({
 
 /** Called by the app right after a purchase or restore, so the server doesn't wait for the webhook. */
 export const refreshMyPlan = action({
-  args: {},
-  handler: async (ctx): Promise<{ unlimitedTrips: boolean; cloudAi: boolean }> => {
+  args: { appCheckToken: v.optional(v.string()) },
+  handler: async (ctx, { appCheckToken }): Promise<{ unlimitedTrips: boolean; cloudAi: boolean }> => {
+    await requireAppCheck(appCheckToken);
     const user = await requireUser(ctx);
-    const plan = await fetchPlan(user.id);
+    // Over the limit it returns the stored plan; the webhook still keeps it current.
+    const { ok } = await rateLimiter.limit(ctx, "planRefresh", { key: user.id });
+    const plan = ok ? await fetchPlan(user.id) : null;
     if (plan) await ctx.runMutation(internal.billing.savePlan, { userId: user.id, ...plan });
     return await ctx.runQuery(internal.billing.planForUser, { userId: user.id });
   },
@@ -126,7 +137,7 @@ const isAnonymousId = (id: string) => id.startsWith("$RCAnonymousID");
  */
 export const revenueCatWebhook = httpAction(async (ctx, req) => {
   const expected = process.env.REVENUECAT_WEBHOOK_AUTH;
-  if (!expected || req.headers.get("authorization") !== expected) {
+  if (!expected || !constantTimeEqual(req.headers.get("authorization") ?? "", expected)) {
     return new Response("Unauthorized", { status: 401 });
   }
   const body = (await req.json().catch(() => null)) as { event?: RevenueCatEvent } | null;

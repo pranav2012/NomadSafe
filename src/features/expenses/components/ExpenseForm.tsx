@@ -23,7 +23,7 @@ import { categorizeHeuristic } from "@/features/expenses/services/categorizer";
 import { getCurrentExpenseLocation } from "@/features/expenses/services/locationTagging";
 import { useGmailStatus } from "@/features/expenses/hooks/useGmailStatus";
 import { localeDecimalSeparator, parseAmountInput } from "@/features/expenses/utils/amountInput";
-import { track } from "@/modules/analytics";
+import { track, PrivateView } from "@/modules/analytics";
 import { showInterstitial } from "@/modules/ads";
 
 export interface ExpenseDraftValues {
@@ -243,7 +243,7 @@ function ExpenseFormBody({
   const affixText = (text: string) => <Text style={[styles.affix, { color: c.textSoft, fontFamily: f.semibold }]}>{text}</Text>;
 
   return (
-    <View style={styles.flex}>
+    <PrivateView style={styles.flex}>
       <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
         {onImport && !editingExpense && !initialDraft ? <ImportShortcuts onImport={onImport} /> : null}
         <AuraField
@@ -346,7 +346,7 @@ function ExpenseFormBody({
           style={styles.flex}
         />
       </View>
-    </View>
+    </PrivateView>
   );
 }
 

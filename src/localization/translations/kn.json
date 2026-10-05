@@ -272,7 +272,12 @@
     "createPinTitle": "6-ಅಂಕಿಯ PIN ರಚಿಸಿ",
     "confirmPinTitle": "ನಿಮ್ಮ PIN ದೃಢೀಕರಿಸಿ",
     "attemptsRemaining_one": "ತಪ್ಪಾದ PIN. ಇನ್ನೂ {{count}} ಪ್ರಯತ್ನ ಉಳಿದಿದೆ.",
-    "attemptsRemaining_other": "ತಪ್ಪಾದ PIN. ಇನ್ನೂ {{count}} ಪ್ರಯತ್ನಗಳು ಉಳಿದಿವೆ."
+    "attemptsRemaining_other": "ತಪ್ಪಾದ PIN. ಇನ್ನೂ {{count}} ಪ್ರಯತ್ನಗಳು ಉಳಿದಿವೆ.",
+    "currentPinTitle": "ನಿಮ್ಮ ಈಗಿನ PIN ನಮೂದಿಸಿ",
+    "currentPinSub": "ಹೊಸ PIN ಆಯ್ಕೆ ಮಾಡುವ ಮೊದಲು ಇದು ನೀವೇ ಎಂದು ದೃಢೀಕರಿಸಿ.",
+    "enterPinTitle": "ನಿಮ್ಮ PIN ನಮೂದಿಸಿ",
+    "confirmOwnerSub": "NomadSafe ಅನ್‌ಲಾಕ್ ಆಗುವ ವಿಧಾನ ಬದಲಿಸಲು ಇದು ನೀವೇ ಎಂದು ದೃಢೀಕರಿಸಿ.",
+    "pinUnavailable": "ನಿಮ್ಮ PIN ಪರಿಶೀಲಿಸಲು ಆಗಲಿಲ್ಲ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ."
   },
   "biometric": {
     "touchId": "Touch ID",

@@ -510,7 +510,12 @@
     "createPinTitle": "Create a 6-digit PIN",
     "confirmPinTitle": "Confirm your PIN",
     "attemptsRemaining_one": "Incorrect PIN. {{count}} attempt remaining.",
-    "attemptsRemaining_other": "Incorrect PIN. {{count}} attempts remaining."
+    "attemptsRemaining_other": "Incorrect PIN. {{count}} attempts remaining.",
+    "currentPinTitle": "Enter your current PIN",
+    "currentPinSub": "Confirm it's you before choosing a new PIN.",
+    "enterPinTitle": "Enter your PIN",
+    "confirmOwnerSub": "Confirm it's you to change how NomadSafe unlocks.",
+    "pinUnavailable": "Couldn't check your PIN. Try again."
   },
   "biometric": {
     "touchId": "Touch ID",

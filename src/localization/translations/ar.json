@@ -272,7 +272,12 @@
     "createPinTitle": "أنشئ رمز PIN من 6 أرقام",
     "confirmPinTitle": "أكّد رمز PIN",
     "attemptsRemaining_one": "رمز PIN غير صحيح. المحاولات المتبقية: {{count}}.",
-    "attemptsRemaining_other": "رمز PIN غير صحيح. المحاولات المتبقية: {{count}}."
+    "attemptsRemaining_other": "رمز PIN غير صحيح. المحاولات المتبقية: {{count}}.",
+    "currentPinTitle": "أدخل رمز PIN الحالي",
+    "currentPinSub": "أكّد هويتك قبل اختيار رمز PIN جديد.",
+    "enterPinTitle": "أدخل رمز PIN",
+    "confirmOwnerSub": "أكّد هويتك لتغيير طريقة فتح NomadSafe.",
+    "pinUnavailable": "تعذّر التحقق من رمز PIN. حاول مرة أخرى."
   },
   "biometric": {
     "touchId": "Touch ID",

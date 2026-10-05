@@ -13,7 +13,12 @@
     "updates": {
       "url": "https://u.expo.dev/10d0b7a8-3f54-4ae4-9991-cfe3f5d1ef41",
       "checkAutomatically": "ON_LOAD",
-      "fallbackToCacheTimeout": 0
+      "fallbackToCacheTimeout": 0,
+      "codeSigningCertificate": "./certs/certificate.pem",
+      "codeSigningMetadata": {
+        "keyid": "main",
+        "alg": "rsa-v1_5-sha256"
+      }
     },
     "ios": {
       "supportsTablet": true,
@@ -132,6 +137,8 @@
       "./plugins/withGradleHeap",
       "./plugins/withLlamaMemoryEntitlements",
       "./plugins/withGoogleMobileAdsBackend",
+      "./plugins/withRecentsPrivacy",
+      "./plugins/withFirebaseAppCheck",
       [
         "expo-build-properties",
         {

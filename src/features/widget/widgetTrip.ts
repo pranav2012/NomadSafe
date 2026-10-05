@@ -1,4 +1,5 @@
 import { storage } from "@/modules/storage";
+import { WIDGET_TOKEN_PARAM } from "@/features/widget/widgetToken";
 import {
   pickDefaultActiveTripId,
   useTripsStore,
@@ -20,8 +21,9 @@ export function resolveWidgetTrip(): Trip | null {
   return byId(pickedId) ?? byId(activeTripId) ?? byId(pickDefaultActiveTripId(trips)) ?? trips[0] ?? null;
 }
 
-export function voiceCaptureUrl(options: { tripId?: string | null; autostart?: boolean; pickTrip?: boolean }) {
-  const params = new URLSearchParams({ source: "widget" });
+/** A voice widget link; without this install's token the app drops `autostart` and the widget source. */
+export function voiceCaptureUrl(options: { tripId?: string | null; autostart?: boolean; pickTrip?: boolean; token: string }) {
+  const params = new URLSearchParams({ source: "widget", [WIDGET_TOKEN_PARAM]: options.token });
   if (options.tripId) params.set("tripId", options.tripId);
   if (options.autostart) params.set("autostart", "1");
   if (options.pickTrip) params.set("pickTrip", "1");

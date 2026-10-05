@@ -8,7 +8,6 @@ import { PrivateView } from "@/modules/analytics";
 import { Icon, PressableScale, showAlert, useAura } from "@/atoms";
 import {
   localAuth,
-  secureStorage,
   useAuthStore,
   useBiometricPresentation,
 } from "@/features/auth";
@@ -16,8 +15,8 @@ import { BiometricGlyph } from "@/features/auth/components/BiometricGlyph";
 import { PinDots } from "@/features/auth/components/PinDots";
 import { PinPad } from "@/features/auth/components/PinPad";
 import { SecurityRing } from "@/features/auth/components/SecurityRing";
-import { hashPin, isLegacyPinHash, verifyPin } from "@/features/auth/utils/crypto";
 import { pinAttempts } from "@/features/auth/services/pinAttempts";
+import { checkPin } from "@/features/auth/services/pinVerifier";
 import { flushBeforeSignOut } from "@/features/auth/services/session";
 import { wipeAllDeviceData } from "@/features/settings/services/wipeService";
 import { errorNotification, successNotification } from "@/utils/haptics";
@@ -34,7 +33,7 @@ export default function LockScreen() {
   const { c, f, isDark } = useAura();
   const { t, formatDuration } = useLocalization();
   const { width, height } = useWindowDimensions();
-  const { user, biometricEnabled, setUnlocked, setPinSet } = useAuthStore();
+  const { user, biometricEnabled, setUnlocked } = useAuthStore();
   const biometric = useBiometricPresentation();
 
   const [mode, setMode] = useState<"biometric" | "passcode">(
@@ -117,6 +116,24 @@ export default function LockScreen() {
     }
   }, [phase, handleUnlock, t]);
 
+  // Biometric unlock turned on before strong biometrics were required (or since removed): switch it
+  // off, since the scan can never succeed. It can be turned back on in Settings.
+  useEffect(() => {
+    if (!biometricEnabled) return;
+    let cancelled = false;
+    localAuth
+      .checkBiometricAvailability()
+      .then(({ available }) => {
+        if (cancelled || available) return;
+        useAuthStore.getState().setBiometricEnabled(false);
+        setMode("passcode");
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [biometricEnabled]);
+
   useEffect(() => {
     if (mode !== "biometric" || !biometricEnabled) return;
     const timer = setTimeout(runScan, 650);
@@ -140,31 +157,26 @@ export default function LockScreen() {
     if (next.length === PIN_LENGTH) {
       setVerifying(true);
       try {
-        const lock = await pinAttempts.status();
-        if (lock.remainingMs > 0) {
-          applyLockout(lock.remainingMs);
+        const result = await checkPin(next);
+        if (result.status === "locked") {
+          applyLockout(result.remainingMs);
           setPin("");
           return;
         }
-        const storedHash = await secureStorage.getPin();
-        if (!storedHash) {
-          // PIN missing from the keystore (e.g. restored device): force re-auth.
-          setPinSet(false);
+        if (result.status === "missing") {
+          // PIN missing from the keystore (e.g. restored device): erase; the lock stays up meanwhile.
+          setPin("");
           showAlert(t("auth.pinMissingTitle"), t("auth.pinMissingBody"), [
             { text: t("common.ok"), onPress: () => void eraseAfterSync() },
           ]);
           return;
         }
-        if (await verifyPin(next, storedHash)) {
-          if (isLegacyPinHash(storedHash)) {
-            secureStorage.setPin(await hashPin(next)).catch(() => {});
-          }
+        if (result.status === "ok") {
           handleUnlock();
           return;
         }
         errorNotification();
         setShakeKey((k) => k + 1);
-        const result = await pinAttempts.recordFailure();
         if (result.lockMs > 0) {
           applyLockout(result.lockMs);
         } else {

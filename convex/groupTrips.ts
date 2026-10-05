@@ -1,22 +1,40 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
-import { internal } from "./_generated/api";
+import { HOUR, RateLimiter } from "@convex-dev/rate-limiter";
+import { components, internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { tripRecordKindValidator } from "./schema";
+import { MAX_CLIENT_ID } from "./sync";
+import { assertMaxLength, clampClientTime, newInviteCode, normalizeInviteCode, stripEmailNote } from "./securityRules";
+import { NOTIFY_TITLE_CHARS, queueTripNotification } from "./tripNotifications";
 import { requireUser } from "./users";
 
-const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-const CODE_LENGTH = 8;
 const MAX_BATCH = 100;
 const MAX_RECORD_BYTES = 64 * 1024;
+const MAX_TRIP_DATA_BYTES = 64 * 1024;
 const MAX_MEMBERS = 50;
+const MAX_NAME = 80;
+const MAX_RECORDS_PER_TRIP = 10_000;
+const MAX_OWNED_TRIPS = 50;
+const MAX_JOINED_TRIPS = 200;
 const PURGE_BATCH = 500;
 
-function newInviteCode() {
-  let code = "";
-  for (let i = 0; i < CODE_LENGTH; i += 1) code += CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)];
-  return code;
+const rateLimiter = new RateLimiter(components.rateLimiter, {
+  tripShare: { kind: "token bucket", rate: 20, period: HOUR, capacity: 10 },
+  tripDetails: { kind: "token bucket", rate: 300, period: HOUR, capacity: 60 },
+  tripRecordsPush: { kind: "token bucket", rate: 600, period: HOUR, capacity: 200 },
+  // Joining is a handful of taps; this stops scripted guessing of invite codes.
+  tripJoin: { kind: "token bucket", rate: 20, period: HOUR, capacity: 10 },
+});
+
+function assertTripData(data: unknown) {
+  if (JSON.stringify(data ?? null).length > MAX_TRIP_DATA_BYTES) throw new Error("Trip details too large");
+}
+
+function assertNames(names: string[]) {
+  if (names.length > MAX_MEMBERS) throw new Error("Too many members");
+  for (const name of names) assertMaxLength(name, MAX_NAME, "Name");
 }
 
 async function uniqueInviteCode(ctx: MutationCtx) {
@@ -80,14 +98,26 @@ export const shareTrip = mutation({
   handler: async (ctx, { data, dataUpdatedAt, ownerName, companions }) => {
     const user = await requireUser(ctx);
     if (companions.length >= MAX_MEMBERS) throw new Error("Too many members");
+    assertNames(companions);
+    assertMaxLength(ownerName, MAX_NAME, "Name");
+    assertTripData(data);
+    await rateLimiter.limit(ctx, "tripShare", { key: user.id, throws: true });
+    const memberships = await ctx.db
+      .query("tripMembers")
+      .withIndex("by_user", (q) => q.eq("userId", user.id))
+      .collect();
+    if (memberships.filter((member) => member.role === "owner").length >= MAX_OWNED_TRIPS) {
+      throw new Error("Too many shared trips");
+    }
     const now = Date.now();
     const tripId = await ctx.db.insert("sharedTrips", {
       ownerUserId: user.id,
       inviteCode: await uniqueInviteCode(ctx),
       data,
-      dataUpdatedAt,
+      dataUpdatedAt: clampClientTime(dataUpdatedAt, now),
       seq: 1,
       createdAt: now,
+      recordCount: 0,
     });
     // Companion names are kept exactly as typed, since the owner's expenses already refer to them;
     // on a clash it's the owner who gets a suffix (on their own phone they're always "You").
@@ -159,9 +189,11 @@ export const previewInvite = query({
   args: { code: v.string() },
   handler: async (ctx, { code }) => {
     const user = await requireUser(ctx);
+    const inviteCode = normalizeInviteCode(code);
+    if (!inviteCode) return null;
     const trip = await ctx.db
       .query("sharedTrips")
-      .withIndex("by_code", (q) => q.eq("inviteCode", code.trim().toUpperCase()))
+      .withIndex("by_code", (q) => q.eq("inviteCode", inviteCode))
       .unique();
     if (!trip) return null;
     const members = await membersOf(ctx, trip._id);
@@ -188,18 +220,31 @@ export const joinTrip = mutation({
   args: { code: v.string(), claimMemberId: v.optional(v.string()), name: v.string() },
   handler: async (ctx, { code, claimMemberId, name }) => {
     const user = await requireUser(ctx);
-    const trip = await ctx.db
-      .query("sharedTrips")
-      .withIndex("by_code", (q) => q.eq("inviteCode", code.trim().toUpperCase()))
-      .unique();
+    assertMaxLength(name, MAX_NAME, "Name");
+    await rateLimiter.limit(ctx, "tripJoin", { key: user.id, throws: true });
+    const inviteCode = normalizeInviteCode(code);
+    const trip = inviteCode
+      ? await ctx.db
+          .query("sharedTrips")
+          .withIndex("by_code", (q) => q.eq("inviteCode", inviteCode))
+          .unique()
+      : null;
     if (!trip) throw new Error("Invite not found");
     const members = await membersOf(ctx, trip._id);
     const existing = members.find((member) => member.userId === user.id);
     if (existing?.status === "active") return { tripId: trip._id };
     if (existing?.status === "removed") throw new Error("Removed from this trip");
     if (members.filter((member) => member.status === "active").length >= MAX_MEMBERS) throw new Error("Trip is full");
+    if (!existing) {
+      const joined = await ctx.db
+        .query("tripMembers")
+        .withIndex("by_user", (q) => q.eq("userId", user.id))
+        .collect();
+      if (joined.filter((member) => member.status === "active").length >= MAX_JOINED_TRIPS) throw new Error("Too many shared trips");
+    }
 
-    const claim = claimMemberId
+    // Someone who left and rejoins always gets their old row back, so they never hold two memberships.
+    const claim = claimMemberId && !existing
       ? members.find((member) => member.memberId === claimMemberId && member.userId === undefined && member.status === "active")
       : undefined;
     if (claim) {
@@ -230,10 +275,13 @@ export const updateTripDetails = mutation({
   args: { tripId: v.id("sharedTrips"), data: v.any(), dataUpdatedAt: v.number() },
   handler: async (ctx, { tripId, data, dataUpdatedAt }) => {
     const user = await requireUser(ctx);
+    assertTripData(data);
     await requireMember(ctx, tripId, user.id);
+    await rateLimiter.limit(ctx, "tripDetails", { key: user.id, throws: true });
     const trip = await ctx.db.get(tripId);
-    if (!trip || trip.dataUpdatedAt > dataUpdatedAt) return;
-    await ctx.db.patch(tripId, { data, dataUpdatedAt, seq: trip.seq + 1 });
+    const updatedAt = clampClientTime(dataUpdatedAt, Date.now());
+    if (!trip || trip.dataUpdatedAt > updatedAt) return;
+    await ctx.db.patch(tripId, { data, dataUpdatedAt: updatedAt, seq: trip.seq + 1 });
   },
 });
 
@@ -242,6 +290,7 @@ export const addCompanions = mutation({
   args: { tripId: v.id("sharedTrips"), names: v.array(v.string()) },
   handler: async (ctx, { tripId, names }) => {
     const user = await requireUser(ctx);
+    assertNames(names);
     await requireMember(ctx, tripId, user.id);
     const trip = await ctx.db.get(tripId);
     if (!trip) return;
@@ -296,8 +345,12 @@ export const pushRecords = mutation({
     const trip = await ctx.db.get(tripId);
     if (!trip) throw new Error("Trip not found");
     if (records.length > MAX_BATCH) throw new Error("Too many records");
+    for (const record of records) assertMaxLength(record.clientId, MAX_CLIENT_ID, "clientId");
+    await rateLimiter.limit(ctx, "tripRecordsPush", { key: user.id, throws: true });
 
+    const now = Date.now();
     let seq = trip.seq;
+    let recordCount = trip.recordCount ?? 0;
     let rejectedSeq: number | null = null;
     const changes: { kind: "expense" | "settlement"; action: "added" | "updated" | "deleted"; title: string; amount: number; currency: string }[] = [];
     for (const record of records) {
@@ -306,20 +359,25 @@ export const pushRecords = mutation({
         .query("tripRecords")
         .withIndex("by_trip_record", (q) => q.eq("tripId", tripId).eq("kind", record.kind).eq("clientId", record.clientId))
         .unique();
-      if (existing && existing.updatedAt > record.updatedAt) {
+      const updatedAt = clampClientTime(record.updatedAt, now);
+      if (existing && existing.updatedAt > updatedAt) {
         rejectedSeq = Math.min(rejectedSeq ?? existing.seq, existing.seq);
         continue;
       }
       if (existing?.deleted && record.deleted) continue;
+      if (!existing) {
+        if (recordCount >= MAX_RECORDS_PER_TRIP) throw new Error("Trip is full");
+        recordCount += 1;
+      }
 
       seq += 1;
       const doc = {
         tripId,
         kind: record.kind,
         clientId: record.clientId,
-        data: record.deleted ? undefined : record.data,
+        data: record.deleted ? undefined : stripEmailNote(record.data),
         deleted: record.deleted,
-        updatedAt: record.updatedAt,
+        updatedAt,
         updatedBy: user.id,
         seq,
       };
@@ -327,20 +385,18 @@ export const pushRecords = mutation({
       else await ctx.db.insert("tripRecords", doc);
 
       if (record.kind !== "event") {
-        const source = (record.deleted ? existing?.data : record.data) as { merchant?: string; amount?: number; currency?: string } | undefined;
+        const source = (record.deleted ? existing?.data : record.data) as { merchant?: unknown; amount?: unknown; currency?: unknown } | undefined;
         changes.push({
           kind: record.kind,
           action: record.deleted ? "deleted" : existing && !existing.deleted ? "updated" : "added",
-          title: source?.merchant ?? "",
-          amount: source?.amount ?? 0,
-          currency: source?.currency ?? "",
+          title: typeof source?.merchant === "string" ? source.merchant.slice(0, NOTIFY_TITLE_CHARS) : "",
+          amount: typeof source?.amount === "number" && Number.isFinite(source.amount) ? source.amount : 0,
+          currency: typeof source?.currency === "string" ? source.currency.slice(0, 8) : "",
         });
       }
     }
-    if (seq !== trip.seq) await ctx.db.patch(tripId, { seq });
-    if (changes.length > 0) {
-      await ctx.scheduler.runAfter(0, internal.tripNotifications.notifyTrip, { tripId, actorMemberId: me.memberId, changes });
-    }
+    if (seq !== trip.seq) await ctx.db.patch(tripId, { seq, recordCount });
+    if (changes.length > 0) await queueTripNotification(ctx, tripId, me.memberId, changes);
     // The client re-pulls from just before the oldest rejected record to adopt the newer version.
     return { seq, rejectedSeq };
   },
@@ -441,6 +497,11 @@ export const deleteSharedTrip = mutation({
 
 async function purgeTrip(ctx: MutationCtx, tripId: Id<"sharedTrips">) {
   for (const member of await membersOf(ctx, tripId)) await ctx.db.delete(member._id);
+  const notifyRows = await ctx.db
+    .query("tripNotifyState")
+    .withIndex("by_trip_actor", (q) => q.eq("tripId", tripId))
+    .collect();
+  for (const row of notifyRows) await ctx.db.delete(row._id);
   await ctx.db.delete(tripId);
   await ctx.scheduler.runAfter(0, internal.groupTrips.purgeTripRecords, { tripId });
 }
@@ -482,8 +543,26 @@ export async function removeUserFromTrips(ctx: MutationCtx, userId: string) {
     }
     await ctx.db.patch(me._id, { userId: undefined, role: "member", status: "left" });
     await bumpSeq(ctx, trip);
+    await ctx.scheduler.runAfter(0, internal.groupTrips.clearRecordAuthor, { tripId: me.tripId, userId, cursor: null });
   }
 }
+
+/** Account deletion: drops the deleted user's id from the records they last edited on a trip that lives on. */
+export const clearRecordAuthor = internalMutation({
+  args: { tripId: v.id("sharedTrips"), userId: v.string(), cursor: v.union(v.string(), v.null()) },
+  handler: async (ctx, { tripId, userId, cursor }) => {
+    const page = await ctx.db
+      .query("tripRecords")
+      .withIndex("by_trip_seq", (q) => q.eq("tripId", tripId))
+      .paginate({ cursor, numItems: PURGE_BATCH });
+    for (const doc of page.page) {
+      if (doc.updatedBy === userId) await ctx.db.patch(doc._id, { updatedBy: undefined });
+    }
+    if (!page.isDone) {
+      await ctx.scheduler.runAfter(0, internal.groupTrips.clearRecordAuthor, { tripId, userId, cursor: page.continueCursor });
+    }
+  },
+});
 
 /** Who to notify about a change, with their tokens; used by the push action. */
 export const notificationTargets = internalQuery({
@@ -502,6 +581,7 @@ export const notificationTargets = internalQuery({
         .collect();
       targets.push(...tokens.map((token) => ({ token: token.token, locale: token.locale })));
     }
-    return { tripName: (trip.data as { name?: string }).name ?? "", actorName: actor?.name ?? "", targets };
+    const tripName = (trip.data as { name?: unknown } | null)?.name;
+    return { tripName: typeof tripName === "string" ? tripName : "", actorName: actor?.name ?? "", targets };
   },
 });

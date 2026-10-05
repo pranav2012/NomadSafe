@@ -2,6 +2,7 @@ import { ConvexError, v } from "convex/values";
 import { HOUR, RateLimiter } from "@convex-dev/rate-limiter";
 import { components, internal } from "./_generated/api";
 import { action, httpAction, internalMutation, query, type ActionCtx } from "./_generated/server";
+import { requireAppCheck } from "./appCheck";
 import { userHasCloudAi } from "./billing";
 import {
   CLOUD_AI_LIMITS,
@@ -22,6 +23,9 @@ const CHAT_MAX_TOKENS = 2048;
 const TASK_MAX_TOKENS = 1024;
 const MAX_MESSAGES = 60;
 const MAX_INPUT_CHARS = 60_000;
+const MAX_SCHEMA_CHARS = 8 * 1024;
+// OpenAI's json_schema name rule.
+const SCHEMA_NAME = /^[A-Za-z0-9_-]{1,64}$/;
 
 // The monthly quota caps cost; this only stops bursts from a leaked session.
 const rateLimiter = new RateLimiter(components.rateLimiter, {
@@ -173,9 +177,15 @@ export const complete = action({
     schemaName: v.string(),
     schema: v.any(),
     task: completeTaskValidator,
+    appCheckToken: v.optional(v.string()),
   },
-  handler: async (ctx, { system, prompt, schemaName, schema, task }): Promise<string> => {
-    if (system.length + prompt.length > MAX_INPUT_CHARS) throw new ConvexError({ code: "too_large" });
+  handler: async (ctx, { system, prompt, schemaName, schema, task, appCheckToken }): Promise<string> => {
+    const schemaJson = JSON.stringify(schema ?? null);
+    if (!SCHEMA_NAME.test(schemaName) || schemaJson.length > MAX_SCHEMA_CHARS) throw new ConvexError({ code: "too_large" });
+    if (system.length + prompt.length + schemaName.length + schemaJson.length > MAX_INPUT_CHARS) {
+      throw new ConvexError({ code: "too_large" });
+    }
+    await requireAppCheck(appCheckToken);
     const auth = await authorize(ctx, task);
     if ("error" in auth) throw new ConvexError({ code: auth.error });
 
@@ -215,6 +225,11 @@ const ERROR_STATUS = { no_plan: 402, quota: 429, rate_limited: 429 } as const;
 export const chatStream = httpAction(async (ctx, req) => {
   const user = await getAuthenticatedUser(ctx);
   if (!user) return errorResponse("unauthenticated", 401);
+  try {
+    await requireAppCheck(req.headers.get("X-Firebase-AppCheck"));
+  } catch {
+    return errorResponse("app_check", 401);
+  }
 
   const body = (await req.json().catch(() => null)) as { messages?: unknown; task?: unknown } | null;
   const messages = validMessages(body?.messages);
@@ -245,7 +260,6 @@ export const chatStream = httpAction(async (ctx, req) => {
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
   let buffer = "";
-  let sentText = false;
 
   const stream = new ReadableStream<Uint8Array>({
     // Keeps reading until there's text: a pull that enqueues nothing isn't called again, and the
@@ -270,16 +284,15 @@ export const chatStream = httpAction(async (ctx, req) => {
           } catch {}
         }
         if (text) {
-          sentText = true;
           controller.enqueue(encoder.encode(text));
           return;
         }
       }
     },
-    // The app gave up (timeout or Stop) before any text arrived, so the reply doesn't count.
-    async cancel() {
+    // The app gave up (timeout or Stop). The model call is already paid for, so the request still
+    // counts; refunding here would make cancel-before-first-token a free way around the quota.
+    cancel() {
       void reader.cancel();
-      if (!sentText) await ctx.runMutation(internal.ai.refund, { userId: auth.userId, task });
     },
   });
 

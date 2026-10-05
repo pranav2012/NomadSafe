@@ -6,6 +6,7 @@ import {
   useSpeechRecognitionEvent,
 } from "expo-speech-recognition";
 import { logger } from "@/modules/logger";
+import { withSystemPrompt } from "@/utils/systemPrompt";
 
 export type SpeechUnavailableReason =
   | "unsupported"
@@ -117,7 +118,7 @@ export function useSpeechCapture({
   const start = useCallback(async () => {
     transcriptRef.current = "";
     deliveredRef.current = false;
-    const permission = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+    const permission = await withSystemPrompt(() => ExpoSpeechRecognitionModule.requestPermissionsAsync());
     if (!permission.granted) {
       setState({ status: "unavailable", reason: "permission" });
       return;
