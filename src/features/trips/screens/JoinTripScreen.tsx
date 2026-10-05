@@ -7,6 +7,7 @@ import { AuraButton, AuraCard, AuraChip, AuraField, Icon, PressableScale, useAur
 import { useAuthStore } from "@/features/auth/store/authStore";
 import { registerTripPush } from "@/features/sync";
 import { useTripsStore } from "@/features/trips/store/tripsStore";
+import { track } from "@/modules/analytics";
 import { fromDateKey } from "@/features/trips/utils/dates";
 import { useLocalization } from "@/localization";
 
@@ -43,7 +44,7 @@ export default function JoinTripScreen() {
   const { t, formatDate } = useLocalization();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { code } = useLocalSearchParams<{ code: string }>();
+  const { code, deferred } = useLocalSearchParams<{ code: string; deferred?: string }>();
   const preview = useQuery(api.groupTrips.previewInvite, code ? { code } : "skip");
   const join = useMutation(api.groupTrips.joinTrip);
   const userName = useAuthStore((s) => s.user?.name?.split(" ")[0] ?? "");
@@ -74,6 +75,7 @@ export default function JoinTripScreen() {
         claimMemberId: selected === NEW_MEMBER ? undefined : selected,
         name: name.trim(),
       });
+      track("trip_joined", { deferred: deferred === "1", claimed_member: selected !== NEW_MEMBER });
       void registerTripPush(true);
       await finish(tripId);
     } catch {

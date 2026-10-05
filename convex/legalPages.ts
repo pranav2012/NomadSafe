@@ -188,10 +188,36 @@ export const submitDeletionRequest = httpAction(async (ctx, req) => {
 
 const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.pranav.nomadsafe";
 
+const IOS_UA = /iPhone|iPad|iPod/i;
+
+/**
+ * Store link that carries the invite through the install: Play's install referrer on Android; on
+ * iOS a tap copies the invite URL, which the app reads from the clipboard on first launch.
+ */
+function joinStoreLink(url: URL, code: string, ios: boolean) {
+  if (!ios) {
+    const playUrl = `${PLAY_STORE_URL}&referrer=${encodeURIComponent(`join=${code}`)}`;
+    return `<p>Don't have the app yet? <a href="${escapeHtml(playUrl)}">Get NomadSafe on Google Play</a>. Your invite opens once you've signed in.</p>`;
+  }
+  const appStoreUrl = process.env.IOS_APP_STORE_URL;
+  if (!appStoreUrl) {
+    return `<p>NomadSafe for iPhone is coming soon. Keep your invite code to join the trip once it's out.</p>`;
+  }
+  const inviteUrl = `${url.origin}/join/${code}`;
+  // text/uri-list makes the copy a URL on iOS, so the app can check for it without a paste prompt.
+  const copyAndGo = `async function getApp(){var u=${JSON.stringify(inviteUrl)};try{await navigator.clipboard.write([new ClipboardItem({"text/plain":new Blob([u],{type:"text/plain"}),"text/uri-list":new Blob([u],{type:"text/uri-list"})})]);}catch(e){try{await navigator.clipboard.writeText(u);}catch(e2){}}location.href=${JSON.stringify(appStoreUrl)};}`;
+  return `<p>Don't have the app yet?</p>
+<p><button type="button" onclick="getApp()">Get NomadSafe on the App Store</button></p>
+<p class="muted">This copies your invite so NomadSafe can open it after you install. Allow the paste prompt when the app asks.</p>
+<script>${copyAndGo}</script>`;
+}
+
 /** Invite link landing page: opens the app on the join screen, or points to the store. */
 export const joinTripPage = httpAction(async (_ctx, req) => {
-  const code = new URL(req.url).pathname.split("/").pop()?.replace(/[^A-Za-z0-9]/g, "").toUpperCase() ?? "";
+  const url = new URL(req.url);
+  const code = url.pathname.split("/").pop()?.replace(/[^A-Za-z0-9]/g, "").toUpperCase() ?? "";
   const appLink = `nomadsafe://join/${code}`;
+  const ios = IOS_UA.test(req.headers.get("user-agent") ?? "");
   return page(
     "Join a trip",
     `<h1>You're invited to a trip</h1>
@@ -200,7 +226,7 @@ export const joinTripPage = httpAction(async (_ctx, req) => {
 <p><a href="${escapeHtml(appLink)}"><button type="button">Open in NomadSafe</button></a></p>
 <p class="muted">Invite code: <strong>${escapeHtml(code)}</strong>. In the app, go to <em>Trips → Join with code</em> if the button doesn't open it.</p>
 </div>
-<p>Don't have the app yet? <a href="${PLAY_STORE_URL}">Get NomadSafe on Google Play</a>, sign in, then open this link again.</p>
+${joinStoreLink(url, code, ios)}
 <script>location.href=${JSON.stringify(appLink)};</script>`,
   );
 });

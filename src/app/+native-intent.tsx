@@ -1,6 +1,7 @@
 import { noteIncomingLink } from "@/features/expenses/services/voiceCaptureSession";
 import { isQuickSosLink, useQuickSosStore } from "@/features/safety/store/quickSosStore";
-import { inviteCodeFromPath, usePendingJoinStore } from "@/features/trips/store/pendingJoinStore";
+import { usePendingJoinStore } from "@/features/trips/store/pendingJoinStore";
+import { inviteCodeFromPath } from "@/features/trips/utils/inviteLinks";
 
 // Google OAuth callback (`com.pranav.nomadsafe:/oauthredirect?...`), consumed by expo-auth-session.
 const OAUTH_REDIRECT = /^(?:[\w.+-]+:\/{1,2}|\/)oauthredirect(?:[/?#]|$)/;

@@ -17,6 +17,7 @@ import {
   isCaptureLinkRecent,
   isVoiceCaptureRoute,
 } from "@/features/expenses/services/voiceCaptureSession";
+import { checkDeferredInvite } from "@/features/trips/services/deferredInvite";
 import { WidgetSync } from "@/features/widget/WidgetSync";
 import { BillingEffects } from "@/modules/billing";
 import { AdsEffects } from "@/modules/ads";
@@ -201,6 +202,10 @@ function SessionEffects() {
   useSafetyNotificationRouting();
   useSafetyServerSync();
   useTripNotificationRouting();
+
+  useEffect(() => {
+    void checkDeferredInvite();
+  }, []);
 
   useEffect(() => {
     if (!isAuthenticated || !userId) return;

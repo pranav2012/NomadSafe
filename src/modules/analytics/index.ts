@@ -18,6 +18,8 @@ export interface AnalyticsEvents {
   sign_in_started: undefined;
   sign_in_failed: undefined;
   trip_created: { mode: "solo" | "group"; destinations: number; has_budget: boolean };
+  trip_joined: { deferred: boolean; claimed_member: boolean };
+  invite_deferred_found: { source: "install_referrer" | "clipboard" };
   expense_added: { source: ExpenseSourceKind; count: number };
   live_share_started: { mode: string; recipients: number };
   live_share_stopped: undefined;

@@ -32,8 +32,9 @@ function usePendingInvite() {
   const code = usePendingJoinStore((s) => s.code);
   useEffect(() => {
     if (!code) return;
+    const { deferred } = usePendingJoinStore.getState();
     usePendingJoinStore.getState().setCode(null);
-    router.push({ pathname: "/join/[code]", params: { code } });
+    router.push({ pathname: "/join/[code]", params: deferred ? { code, deferred: "1" } : { code } });
   }, [code, router]);
 }
 
