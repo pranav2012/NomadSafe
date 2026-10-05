@@ -1,10 +1,11 @@
 import React, { useState } from "react";
-import { ActivityIndicator, ScrollView, Share, StyleSheet, Text, View } from "react-native";
+import { ScrollView, Share, StyleSheet, Text, View } from "react-native";
 import { api, type Id, useMutation } from "@/modules/backend";
 import {
   AuraButton,
   AuraListGroup,
   AuraListRow,
+  AuraLoader,
   AuraSheet,
   AuraSwitch,
   Icon,
@@ -130,7 +131,7 @@ export function TripPeopleSheet({ tripId, onClose }: { tripId: string | null; on
           <Text style={[styles.intro, { color: c.textSoft, fontFamily: f.regular }]}>{t("groupTrip.shareIntro")}</Text>
         ) : !shared.myMemberId || !shared.inviteCode ? (
           <View style={styles.pending}>
-            <ActivityIndicator color={c.textMuted} />
+            <AuraLoader size={56} />
             <Text style={[styles.intro, { color: c.textSoft, fontFamily: f.regular }]}>{t("groupTrip.settingUp")}</Text>
           </View>
         ) : (

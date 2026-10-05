@@ -1,9 +1,10 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { AppState, Modal, Pressable, StyleSheet, Text, View, type AppStateStatus } from "react-native";
 import { Stack, usePathname, useRouter, useSegments, type ErrorBoundaryProps } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { api, BackendProvider, useConvexAuth, useMutation } from "@/modules/backend";
 import { useFonts } from "expo-font";
+import * as SplashScreen from "expo-splash-screen";
 import { registerTripPush, startGroupSync, startSync, stopGroupSync, stopSync, useTripNotificationRouting } from "@/features/sync";
 import { AURA_FONT_FILES } from "@/constants/aura";
 import { useAuthStore, useSyncAuthSession } from "@/features/auth";
@@ -32,11 +33,15 @@ import {
   trackScreen,
 } from "@/modules/analytics";
 import { logger } from "@/modules/logger";
-import { AuraAlertHost } from "@/atoms";
+import { AuraAlertHost, AuraSplash } from "@/atoms";
+
+// Hidden once AuraSplash has drawn the same logo on top (see RootLayout).
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
   useEffect(() => {
     logger.error("error-boundary", "render crashed", error);
+    SplashScreen.hide();
   }, [error]);
 
   return (
@@ -121,11 +126,11 @@ function AppStateLock() {
 }
 
 /**
- * Renders the lock screen above every route (including native modals). Two exceptions work
- * locked: voice capture (it only adds expenses) and the Safety tab while an SOS is counting
- * down or active (it shows only the SOS takeover, never trip data).
+ * Whether the lock screen should cover the app. Two exceptions work locked: voice capture
+ * (it only adds expenses) and the Safety tab while an SOS is counting down or active
+ * (it shows only the SOS takeover, never trip data).
  */
-function LockGate() {
+function useLockRequired() {
   const pathname = usePathname();
   const sosStatus = useSafetyStore((s) => s.status);
   const sosArming = useQuickSosStore((s) => s.arming);
@@ -134,13 +139,18 @@ function LockGate() {
   const isSignedIn = useAuthStore((s) => s.isSignedIn);
   const isPinSet = useAuthStore((s) => s.isPinSet);
   const isUnlocked = useAuthStore((s) => s.isUnlocked);
-  const locked =
-    onboardingCompleted && isSignedIn && isPinSet && !isUnlocked && !isVoiceCaptureRoute(pathname) && !sosOnScreen;
+  return onboardingCompleted && isSignedIn && isPinSet && !isUnlocked && !isVoiceCaptureRoute(pathname) && !sosOnScreen;
+}
+
+/** Renders the lock screen above every route (including native modals); at launch it fades in over the splash. */
+function LockGate({ fadeIn, onShow }: { fadeIn: boolean; onShow: () => void }) {
+  const locked = useLockRequired();
 
   return (
     <Modal
       visible={locked}
-      animationType="none"
+      animationType={fadeIn ? "fade" : "none"}
+      onShow={onShow}
       statusBarTranslucent
       navigationBarTranslucent
       onRequestClose={() => {}}
@@ -287,8 +297,19 @@ function AppStack() {
 
 function RootLayout() {
   const [fontsLoaded] = useFonts(AURA_FONT_FILES);
+  const [splashVisible, setSplashVisible] = useState(true);
+  const [lockShown, setLockShown] = useState(false);
+  const [splashDrawn, setSplashDrawn] = useState(false);
+  const lockRequired = useLockRequired();
+  // When locked, the splash waits for the lock screen to cover it, so the app is never seen unlocked.
+  const appReady = fontsLoaded && (!lockRequired || lockShown);
 
   useSyncAuthSession();
+
+  // Expo Router shows nothing until the Stack mounts (after fonts), so the native splash stays until then.
+  useEffect(() => {
+    if (fontsLoaded && splashDrawn) SplashScreen.hide();
+  }, [fontsLoaded, splashDrawn]);
 
   // Provision the device-matched model (resuming any download from a previous
   // session), wire up the background task, and prepare download notifications.
@@ -298,27 +319,34 @@ function RootLayout() {
     void aiRuntime.ensureProvisioned();
   }, []);
 
-  if (!fontsLoaded) return null;
-
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <BackendProvider>
-        <LocalizationProvider>
-          <ThemeProvider>
-            <AppStateLock />
-            <SessionEffects />
-            <BackupEffects />
-            <BillingEffects />
-            <AdsGate />
-            <AnalyticsEffects />
-            <WidgetSync />
-            <AppStack />
-            <LockGate />
-            <AuraAlertHost />
-          </ThemeProvider>
-        </LocalizationProvider>
-      </BackendProvider>
+      {fontsLoaded ? <AppTree splashVisible={splashVisible} onLockShown={() => setLockShown(true)} /> : null}
+      {splashVisible ? (
+        <AuraSplash ready={appReady} onFirstFrame={() => setSplashDrawn(true)} onDone={() => setSplashVisible(false)} />
+      ) : null}
     </GestureHandlerRootView>
+  );
+}
+
+function AppTree({ splashVisible, onLockShown }: { splashVisible: boolean; onLockShown: () => void }) {
+  return (
+    <BackendProvider>
+      <LocalizationProvider>
+        <ThemeProvider>
+          <AppStateLock />
+          <SessionEffects />
+          <BackupEffects />
+          <BillingEffects />
+          <AdsGate />
+          <AnalyticsEffects />
+          <WidgetSync />
+          <AppStack />
+          <LockGate fadeIn={splashVisible} onShow={onLockShown} />
+          <AuraAlertHost />
+        </ThemeProvider>
+      </LocalizationProvider>
+    </BackendProvider>
   );
 }
 

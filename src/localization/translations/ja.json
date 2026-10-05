@@ -15,7 +15,8 @@
     "later": "あとで",
     "saving": "保存中…",
     "close": "閉じる",
-    "back": "戻る"
+    "back": "戻る",
+    "loading": "読み込み中…"
   },
   "tabs": {
     "trip": "旅",

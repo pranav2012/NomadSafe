@@ -15,7 +15,8 @@
     "later": "나중에",
     "saving": "저장 중…",
     "close": "닫기",
-    "back": "뒤로"
+    "back": "뒤로",
+    "loading": "불러오는 중…"
   },
   "tabs": {
     "trip": "여행",

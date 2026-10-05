@@ -1,9 +1,9 @@
 import React, { useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { api, useMutation, useQuery } from "@/modules/backend";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { AuraButton, AuraCard, AuraChip, AuraField, Icon, PressableScale, useAura } from "@/atoms";
+import { AuraButton, AuraCard, AuraChip, AuraField, AuraLoader, Icon, PressableScale, useAura } from "@/atoms";
 import { useAuthStore } from "@/features/auth/store/authStore";
 import { registerTripPush } from "@/features/sync";
 import { useTripsStore } from "@/features/trips/store/tripsStore";
@@ -99,7 +99,7 @@ export default function JoinTripScreen() {
         </View>
 
         {preview === undefined ? (
-          <ActivityIndicator color={c.textMuted} style={styles.loading} />
+          <AuraLoader style={styles.loading} />
         ) : preview === null ? (
           <AuraCard style={styles.card}>
             <Text style={[styles.cardTitle, { color: c.text, fontFamily: f.semibold }]}>{t("groupTrip.joinNotFoundTitle")}</Text>

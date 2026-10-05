@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { AuraButton, AuraCard, AuraSegmented, Icon, PressableScale, showAlert, showToast, useAura } from "@/atoms";
+import { AuraButton, AuraCard, AuraLoader, AuraSegmented, Icon, PressableScale, showAlert, showToast, useAura } from "@/atoms";
 import { auraStatusColors } from "@/constants/aura";
 import { LEGAL_URLS, openLegalPage } from "@/constants/legal";
 import { useLocalization } from "@/localization";
@@ -209,7 +209,7 @@ export default function PaywallScreen() {
         ) : loadFailed || (packages !== null && PACKAGES_BY_TIER[tier].every((id) => !packages[id])) ? (
           <Text style={[styles.note, { color: c.textMuted, fontFamily: f.regular }]}>{t(STORE_COPY.unavailable)}</Text>
         ) : packages === null ? (
-          <ActivityIndicator color={c.textMuted} style={styles.loading} />
+          <AuraLoader size={56} style={styles.loading} />
         ) : (
           <View style={styles.options} accessibilityRole="radiogroup">
             {PACKAGES_BY_TIER[tier].map((id) => {

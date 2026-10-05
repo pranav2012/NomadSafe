@@ -1,17 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="500" viewBox="0 0 1024 500">
-  <rect width="1024" height="500" fill="#072B40"/>
-  <path d="M-20 420 C200 330 360 330 520 400 C700 470 860 450 1060 360" fill="none" stroke="#22D3EE" stroke-width="3" stroke-linecap="round" stroke-dasharray="2 12" opacity="0.35"/>
-  <g transform="translate(70 70) scale(0.703)">
-    <rect x="40" y="40" width="432" height="432" rx="108" fill="#0A3450" stroke="#0F3A52" stroke-width="5"/>
-  <path d="M80 300 C140 200 200 200 256 260 C320 330 360 320 400 260" fill="none" stroke="#22D3EE" stroke-width="5.5" stroke-linecap="round" stroke-dasharray="3 12" opacity="0.75"/>
-  <g transform="translate(400,260) rotate(-50)"><path d="M-14 -10 L14 0 L-14 10 L-6 0 Z" fill="#E6F6FF"/></g>
-  <path d="M196 184 L316 360" stroke="#E6F6FF" stroke-width="40" stroke-linecap="round" opacity="0.32"/>
-  <rect x="176" y="168" width="44" height="176" rx="22" fill="#E6F6FF"/>
-  <rect x="292" y="168" width="44" height="176" rx="22" fill="#E6F6FF"/>
-  <path d="M200 168 L320 344" stroke="#E6F6FF" stroke-width="40" stroke-linecap="round"/>
-  </g>
-  <text x="480" y="228" font-family="Helvetica Neue, Helvetica, Arial" font-weight="700" font-size="86" fill="#E6F6FF">NomadSafe</text>
-  <text x="484" y="292" font-family="Helvetica Neue, Helvetica, Arial" font-size="28" fill="#E6F6FF" opacity="0.85">SOS, live location &amp; trip money —</text>
-  <text x="484" y="332" font-family="Helvetica Neue, Helvetica, Arial" font-size="28" fill="#E6F6FF" opacity="0.85">with an AI guide that runs on your phone.</text>
-  <rect x="484" y="360" width="64" height="5" rx="2.5" fill="#22D3EE"/>
+<defs><linearGradient id="aurora" x1="96" y1="420" x2="416" y2="92" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#22C7B8"/><stop offset="0.55" stop-color="#5B6CFF"/><stop offset="1" stop-color="#9B7BFF"/></linearGradient><filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="18"/></filter>
+  <radialGradient id="skyA" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#5B6CFF" stop-opacity="0.35"/><stop offset="1" stop-color="#5B6CFF" stop-opacity="0"/></radialGradient>
+  <radialGradient id="skyB" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#22C7B8" stop-opacity="0.22"/><stop offset="1" stop-color="#22C7B8" stop-opacity="0"/></radialGradient>
+  <radialGradient id="skyC" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#9B7BFF" stop-opacity="0.25"/><stop offset="1" stop-color="#9B7BFF" stop-opacity="0"/></radialGradient>
+</defs>
+<rect width="1024" height="500" fill="#0B0D12"/>
+<ellipse cx="230" cy="240" rx="330" ry="260" fill="url(#skyA)"/>
+<ellipse cx="80" cy="430" rx="300" ry="200" fill="url(#skyB)"/>
+<ellipse cx="900" cy="40" rx="380" ry="220" fill="url(#skyC)"/>
+<g transform="translate(230 250) scale(0.95) translate(-256 -285)">
+  <path d="M184 340 V172 L328 340 V172" fill="none" stroke="url(#aurora)" stroke-width="46" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)" opacity="0.7"/>
+  <path d="M184 340 V172 L328 340 V172" fill="none" stroke="url(#aurora)" stroke-width="46" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M92 380 C170 430 342 430 420 380" fill="none" stroke="#EDEFF5" stroke-width="6" stroke-linecap="round" stroke-dasharray="2 14" opacity="0.55"/>
+</g>
+<text x="470" y="228" font-family="Instrument Sans" font-weight="600" font-size="84" fill="#EDEFF5">NomadSafe</text>
+<text x="474" y="290" font-family="Instrument Sans" font-size="27" fill="#B6BACA">SOS, live location &amp; trip money —</text>
+<text x="474" y="328" font-family="Instrument Sans" font-size="27" fill="#B6BACA">with an AI guide that runs on your phone.</text>
+<linearGradient id="bar"><stop offset="0" stop-color="#22C7B8"/><stop offset="1" stop-color="#9B7BFF"/></linearGradient><rect x="474" y="358" width="72" height="5" rx="2.5" fill="url(#bar)"/>
 </svg>

@@ -3,7 +3,7 @@ import { httpAction } from "./_generated/server";
 
 const EFFECTIVE_DATE = "5 October 2026";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="120" fill="#072B40"/><path d="M80 300 C140 200 200 200 256 260 C320 330 360 320 400 260" fill="none" stroke="#22D3EE" stroke-width="5.5" stroke-linecap="round" stroke-dasharray="3 12" opacity="0.75"/><g transform="translate(400,260) rotate(-50)"><path d="M-14 -10 L14 0 L-14 10 L-6 0 Z" fill="#E6F6FF"/></g><path d="M196 184 L316 360" stroke="#E6F6FF" stroke-width="40" stroke-linecap="round" opacity="0.32"/><rect x="176" y="168" width="44" height="176" rx="22" fill="#E6F6FF"/><rect x="292" y="168" width="44" height="176" rx="22" fill="#E6F6FF"/><path d="M200 168 L320 344" stroke="#E6F6FF" stroke-width="40" stroke-linecap="round"/></svg>`;
+const LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="ns-aurora" x1="96" y1="420" x2="416" y2="92" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#22C7B8"/><stop offset="0.55" stop-color="#5B6CFF"/><stop offset="1" stop-color="#9B7BFF"/></linearGradient></defs><rect width="512" height="512" rx="120" fill="#0B0D12"/><g transform="translate(256 256) scale(0.92) translate(-256 -285)"><path d="M184 340 V172 L328 340 V172" fill="none" stroke="url(#ns-aurora)" stroke-width="46" stroke-linecap="round" stroke-linejoin="round"/><path d="M92 380 C170 430 342 430 420 380" fill="none" stroke="#EDEFF5" stroke-width="6" stroke-linecap="round" stroke-dasharray="2 14" opacity="0.55"/></g></svg>`;
 const FAVICON = `data:image/svg+xml,${encodeURIComponent(LOGO_SVG)}`;
 
 function escapeHtml(value: string) {
@@ -35,7 +35,7 @@ form{display:grid;gap:12px;margin-top:16px;max-width:420px}
 input,textarea,button{font:inherit;padding:10px 12px;border-radius:10px;border:1px solid #cfc8bc}
 button{background:#1d4d4f;color:#fff;border:0;cursor:pointer}
 .card{background:#fff;border:1px solid #e6dfd3;border-radius:14px;padding:16px 18px;margin-top:16px}
-.brand{display:flex;align-items:center;gap:10px;margin-bottom:24px;font-weight:600;font-size:18px;color:#072B40}
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:24px;font-weight:600;font-size:18px;color:#0E1018}
 .brand svg{width:40px;height:40px}
 </style></head><body><div class="brand">${LOGO_SVG}<span>NomadSafe</span></div>${body}</body></html>`;
   return new Response(html, {

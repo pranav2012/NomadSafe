@@ -15,7 +15,8 @@
     "later": "Plus tard",
     "saving": "Enregistrement…",
     "close": "Fermer",
-    "back": "Retour"
+    "back": "Retour",
+    "loading": "Chargement…"
   },
   "tabs": {
     "trip": "Voyage",

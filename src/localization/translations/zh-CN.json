@@ -15,7 +15,8 @@
     "later": "稍后",
     "saving": "保存中…",
     "close": "关闭",
-    "back": "返回"
+    "back": "返回",
+    "loading": "正在加载…"
   },
   "tabs": {
     "trip": "行程",

@@ -15,7 +15,8 @@
     "later": "Later",
     "saving": "Saving…",
     "close": "Close",
-    "back": "Back"
+    "back": "Back",
+    "loading": "Loading…"
   },
   "tabs": {
     "trip": "Trip",
