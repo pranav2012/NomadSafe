@@ -22,7 +22,7 @@ NomadSafe is a travel safety and planning app built with Expo (SDK 57), React Na
 
 The code is split into three layers. ESLint (`no-restricted-imports` in `eslint.config.js`) enforces the boundaries.
 
-- **`src/atoms/`**: generic, reusable UI primitives (Aura buttons, fields, lists, chips, `AuraSheet` (the one bottom sheet), `AuraOptionSheet`, `AuraAlert` (`showAlert` / `showToast`, which replace the native `Alert`), `AuraOrb`, motion helpers, icons, tab bar). Import them from `@/atoms`, never deep paths. Only generic primitives belong here; components with feature knowledge stay in their feature.
+- **`src/atoms/`**: generic, reusable UI primitives (Aura buttons, fields, lists, chips, `AuraSheet` (the one bottom sheet), `AuraOptionSheet`, `AuraAlert` (`showAlert` / `showToast`, which replace the native `Alert`), motion helpers, icons, tab bar). Import them from `@/atoms`, never deep paths. Only generic primitives belong here; components with feature knowledge stay in their feature.
 - **`src/modules/<name>/`**: infrastructure, each the single source of truth for one concern and the only place its SDK is imported. Import from `@/modules/<name>` (its `index.ts`) only.
 
   | Module | Owns | Wraps |

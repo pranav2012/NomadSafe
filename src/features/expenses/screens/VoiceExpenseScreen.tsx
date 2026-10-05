@@ -10,8 +10,6 @@ import {
   AuraButton,
   AuraCard,
   AuraChip,
-  AuraOrb,
-  type AuraOrbMode,
   AuraSheet,
   Icon,
   PressableScale,
@@ -38,6 +36,7 @@ import { formatMoney } from "@/features/expenses/utils/money";
 import { resolveShares } from "@/features/expenses/utils/split";
 import { resolveWidgetTrip, setWidgetTripId } from "@/features/widget/widgetTrip";
 import { syncWidgets } from "@/features/widget/syncWidgets";
+import { VoiceOrb, type VoiceOrbMode } from "@/features/expenses/components/VoiceOrb";
 
 type Phase =
   | { name: "idle" }
@@ -223,7 +222,7 @@ export default function VoiceExpenseScreen() {
   const listening = speech.state.status === "listening";
   const partial = speech.state.status === "listening" ? speech.state.partial : "";
 
-  const orbMode: AuraOrbMode =
+  const orbMode: VoiceOrbMode =
     phase.name === "thinking" ? "thinking" : phase.name === "saved" ? "done" : listening ? "listening" : "idle";
   const compact = phase.name === "review";
   const orbSize = Math.min(compact ? 150 : 280, width - 80);
@@ -286,7 +285,7 @@ export default function VoiceExpenseScreen() {
                 accessibilityLabel={listening ? t("voiceExpense.stop") : t("voiceExpense.speakToAdd")}
                 style={{ width: orbSize, height: orbSize }}
               >
-                <AuraOrb size={orbSize} mode={orbMode} level={speech.volume} isDark={isDark} />
+                <VoiceOrb size={orbSize} mode={orbMode} level={speech.volume} isDark={isDark} discColor={c.card} />
                 <View style={styles.orbIcon} pointerEvents="none">
                   <Icon
                     name={phase.name === "saved" ? "check" : listening ? "pause" : "mic"}

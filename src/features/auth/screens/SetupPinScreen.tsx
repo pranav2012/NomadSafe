@@ -4,7 +4,7 @@ import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Redirect, useRouter, useLocalSearchParams } from "expo-router";
 import Animated, { FadeIn, FadeInDown, FadeOut } from "react-native-reanimated";
-import { AuraButton, AuraOrb, Icon, useAura } from "@/atoms";
+import { AuraButton, Icon, useAura } from "@/atoms";
 import {
   localAuth,
   secureStorage,
@@ -13,6 +13,7 @@ import {
 } from "@/features/auth";
 import { PinDots } from "@/features/auth/components/PinDots";
 import { PinPad } from "@/features/auth/components/PinPad";
+import { SecurityRing } from "@/features/auth/components/SecurityRing";
 import { hashPin } from "@/features/auth/utils/crypto";
 import { ONBOARDING_LOCK_STEP } from "@/features/onboarding/steps";
 import { useSettingsStore } from "@/features/settings";
@@ -139,18 +140,15 @@ export default function SetupPinScreen() {
       <StatusBar style={isDark ? "light" : "dark"} />
       <SafeAreaView style={styles.safe} edges={["top", "bottom", "left", "right"]}>
         <View style={styles.body}>
-          <View style={{ width: orbSize, height: orbSize }}>
-            <AuraOrb
-              size={orbSize}
-              mode={saved ? "done" : step === "confirm" ? "listening" : "idle"}
-              level={step === "confirm" ? currentPin.length + 1 : 0}
-              isDark={isDark}
-              core={false}
-            />
-            <View style={styles.orbIcon} pointerEvents="none">
-              <Icon name={saved ? "check" : "lock"} size={orbSize * 0.24} color={isDark ? "#FFFFFF" : c.text} strokeWidth={2.2} />
-            </View>
-          </View>
+          <SecurityRing
+            size={orbSize}
+            state={saved ? "success" : "idle"}
+            isDark={isDark}
+            progress={saved ? 1 : currentPin.length / PIN_LENGTH}
+            errorKey={shakeKey}
+          >
+            <Icon name={saved ? "check" : "lock"} size={orbSize * 0.24} color={isDark ? "#FFFFFF" : c.text} strokeWidth={2.2} />
+          </SecurityRing>
 
           <Animated.View key={step} entering={FadeInDown.duration(320)} exiting={FadeOut.duration(120)} style={styles.copy}>
             <Text style={[styles.title, { color: c.text, fontFamily: f.semibold }]}>
@@ -193,7 +191,6 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   safe: { flex: 1 },
   body: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 24 },
-  orbIcon: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0, alignItems: "center", justifyContent: "center" },
   copy: { alignItems: "center", marginTop: 14 },
   title: { fontSize: 28, letterSpacing: -0.9, lineHeight: 33, textAlign: "center" },
   sub: { fontSize: 15, lineHeight: 21, marginTop: 8, textAlign: "center", maxWidth: 320 },

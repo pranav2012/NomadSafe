@@ -5,7 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import Animated, { FadeIn, FadeOut, LinearTransition, ZoomIn } from "react-native-reanimated";
 import { PrivateView } from "@/modules/analytics";
-import { AuraOrb, type AuraOrbMode, Icon, PressableScale, showAlert, useAura } from "@/atoms";
+import { Icon, PressableScale, showAlert, useAura } from "@/atoms";
 import {
   localAuth,
   secureStorage,
@@ -15,6 +15,7 @@ import {
 import { BiometricGlyph } from "@/features/auth/components/BiometricGlyph";
 import { PinDots } from "@/features/auth/components/PinDots";
 import { PinPad } from "@/features/auth/components/PinPad";
+import { SecurityRing } from "@/features/auth/components/SecurityRing";
 import { hashPin, isLegacyPinHash, verifyPin } from "@/features/auth/utils/crypto";
 import { pinAttempts } from "@/features/auth/services/pinAttempts";
 import { flushBeforeSignOut } from "@/features/auth/services/session";
@@ -52,7 +53,6 @@ export default function LockScreen() {
   const [shakeKey, setShakeKey] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
   const [verifying, setVerifying] = useState(false);
-  const [pulse, setPulse] = useState(0);
   const [signingOut, setSigningOut] = useState(false);
 
   const name = user?.name ?? t("auth.welcomeBack");
@@ -61,15 +61,8 @@ export default function LockScreen() {
   const compact = height < 720;
   const passcode = mode === "passcode";
   const orbSize = Math.round(Math.min(width * 0.62, passcode ? (compact ? 112 : 148) : 248));
-  const orbMode: AuraOrbMode = phase === "success" ? "done" : phase === "scanning" ? "listening" : "idle";
   const label =
     phase === "idle" ? t("auth.tapToUnlock") : phase === "scanning" ? t("auth.scanning") : biometric.matchedLabel;
-
-  useEffect(() => {
-    if (phase !== "scanning") return;
-    const id = setInterval(() => setPulse((p) => (p === 0 ? 1 : 0)), 520);
-    return () => clearInterval(id);
-  }, [phase]);
 
   const handleUnlock = useCallback(() => {
     pinAttempts.reset();
@@ -249,8 +242,13 @@ export default function LockScreen() {
             importantForAccessibility={mode === "biometric" ? "auto" : "no-hide-descendants"}
             style={{ width: orbSize, height: orbSize }}
           >
-            <AuraOrb size={orbSize} mode={orbMode} level={phase === "scanning" ? (pulse ? 7 : 2) : 0} isDark={isDark} core={false} />
-            <View style={styles.center} pointerEvents="none">
+            <SecurityRing
+              size={orbSize}
+              state={phase}
+              isDark={isDark}
+              progress={passcode ? pin.length / PIN_LENGTH : 0}
+              errorKey={shakeKey}
+            >
               {phase === "success" ? (
                 <Animated.View
                   key="ok"
@@ -279,7 +277,7 @@ export default function LockScreen() {
                   </Animated.View>
                 </PrivateView>
               )}
-            </View>
+            </SecurityRing>
           </PressableScale>
 
           <PrivateView>
@@ -359,7 +357,6 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   safe: { flex: 1, alignItems: "center" },
   identity: { alignItems: "center" },
-  center: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0, alignItems: "center", justifyContent: "center" },
   avatar: { alignItems: "center", justifyContent: "center", borderWidth: 1 },
   initial: { letterSpacing: -0.5 },
   name: { fontSize: 22, letterSpacing: -0.5, marginTop: 6, maxWidth: 280, textAlign: "center" },

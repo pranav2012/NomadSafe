@@ -63,6 +63,7 @@ uniform float coronaPhase;
 uniform float rippleOn;
 uniform float stirOn;
 uniform float energy;
+uniform float fill;
 uniform float dark;
 uniform float3 c1;
 uniform float3 c2;
@@ -231,6 +232,15 @@ half4 main(float2 xy) {
   col += ringColor * smoothstep(0.82, 1.0, r) * (0.18 + boost * 0.35);
   col += ringColor * (splashRing * 0.9 + abs(h) * 0.35 + dent * 0.25);
 
+  // Fill level (onboarding download): liquid below a wavy surface line, a dark empty orb above it.
+  if (fill >= 0.0) {
+    float level = 1.05 - 2.1 * fill + 0.035 * sin(p.x * 7.0 + flow * 3.0) + 0.02 * sin(p.x * 13.0 - flow * 4.1);
+    float wet = smoothstep(-aa, aa, p.y - level);
+    float surface = exp(-pow((p.y - level) * radius / 1.5, 2.0)) * step(0.001, fill) * step(fill, 0.999);
+    float3 empty = col * 0.1 + ringColor * smoothstep(0.85, 1.0, r) * 0.25;
+    col = mix(empty, col, wet) + ringColor * surface * 0.8;
+  }
+
   float edge = 1.0 - smoothstep(1.0 - aa, 1.0 + aa, r);
   half4 sphere = half4(half3(clamp(col, 0.0, 1.0)), 1.0);
   return mix(outside, sphere, half(edge));
@@ -250,6 +260,7 @@ export function AiPlasmaOrb({
   paused = false,
   interactive = false,
   contained = false,
+  fill,
 }: {
   size: number;
   mode: AiPlasmaOrbMode;
@@ -257,6 +268,8 @@ export function AiPlasmaOrb({
   paused?: boolean;
   interactive?: boolean;
   contained?: boolean;
+  /** 0..1 liquid level (e.g. download progress); omit for a full orb. */
+  fill?: number;
 }) {
   const reduceMotion = useReducedMotion();
   const appActive = useAppActive();
@@ -264,6 +277,8 @@ export function AiPlasmaOrb({
   const flow = useSharedValue(TIME_OFFSET);
   const coronaPhase = useSharedValue(0);
   const energy = useSharedValue(mode === "thinking" ? 1 : 0);
+  const level = useSharedValue(fill ?? 1);
+  const hasFill = fill !== undefined;
   const touchX = useSharedValue(0);
   const touchY = useSharedValue(0);
   const press = useSharedValue(0);
@@ -281,6 +296,10 @@ export function AiPlasmaOrb({
   useEffect(() => {
     energy.set(withTiming(mode === "thinking" ? 1 : 0, { duration: 700 }));
   }, [energy, mode]);
+
+  useEffect(() => {
+    if (fill !== undefined) level.set(withTiming(Math.min(1, Math.max(0, fill)), { duration: 600 }));
+  }, [fill, level]);
 
   // Flow and corona phases advance faster while boosted; integrating them (instead of scaling
   // time) keeps speed changes smooth, and wrapping keeps the shader's inputs small.
@@ -405,6 +424,7 @@ export function AiPlasmaOrb({
       rippleOn: list.some((item) => now - item[2] < RIPPLE_LIFETIME) ? 1 : 0,
       stirOn: strokes.some((item) => now - item[4] < STIR_LIFETIME) ? 1 : 0,
       energy: energy.get(),
+      fill: hasFill ? level.get() : -1,
       dark,
       c1: C1,
       c2: C2,

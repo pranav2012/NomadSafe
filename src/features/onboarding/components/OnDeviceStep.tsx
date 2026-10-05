@@ -1,18 +1,16 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import {
   AuraCard,
   AuraListGroup,
   AuraListRow,
-  AuraOrb,
-  type AuraOrbMode,
   AuraSection,
   AuraSwitch,
   showAlert,
   useAura,
 } from "@/atoms";
 import { auraStatusAccent, auraStatusColors } from "@/constants/aura";
-import { AiProvisionCard } from "@/features/ai";
+import { AiPlasmaOrb, AiProvisionCard } from "@/features/ai";
 import { modelNotifications, useAiProvisioning, type ProvisionPhase } from "@/modules/ai";
 import { useLocalization } from "@/localization";
 import { logger } from "@/modules/logger";
@@ -20,16 +18,20 @@ import { StepHeader } from "./StepHeader";
 
 const ORB_SIZE = 168;
 
-function orbModeFor(phase: ProvisionPhase): AuraOrbMode {
+const READY_BURST_MS = 1800;
+const EMPTY_FILL = 0.04;
+
+/** Liquid level for the onboarding orb: the download progress, full once verifying or ready. */
+function orbFillFor(phase: ProvisionPhase, progress: number): number {
   switch (phase) {
-    case "queued":
-    case "downloading":
     case "verifying":
-      return "thinking";
     case "ready":
-      return "done";
+      return 1;
+    case "checking":
+    case "queued":
+      return EMPTY_FILL;
     default:
-      return "idle";
+      return Math.max(EMPTY_FILL, progress);
   }
 }
 
@@ -37,7 +39,19 @@ function orbModeFor(phase: ProvisionPhase): AuraOrbMode {
 export function OnDeviceStep() {
   const { c, f, isDark } = useAura();
   const { t } = useLocalization();
-  const { deviceSupported, phase } = useAiProvisioning();
+  const { deviceSupported, phase, progress } = useAiProvisioning();
+  const [bursting, setBursting] = useState(false);
+  const previousPhase = useRef(phase);
+
+  // The corona flares briefly when the model finishes, not when the step opens already ready.
+  useEffect(() => {
+    const wasReady = previousPhase.current === "ready";
+    previousPhase.current = phase;
+    if (phase !== "ready" || wasReady) return;
+    setBursting(true);
+    const timer = setTimeout(() => setBursting(false), READY_BURST_MS);
+    return () => clearTimeout(timer);
+  }, [phase]);
   const [notifyEnabled, setNotifyEnabled] = useState(() => modelNotifications.isEnabled());
   const supported = deviceSupported !== false && phase !== "unsupportedDevice";
 
@@ -55,7 +69,7 @@ export function OnDeviceStep() {
     <View style={styles.root}>
       {supported ? (
         <View style={styles.orb} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-          <AuraOrb size={ORB_SIZE} mode={orbModeFor(phase)} isDark={isDark} />
+          <AiPlasmaOrb size={ORB_SIZE} mode={bursting ? "thinking" : "idle"} isDark={isDark} fill={orbFillFor(phase, progress)} />
         </View>
       ) : null}
 
