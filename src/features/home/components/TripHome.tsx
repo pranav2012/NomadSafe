@@ -73,6 +73,8 @@ export function TripHome({
   const gmail = useGmailStatus();
   const c = isDark ? auraDark : auraLight;
   const accent = auraStatusAccent[status];
+  // The globe and the pass keep the calm look; sharing / SOS only recolour the rest of the page.
+  const heroAccent = auraStatusAccent.calm;
   const { t } = useLocalization();
   const insets = useSafeAreaInsets();
   const tabBarInset = useTabBarInset();
@@ -206,7 +208,7 @@ export function TripHome({
                 origin={globe.origin}
                 contacts={globe.contacts}
                 contactColor="#3DDC97"
-                accent={accent}
+                accent={heroAccent}
                 isDark={isDark}
                 entry={hero.entry}
                 onTouchActive={setHeroTouched}
@@ -225,7 +227,7 @@ export function TripHome({
                 places={safetyPlaces}
                 contacts={globe.contacts}
                 palette={c}
-                accent={accent}
+                accent={heroAccent}
                 isDark={isDark}
                 onBackToGlobe={(center) => {
                   setHeroTouched(false);
@@ -263,7 +265,7 @@ export function TripHome({
         ) : null}
 
         <PrivateView style={styles.passWrap}>
-          <BoardingPass data={data} palette={c} accent={accent} gradient={auraStatusColors[status]} isDark={isDark} emergency={emergency} scrolling={scrolling} />
+          <BoardingPass data={data} palette={c} accent={heroAccent} gradient={auraStatusColors.calm} isDark={isDark} emergency={emergency} scrolling={scrolling} />
         </PrivateView>
 
         <View style={styles.body}>
