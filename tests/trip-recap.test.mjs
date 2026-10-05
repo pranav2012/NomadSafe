@@ -181,7 +181,7 @@ test("the camera fits points into a region and caps zoom", () => {
 });
 
 const passport = loadModule("src/features/passport/utils/passport.ts");
-const regions = loadModule("src/features/passport/utils/regions.ts");
+const regions = loadModule("tests/fixtures/regions-entry.ts");
 const CONTINENT = { IN: "Asia", JP: "Asia", FR: "Europe", TH: "Asia" };
 const trip = (id, status, stops, days = 5, startDate = "2026-01-10") => ({ id, name: id, startDate, endDate: startDate, days, status, stops });
 
@@ -246,4 +246,48 @@ test("finds the state for a city, falling back near coastlines", () => {
   assert.equal(regions.regionAt("GB", 55.95, -3.19).name, "Scotland");
   assert.equal(regions.countryRegions("IN").length, 36);
   assert.ok(regions.mainlandBox("FR").west > -10, "overseas regions are left out of the home map");
+});
+
+test("India view draws India's official borders and leaves the default view alone", () => {
+  const gilgit = [35.92, 74.31];
+  const aksaiChin = [35.2, 79.2];
+  assert.equal(shapes.countryAt(...gilgit), "PK");
+  assert.notEqual(shapes.countryAt(...aksaiChin), "IN");
+
+  // The passport bundle shares the store instance, so switch the view through it.
+  regions.__setView("IN");
+  try {
+    assert.equal(regions.__countryAt(...gilgit), "IN");
+    assert.equal(regions.__countryAt(...aksaiChin), "IN");
+    assert.equal(regions.regionAt("IN", ...gilgit).key, "IN-LA");
+    assert.equal(regions.regionAt("IN", 34.0, 73.7).key, "IN-JK", "Azad Kashmir is part of Jammu and Kashmir");
+    assert.equal(regions.countryRegions("IN").length, 36);
+    assert.ok(!regions.countryRegions("PK").some((r) => r.key === "PK-GB"), "Pakistan no longer holds Gilgit-Baltistan");
+  } finally {
+    regions.__setView("default");
+  }
+  assert.equal(regions.regionAt("IN", 34.16, 77.58).key, "IN-LA", "Leh is in Ladakh either way");
+});
+
+const airports = loadModule("src/features/itinerary/utils/airports.ts");
+
+test("flight legs stored as airport codes are placed and counted", () => {
+  assert.deepEqual(airports.airportCoordinates("BLR"), { latitude: 13.2, longitude: 77.71 });
+  assert.ok(airports.airportCoordinates("NRT"));
+  assert.equal(airports.airportCoordinates("Goa"), null, "only three capital letters are codes");
+  assert.equal(airports.airportCoordinates("ZZZ"), null);
+  const facts = recap.computeRecapFacts({
+    trip: { startDate: "2026-10-18", endDate: "2026-10-20", destinations: ["Tokyo"] },
+    coordinates: [PLACES.tokyo],
+    events: [{ type: "transit", title: "IndiGo", detail: "BLR → NRT", startAt: "2026-10-18T02:00:00" }],
+    locate: (place) => airports.airportCoordinates(place) ?? locate(place),
+    countryOf: () => "JP",
+  });
+  assert.equal(facts.tripsByMode.flight, 1);
+  assert.ok(facts.kmByMode.flight > 6500 && facts.kmByMode.flight < 7000, String(facts.kmByMode.flight));
+});
+
+test("a route between two airport codes is a flight", () => {
+  assert.equal(transit.inferTransitMode("IndiGo", "BLR → NRT"), "flight");
+  assert.equal(transit.inferTransitMode("Bus", "Goa - Pune"), "bus");
 });

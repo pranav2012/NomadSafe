@@ -11,10 +11,12 @@ const MODE_PATTERNS: [TransitMode, RegExp][] = [
 
 // A bare flight number such as "JL754" or "6E 2134", the title the booking parser gives flights.
 const FLIGHT_NUMBER = /^\s*(?:[A-Z]{2}|[A-Z]\d|\d[A-Z])\s?\d{1,4}\s*$/;
+// Two airport codes, "BLR → NRT": only flights are written like this.
+const AIRPORT_ROUTE = /^\s*[A-Z]{3}\s*(?:→|->|–|-|to)\s*[A-Z]{3}\b/;
 
 /** Best guess at how a transit event travels, from its title and detail; undefined when nothing matches. */
 export function inferTransitMode(title: string, detail?: string): TransitMode | undefined {
-  if (FLIGHT_NUMBER.test(title)) return "flight";
+  if (FLIGHT_NUMBER.test(title) || AIRPORT_ROUTE.test(detail ?? "")) return "flight";
   const text = `${title} ${detail ?? ""}`;
   return MODE_PATTERNS.find(([, pattern]) => pattern.test(text))?.[0];
 }
