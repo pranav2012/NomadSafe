@@ -1605,7 +1605,10 @@
     "shareFailed": "No se pudo compartir el pase. Inténtalo de nuevo.",
     "stampedKicker": "Sellado",
     "stampedTitle": "Añadido a tu pasaporte",
-    "openPassport": "Abrir pasaporte"
+    "openPassport": "Abrir pasaporte",
+    "shareVideo": "Compartir como vídeo",
+    "makingVideo": "Creando tu vídeo… {{percent}} %",
+    "videoFailed": "No se pudo crear el vídeo. Inténtalo de nuevo o comparte la imagen."
   },
   "passport": {
     "title": "Pasaporte",

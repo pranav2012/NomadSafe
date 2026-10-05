@@ -1605,7 +1605,10 @@
     "shareFailed": "Couldn't share the pass. Try again.",
     "stampedKicker": "Stamped",
     "stampedTitle": "Added to your passport",
-    "openPassport": "Open passport"
+    "openPassport": "Open passport",
+    "shareVideo": "Share as video",
+    "makingVideo": "Making your video… {{percent}}%",
+    "videoFailed": "Couldn't make the video. Try again, or share the image."
   },
   "passport": {
     "title": "Passport",

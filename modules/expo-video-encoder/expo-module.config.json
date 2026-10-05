@@ -5,13 +5,13 @@
   ],
   "apple": {
     "modules": [
-      "ExpoBootClockModule"
+      "ExpoVideoEncoderModule"
     ],
-    "podspecPath": "ExpoBootClock.podspec"
+    "podspecPath": "ExpoVideoEncoder.podspec"
   },
   "android": {
     "modules": [
-      "expo.modules.bootclock.ExpoBootClockModule"
+      "expo.modules.videoencoder.ExpoVideoEncoderModule"
     ]
   }
 }

@@ -1605,7 +1605,10 @@
     "shareFailed": "تعذّرت مشاركة التذكرة. حاول مرة أخرى.",
     "stampedKicker": "تم الختم",
     "stampedTitle": "أُضيف إلى جواز سفرك",
-    "openPassport": "افتح الجواز"
+    "openPassport": "افتح الجواز",
+    "shareVideo": "مشاركة كفيديو",
+    "makingVideo": "جارٍ إنشاء الفيديو… {{percent}}٪",
+    "videoFailed": "تعذّر إنشاء الفيديو. حاول مرة أخرى أو شارك الصورة."
   },
   "passport": {
     "title": "جواز السفر",

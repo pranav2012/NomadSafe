@@ -1605,7 +1605,10 @@
     "shareFailed": "无法分享通行证，请重试。",
     "stampedKicker": "已盖章",
     "stampedTitle": "已添加到你的护照",
-    "openPassport": "打开护照"
+    "openPassport": "打开护照",
+    "shareVideo": "以视频分享",
+    "makingVideo": "正在生成视频… {{percent}}%",
+    "videoFailed": "无法生成视频。请重试，或分享图片。"
   },
   "passport": {
     "title": "护照",

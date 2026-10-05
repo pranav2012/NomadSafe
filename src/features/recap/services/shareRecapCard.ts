@@ -23,7 +23,8 @@ export async function shareRecapCard(content: RecapCardContent, fonts: SkTypefac
   }
 }
 
-async function clearOldCards() {
+/** Deletes earlier shared cards and videos from the cache. */
+export async function clearOldCards() {
   const dir = FileSystem.cacheDirectory;
   if (!dir) return;
   const names = await FileSystem.readDirectoryAsync(dir).catch(() => [] as string[]);

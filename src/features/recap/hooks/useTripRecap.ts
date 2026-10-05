@@ -111,8 +111,13 @@ export function useTripRecap(tripId: string | undefined) {
 
   /** Card content; spend stays off unless the user turns it on. */
   const cardContent = (includeSpend: boolean): RecapCardContent => {
-    const cardStats = stats.map(({ value, label }) => ({ value, label }));
-    if (cardStats.length < 3 && countryNames.length > 1) cardStats.push({ value: String(countryNames.length), label: t("recap.countries", { count: countryNames.length }) });
+    const cardStats: RecapCardContent["stats"] = stats.map(({ key, value, label }) =>
+      key === "distance"
+        ? { value, label, count: facts.totalKm, kind: "distance" as const }
+        : { value, label, count: key === "days" ? facts.days : places.length, kind: "int" as const },
+    );
+    if (cardStats.length < 3 && countryNames.length > 1)
+      cardStats.push({ value: String(countryNames.length), label: t("recap.countries", { count: countryNames.length }), count: countryNames.length, kind: "int" });
     if (includeSpend && spend) cardStats.splice(Math.min(2, cardStats.length), 1, { value: spend, label: t("recap.spent") });
     return {
       codes: places.length > 1 ? [placeCode(first), placeCode(last)] : [placeCode(first)],

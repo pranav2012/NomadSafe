@@ -1605,7 +1605,10 @@
     "shareFailed": "Impossibile condividere il pass. Riprova.",
     "stampedKicker": "Timbrato",
     "stampedTitle": "Aggiunto al tuo passaporto",
-    "openPassport": "Apri il passaporto"
+    "openPassport": "Apri il passaporto",
+    "shareVideo": "Condividi come video",
+    "makingVideo": "Sto creando il video… {{percent}}%",
+    "videoFailed": "Impossibile creare il video. Riprova o condividi l'immagine."
   },
   "passport": {
     "title": "Passaporto",

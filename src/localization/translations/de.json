@@ -1605,7 +1605,10 @@
     "shareFailed": "Der Pass konnte nicht geteilt werden. Versuch es noch einmal.",
     "stampedKicker": "Gestempelt",
     "stampedTitle": "In deinem Pass",
-    "openPassport": "Pass öffnen"
+    "openPassport": "Pass öffnen",
+    "shareVideo": "Als Video teilen",
+    "makingVideo": "Video wird erstellt… {{percent}} %",
+    "videoFailed": "Das Video konnte nicht erstellt werden. Versuch es noch einmal oder teile das Bild."
   },
   "passport": {
     "title": "Reisepass",

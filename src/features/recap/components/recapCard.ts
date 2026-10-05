@@ -12,9 +12,11 @@ import {
   type SkCanvas,
   type SkImage,
   type SkParagraph,
+  type SkPath,
   type SkTypefaceFontProvider,
 } from "react-native-skia";
 import { auraDark } from "@/constants/aura";
+import { CARD_FINAL, flapLetter, flapSettled, stampScale, type CardAnim } from "../utils/cardTimeline";
 import type { GeoBox } from "../utils/countryShapes";
 import { frameRoute, placeLabels, type Point } from "../utils/recapMap";
 import type { RecapLeg, RecapMode, RecapStop } from "../utils/recapFacts";
@@ -36,7 +38,8 @@ export interface RecapCardContent {
   region: GeoBox | null;
   stamp: { title: string; detail: string } | null;
   legend: { mode: RecapMode; label: string }[];
-  stats: { value: string; label: string }[];
+  /** `count` makes the value count up in the video: a whole number, or kilometres for "distance". */
+  stats: { value: string; label: string; count?: number; kind?: "int" | "distance" }[];
   footer: string;
   dates: string;
   promo: string;
@@ -61,6 +64,21 @@ const ARC_PATH = Skia.Path.MakeFromSVGString("M92 380 C170 430 342 430 420 380")
 const PLANE_PATH = Skia.Path.MakeFromSVGString("M10.5 20l1.5-6-6 2.5V14l6-4.5V4.5a1.5 1.5 0 013 0v5L21 14v2.5L15 14l1.5 6-3-1.2-3 1.2z")!;
 
 const color = (value: string) => Skia.Color(value);
+const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
+
+/** Draws `draw` at `alpha` (a layer only when partly transparent; nothing at 0). */
+function withAlpha(canvas: SkCanvas, alpha: number, draw: () => void) {
+  if (alpha <= 0) return;
+  if (alpha >= 1) {
+    draw();
+    return;
+  }
+  const paint = Skia.Paint();
+  paint.setAlphaf(alpha);
+  canvas.saveLayer(paint);
+  draw();
+  canvas.restore();
+}
 
 function text(
   fonts: SkTypefaceFontProvider,
@@ -83,14 +101,17 @@ function text(
 }
 
 /** Largest size up to `size` at which `value` fits on one line in `width`. */
-function fittedText(fonts: SkTypefaceFontProvider, value: string, size: number, width: number, opts: { color: string; weight: 600 | 700; spacing: number }) {
+function fittedSize(fonts: SkTypefaceFontProvider, value: string, size: number, width: number, opts: { color: string; weight: 600 | 700; spacing: number }): number {
   let current = size;
-  let paragraph = text(fonts, value, { ...opts, size: current, width: 10_000 });
-  while (paragraph.getLongestLine() > width && current > size * 0.45) {
+  while (current > size * 0.45 && text(fonts, value, { ...opts, size: current, spacing: (opts.spacing * current) / size, width: 10_000 }).getLongestLine() > width) {
     current -= 4;
-    paragraph = text(fonts, value, { ...opts, size: current, spacing: (opts.spacing * current) / size, width: 10_000 });
   }
-  return paragraph;
+  return current;
+}
+
+function fittedText(fonts: SkTypefaceFontProvider, value: string, size: number, width: number, opts: { color: string; weight: 600 | 700; spacing: number }) {
+  const fitted = fittedSize(fonts, value, size, width, opts);
+  return text(fonts, value, { ...opts, size: fitted, spacing: (opts.spacing * fitted) / size, width: 10_000 });
 }
 
 function radialGlow(canvas: SkCanvas, cx: number, cy: number, rx: number, ry: number, rgba: string, area: { w: number; h: number }) {
@@ -149,7 +170,15 @@ function drawPlane(canvas: SkCanvas, cx: number, cy: number, size: number, rgba:
 }
 
 /** Departure-board tiles; `plane` puts the aurora plane tile between the first and last code. */
-export function drawFlaps(canvas: SkCanvas, fonts: SkTypefaceFontProvider, codes: string[], x: number, y: number, tile: { w: number; h: number; gap: number }) {
+export function drawFlaps(
+  canvas: SkCanvas,
+  fonts: SkTypefaceFontProvider,
+  codes: string[],
+  x: number,
+  y: number,
+  tile: { w: number; h: number; gap: number },
+  flapTime = Infinity,
+) {
   const cells: (string | null)[] = codes.length > 1 ? [...codes[0].split(""), null, ...codes[codes.length - 1].split("")] : codes[0]?.split("") ?? [];
   const radius = tile.w * 0.115;
   cells.forEach((cell, i) => {
@@ -173,7 +202,8 @@ export function drawFlaps(canvas: SkCanvas, fonts: SkTypefaceFontProvider, codes
     edge.setStrokeWidth(1.5);
     edge.setColor(color(C.highlight));
     canvas.drawRRect(rect, edge);
-    const letter = text(fonts, cell, { size: tile.w, color: C.text, weight: 600, width: tile.w, align: TextAlign.Center, spacing: -1 });
+    const shown = flapSettled(flapTime, i) ? cell : flapLetter(flapTime, i);
+    const letter = text(fonts, shown, { size: tile.w, color: C.text, weight: 600, width: tile.w, align: TextAlign.Center, spacing: -1 });
     letter.paint(canvas, left, y + (tile.h - letter.getHeight()) / 2 + tile.h * 0.01);
     const seam = Skia.Paint();
     seam.setColor(color("rgba(0,0,0,0.55)"));
@@ -181,7 +211,15 @@ export function drawFlaps(canvas: SkCanvas, fonts: SkTypefaceFontProvider, codes
   });
 }
 
-function drawMap(canvas: SkCanvas, fonts: SkTypefaceFontProvider, content: RecapCardContent) {
+/** The first `fraction` of a path, for drawing a leg partway. */
+function partial(path: SkPath, fraction: number): SkPath | null {
+  if (fraction >= 1) return path;
+  const contour = Skia.ContourMeasureIter(path, false, 1).next();
+  if (!contour) return null;
+  return contour.getSegment(0, contour.length() * fraction, true);
+}
+
+function drawMap(canvas: SkCanvas, fonts: SkTypefaceFontProvider, content: RecapCardContent, anim: CardAnim) {
   const frame = frameRoute(content.stops, MAP.w, MAP.h, 70, content.region);
   const geometry = buildRecapGeometry(frame, content.stops, content.legs, content.countries);
   canvas.save();
@@ -203,18 +241,22 @@ function drawMap(canvas: SkCanvas, fonts: SkTypefaceFontProvider, content: Recap
   outline.setStyle(PaintStyle.Stroke);
   outline.setStrokeJoin(StrokeJoin.Round);
   outline.setStrokeWidth(1.4);
-  land.setShader(faded([255, 255, 255, 0.025]));
-  outline.setShader(faded([255, 255, 255, 0.11]));
-  canvas.drawPath(geometry.around, land);
-  canvas.drawPath(geometry.around, outline);
-  land.setShader(faded([255, 255, 255, 0.045]));
-  outline.setShader(faded([255, 255, 255, 0.22]));
-  canvas.drawPath(geometry.home, land);
-  canvas.drawPath(geometry.home, outline);
+  withAlpha(canvas, anim.land, () => {
+    land.setShader(faded([255, 255, 255, 0.025]));
+    outline.setShader(faded([255, 255, 255, 0.11]));
+    canvas.drawPath(geometry.around, land);
+    canvas.drawPath(geometry.around, outline);
+    land.setShader(faded([255, 255, 255, 0.045]));
+    outline.setShader(faded([255, 255, 255, 0.22]));
+    canvas.drawPath(geometry.home, land);
+    canvas.drawPath(geometry.home, outline);
+  });
 
   const [g0, g1] = geometry.gradient;
   const aurora = Skia.Shader.MakeLinearGradient(g0, g1, AURORA.map(color), AURORA_STOPS, TileMode.Clamp);
-  for (const leg of geometry.legs) {
+  geometry.legs.forEach((leg, i) => {
+    const path = partial(leg.path, clamp01(anim.route - i));
+    if (!path || anim.route <= i) return;
     const glow = Skia.Paint();
     glow.setAntiAlias(true);
     glow.setStyle(PaintStyle.Stroke);
@@ -222,7 +264,7 @@ function drawMap(canvas: SkCanvas, fonts: SkTypefaceFontProvider, content: Recap
     glow.setShader(aurora);
     glow.setAlphaf(0.45);
     glow.setMaskFilter(Skia.MaskFilter.MakeBlur(BlurStyle.Normal, 7, true));
-    canvas.drawPath(leg.path, glow);
+    canvas.drawPath(path, glow);
     const line = Skia.Paint();
     line.setAntiAlias(true);
     line.setStyle(PaintStyle.Stroke);
@@ -231,14 +273,16 @@ function drawMap(canvas: SkCanvas, fonts: SkTypefaceFontProvider, content: Recap
     line.setShader(aurora);
     const dashes = legDashes(leg.mode);
     if (dashes) line.setPathEffect(Skia.PathEffect.MakeDash(dashes, 0));
-    canvas.drawPath(leg.path, line);
-  }
+    canvas.drawPath(path, line);
+  });
+  // A stop appears once the route reaches it; the first one with the land.
+  const reached = (i: number) => (i === 0 ? anim.land : clamp01((anim.route - (i - 1) - 0.85) / 0.15));
 
   const dot = Skia.Paint();
   dot.setAntiAlias(true);
   dot.setColor(color(C.text));
   const last = geometry.points.length - 1;
-  geometry.points.forEach((p, i) => canvas.drawCircle(p.x, p.y, i === 0 || i === last ? 13 : 8, dot));
+  geometry.points.forEach((p, i) => withAlpha(canvas, reached(i), () => canvas.drawCircle(p.x, p.y, i === 0 || i === last ? 13 : 8, dot)));
 
   const labels = content.stops.map((stop) => text(fonts, stop.name.split(",")[0].trim(), { size: 27, color: C.text, weight: 600, width: 400, maxLines: 1 }));
   const placed = placeLabels(
@@ -251,9 +295,9 @@ function drawMap(canvas: SkCanvas, fonts: SkTypefaceFontProvider, content: Recap
     { width: MAP.w, height: MAP.h },
     13,
   );
-  placed.forEach((rect, i) => rect && labels[i].paint(canvas, rect.x, rect.y));
+  placed.forEach((rect, i) => rect && withAlpha(canvas, reached(i), () => labels[i].paint(canvas, rect.x, rect.y)));
 
-  if (content.stamp) drawStamp(canvas, fonts, content.stamp, stampSpot(geometry.points, placed));
+  if (content.stamp && anim.stamp > 0) drawStamp(canvas, fonts, content.stamp, stampSpot(geometry.points, placed), anim.stamp);
   canvas.restore();
 }
 
@@ -275,10 +319,20 @@ function stampSpot(points: Point[], labels: ({ x: number; y: number; width: numb
   return corners.reduce((best, corner) => (busy(corner) < busy(best) ? corner : best), corners[0]);
 }
 
-function drawStamp(canvas: SkCanvas, fonts: SkTypefaceFontProvider, stamp: { title: string; detail: string }, at: Point) {
+function drawStamp(canvas: SkCanvas, fonts: SkTypefaceFontProvider, stamp: { title: string; detail: string }, at: Point, progress = 1) {
+  const scale = stampScale(progress);
+  const alpha = clamp01(progress * 2.5);
+  if (alpha < 1) {
+    const paint = Skia.Paint();
+    paint.setAlphaf(alpha);
+    canvas.saveLayer(paint);
+  }
   canvas.save();
   canvas.translate(at.x, at.y);
   canvas.rotate(-8, 160, 105);
+  canvas.translate(160, 105);
+  canvas.scale(scale, scale);
+  canvas.translate(-160, -105);
   const outer = Skia.Paint();
   outer.setAntiAlias(true);
   outer.setStyle(PaintStyle.Stroke);
@@ -295,6 +349,7 @@ function drawStamp(canvas: SkCanvas, fonts: SkTypefaceFontProvider, stamp: { tit
   title.paint(canvas, 30, top);
   detail.paint(canvas, 32, top + title.getHeight() + 8);
   canvas.restore();
+  if (alpha < 1) canvas.restore();
 }
 
 function drawLegend(canvas: SkCanvas, fonts: SkTypefaceFontProvider, legend: RecapCardContent["legend"], y: number) {
@@ -315,8 +370,25 @@ function drawLegend(canvas: SkCanvas, fonts: SkTypefaceFontProvider, legend: Rec
   }
 }
 
-/** Paints the 1080×1920 share card, scaled to `width`. */
-export function drawRecapCard(canvas: SkCanvas, width: number, content: RecapCardContent, fonts: SkTypefaceFontProvider) {
+/** The value shown while counting up (`progress` 0..1); the final value as is. */
+function countedValue(stat: RecapCardContent["stats"][number], progress: number, formatDistance?: (km: number) => string): string {
+  if (progress >= 1 || stat.count === undefined) return stat.value;
+  if (stat.kind === "distance") return formatDistance ? formatDistance(Math.max(1, stat.count * progress)) : stat.value;
+  return String(Math.round(stat.count * progress));
+}
+
+/**
+ * Paints the 1080×1920 share card, scaled to `width`. `anim` animates it in for the video; the
+ * default is the finished card. `formatDistance` formats the distance while it counts up.
+ */
+export function drawRecapCard(
+  canvas: SkCanvas,
+  width: number,
+  content: RecapCardContent,
+  fonts: SkTypefaceFontProvider,
+  anim: CardAnim = CARD_FINAL,
+  formatDistance?: (km: number) => string,
+) {
   canvas.save();
   canvas.scale(width / CARD_WIDTH, width / CARD_WIDTH);
   const area = { w: CARD_WIDTH, h: CARD_HEIGHT };
@@ -331,7 +403,17 @@ export function drawRecapCard(canvas: SkCanvas, width: number, content: RecapCar
   drawMark(canvas, 72, 64, 76);
   text(fonts, content.brand, { size: 34, color: C.text, weight: 600, width: 600, spacing: -0.4 }).paint(canvas, 158, 79);
 
+  withAlpha(canvas, anim.ticket, () => drawTicket(canvas, content, fonts, anim, formatDistance));
+
+  withAlpha(canvas, anim.footer, () =>
+    text(fonts, content.promo, { size: 28, color: C.soft, weight: 500, width: CARD_WIDTH, align: TextAlign.Center, maxLines: 1 }).paint(canvas, 0, CARD_HEIGHT - 100),
+  );
+  canvas.restore();
+}
+
+function drawTicket(canvas: SkCanvas, content: RecapCardContent, fonts: SkTypefaceFontProvider, anim: CardAnim, formatDistance?: (km: number) => string) {
   canvas.save();
+  canvas.translate(0, (1 - anim.ticket) * 90);
   canvas.rotate(TICKET.tilt, TICKET.x + TICKET.w / 2, TICKET.y + TICKET.h / 2);
   canvas.translate(TICKET.x, TICKET.y);
   const shape = Skia.RRectXY(Skia.XYWHRect(0, 0, TICKET.w, TICKET.h), TICKET.r, TICKET.r);
@@ -367,12 +449,14 @@ export function drawRecapCard(canvas: SkCanvas, width: number, content: RecapCar
   );
   canvas.drawRect(Skia.XYWHRect(0, 0, TICKET.w, TICKET.h), foil);
 
-  drawFlaps(canvas, fonts, content.codes, PAD, 64, { w: 104, h: 148, gap: 8 });
-  text(fonts, content.title, { size: 50, color: C.text, weight: 600, width: INNER, maxLines: 1, spacing: -1.4 }).paint(canvas, PAD, 248);
-  if (content.via) text(fonts, content.via, { size: 29, color: C.soft, width: 760, maxLines: 2, lineHeight: 1.35 }).paint(canvas, PAD, 316);
+  drawFlaps(canvas, fonts, content.codes, PAD, 64, { w: 104, h: 148, gap: 8 }, anim.flapTime);
+  withAlpha(canvas, anim.text, () => {
+    text(fonts, content.title, { size: 50, color: C.text, weight: 600, width: INNER, maxLines: 1, spacing: -1.4 }).paint(canvas, PAD, 248);
+    if (content.via) text(fonts, content.via, { size: 29, color: C.soft, width: 760, maxLines: 2, lineHeight: 1.35 }).paint(canvas, PAD, 316);
+  });
 
-  drawMap(canvas, fonts, content);
-  if (content.legend.length > 0) drawLegend(canvas, fonts, content.legend, 1060);
+  drawMap(canvas, fonts, content, anim);
+  if (content.legend.length > 0) withAlpha(canvas, anim.land, () => drawLegend(canvas, fonts, content.legend, 1060));
 
   const perf = Skia.Paint();
   perf.setAntiAlias(true);
@@ -399,21 +483,29 @@ export function drawRecapCard(canvas: SkCanvas, width: number, content: RecapCar
   // Values share a baseline even when one shrinks to fit its column, and the labels share a line.
   const stats = content.stats.slice(0, 3).map((stat, i) => {
     const cell = columns[i] * unit;
-    return { cell, value: fittedText(fonts, stat.value, 120, cell - 24, { color: C.text, weight: 700, spacing: -5 }), label: stat.label };
+    // Sized for the final value, so the number doesn't jump in size while it counts up.
+    const opts = { color: C.text, weight: 700 as const, spacing: -5 };
+    const size = fittedSize(fonts, stat.value, 120, cell - 24, opts);
+    const shown = countedValue(stat, anim.stats, formatDistance);
+    return { cell, value: text(fonts, shown, { ...opts, size, spacing: (opts.spacing * size) / 120, width: 10_000 }), label: stat.label };
   });
   const baselineOf = (p: SkParagraph) => p.getLineMetrics()[0]?.baseline ?? p.getHeight();
   const baseline = Math.max(...stats.map((stat) => baselineOf(stat.value)));
   const valueBottom = Math.max(...stats.map((stat) => stat.value.getHeight() - baselineOf(stat.value))) + baseline;
-  let x = PAD;
-  for (const stat of stats) {
-    stat.value.paint(canvas, x, 1172 + baseline - baselineOf(stat.value));
-    text(fonts, stat.label, { size: 27, color: C.muted, width: stat.cell - 16, maxLines: 2 }).paint(canvas, x, 1172 + valueBottom + 6);
-    x += stat.cell;
-  }
+  withAlpha(canvas, clamp01(anim.stats * 4), () => {
+    let x = PAD;
+    for (const stat of stats) {
+      stat.value.paint(canvas, x, 1172 + baseline - baselineOf(stat.value));
+      text(fonts, stat.label, { size: 27, color: C.muted, width: stat.cell - 16, maxLines: 2 }).paint(canvas, x, 1172 + valueBottom + 6);
+      x += stat.cell;
+    }
+  });
 
-  drawMark(canvas, PAD - 8, 1420, 52);
-  text(fonts, content.footer, { size: 26, color: C.text, weight: 600, width: 520, maxLines: 1 }).paint(canvas, PAD + 50, 1432);
-  text(fonts, content.dates, { size: 26, color: C.muted, width: 320, align: TextAlign.Right, maxLines: 1 }).paint(canvas, TICKET.w - PAD - 320, 1432);
+  withAlpha(canvas, anim.footer, () => {
+    drawMark(canvas, PAD - 8, 1420, 52);
+    text(fonts, content.footer, { size: 26, color: C.text, weight: 600, width: 520, maxLines: 1 }).paint(canvas, PAD + 50, 1432);
+    text(fonts, content.dates, { size: 26, color: C.muted, width: 320, align: TextAlign.Right, maxLines: 1 }).paint(canvas, TICKET.w - PAD - 320, 1432);
+  });
   canvas.restore();
 
   const edge = Skia.Paint();
@@ -423,17 +515,20 @@ export function drawRecapCard(canvas: SkCanvas, width: number, content: RecapCar
   edge.setColor(color(C.highlight));
   canvas.drawRRect(shape, edge);
   canvas.restore();
-
-  text(fonts, content.promo, { size: 28, color: C.soft, weight: 500, width: CARD_WIDTH, align: TextAlign.Center, maxLines: 1 }).paint(canvas, 0, CARD_HEIGHT - 100);
-  canvas.restore();
 }
 
 /** Renders the card on a CPU raster surface, so it never adds a second GPU canvas. */
-export function renderRecapCard(content: RecapCardContent, fonts: SkTypefaceFontProvider, width: number): SkImage | null {
+export function renderRecapCard(
+  content: RecapCardContent,
+  fonts: SkTypefaceFontProvider,
+  width: number,
+  anim: CardAnim = CARD_FINAL,
+  formatDistance?: (km: number) => string,
+): SkImage | null {
   const height = Math.round((width * CARD_HEIGHT) / CARD_WIDTH);
   const surface = Skia.Surface.Make(width, height);
   if (!surface) return null;
-  drawRecapCard(surface.getCanvas(), width, content, fonts);
+  drawRecapCard(surface.getCanvas(), width, content, fonts, anim, formatDistance);
   surface.flush();
   return surface.makeImageSnapshot();
 }

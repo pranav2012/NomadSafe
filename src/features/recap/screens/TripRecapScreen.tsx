@@ -37,6 +37,8 @@ import { RecapMapCanvas } from "../components/RecapMapCanvas";
 import { CARD_HEIGHT, CARD_WIDTH, RECAP_FONT_FAMILY, encodeRecapCard, renderRecapCard } from "../components/recapCard";
 import { placeCode, shortPlace, useTripRecap, type TripRecap } from "../hooks/useTripRecap";
 import { shareRecapCard } from "../services/shareRecapCard";
+import { shareRecapVideo } from "../services/shareRecapVideo";
+import { videoEncoder } from "../services/videoEncoder";
 import { finishRecap, useRecapStore } from "../store/recapStore";
 import { cameraFor, frameRoute, type Camera, type Point, type Rect } from "../utils/recapMap";
 
@@ -368,7 +370,7 @@ function Finale({
   onPlanNext: () => void;
   onCheckBalances: () => void;
 }) {
-  const { t } = useLocalization();
+  const { t, formatDistance } = useLocalization();
   const { width, height } = useWindowDimensions();
   const fonts = useFonts({
     [RECAP_FONT_FAMILY]: [
@@ -380,6 +382,8 @@ function Finale({
   });
   const [includeSpend, setIncludeSpend] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [videoProgress, setVideoProgress] = useState<number | null>(null);
+  const cancelVideo = useRef(false);
   const contentKey = JSON.stringify(recap.cardContent(includeSpend));
   const preview = useMemo(() => {
     if (!fonts) return null;
@@ -399,13 +403,37 @@ function Finale({
     if (!shared) showToast(t("recap.shareFailed"));
   };
 
+  const shareVideo = async () => {
+    if (!fonts || videoProgress !== null) return;
+    cancelVideo.current = false;
+    setVideoProgress(0);
+    track("recap_shared", { format: "video", spend: includeSpend && recap.spend !== null });
+    const result = await shareRecapVideo(JSON.parse(contentKey), fonts, {
+      formatDistance,
+      dialogTitle: t("recap.shareDialogTitle"),
+      onProgress: setVideoProgress,
+      isCancelled: () => cancelVideo.current,
+    });
+    setVideoProgress(null);
+    if (result === "failed") showToast(t("recap.videoFailed"));
+  };
+
   return (
     <View style={[styles.finale, { paddingTop: top, paddingBottom: bottom }]}>
       <TiltCard width={cardWidth} height={cardHeight} uri={preview} label={t("recap.previewLabel")} />
-      <View style={styles.finaleText}>
-        <Text style={styles.wrap}>{t("recap.finaleTitle")}</Text>
-        <Text style={[styles.sub, styles.center]}>{t("recap.finaleBody")}</Text>
-      </View>
+      {videoProgress !== null ? (
+        <View style={styles.making} accessibilityLiveRegion="polite">
+          <Text style={styles.makingText}>{t("recap.makingVideo", { percent: Math.round(videoProgress * 100) })}</Text>
+          <View style={styles.makingTrack}>
+            <View style={[styles.makingFill, { width: `${Math.round(videoProgress * 100)}%` }]} />
+          </View>
+        </View>
+      ) : (
+        <View style={styles.finaleText}>
+          <Text style={styles.wrap}>{t("recap.finaleTitle")}</Text>
+          <Text style={[styles.sub, styles.center]}>{t("recap.finaleBody")}</Text>
+        </View>
+      )}
       {recap.spend ? (
         <View style={styles.spendRow}>
           <Text style={[styles.sub, styles.flex]}>{t("recap.includeSpend")}</Text>
@@ -413,12 +441,21 @@ function Finale({
         </View>
       ) : null}
       <View style={styles.actions}>
-        <AuraButton label={t("recap.shareStory")} icon="share" onPress={share} loading={sharing} disabled={!fonts} />
-        <View style={styles.actionRow}>
-          <AuraButton label={t("recap.planNext")} variant="secondary" size="md" onPress={onPlanNext} style={styles.flex} />
-          {recap.hasSplits ? <AuraButton label={t("recap.checkBalances")} variant="secondary" size="md" onPress={onCheckBalances} style={styles.flex} /> : null}
-        </View>
-        <AuraButton label={t("recap.done")} variant="ghost" size="md" onPress={onDone} />
+        {videoProgress !== null ? (
+          <AuraButton label={t("common.cancel")} variant="secondary" onPress={() => (cancelVideo.current = true)} />
+        ) : (
+          <>
+            <AuraButton label={t("recap.shareStory")} icon="share" onPress={share} loading={sharing} disabled={!fonts} />
+            <View style={styles.actionRow}>
+              {videoEncoder ? <AuraButton label={t("recap.shareVideo")} icon="play" variant="secondary" size="md" onPress={shareVideo} disabled={!fonts} style={styles.flex} /> : null}
+              <AuraButton label={t("recap.planNext")} variant="secondary" size="md" onPress={onPlanNext} style={styles.flex} />
+            </View>
+            <View style={styles.actionRow}>
+              {recap.hasSplits ? <AuraButton label={t("recap.checkBalances")} variant="ghost" size="md" onPress={onCheckBalances} style={styles.flex} /> : null}
+              <AuraButton label={t("recap.done")} variant="ghost" size="md" onPress={onDone} style={styles.flex} />
+            </View>
+          </>
+        )}
       </View>
     </View>
   );
@@ -539,6 +576,10 @@ const styles = StyleSheet.create({
   wrap: { fontFamily: f.semibold, fontSize: 28, letterSpacing: -0.8, color: c.text },
   spendRow: { alignSelf: "stretch", flexDirection: "row", alignItems: "center", gap: 12, marginTop: 10 },
   actions: { alignSelf: "stretch", marginTop: "auto", gap: 10 },
+  making: { alignSelf: "stretch", alignItems: "center", gap: 12, marginTop: 22, paddingHorizontal: 24 },
+  makingText: { fontFamily: f.semibold, fontSize: 16, color: c.text, textAlign: "center" },
+  makingTrack: { alignSelf: "stretch", height: 4, borderRadius: 2, backgroundColor: c.hairline, overflow: "hidden" },
+  makingFill: { height: 4, borderRadius: 2, backgroundColor: c.text },
   actionRow: { flexDirection: "row", gap: 10 },
   controls: { position: "absolute", left: 0, right: 0, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 22 },
   control: { alignItems: "center", justifyContent: "center" },

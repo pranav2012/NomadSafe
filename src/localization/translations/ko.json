@@ -1605,7 +1605,10 @@
     "shareFailed": "패스를 공유하지 못했어요. 다시 시도해 주세요.",
     "stampedKicker": "스탬프 완료",
     "stampedTitle": "여권에 추가됐어요",
-    "openPassport": "여권 열기"
+    "openPassport": "여권 열기",
+    "shareVideo": "동영상으로 공유",
+    "makingVideo": "동영상 만드는 중… {{percent}}%",
+    "videoFailed": "동영상을 만들지 못했어요. 다시 시도하거나 이미지를 공유해 주세요."
   },
   "passport": {
     "title": "여권",

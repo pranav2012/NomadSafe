@@ -1605,7 +1605,10 @@
     "shareFailed": "パスをシェアできませんでした。もう一度お試しください。",
     "stampedKicker": "スタンプ",
     "stampedTitle": "パスポートに追加されました",
-    "openPassport": "パスポートを開く"
+    "openPassport": "パスポートを開く",
+    "shareVideo": "動画でシェア",
+    "makingVideo": "動画を作成中… {{percent}}%",
+    "videoFailed": "動画を作成できませんでした。もう一度試すか、画像をシェアしてください。"
   },
   "passport": {
     "title": "パスポート",

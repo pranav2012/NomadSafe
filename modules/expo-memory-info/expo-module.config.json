@@ -1,9 +1,17 @@
 {
-  "platforms": ["android", "apple"],
+  "platforms": [
+    "android",
+    "apple"
+  ],
   "apple": {
-    "modules": ["ExpoMemoryInfoModule"]
+    "modules": [
+      "ExpoMemoryInfoModule"
+    ],
+    "podspecPath": "ExpoMemoryInfo.podspec"
   },
   "android": {
-    "modules": ["expo.modules.memoryinfo.ExpoMemoryInfoModule"]
+    "modules": [
+      "expo.modules.memoryinfo.ExpoMemoryInfoModule"
+    ]
   }
 }

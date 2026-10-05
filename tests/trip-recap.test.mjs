@@ -291,3 +291,32 @@ test("a route between two airport codes is a flight", () => {
   assert.equal(transit.inferTransitMode("IndiGo", "BLR → NRT"), "flight");
   assert.equal(transit.inferTransitMode("Bus", "Goa - Pune"), "bus");
 });
+
+const timeline = loadModule("src/features/recap/utils/cardTimeline.ts");
+
+test("the video's card animation starts empty and ends on the static card", () => {
+  const start = timeline.cardTimeline(0, 4);
+  assert.equal(start.ticket, 0);
+  assert.equal(start.route, 0);
+  assert.equal(start.stamp, 0);
+  const end = timeline.cardTimeline(timeline.VIDEO_SECONDS, 4);
+  for (const key of ["ticket", "text", "land", "stamp", "stats", "footer"]) assert.equal(end[key], 1, key);
+  assert.equal(end.route, Infinity);
+  assert.equal(end.flapTime, Infinity);
+  let previous = -1;
+  for (let t = 0; t <= timeline.VIDEO_SECONDS; t += 0.25) {
+    const route = Math.min(4, timeline.cardTimeline(t, 4).route);
+    assert.ok(route >= previous, `route never goes backwards (t=${t})`);
+    previous = route;
+  }
+});
+
+test("flaps settle left to right and flip deterministically", () => {
+  assert.ok(!timeline.flapSettled(0.3, 0));
+  assert.ok(timeline.flapSettled(0.5, 0));
+  assert.ok(!timeline.flapSettled(0.5, 3));
+  assert.equal(timeline.flapLetter(0.2, 1), timeline.flapLetter(0.2, 1));
+  assert.match(timeline.flapLetter(0.2, 1), /^[A-Z]$/);
+  assert.equal(timeline.stampScale(1), 1);
+  assert.ok(timeline.stampScale(0) > 2);
+});
