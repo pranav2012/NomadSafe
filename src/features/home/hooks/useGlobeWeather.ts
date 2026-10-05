@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlphaType, ColorType, Skia, type SkImage } from "react-native-skia";
-import { api, useQuery } from "@/modules/backend";
+import { api, useQueries } from "@/modules/backend";
 import {
   CLOUD_COLS,
   CLOUD_ROWS,
@@ -30,12 +30,16 @@ function cloudImage({ cover, storm }: CloudGrid): SkImage | null {
 // Last decoded grid, so a remounted globe shows clouds on its first frame.
 let lastClouds: { updatedAt: number; image: SkImage } | null = null;
 
+// useQueries returns a server error instead of throwing it, so an outage falls back to the cached grid.
+const CLOUD_QUERY = { clouds: { query: api.weather.globeClouds, args: {} } };
+
 /**
  * Live cloud cover for the whole globe (a Convex subscription the server refreshes hourly from MET
  * Norway, so it updates in place) and current weather at each stop.
  */
 export function useGlobeWeather(stops: { latitude: number; longitude: number }[]) {
-  const live = useQuery(api.weather.globeClouds);
+  const result = useQueries(CLOUD_QUERY).clouds as (CloudGrid & { updatedAt: number }) | null | Error | undefined;
+  const live = result instanceof Error ? undefined : result;
   const [offline] = useState<SkImage | null>(() => {
     if (lastClouds) return lastClouds.image;
     const cached = readCachedClouds();
