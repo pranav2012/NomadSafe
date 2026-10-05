@@ -1,12 +1,21 @@
 import React, { useEffect, useRef, useState } from "react";
 import { AppState, Modal, Pressable, StyleSheet, Text, View, type AppStateStatus } from "react-native";
-import { Stack, usePathname, useRouter, useSegments, type ErrorBoundaryProps } from "expo-router";
+import {
+  DarkTheme,
+  DefaultTheme,
+  ThemeProvider as NavigationThemeProvider,
+  Stack,
+  usePathname,
+  useRouter,
+  useSegments,
+  type ErrorBoundaryProps,
+} from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { api, BackendProvider, useConvexAuth, useMutation } from "@/modules/backend";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 import { registerTripPush, startGroupSync, startSync, stopGroupSync, stopSync, useTripNotificationRouting } from "@/features/sync";
-import { AURA_FONT_FILES } from "@/constants/aura";
+import { AURA_FONT_FILES, auraDark, auraLight } from "@/constants/aura";
 import { useAuthStore, useSyncAuthSession } from "@/features/auth";
 import LockScreen from "@/features/auth/screens/LockScreen";
 import { useChatStore } from "@/features/ai";
@@ -23,6 +32,7 @@ import { WidgetSync } from "@/features/widget/WidgetSync";
 import { BillingEffects } from "@/modules/billing";
 import { AdsEffects } from "@/modules/ads";
 import { ThemeProvider } from "@/providers/ThemeProvider";
+import { useTheme } from "@/hooks/useTheme";
 import { LocalizationProvider } from "@/localization";
 import { translate } from "@/localization/translate";
 import {
@@ -270,28 +280,34 @@ function AppStack() {
   const onboardingCompleted = useSettingsStore((s) => s.onboardingCompleted);
   const isSignedIn = useAuthStore((s) => s.isSignedIn);
   const inApp = onboardingCompleted && isSignedIn;
+  const { isDark } = useTheme();
+  // Screen containers default to React Navigation's light grey, which flashes white before a screen paints.
+  const base = isDark ? DarkTheme : DefaultTheme;
+  const navTheme = { ...base, colors: { ...base.colors, background: (isDark ? auraDark : auraLight).bg } };
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="index" />
-      <Stack.Protected guard={isSignedIn && !onboardingCompleted}>
-        <Stack.Screen name="(onboarding)" />
-      </Stack.Protected>
-      <Stack.Screen name="(auth)" />
-      <Stack.Protected guard={inApp}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="settings" options={{ presentation: "modal" }} />
-        <Stack.Screen name="trips" options={{ presentation: "modal" }} />
-        <Stack.Screen name="plan-trip" options={{ presentation: "fullScreenModal", animation: "fade" }} />
-        <Stack.Screen name="join/[code]" options={{ presentation: "modal" }} />
-        <Stack.Screen name="paywall" options={{ presentation: "modal" }} />
-        <Stack.Screen name="emergency-contacts" />
-        <Stack.Screen
-          name="voice-expense"
-          options={{ presentation: "fullScreenModal", animation: "slide_from_bottom" }}
-        />
-      </Stack.Protected>
-    </Stack>
+    <NavigationThemeProvider value={navTheme}>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
+        <Stack.Protected guard={isSignedIn && !onboardingCompleted}>
+          <Stack.Screen name="(onboarding)" />
+        </Stack.Protected>
+        <Stack.Screen name="(auth)" />
+        <Stack.Protected guard={inApp}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="settings" options={{ presentation: "modal" }} />
+          <Stack.Screen name="trips" options={{ presentation: "modal" }} />
+          <Stack.Screen name="plan-trip" options={{ presentation: "fullScreenModal", animation: "fade" }} />
+          <Stack.Screen name="join/[code]" options={{ presentation: "modal" }} />
+          <Stack.Screen name="paywall" options={{ presentation: "modal" }} />
+          <Stack.Screen name="emergency-contacts" />
+          <Stack.Screen
+            name="voice-expense"
+            options={{ presentation: "fullScreenModal", animation: "slide_from_bottom" }}
+          />
+        </Stack.Protected>
+      </Stack>
+    </NavigationThemeProvider>
   );
 }
 

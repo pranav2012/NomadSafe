@@ -62,8 +62,9 @@ function NativeTabsLayout() {
  */
 function GlassTabsLayout() {
   const blurTarget = useRef<View>(null);
+  const { isDark } = useTheme();
   return (
-    <Tabs style={styles.root}>
+    <Tabs style={[styles.root, { backgroundColor: (isDark ? auraDark : auraLight).bg }]}>
       <BlurTargetView ref={blurTarget} style={styles.root}>
         <TabSlot renderFn={renderFrozenWhenHidden} />
       </BlurTargetView>
