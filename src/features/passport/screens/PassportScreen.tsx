@@ -3,7 +3,6 @@ import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, { interpolate, useAnimatedScrollHandler, useAnimatedStyle, useSharedValue, type SharedValue } from "react-native-reanimated";
 import Svg, { Defs, LinearGradient as SvgGradient, Path, Stop } from "react-native-svg";
 import { AuraButton, AuraSheet, Icon, PressableScale, useAura } from "@/atoms";
 import { auraDark, auraFonts as f } from "@/constants/aura";
@@ -14,6 +13,7 @@ import { getTripStatus } from "@/features/trips/utils/dates";
 import { useLocalization } from "@/localization";
 import { track } from "@/modules/analytics";
 import { AddPastTravelSheet } from "../components/AddPastTravelSheet";
+import { PassportBook } from "../components/PassportBook";
 import { HomeMap } from "../components/HomeMap";
 import { PassportStamp, StateSeal } from "../components/PassportStamp";
 import { useHomeCountry, usePassport } from "../hooks/usePassport";
@@ -48,7 +48,6 @@ export default function PassportScreen() {
   const [sealDetail, setSealDetail] = useState<Seal | null>(null);
   const [page, setPage] = useState(0);
   const [pagerHeight, setPagerHeight] = useState(0);
-  const scrollX = useSharedValue(0);
 
   React.useEffect(() => {
     track("passport_opened", {
@@ -73,9 +72,6 @@ export default function PassportScreen() {
     return [{ kind: "cover" }, { kind: "data" }, ...(visa.length > 0 ? visa : [[]]).map((stamps): Page => ({ kind: "visa", stamps })), ...homePages];
   }, [home, passport.seals, passport.stamps]);
 
-  const onScroll = useAnimatedScrollHandler((event) => {
-    scrollX.set(event.contentOffset.x);
-  });
   const pageHeight = Math.min(pagerHeight - 16, 660);
 
   return (
@@ -92,23 +88,21 @@ export default function PassportScreen() {
 
       <View style={styles.flex} onLayout={(event) => setPagerHeight(event.nativeEvent.layout.height)}>
         {pagerHeight > 0 ? (
-          <Animated.ScrollView
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onScroll={onScroll}
-            scrollEventThrottle={16}
-            onMomentumScrollEnd={(event) => setPage(Math.round(event.nativeEvent.contentOffset.x / width))}
-          >
-            {pages.map((item, i) => (
-              <PageShell key={`${item.kind}-${i}`} index={i} width={width} height={pageHeight} scrollX={scrollX}>
-                {item.kind === "cover" ? <Cover /> : null}
-                {item.kind === "data" ? <DataPage /> : null}
-                {item.kind === "visa" ? <VisaPage stamps={item.stamps} width={width - 40} onOpen={setDetail} onAdd={() => setAdding(true)} /> : null}
-                {item.kind === "home" && home ? <HomePage home={home} seals={item.seals} map={item.map} width={width - 40} onOpen={setSealDetail} /> : null}
-              </PageShell>
-            ))}
-          </Animated.ScrollView>
+          <View style={styles.bookWrap}>
+            <PassportBook
+              width={width - 40}
+              height={pageHeight}
+              onPageChange={setPage}
+              pages={pages.map((item, i) => (
+                <PageFace key={`${item.kind}-${i}`}>
+                  {item.kind === "cover" ? <Cover /> : null}
+                  {item.kind === "data" ? <DataPage /> : null}
+                  {item.kind === "visa" ? <VisaPage stamps={item.stamps} width={width - 40} onOpen={setDetail} onAdd={() => setAdding(true)} /> : null}
+                  {item.kind === "home" && home ? <HomePage home={home} seals={item.seals} map={item.map} width={width - 40} onOpen={setSealDetail} /> : null}
+                </PageFace>
+              ))}
+            />
+          </View>
         ) : null}
       </View>
 
@@ -128,42 +122,13 @@ export default function PassportScreen() {
   );
 }
 
-function PageShell({
-  index,
-  width,
-  height,
-  scrollX,
-  children,
-}: {
-  index: number;
-  width: number;
-  height: number;
-  scrollX: SharedValue<number>;
-  children: React.ReactNode;
-}) {
-  const style = useAnimatedStyle(() => {
-    const at = scrollX.get() / width - index;
-    return {
-      transform: [
-        { perspective: 1200 },
-        { rotateY: `${interpolate(at, [-1, 0, 1], [28, 0, -28])}deg` },
-        { scale: interpolate(Math.abs(at), [0, 1], [1, 0.9], "clamp") },
-      ],
-      opacity: interpolate(Math.abs(at), [0, 1], [1, 0.5], "clamp"),
-    };
-  });
+/** Paper for one passport page: the card's dark gradient with a soft aurora corner. */
+function PageFace({ children }: { children: React.ReactNode }) {
   return (
-    <View style={{ width, alignItems: "center", justifyContent: "center" }}>
-      <Animated.View style={[styles.page, { width: width - 40, height }, style]}>
-        <LinearGradient colors={["#1A1E29", c.card, "#0F1219"]} locations={[0, 0.45, 1]} style={StyleSheet.absoluteFill} />
-        <LinearGradient
-          colors={["rgba(91,108,255,0.22)", "rgba(91,108,255,0)"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0.7, y: 0.5 }}
-          style={StyleSheet.absoluteFill}
-        />
-        {children}
-      </Animated.View>
+    <View style={styles.flex}>
+      <LinearGradient colors={["#1A1E29", c.card, "#0F1219"]} locations={[0, 0.45, 1]} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={["rgba(91,108,255,0.22)", "rgba(91,108,255,0)"]} start={{ x: 0, y: 0 }} end={{ x: 0.7, y: 0.5 }} style={StyleSheet.absoluteFill} />
+      {children}
     </View>
   );
 }
@@ -476,12 +441,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: c.surfaceStrong,
   },
-  page: {
-    borderRadius: 28,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: c.highlight,
-  },
+  bookWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
   pad: { flex: 1, padding: 22 },
   pageLabel: {
     fontFamily: f.medium,
