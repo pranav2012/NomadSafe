@@ -18,7 +18,7 @@ function greetingKeyFor(hour: number) {
 
 /** Everything Home renders for the active trip, already formatted; null without an active trip. */
 export function useHomeData(): HomeData | null {
-  const { t, locale, formatCurrency } = useLocalization();
+  const { t, locale, hour12, formatCurrency } = useLocalization();
   const user = useAuthStore((state) => state.user);
   const trip = useTripsStore(selectActiveTrip);
   const allEvents = useEventsStore((state) => state.events);
@@ -38,7 +38,7 @@ export function useHomeData(): HomeData | null {
   const now = new Date();
   const userName = user?.name?.split(" ")[0] ?? t("common.fallbackUser");
   const greeting = t(greetingKeyFor(now.getHours()));
-  const timeFormatter = new Intl.DateTimeFormat(locale, { weekday: "short", hour: "numeric", minute: "2-digit" });
+  const timeFormatter = new Intl.DateTimeFormat(locale, { weekday: "short", hour: "numeric", minute: "2-digit", hour12 });
   const shortDate = new Intl.DateTimeFormat(locale, { month: "short", day: "numeric" });
   const sharingLabel = isSharing ? t("trip.sharingLive") : t("trip.notSharing");
 

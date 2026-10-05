@@ -20,6 +20,7 @@ import { auraStatusAccent, auraStatusColors } from "@/constants/aura";
 import { LEGAL_URLS, openLegalPage } from "@/constants/legal";
 import { LANGUAGE_OPTIONS, useLocalization, type SupportedLocale } from "@/localization";
 import { currencyCodes, currencyDisplayName } from "@/utils/currency";
+import type { TimeFormat, UnitPrefs, UnitSystem } from "@/utils/units";
 import { confirmDeviceOwner, disconnectGmail, signOutAndCleanup } from "@/features/auth/services/session";
 import { disableBackup, flushGroupSync, flushSync, hasBackupOwner } from "@/features/sync";
 import { localAuth, useAuthStore, useBiometricPresentation } from "@/features/auth";
@@ -45,7 +46,7 @@ const [INDIGO, TEAL, VIOLET] = auraStatusColors.calm;
 const AMBER = auraStatusAccent.live;
 
 type ThemeMode = "light" | "dark" | "system";
-type SheetId = "autoLock" | "checkIn" | "appearance" | "language" | "currency" | "sms" | "aiKey" | "aiUsage";
+type SheetId = "autoLock" | "checkIn" | "appearance" | "language" | "currency" | "units" | "timeFormat" | "sms" | "aiKey" | "aiUsage";
 type Translate = ReturnType<typeof useLocalization>["t"];
 
 function formatShortDuration(seconds: number, t: Translate): string {
@@ -77,7 +78,7 @@ export default function SettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { c, f, isDark } = useAura();
-  const { t, locale, deviceLocale, deviceCurrency } = useLocalization();
+  const { t, locale, deviceLocale, deviceCurrency, deviceUnits, deviceHour12 } = useLocalization();
 
   const user = useAuthStore((s) => s.user);
   const isPinSet = useAuthStore((s) => s.isPinSet);
@@ -94,6 +95,10 @@ export default function SettingsScreen() {
   const setLocaleOverride = useSettingsStore((s) => s.setLocaleOverride);
   const currencyOverride = useSettingsStore((s) => s.currencyOverride);
   const setCurrencyOverride = useSettingsStore((s) => s.setCurrencyOverride);
+  const unitSystem = useSettingsStore((s) => s.unitSystem);
+  const setUnitSystem = useSettingsStore((s) => s.setUnitSystem);
+  const timeFormat = useSettingsStore((s) => s.timeFormat);
+  const setTimeFormat = useSettingsStore((s) => s.setTimeFormat);
   const tripModeEnabled = useSettingsStore((s) => s.tripModeEnabled);
   const setTripModeEnabled = useSettingsStore((s) => s.setTripModeEnabled);
   const defaultCheckInDuration = useSettingsStore((s) => s.defaultCheckInDuration);
@@ -191,6 +196,23 @@ export default function SettingsScreen() {
     })),
   ];
   const currencyValue = currencyOverride ?? t("settings.currencyAutomaticValue", { currency: deviceCurrency });
+
+  const describeUnits = (prefs: UnitPrefs) => `°${prefs.temperature} · ${prefs.distance} · ${prefs.rain}`;
+  const unitOptions: { value: UnitSystem | null; label: string; detail?: string }[] = [
+    { value: null, label: t("settings.unitsAutomatic"), detail: t("settings.unitsAutomaticDetail", { units: describeUnits(deviceUnits) }) },
+    { value: "metric", label: t("settings.unitsMetric"), detail: describeUnits({ temperature: "C", distance: "km", rain: "mm" }) },
+    { value: "imperial", label: t("settings.unitsImperial"), detail: describeUnits({ temperature: "F", distance: "mi", rain: "in" }) },
+  ];
+  const unitsValue = unitOptions.find((option) => option.value === unitSystem)?.label;
+
+  const sampleTime = (hour12: boolean) =>
+    new Intl.DateTimeFormat(locale, { hour: "numeric", minute: "2-digit", hour12 }).format(new Date(2026, 0, 1, 14, 5));
+  const timeFormatOptions: { value: TimeFormat | null; label: string; detail?: string }[] = [
+    { value: null, label: t("settings.timeFormatAutomatic"), detail: t("settings.timeFormatAutomaticDetail", { example: sampleTime(deviceHour12) }) },
+    { value: "12h", label: t("settings.timeFormat12h"), detail: sampleTime(true) },
+    { value: "24h", label: t("settings.timeFormat24h"), detail: sampleTime(false) },
+  ];
+  const timeFormatValue = timeFormatOptions.find((option) => option.value === timeFormat)?.label;
 
   const toggleBiometric = (value: boolean) => {
     if (!value) {
@@ -578,6 +600,22 @@ export default function SettingsScreen() {
             value={currencyValue}
             onPress={() => setSheet("currency")}
           />
+          <AuraListRow
+            icon="compass"
+            tone={AMBER}
+            label={t("settings.units")}
+            detail={t("settings.unitsSub")}
+            value={unitsValue}
+            onPress={() => setSheet("units")}
+          />
+          <AuraListRow
+            icon="clock"
+            tone={VIOLET}
+            label={t("settings.timeFormat")}
+            detail={t("settings.timeFormatSub")}
+            value={timeFormatValue}
+            onPress={() => setSheet("timeFormat")}
+          />
         </AuraListGroup>
 
         <AuraListGroup title={t("settings.tripsSection")}>
@@ -734,6 +772,22 @@ export default function SettingsScreen() {
         options={currencyOptions}
         selected={currencyOverride}
         onSelect={setCurrencyOverride}
+      />
+      <AuraOptionSheet
+        visible={sheet === "units"}
+        onClose={closeSheet}
+        title={t("settings.units")}
+        options={unitOptions}
+        selected={unitSystem}
+        onSelect={setUnitSystem}
+      />
+      <AuraOptionSheet
+        visible={sheet === "timeFormat"}
+        onClose={closeSheet}
+        title={t("settings.timeFormat")}
+        options={timeFormatOptions}
+        selected={timeFormat}
+        onSelect={setTimeFormat}
       />
       <SmsTemplatesSheet visible={sheet === "sms"} onClose={closeSheet} />
       <AiKeySheet key={keySheetSession} visible={sheet === "aiKey"} onClose={closeSheet} />

@@ -5,7 +5,6 @@ import { Icon, PressableScale } from "@/atoms";
 import { auraFonts as f, type AuraPalette } from "@/constants/aura";
 import type { HomeStop } from "@/features/home/types";
 import type { PlacePin, SafetyPlace } from "@/features/home/hooks/useTripSafety";
-import { formatDistance } from "@/features/home/utils/format";
 import { isCompactFrame, regionForPoints } from "@/features/trips/utils/mapFraming";
 import { useLocalization } from "@/localization";
 import { MapView, Marker, Polyline, type MapViewHandle, type Region } from "@/modules/location";
@@ -92,7 +91,7 @@ export function InlineSafetyMap({
   onBackToGlobe,
   onTouchActive,
 }: InlineSafetyMapProps) {
-  const { t, locale } = useLocalization();
+  const { t, formatDistance } = useLocalization();
   const mapRef = useRef<MapViewHandle>(null);
   const [selected, setSelected] = useState<SafetyPlace | null>(null);
   const [settled, setSettled] = useState(false);
@@ -259,7 +258,7 @@ export function InlineSafetyMap({
               <Icon name={SAFETY_KIND_META[selected.kind].icon} size={12} color="#FFFFFF" strokeWidth={2.4} />
             </View>
             <Text style={[styles.kind, { color: c.textSoft }]}>{t(SAFETY_KIND_META[selected.kind].labelKey)}</Text>
-            {selectedKm !== null ? <Text style={[styles.km, { color: c.textMuted }]}>{formatDistance(selectedKm, locale)}</Text> : null}
+            {selectedKm !== null ? <Text style={[styles.km, { color: c.textMuted }]}>{formatDistance(selectedKm)}</Text> : null}
             <PressableScale onPress={() => setSelected(null)} accessibilityRole="button" accessibilityLabel={t("common.close")} hitSlop={10}>
               <Icon name="x" size={16} color={c.textMuted} />
             </PressableScale>

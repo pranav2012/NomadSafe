@@ -43,32 +43,10 @@ function distanceInMeters(from: { latitude: number; longitude: number }, place: 
   return 2 * 6_371_000 * Math.asin(Math.sqrt(value));
 }
 
-function formatDistance(meters: number, locale: string) {
-  const inKm = meters >= 1_000;
-  try {
-    return new Intl.NumberFormat(locale, {
-      style: "unit",
-      unit: inKm ? "kilometer" : "meter",
-      unitDisplay: "short",
-      maximumFractionDigits: inKm ? 1 : 0,
-    }).format(inKm ? meters / 1_000 : Math.round(meters / 10) * 10);
-  } catch {
-    return inKm ? `${(meters / 1_000).toFixed(1)} km` : `${Math.round(meters / 10) * 10} m`;
-  }
-}
-
-function formatRatingCount(count: number, locale: string) {
-  try {
-    return new Intl.NumberFormat(locale, { notation: "compact", maximumFractionDigits: 1 }).format(count);
-  } catch {
-    return `${count}`;
-  }
-}
-
 /** Places around the user by category, as photo cards with walk time, rating and open status. */
 export function NearbyPlaces({ userLocation }: { userLocation: UserLocation | null }) {
   const { c, f } = useAura();
-  const { t, locale } = useLocalization();
+  const { t, locale, formatDistance, formatCompactNumber } = useLocalization();
   const latitude = userLocation?.latitude;
   const longitude = userLocation?.longitude;
   const searchNearby = useAction(api.places.searchNearby);
@@ -163,7 +141,7 @@ export function NearbyPlaces({ userLocation }: { userLocation: UserLocation | nu
             const photo = place.photoUrl && !brokenPhotos.has(place.photoUrl) ? place.photoUrl : null;
             const open = place.hours ? isOpenAt(place.hours, now) : place.openNow;
             const walkMin = Math.max(1, Math.round((distance * WALK_DETOUR) / WALK_METERS_PER_MIN));
-            const away = walkMin <= MAX_WALK_MIN ? t("places.walk", { count: walkMin }) : formatDistance(distance, locale);
+            const away = walkMin <= MAX_WALK_MIN ? t("places.walk", { count: walkMin }) : formatDistance(distance / 1_000);
             return (
               <PressableScale
                 key={`${place.name}-${place.latitude}-${place.longitude}`}
@@ -216,7 +194,7 @@ export function NearbyPlaces({ userLocation }: { userLocation: UserLocation | nu
                   </View>
                   <Text style={[styles.category, { color: c.textSoft, fontFamily: f.regular }]} numberOfLines={1}>
                     {place.category}
-                    {place.ratingCount > 0 ? ` · ${formatRatingCount(place.ratingCount, locale)} ★` : ""}
+                    {place.ratingCount > 0 ? ` · ${formatCompactNumber(place.ratingCount)} ★` : ""}
                   </Text>
                   <View style={styles.walkRow}>
                     <Icon name="mapPin" size={12} color={active.tint} />

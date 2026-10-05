@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { mmkvStateStorage } from "@/modules/storage";
 import type { SupportedLocale } from "@/localization/languages";
 import { normalizeCurrencyCode } from "@/utils/currency";
+import type { TimeFormat, UnitSystem } from "@/utils/units";
 
 type ThemeMode = "light" | "dark" | "system";
 export type DefaultTripMode = "solo" | "group";
@@ -14,6 +15,10 @@ interface SettingsState {
   /** The user's pick for new trips and amounts; null follows the phone. Read the result with `useDefaultCurrency()`. */
   currencyOverride: string | null;
   localeOverride: SupportedLocale | null;
+  /** null follows the phone's region (see `resolveUnitPrefs`). */
+  unitSystem: UnitSystem | null;
+  /** null follows the phone's 12/24-hour setting. */
+  timeFormat: TimeFormat | null;
   tripModeEnabled: boolean;
   defaultTripMode: DefaultTripMode;
   defaultCheckInDuration: number; // seconds
@@ -31,6 +36,8 @@ interface SettingsState {
   setOnboardingStep: (step: number) => void;
   setCurrencyOverride: (currency: string | null) => void;
   setLocaleOverride: (locale: SupportedLocale | null) => void;
+  setUnitSystem: (system: UnitSystem | null) => void;
+  setTimeFormat: (format: TimeFormat | null) => void;
   setTripModeEnabled: (value: boolean) => void;
   setDefaultTripMode: (mode: DefaultTripMode) => void;
   setDefaultCheckInDuration: (seconds: number) => void;
@@ -54,6 +61,8 @@ export const useSettingsStore = create<SettingsState>()(
       onboardingStep: 0,
       currencyOverride: null,
       localeOverride: null,
+      unitSystem: null,
+      timeFormat: null,
       tripModeEnabled: true,
       defaultTripMode: "solo",
       defaultCheckInDuration: 2 * 60 * 60,
@@ -70,6 +79,8 @@ export const useSettingsStore = create<SettingsState>()(
       setOnboardingStep: (step) => set({ onboardingStep: step }),
       setCurrencyOverride: (currency) => set({ currencyOverride: currency ? normalizeCurrencyCode(currency) : null }),
       setLocaleOverride: (locale) => set({ localeOverride: locale }),
+      setUnitSystem: (system) => set({ unitSystem: system }),
+      setTimeFormat: (format) => set({ timeFormat: format }),
       setTripModeEnabled: (value) => set({ tripModeEnabled: value }),
       setDefaultTripMode: (mode) => set({ defaultTripMode: mode }),
       setDefaultCheckInDuration: (seconds) => set({ defaultCheckInDuration: seconds }),
@@ -86,6 +97,8 @@ export const useSettingsStore = create<SettingsState>()(
           onboardingStep: 0,
           currencyOverride: null,
           localeOverride: null,
+          unitSystem: null,
+          timeFormat: null,
           tripModeEnabled: true,
           defaultTripMode: "solo",
           defaultCheckInDuration: 2 * 60 * 60,

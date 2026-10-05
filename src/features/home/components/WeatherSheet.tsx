@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { AuraChip, AuraSheet, useAura } from "@/atoms";
 import { describeWeather } from "@/features/trips/services/weatherService";
-import { buildOutlook, dayRain, todayKey, toUnit, weekday, type DestinationForecast, type TemperatureUnit } from "@/features/trips/hooks/useTripForecast";
+import { buildOutlook, dayRain, todayKey, weekday, type DestinationForecast } from "@/features/trips/hooks/useTripForecast";
 import { useLocalization } from "@/localization";
 
 interface WeatherSheetProps {
@@ -11,7 +11,6 @@ interface WeatherSheetProps {
   onClose: () => void;
   destinations: DestinationForecast[];
   active: DestinationForecast;
-  unit: TemperatureUnit;
   onSelect: (name: string) => void;
 }
 
@@ -19,16 +18,17 @@ const RAIN = "#5B8CFF";
 const WARM = "#FFB547";
 
 /** Trip forecast in a sheet: destination switcher, today's detail, and a day list with low/high range bars. */
-export function WeatherSheet({ visible, onClose, destinations, active, unit, onSelect }: WeatherSheetProps) {
+export function WeatherSheet({ visible, onClose, destinations, active, onSelect }: WeatherSheetProps) {
   const { c, f } = useAura();
-  const { t, locale } = useLocalization();
+  const localization = useLocalization();
+  const { t, locale, toTemperature, formatTemperature, formatRain, units } = localization;
   const lead = active.days[0];
   const condition = describeWeather(lead.weatherCode);
-  const outlook = buildOutlook(active.days, locale, t);
+  const outlook = buildOutlook(active.days, localization);
   const today = todayKey();
   const meta = [
     t(`trip.weatherConditions.${condition.labelKey}`),
-    lead.feelsLike != null ? t("trip.weatherFeelsLike", { temp: toUnit(lead.feelsLike, unit) }) : null,
+    lead.feelsLike != null ? t("trip.weatherFeelsLike", { temp: toTemperature(lead.feelsLike) }) : null,
     lead.uvIndex != null ? t("trip.weatherUv", { value: lead.uvIndex }) : null,
   ]
     .filter(Boolean)
@@ -56,8 +56,8 @@ export function WeatherSheet({ visible, onClose, destinations, active, unit, onS
             <Text style={styles.emoji}>{condition.emoji}</Text>
             <View style={styles.heroText}>
               <Text style={[styles.temp, { color: c.text, fontFamily: f.semibold }]}>
-                {`${toUnit(lead.tempMax, unit)}°`}
-                <Text style={[styles.unit, { color: c.textMuted, fontFamily: f.medium }]}>{unit}</Text>
+                {formatTemperature(lead.tempMax)}
+                <Text style={[styles.unit, { color: c.textMuted, fontFamily: f.medium }]}>{units.temperature}</Text>
               </Text>
               <Text numberOfLines={2} style={[styles.meta, { color: c.textSoft, fontFamily: f.regular }]}>
                 {meta}
@@ -74,7 +74,7 @@ export function WeatherSheet({ visible, onClose, destinations, active, unit, onS
         <View style={styles.days}>
           {active.days.map((day) => {
             const low = day.tempMin ?? day.tempMax;
-            const rain = dayRain(day, locale);
+            const rain = dayRain(day, formatRain);
             return (
               <View key={day.date} style={[styles.day, { borderBottomColor: c.hairline }]}>
                 <Text numberOfLines={1} style={[styles.dayLabel, { color: day.date === today ? c.text : c.textSoft, fontFamily: f.medium }]}>
@@ -84,7 +84,7 @@ export function WeatherSheet({ visible, onClose, destinations, active, unit, onS
                   <Text style={styles.dayEmoji}>{describeWeather(day.weatherCode).emoji}</Text>
                   {rain != null ? <Text style={[styles.rain, { fontFamily: f.semibold }]}>{rain}</Text> : null}
                 </View>
-                <Text style={[styles.low, { color: c.textMuted, fontFamily: f.medium }]}>{`${toUnit(low, unit)}°`}</Text>
+                <Text style={[styles.low, { color: c.textMuted, fontFamily: f.medium }]}>{formatTemperature(low)}</Text>
                 <View style={[styles.track, { backgroundColor: c.surfaceStrong }]}>
                   <LinearGradient
                     colors={[RAIN, WARM]}
@@ -99,7 +99,7 @@ export function WeatherSheet({ visible, onClose, destinations, active, unit, onS
                     ]}
                   />
                 </View>
-                <Text style={[styles.high, { color: c.text, fontFamily: f.semibold }]}>{`${toUnit(day.tempMax, unit)}°`}</Text>
+                <Text style={[styles.high, { color: c.text, fontFamily: f.semibold }]}>{formatTemperature(day.tempMax)}</Text>
               </View>
             );
           })}

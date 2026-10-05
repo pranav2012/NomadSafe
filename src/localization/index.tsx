@@ -5,6 +5,18 @@ import { reloadAppAsync } from "expo";
 import { useSettingsStore } from "@/features/settings";
 import { storage } from "@/modules/storage";
 import { getEffectiveCurrency } from "@/utils/currency";
+import {
+  deviceUnitPrefs,
+  formatApproxDuration,
+  formatCompactNumber,
+  formatDistance,
+  formatRain,
+  resolveUnitPrefs,
+  toTemperature,
+  uses12HourClock,
+  type LabelUnit,
+  type UnitPrefs,
+} from "@/utils/units";
 import { LANGUAGE_OPTIONS, normalizeLocale, type SupportedLocale } from "./languages";
 import { translations } from "./resources";
 import { fallbackResource, interpolate, lookup, readPath, type TranslateParams as Params } from "./translate";
@@ -22,6 +34,19 @@ interface LocalizationContextValue {
   formatTime: (value: Date | number, options?: Intl.DateTimeFormatOptions) => string;
   formatDateTime: (value: Date | number, options?: Intl.DateTimeFormatOptions) => string;
   formatDuration: (seconds: number) => string;
+  units: UnitPrefs;
+  /** What "Automatic" resolves to on this phone, for Settings. */
+  deviceUnits: UnitPrefs;
+  deviceHour12: boolean;
+  /** Pass as `hour12` to any Intl.DateTimeFormat that shows the hour. */
+  hour12: boolean;
+  toTemperature: (celsius: number) => number;
+  /** "21°" in the user's unit. */
+  formatTemperature: (celsius: number) => string;
+  formatDistance: (km: number) => string;
+  formatRain: (mm: number) => string;
+  formatApproxDuration: (hours: number) => string;
+  formatCompactNumber: (value: number) => string;
 }
 
 const LocalizationContext = createContext<LocalizationContextValue | null>(null);
@@ -69,13 +94,26 @@ function formatCurrencyNumber(value: number, locale: string, currency: string): 
 
 const DATE_COMPONENTS = ["weekday", "era", "year", "month", "day", "hour", "minute", "second", "dayPeriod", "timeZoneName", "fractionalSecondDigits"] as const;
 
-/** Intl throws if dateStyle/timeStyle are mixed with explicit components, so only default when none are given. */
+const TIME_PARTS: Intl.DateTimeFormatOptions = { hour: "numeric", minute: "2-digit" };
+const DATE_PARTS: Intl.DateTimeFormatOptions = { year: "numeric", month: "short", day: "numeric" };
+
+/**
+ * Intl throws if dateStyle/timeStyle are mixed with explicit components, so only default when none are
+ * given. Times are spelled out as hour/minute with `hour12`: iOS Hermes ignores `hour12` with `timeStyle`.
+ */
 function withDefaultStyle(
   options: Intl.DateTimeFormatOptions | undefined,
   defaults: Intl.DateTimeFormatOptions,
+  hour12: boolean,
 ): Intl.DateTimeFormatOptions {
-  if (options && DATE_COMPONENTS.some((key) => options[key] !== undefined)) return options;
-  return { ...defaults, ...options };
+  const merged = options && DATE_COMPONENTS.some((key) => options[key] !== undefined) ? options : { ...defaults, ...options };
+  if (merged.timeStyle) {
+    const spelled: Intl.DateTimeFormatOptions = { ...(merged.dateStyle ? DATE_PARTS : null), ...TIME_PARTS, ...merged, hour12 };
+    delete spelled.timeStyle;
+    delete spelled.dateStyle;
+    return spelled;
+  }
+  return merged.hour ? { ...merged, hour12 } : merged;
 }
 
 /**
@@ -101,19 +139,32 @@ function useApplyLayoutDirection(isRTL: boolean) {
 export function LocalizationProvider({ children }: { children: React.ReactNode }) {
   const localeOverride = useSettingsStore((s) => s.localeOverride);
   const currencyOverride = useSettingsStore((s) => s.currencyOverride);
+  const unitSystem = useSettingsStore((s) => s.unitSystem);
+  const timeFormat = useSettingsStore((s) => s.timeFormat);
   const deviceLocalization = Localization.useLocales()[0];
+  const device24h = Localization.useCalendars()[0]?.uses24hourClock;
   const deviceLocale = normalizeLocale(deviceLocalization?.languageTag);
   const locale = localeOverride ?? deviceLocale;
   const deviceCurrency = getEffectiveCurrency(null, deviceLocalization?.currencyCode);
   const currency = getEffectiveCurrency(currencyOverride, deviceLocalization?.currencyCode);
   const resource = translations[locale] ?? fallbackResource;
   const isRTL = locale === "ar";
+  const measurementSystem = deviceLocalization?.measurementSystem;
+  const temperatureUnit = deviceLocalization?.temperatureUnit;
+  const deviceUnits = useMemo(() => deviceUnitPrefs(measurementSystem, temperatureUnit), [measurementSystem, temperatureUnit]);
+  const units = useMemo(() => resolveUnitPrefs(unitSystem, deviceUnits), [unitSystem, deviceUnits]);
+  const deviceHour12 = uses12HourClock(null, device24h, locale);
+  const hour12 = uses12HourClock(timeFormat, device24h, locale);
 
   useApplyLayoutDirection(isRTL);
 
   const value = useMemo<LocalizationContextValue>(() => {
     const getValue = (key: string) => readPath(resource, key) ?? readPath(fallbackResource, key);
     const formatLocale = locale;
+    const label: LabelUnit = (unit, amount) => {
+      const valueAtKey = lookup(resource, locale, `units.${unit}`, { value: amount });
+      return typeof valueAtKey === "string" ? interpolate(valueAtKey, { value: amount }) : `${amount} ${unit}`;
+    };
 
     return {
       locale,
@@ -138,13 +189,13 @@ export function LocalizationProvider({ children }: { children: React.ReactNode }
         }).format(amount);
       },
       formatDate: (value, options) =>
-        new Intl.DateTimeFormat(formatLocale, withDefaultStyle(options, { dateStyle: "medium" })).format(value),
+        new Intl.DateTimeFormat(formatLocale, withDefaultStyle(options, { dateStyle: "medium" }, hour12)).format(value),
       formatTime: (value, options) =>
-        new Intl.DateTimeFormat(formatLocale, withDefaultStyle(options, { timeStyle: "short" })).format(value),
+        new Intl.DateTimeFormat(formatLocale, withDefaultStyle(options, { timeStyle: "short" }, hour12)).format(value),
       formatDateTime: (value, options) =>
         new Intl.DateTimeFormat(
           formatLocale,
-          withDefaultStyle(options, { dateStyle: "medium", timeStyle: "short" }),
+          withDefaultStyle(options, { dateStyle: "medium", timeStyle: "short" }, hour12),
         ).format(value),
       formatDuration: (seconds) => {
         try {
@@ -157,8 +208,18 @@ export function LocalizationProvider({ children }: { children: React.ReactNode }
           return `${Math.round(seconds)}s`;
         }
       },
+      units,
+      deviceUnits,
+      deviceHour12,
+      hour12,
+      toTemperature: (celsius) => toTemperature(celsius, units.temperature),
+      formatTemperature: (celsius) => `${toTemperature(celsius, units.temperature)}°`,
+      formatDistance: (km) => formatDistance(km, units.distance, formatLocale, label),
+      formatRain: (mm) => formatRain(mm, units.rain, formatLocale, label),
+      formatApproxDuration: (hours) => formatApproxDuration(hours, formatLocale, label),
+      formatCompactNumber: (value) => formatCompactNumber(value, formatLocale),
     };
-  }, [currency, deviceCurrency, deviceLocale, isRTL, locale, resource]);
+  }, [currency, deviceCurrency, deviceHour12, deviceLocale, deviceUnits, hour12, isRTL, locale, resource, units]);
 
   return (
     <LocalizationContext.Provider value={value}>

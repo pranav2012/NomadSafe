@@ -15,6 +15,7 @@ import {
   type AiModelId,
 } from "./modelCatalog";
 import { logger } from "@/modules/logger";
+import { formatNumber } from "@/utils/units";
 
 export * from "./modelCatalog";
 
@@ -22,17 +23,8 @@ const MB = 1024 * 1024;
 
 export function formatModelSize(sizeMb: number, locale?: string): string {
   const useGb = sizeMb >= 1024;
-  const value = useGb ? sizeMb / 1024 : sizeMb;
-  try {
-    return new Intl.NumberFormat(locale, {
-      style: "unit",
-      unit: useGb ? "gigabyte" : "megabyte",
-      unitDisplay: "short",
-      maximumFractionDigits: useGb ? 1 : 0,
-    }).format(value);
-  } catch {
-    return useGb ? `${value.toFixed(1)} GB` : `${Math.round(value)} MB`;
-  }
+  const value = formatNumber(useGb ? sizeMb / 1024 : sizeMb, locale ?? "en", useGb ? 1 : 0);
+  return `${value} ${useGb ? "GB" : "MB"}`;
 }
 
 export function formatBytes(bytes: number, locale?: string): string {

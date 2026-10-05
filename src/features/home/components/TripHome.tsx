@@ -15,7 +15,7 @@ import { todayStopIndex } from "@/features/home/utils/globeTiles";
 import { TripItinerary } from "@/features/itinerary";
 import { emergencyContactsStorage } from "@/features/onboarding/services/emergencyContactsStorage";
 import { NearbyPlaces } from "@/features/places/components/NearbyPlaces";
-import { useTemperatureUnit, useTripForecast, toUnit } from "@/features/trips/hooks/useTripForecast";
+import { useTripForecast } from "@/features/trips/hooks/useTripForecast";
 import { describeWeather } from "@/features/trips/services/weatherService";
 import { WeatherSheet } from "./WeatherSheet";
 import type { Trip } from "@/features/trips/store/tripsStore";
@@ -76,12 +76,11 @@ export function TripHome({
   const accent = auraStatusAccent[status];
   // The globe and the pass keep the calm look; sharing / SOS only recolour the rest of the page.
   const heroAccent = auraStatusAccent.calm;
-  const { t } = useLocalization();
+  const { t, formatTemperature } = useLocalization();
   const insets = useSafeAreaInsets();
   const tabBarInset = useTabBarInset();
   const { width } = useWindowDimensions();
   const forecast = useTripForecast(trip, userLocation);
-  const tempUnit = useTemperatureUnit();
   const [weatherOpen, setWeatherOpen] = useState(false);
   const [railDay, setRailDay] = useState<number | null>(null);
   const [spendDay, setSpendDay] = useState<number | null>(null);
@@ -115,7 +114,7 @@ export function TripHome({
 
   const lead = forecast.active?.days[0];
   const weatherLabel = lead
-    ? `${describeWeather(lead.weatherCode).emoji} ${toUnit(lead.tempMax, tempUnit)}° · ${t(`trip.weatherConditions.${describeWeather(lead.weatherCode).labelKey}`)}`
+    ? `${describeWeather(lead.weatherCode).emoji} ${formatTemperature(lead.tempMax)} · ${t(`trip.weatherConditions.${describeWeather(lead.weatherCode).labelKey}`)}`
     : null;
   const chips: {
     icon?: "mapPin" | "clock" | "users";
@@ -388,7 +387,6 @@ export function TripHome({
           onClose={() => setWeatherOpen(false)}
           destinations={forecast.destinations}
           active={forecast.active}
-          unit={tempUnit}
           onSelect={forecast.select}
         />
       ) : null}

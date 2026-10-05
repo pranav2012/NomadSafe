@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import * as Localization from "expo-localization";
 import { useLocalization } from "@/localization";
 import { geocodeDestination } from "@/features/trips/services/geocoding";
 import { getDestinationCoordinates, type LatLng, type Trip } from "@/features/trips/store/tripsStore";
@@ -17,19 +16,6 @@ type LoadState =
   | { status: "outside" }
   | { status: "unavailable" }
   | { status: "ready"; destinations: DestinationForecast[] };
-
-export type TemperatureUnit = "C" | "F";
-
-/** Device temperature preference; forecasts are always Celsius. */
-export function useTemperatureUnit(): TemperatureUnit {
-  const deviceLocale = Localization.useLocales()[0];
-  if (deviceLocale?.temperatureUnit) return deviceLocale.temperatureUnit === "fahrenheit" ? "F" : "C";
-  return deviceLocale?.measurementSystem === "us" ? "F" : "C";
-}
-
-export function toUnit(celsius: number, unit: TemperatureUnit) {
-  return unit === "F" ? Math.round((celsius * 9) / 5 + 32) : celsius;
-}
 
 export function todayKey() {
   const now = new Date();
@@ -53,26 +39,16 @@ function distanceKm(a: LatLng, b: LatLng) {
 const SHOWER_MM = 1;
 const RAIN_MM = 5;
 
-/** "4 mm" in the user's locale, whole millimetres. */
-export function formatRainMm(mm: number, locale: string) {
-  const value = Math.max(1, Math.round(mm));
-  try {
-    return new Intl.NumberFormat(locale, { style: "unit", unit: "millimeter", unitDisplay: "short" }).format(value);
-  } catch {
-    return `${value} mm`;
-  }
-}
-
 /** Rain amount to show under a day's icon, or null for a dry day. */
-export function dayRain(day: DailyForecast, locale: string) {
-  return day.precipMm != null && day.precipMm >= SHOWER_MM ? formatRainMm(day.precipMm, locale) : null;
+export function dayRain(day: DailyForecast, formatRain: (mm: number) => string) {
+  return day.precipMm != null && day.precipMm >= SHOWER_MM ? formatRain(day.precipMm) : null;
 }
 
 /** Summarises rain across the forecast into a short headline and sub line. */
-export function buildOutlook(days: DailyForecast[], locale: string, t: ReturnType<typeof useLocalization>["t"]) {
+export function buildOutlook(days: DailyForecast[], { locale, t, formatRain }: ReturnType<typeof useLocalization>) {
   const amounts = days.map((d) => d.precipMm).filter((mm): mm is number => mm != null);
   if (!amounts.length) return null;
-  const amount = formatRainMm(Math.max(...amounts), locale);
+  const amount = formatRain(Math.max(...amounts));
   const rainy = days.filter((d) => d.precipMm != null && d.precipMm >= RAIN_MM);
   if (rainy.length) {
     const first = weekday(rainy[0].date, locale);

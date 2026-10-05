@@ -13,9 +13,9 @@ type Translate = (key: string, params?: Record<string, string | number>) => stri
 const LEGACY_HEADS = new Set(["Check-in", "Check-out", "Departure", "Arrival"]);
 const DAY_MS = 86_400_000;
 
-function formatters(locale: string) {
+function formatters(locale: string, hour12: boolean) {
   return {
-    time: new Intl.DateTimeFormat(locale, { hour: "numeric", minute: "2-digit" }),
+    time: new Intl.DateTimeFormat(locale, { hour: "numeric", minute: "2-digit", hour12 }),
     weekdayDay: new Intl.DateTimeFormat(locale, { weekday: "short", day: "numeric" }),
     monthDay: new Intl.DateTimeFormat(locale, { month: "short", day: "numeric" }),
     dayHeader: new Intl.DateTimeFormat(locale, { weekday: "short", month: "short", day: "numeric" }),
@@ -68,8 +68,8 @@ function TypeIcon({ event }: { event: TripEvent }) {
 /** Home's compact "what's next" card: one row per booking, tap to edit. */
 export function UpNextList({ events, onPress }: { events: TripEvent[]; onPress: (event: TripEvent) => void }) {
   const { c, f } = useAura();
-  const { t, locale } = useLocalization();
-  const format = formatters(locale);
+  const { t, locale, hour12 } = useLocalization();
+  const format = formatters(locale, hour12);
   const [now] = useState(() => Date.now());
 
   return (
@@ -119,8 +119,8 @@ export function TimelineList({
   onPress: (event: TripEvent) => void;
 }) {
   const { c, f } = useAura();
-  const { t, locale } = useLocalization();
-  const format = formatters(locale);
+  const { t, locale, hour12 } = useLocalization();
+  const format = formatters(locale, hour12);
   const [now] = useState(() => Date.now());
   const sections = buildTimeline(events);
 

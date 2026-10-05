@@ -4,7 +4,6 @@ import { getCurrentPosition, getForegroundPermission, getLastKnownPosition } fro
 import { useLocalization } from "@/localization";
 import type { HomeStop } from "@/features/home/types";
 import { daylightAt, distanceKm } from "@/features/home/components/aura/globe/sun";
-import { formatApproxDuration, formatDistance } from "@/features/home/utils/format";
 
 export interface GlobeContact {
   name: string;
@@ -18,7 +17,7 @@ export interface GlobeContact {
  * labels for distance and daylight at the focused stop.
  */
 export function useGlobeContext(focus: HomeStop | undefined) {
-  const { t, locale } = useLocalization();
+  const { t, formatDistance, formatApproxDuration } = useLocalization();
   const [origin, setOrigin] = useState<HomeStop | null>(null);
   const incoming = useQuery(api.sharing.getIncomingShares) as GlobeContact[] | undefined;
 
@@ -41,7 +40,7 @@ export function useGlobeContext(focus: HomeStop | undefined) {
   let distanceLabel: string | null = null;
   if (origin && focus) {
     const km = distanceKm(origin, focus);
-    distanceLabel = km < 50 ? null : t("home.distanceAway", { distance: formatDistance(km, locale) });
+    distanceLabel = km < 50 ? null : t("home.distanceAway", { distance: formatDistance(km) });
   }
 
   let daylightLabel: string | null = null;
@@ -51,7 +50,7 @@ export function useGlobeContext(focus: HomeStop | undefined) {
     daylightLabel =
       light.hoursUntil === null
         ? t(light.isNight ? "home.polarNight" : "home.midnightSun", { place })
-        : t(light.isNight ? "home.nightAt" : "home.dayAt", { place, time: formatApproxDuration(light.hoursUntil, locale) });
+        : t(light.isNight ? "home.nightAt" : "home.dayAt", { place, time: formatApproxDuration(light.hoursUntil) });
   }
 
   return { origin, contacts, distanceLabel, daylightLabel, isNightAtFocus: focus ? daylightAt(focus.latitude, focus.longitude, now).isNight : false };

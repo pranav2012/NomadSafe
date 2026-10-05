@@ -3,7 +3,6 @@ import { ActivityIndicator, Linking, Share, StyleSheet, Text, View } from "react
 import { api, type Id, useMutation, useQuery } from "@/modules/backend";
 import { AuraCard, AuraChip, AuraSection, Icon, type IconName, PressableScale, showAlert, useAura } from "@/atoms";
 import { distanceKm } from "@/features/home/components/aura/globe/sun";
-import { formatDistance } from "@/features/home/utils/format";
 import { emergencyContactsStorage, normalizeEmail } from "@/features/onboarding/services/emergencyContactsStorage";
 import { registerTripPush } from "@/features/sync";
 import { useLocalization } from "@/localization";
@@ -29,7 +28,7 @@ interface SharingPeopleProps {
 /** Sharing requests, people sharing with you, and the people you share with. */
 export function SharingPeople({ isBroadcasting, location, accent }: SharingPeopleProps) {
   const { c, f } = useAura();
-  const { t, formatTime, locale } = useLocalization();
+  const { t, formatTime, formatDistance } = useLocalization();
   const [addVisible, setAddVisible] = useState(false);
   const [now, setNow] = useState(() => Date.now());
 
@@ -154,7 +153,7 @@ export function SharingPeople({ isBroadcasting, location, accent }: SharingPeopl
           sharingWithYou.map((share, i) => {
             const stale = now - share.updatedAt > STALE_AFTER_MS;
             const km = location ? distanceKm(location, share) : null;
-            const sub = `${t("sharing.lastSeenAt", { time: formatTime(new Date(share.updatedAt)) })}${km != null ? ` · ${formatDistance(km, locale)}` : ""}`;
+            const sub = `${t("sharing.lastSeenAt", { time: formatTime(new Date(share.updatedAt)) })}${km != null ? ` · ${formatDistance(km)}` : ""}`;
             return (
               <PersonRow
                 key={share.ownerUserId}

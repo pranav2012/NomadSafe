@@ -35,7 +35,6 @@ import { useAnimationsActive } from "@/hooks/useAnimationsActive";
 import type { HomeData } from "@/features/home/types";
 import { SAFETY_KIND_META } from "./safety/kinds";
 import { useLocalization } from "@/localization";
-import { formatDistance } from "@/features/home/utils/format";
 import type { SafetyPlace } from "@/features/home/hooks/useTripSafety";
 import { auraFonts as f, type AuraPalette } from "@/constants/aura";
 
@@ -86,6 +85,8 @@ half4 main(float2 xy) {
 
 const HEIGHT = 200;
 const RADIUS = 24;
+// Matches the server's hospital/police search radius (convex/places.ts).
+const SAFETY_RADIUS_KM = 2;
 const MAX_TILT = 0.45;
 const STUB_Y = 130;
 // The aura pools drift slowly, so ~15 fps is indistinguishable from full rate; tilt samples at ~30 Hz.
@@ -350,9 +351,9 @@ function EmergencyRow({
   palette: AuraPalette;
 }) {
   const meta = SAFETY_KIND_META[kind];
-  const { t, locale } = useLocalization();
+  const { t, formatDistance } = useLocalization();
   const finding = kind === "hospital" ? t("home.findingHospital") : t("home.findingPolice");
-  const none = kind === "hospital" ? t("home.noHospital") : t("home.noPolice");
+  const none = kind === "hospital" ? t("home.noHospital", { distance: formatDistance(SAFETY_RADIUS_KM) }) : t("home.noPolice", { distance: formatDistance(SAFETY_RADIUS_KM) });
   return (
     <View style={styles.row}>
       <View style={[styles.rowIcon, { backgroundColor: meta.color }]}>
@@ -361,7 +362,7 @@ function EmergencyRow({
       <Text numberOfLines={1} style={[styles.rowName, { color: c.text }]}>
         {entry ? entry.place.name : loading ? finding : none}
       </Text>
-      {entry ? <Text style={[styles.rowMeta, { color: c.textMuted }]}>{formatDistance(entry.km, locale)}</Text> : null}
+      {entry ? <Text style={[styles.rowMeta, { color: c.textMuted }]}>{formatDistance(entry.km)}</Text> : null}
       {entry?.place.phone ? (
         <PressableScale
           onPress={() => void Linking.openURL(`tel:${entry.place.phone}`)}

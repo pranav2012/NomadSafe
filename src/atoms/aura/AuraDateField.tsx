@@ -39,14 +39,14 @@ function withClock(base: Date, picked: Date) {
  */
 export function AuraDateField({ label, value, onChange, withTime = false, minimumDate, maximumDate, caption, compact }: AuraDateFieldProps) {
   const { c, f, accent, isDark } = useAura();
-  const { t, locale } = useLocalization();
+  const { t, locale, hour12 } = useLocalization();
   const [open, setOpen] = useState<null | "inline" | "date" | "time">(null);
 
   const formatted = new Intl.DateTimeFormat(locale, {
     weekday: "short",
     month: "short",
     day: "numeric",
-    ...(withTime ? { hour: "numeric", minute: "2-digit" } : { year: compact ? undefined : "numeric" }),
+    ...(withTime ? { hour: "numeric", minute: "2-digit", hour12 } : { year: compact ? undefined : "numeric" }),
   }).format(value);
 
   return (
@@ -105,6 +105,7 @@ export function AuraDateField({ label, value, onChange, withTime = false, minimu
         <DateTimePicker
           value={value}
           mode="time"
+          is24Hour={!hour12}
           display="default"
           presentation="dialog"
           accentColor={accent}

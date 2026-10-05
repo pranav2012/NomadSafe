@@ -24,10 +24,10 @@ function startOfDay(ms: number): number {
   return date.getTime();
 }
 
-function formatWhen(at: number, now: number, locale: string, t: Translate): string {
+function formatWhen(at: number, now: number, locale: string, hour12: boolean, t: Translate): string {
   const today = startOfDay(now);
   try {
-    if (at >= today) return new Date(at).toLocaleTimeString(locale, { hour: "numeric", minute: "2-digit" });
+    if (at >= today) return new Date(at).toLocaleTimeString(locale, { hour: "numeric", minute: "2-digit", hour12 });
     if (at >= today - DAY_MS) return t("aiUsage.yesterday");
     return new Date(at).toLocaleDateString(locale, { month: "short", day: "numeric" });
   } catch {
@@ -61,7 +61,7 @@ function FeatureCounts({ title, counts, footer }: { title: string; counts: AiTas
 /** This month's online AI use: the NomadSafe Cloud allowance (Pro), own-key counts, and recent uses on this phone. */
 export function AiUsageSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { c, f } = useAura();
-  const { t, locale } = useLocalization();
+  const { t, locale, hour12 } = useLocalization();
   const plan = usePlan();
   const byok = useByokStore((s) => s.summary);
   const usage = useQuery(api.ai.myUsage, visible && plan.cloudAi ? {} : "skip");
@@ -124,7 +124,7 @@ export function AiUsageSheet({ visible, onClose }: { visible: boolean; onClose: 
                 key={`${entry.at}-${entry.task}`}
                 label={t(`aiUsage.use_${entry.task as UsageTask}`)}
                 detail={entry.provider === "cloud" ? t("aiTab.cloudName") : byokLabel}
-                value={formatWhen(entry.at, now, locale, t)}
+                value={formatWhen(entry.at, now, locale, hour12, t)}
               />
             ))
           )}

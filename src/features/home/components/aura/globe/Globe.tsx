@@ -37,8 +37,8 @@ import { useGlobeWeather } from "@/features/home/hooks/useGlobeWeather";
 import { GLOBE_MAX_TILES, getRegionImagery, prefetchRegionImagery } from "@/features/home/services/globeImagery";
 import { tileBoxFor, tileBoxKey, type DetailBox, type TileBox } from "@/features/home/utils/globeTiles";
 import { CLOUD_COLS, CLOUD_ROWS, CLOUD_STEP, type StopWeather } from "@/features/home/services/globeWeather";
-import { toUnit, useTemperatureUnit } from "@/features/trips/hooks/useTripForecast";
 import { selectionChanged } from "@/utils/haptics";
+import { useLocalization } from "@/localization";
 import { distanceKm, moonIllumination, sunVector } from "./sun";
 
 // NASA Visible Earth (public domain): Blue Marble Next Generation (Sep 2004, least seasonal snow) and Black Marble 2016.
@@ -868,7 +868,7 @@ function WeatherBadge({
   fade: ReturnType<typeof useDerivedValue<number>>;
 }) {
   const { c, f } = useAura();
-  const unit = useTemperatureUnit();
+  const { formatTemperature } = useLocalization();
   // Sits up and to the right of the pin; fades out as the stop turns toward the limb.
   const style = useAnimatedStyle(() => {
     const point = project(stop.latitude * DEG, stop.longitude * DEG, rotLng.get(), rotLat.get(), cx, cy, radius.get());
@@ -881,7 +881,7 @@ function WeatherBadge({
   return (
     <Animated.View pointerEvents="none" style={[styles.badge, { backgroundColor: c.surfaceStrong, borderColor: c.hairline }, style]}>
       <Text style={styles.badgeEmoji}>{weather.emoji}</Text>
-      <Text style={[styles.badgeText, { color: c.text, fontFamily: f.semibold }]}>{`${toUnit(weather.temperature, unit)}°`}</Text>
+      <Text style={[styles.badgeText, { color: c.text, fontFamily: f.semibold }]}>{formatTemperature(weather.temperature)}</Text>
     </Animated.View>
   );
 }
