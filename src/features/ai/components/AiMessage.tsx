@@ -1,13 +1,70 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
-import { AuraOrb, useAura } from "@/atoms";
+import { useAura } from "@/atoms";
+import { auraStatusColors } from "@/constants/aura";
 import type { ChatMessage } from "../store/chatStore";
+import { AiPlasmaOrb } from "./AiPlasmaOrb";
+import { AiThinking } from "./AiThinking";
 
 const MONO = Platform.select({ ios: "Menlo", default: "monospace" });
+const REVEAL_FRAME_MS = 32;
+const REVEAL_FRAMES = 6;
+const TAIL_CHARS = 10;
+const CURSOR_MS = 420;
 
-/** Renders **bold** and `code` spans within a single line. */
-function renderInline(line: string, colors: { text: string; code: string }, bold: string, keyPrefix: string) {
-  return line.split(/(\*\*[^*]+\*\*|`[^`]+`)/).map((part, i) => {
+function withAlpha(hex: string, alpha: number): string {
+  if (!/^#[0-9a-f]{6}$/i.test(hex)) return hex;
+  return `${hex}${Math.round(alpha * 255).toString(16).padStart(2, "0")}`;
+}
+
+/**
+ * Types `text` out at a pace that catches up within a few frames, so bursty streams read smoothly.
+ * Messages that weren't live when mounted (history) show in full straight away.
+ */
+function useRevealedText(text: string, live: boolean): string {
+  const [shown, setShown] = useState(() => (live ? 0 : text.length));
+  const target = text.length;
+  useEffect(() => {
+    if (shown >= target) return;
+    const id = setTimeout(() => {
+      setShown((value) => Math.min(target, value + Math.max(2, Math.ceil((target - value) / REVEAL_FRAMES))));
+    }, REVEAL_FRAME_MS);
+    return () => clearTimeout(id);
+  }, [shown, target]);
+  return shown >= target ? text : text.slice(0, shown);
+}
+
+/** Dot at the end of a streaming reply that steps through the aura palette. */
+function StreamCursor() {
+  const [step, setStep] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setStep((value) => (value + 1) % auraStatusColors.calm.length), CURSOR_MS);
+    return () => clearInterval(id);
+  }, []);
+  return <Text style={[styles.cursor, { color: auraStatusColors.calm[step] }]}>{" ●"}</Text>;
+}
+
+/** Splits the last characters of a plain span into fading letters, so new text appears to materialise. */
+function fadeTail(part: string, color: string, keyPrefix: string) {
+  const chars = Array.from(part);
+  const head = chars.slice(0, -TAIL_CHARS).join("");
+  const tail = chars.slice(-TAIL_CHARS);
+  return (
+    <React.Fragment key={keyPrefix}>
+      {head}
+      {tail.map((char, i) => (
+        <Text key={i} style={{ color: withAlpha(color, 1 - (i + 1) / (tail.length + 1)) }}>
+          {char}
+        </Text>
+      ))}
+    </React.Fragment>
+  );
+}
+
+/** Renders **bold** and `code` spans within a single line; `tail` fades the end of the line while streaming. */
+function renderInline(line: string, colors: { text: string; code: string }, bold: string, keyPrefix: string, tail = false) {
+  const parts = line.split(/(\*\*[^*]+\*\*|`[^`]+`)/);
+  return parts.map((part, i) => {
     const key = `${keyPrefix}-${i}`;
     if (part.length > 4 && part.startsWith("**") && part.endsWith("**")) {
       return (
@@ -23,26 +80,32 @@ function renderInline(line: string, colors: { text: string; code: string }, bold
         </Text>
       );
     }
+    if (tail && i === parts.length - 1) return fadeTail(part, colors.text, key);
     return <Text key={key}>{part}</Text>;
   });
 }
 
-/** Minimal markdown: headings, bullet / numbered lists, bold, inline code. */
-function MarkdownText({ text }: { text: string }) {
+/** Minimal markdown: headings, bullet / numbered lists, bold, inline code. `streaming` adds the fading tail and cursor. */
+function MarkdownText({ text, streaming = false }: { text: string; streaming?: boolean }) {
   const { c, f } = useAura();
   const colors = { text: c.text, code: c.surfaceStrong };
   const body = [styles.body, { color: c.text, fontFamily: f.regular }];
+  const lines = text.split("\n");
+  const lastLine = streaming ? lines.findLastIndex((line) => line.trim().length > 0) : -1;
   return (
     <View style={styles.markdown}>
-      {text.split("\n").map((raw, i) => {
+      {lines.map((raw, i) => {
         const line = raw.trimEnd();
+        const live = i === lastLine;
+        const cursor = live ? <StreamCursor /> : null;
         if (!line.trim()) return <View key={i} style={styles.gap} />;
 
         const heading = /^#{1,6}\s+(.*)$/.exec(line.trim());
         if (heading) {
           return (
             <Text key={i} style={[body, styles.heading, { fontFamily: f.semibold }]}>
-              {renderInline(heading[1], colors, f.bold, `h${i}`)}
+              {renderInline(heading[1], colors, f.bold, `h${i}`, live)}
+              {cursor}
             </Text>
           );
         }
@@ -52,14 +115,18 @@ function MarkdownText({ text }: { text: string }) {
           return (
             <View key={i} style={styles.listRow}>
               <Text style={[body, styles.listMarker, { color: c.textMuted }]}>{bullet[1] ? `${bullet[1]}.` : "•"}</Text>
-              <Text style={[body, styles.flex]}>{renderInline(bullet[2], colors, f.semibold, `l${i}`)}</Text>
+              <Text style={[body, styles.flex]}>
+                {renderInline(bullet[2], colors, f.semibold, `l${i}`, live)}
+                {cursor}
+              </Text>
             </View>
           );
         }
 
         return (
           <Text key={i} style={body}>
-            {renderInline(line, colors, f.semibold, `p${i}`)}
+            {renderInline(line, colors, f.semibold, `p${i}`, live)}
+            {cursor}
           </Text>
         );
       })}
@@ -67,23 +134,15 @@ function MarkdownText({ text }: { text: string }) {
   );
 }
 
-function Skeleton() {
-  const { c } = useAura();
-  return (
-    <View style={styles.skeleton}>
-      {[88, 70, 52].map((w) => (
-        <View key={w} style={[styles.bar, { width: `${w}%`, backgroundColor: c.surfaceStrong }]} />
-      ))}
-    </View>
-  );
-}
-
 /** One chat turn: user text in an inverse bubble, assistant markdown flush left under a name row. */
 export function AiMessage({ msg, label, streamingText }: { msg: ChatMessage; label: string; streamingText?: string }) {
   const { c, f, isDark, accent } = useAura();
-  const text = streamingText ?? msg.text;
+  const fullText = streamingText ?? msg.text;
+  const isAssistant = msg.from === "ai";
+  const text = useRevealedText(fullText, isAssistant && msg.generating === true);
+  const streaming = msg.generating === true || text.length < fullText.length;
 
-  if (msg.from === "you") {
+  if (!isAssistant) {
     return (
       <View style={[styles.userBubble, { backgroundColor: c.inverse }]}>
         <Text style={[styles.body, { color: c.onInverse, fontFamily: f.regular }]}>{text}</Text>
@@ -94,8 +153,10 @@ export function AiMessage({ msg, label, streamingText }: { msg: ChatMessage; lab
   return (
     <View style={styles.assistant}>
       <View style={styles.nameRow}>
-        {msg.generating ? (
-          <AuraOrb size={22} mode="thinking" isDark={isDark} core={false} />
+        {streaming ? (
+          <View style={styles.dotWrap}>
+            <AiPlasmaOrb size={16} mode="thinking" isDark={isDark} contained />
+          </View>
         ) : (
           <View style={styles.dotWrap}>
             <View style={[styles.dot, { backgroundColor: accent }]} />
@@ -103,7 +164,7 @@ export function AiMessage({ msg, label, streamingText }: { msg: ChatMessage; lab
         )}
         <Text style={[styles.name, { color: c.textMuted, fontFamily: f.medium }]}>{label}</Text>
       </View>
-      {msg.generating && !text ? <Skeleton /> : <MarkdownText text={text} />}
+      {streaming && !text ? <AiThinking /> : <MarkdownText text={text} streaming={streaming} />}
     </View>
   );
 }
@@ -130,6 +191,5 @@ const styles = StyleSheet.create({
   dotWrap: { width: 22, height: 22, alignItems: "center", justifyContent: "center" },
   dot: { width: 8, height: 8, borderRadius: 4 },
   name: { fontSize: 13 },
-  skeleton: { gap: 8, paddingTop: 4 },
-  bar: { height: 10, borderRadius: 5 },
+  cursor: { fontSize: 12 },
 });

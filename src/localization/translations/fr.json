@@ -666,7 +666,27 @@
     "cloudName": "NomadSafe Cloud",
     "onlinePill": "En ligne · {{provider}}",
     "onlineNotice": "Quand vous êtes en ligne, les réponses viennent de {{provider}}. Votre question et les informations de voyage et d'argent nécessaires y sont envoyées. Vous pouvez désactiver cela dans les Paramètres.",
-    "introHintOnline": "Posez vos questions sur votre voyage, vos dépenses ou des conseils de voyage. En ligne, les réponses viennent d'un modèle plus performant ; hors ligne, le modèle sur l'appareil prend le relais."
+    "introHintOnline": "Posez vos questions sur votre voyage, vos dépenses ou des conseils de voyage. En ligne, les réponses viennent d'un modèle plus performant ; hors ligne, le modèle sur l'appareil prend le relais.",
+    "thinking": {
+      "thinking": "Réflexion…",
+      "reading": "Je parcours ton voyage…",
+      "working": "Je fais le calcul…",
+      "composing": "Je rassemble tout…"
+    },
+    "temporary": {
+      "tag": "Discussion temporaire · non enregistrée",
+      "title": "Discussion temporaire",
+      "hint": "Pose une question rapide. Cette discussion n'est ni enregistrée ni mémorisée dans la discussion de ton voyage, et elle est effacée quand tu quittes cet onglet.",
+      "turnOn": "Démarrer une discussion temporaire",
+      "turnOff": "Terminer la discussion temporaire"
+    },
+    "clear": {
+      "title": "Effacer cette discussion ?",
+      "action": "Effacer la discussion",
+      "bodyTrip": "Tous les messages de la discussion {{trip}} seront supprimés et Nomad oubliera cette conversation.",
+      "bodyGeneral": "Tous les messages de cette discussion seront supprimés et Nomad oubliera cette conversation.",
+      "bodyTemporary": "Tous les messages de cette discussion temporaire seront supprimés."
+    }
   },
   "safety": {
     "eyebrow": "Moteur de sérénité",

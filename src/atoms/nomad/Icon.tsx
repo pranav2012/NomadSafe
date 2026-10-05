@@ -36,6 +36,7 @@ export type IconName =
   | "x"
   | "alertTriangle"
   | "messageCircle"
+  | "messageDashed"
   | "trash"
   | "calendar"
   | "edit"
@@ -381,6 +382,16 @@ export function Icon({
       body = (
         <G {...p}>
           <Path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7A8.38 8.38 0 014 11.5a8.5 8.5 0 0117 0z" />
+        </G>
+      );
+      break;
+    case "messageDashed":
+      body = (
+        <G {...p}>
+          <Path
+            d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7A8.38 8.38 0 014 11.5a8.5 8.5 0 0117 0z"
+            strokeDasharray="3 3.2"
+          />
         </G>
       );
       break;

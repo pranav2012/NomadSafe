@@ -666,7 +666,27 @@
     "cloudName": "NomadSafe Cloud",
     "onlinePill": "온라인 · {{provider}}",
     "onlineNotice": "온라인일 때는 {{provider}}에서 답변해요. 질문과 답변에 필요한 여행·금액 정보가 그곳으로 전송돼요. 설정에서 끌 수 있어요.",
-    "introHintOnline": "여행, 지출, 여행 팁에 대해 물어보세요. 온라인에서는 더 뛰어난 모델이 답하고, 오프라인에서는 기기 내 모델이 이어받아요."
+    "introHintOnline": "여행, 지출, 여행 팁에 대해 물어보세요. 온라인에서는 더 뛰어난 모델이 답하고, 오프라인에서는 기기 내 모델이 이어받아요.",
+    "thinking": {
+      "thinking": "생각하는 중…",
+      "reading": "여행 내용을 살펴보는 중…",
+      "working": "정리하는 중…",
+      "composing": "답변을 준비하는 중…"
+    },
+    "temporary": {
+      "tag": "임시 채팅 · 저장되지 않음",
+      "title": "임시 채팅",
+      "hint": "간단히 물어보세요. 이 채팅은 저장되지 않고 여행 채팅에도 기억되지 않으며, 이 탭을 나가면 지워집니다.",
+      "turnOn": "임시 채팅 시작",
+      "turnOff": "임시 채팅 종료"
+    },
+    "clear": {
+      "title": "이 채팅을 지울까요?",
+      "action": "채팅 지우기",
+      "bodyTrip": "{{trip}} 채팅의 모든 메시지가 삭제되고 Nomad가 이 대화를 잊습니다.",
+      "bodyGeneral": "이 채팅의 모든 메시지가 삭제되고 Nomad가 이 대화를 잊습니다.",
+      "bodyTemporary": "이 임시 채팅의 모든 메시지가 삭제됩니다."
+    }
   },
   "safety": {
     "eyebrow": "안심 엔진",

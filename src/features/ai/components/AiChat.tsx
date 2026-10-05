@@ -2,32 +2,42 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
+  type ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
 } from "react-native";
 import { BlurTargetView } from "expo-blur";
-import Animated, { FadeIn } from "react-native-reanimated";
-import { AuraCard, AuraOptionSheet, AuraOrb, Icon, PressableScale, useAura, useTabBarInset } from "@/atoms";
+import Animated, {
+  Extrapolation,
+  FadeIn,
+  interpolate,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+  type SharedValue,
+} from "react-native-reanimated";
+import { AuraCard, AuraOptionSheet, Icon, PressableScale, useAura, useTabBarInset } from "@/atoms";
 import { auraStatusAccent } from "@/constants/aura";
 import { useAnimationsActive } from "@/hooks/useAnimationsActive";
 import { useLocalization } from "@/localization";
-import { useTripsStore } from "@/features/trips/store/tripsStore";
 import { track } from "@/modules/analytics";
-import { GENERAL_CHAT_KEY, useChatStore, useChatStreamStore } from "../store/chatStore";
+import { useChatStore, useChatStreamStore } from "../store/chatStore";
+import { useChatConversationKey } from "../hooks/useChatConversationKey";
 import { aiRuntime, modelNotifications, remoteLabel, useAiAvailability, useAiProvisioning, useAiSources } from "@/modules/ai";
 import { useSettingsStore } from "@/features/settings/store/settingsStore";
 import { provisionUnavailableText } from "../utils/provisionCopy";
 import { AiComposer } from "./AiComposer";
 import { AiMessage } from "./AiMessage";
+import { AiPlasmaOrb } from "./AiPlasmaOrb";
 
 const EMPTY_CONVERSATION = { messages: [], summary: null, contextMessages: [] };
 const NEAR_BOTTOM_PX = 80;
 const COMPOSER_FALLBACK_HEIGHT = 150;
+const HERO_SIZE = 84;
+/** Scroll distance over which the chat's hero orb shrinks away and docks into the header. */
+export const HERO_DOCK_DISTANCE = 110;
 
 function localDayKey(timestamp: number): string {
   const date = new Date(timestamp);
@@ -46,12 +56,21 @@ function DayDivider({ label }: { label: string }) {
 }
 
 /** Chat with the on-device model, scoped to the active trip (or a general thread). */
-export function AiChat({ activeModelName }: { activeModelName: string | null }) {
+export function AiChat({
+  activeModelName,
+  scrollY,
+  heroDocked,
+}: {
+  activeModelName: string | null;
+  /** Written with the list's scroll offset so the header can dock the orb. */
+  scrollY: SharedValue<number>;
+  heroDocked: boolean;
+}) {
   const { c, f, isDark } = useAura();
   const { t, formatDate } = useLocalization();
   const tabBarInset = useTabBarInset();
-  const activeTripId = useTripsStore((state) => state.activeTripId);
-  const conversationKey = activeTripId ?? GENERAL_CHAT_KEY;
+  const conversationKey = useChatConversationKey();
+  const temporary = useChatStore((s) => s.temporary);
   const conversation = useChatStore((state) => state.conversations[conversationKey] ?? EMPTY_CONVERSATION);
   const messages = conversation.messages;
   const generatingKey = useChatStore((state) => state.generatingConversationKey);
@@ -78,7 +97,7 @@ export function AiChat({ activeModelName }: { activeModelName: string | null }) 
   const inputRef = useRef<TextInput>(null);
   const containerRef = useRef<View>(null);
   const blurTarget = useRef<View>(null);
-  const nearBottomRef = useRef(true);
+  const nearBottom = useSharedValue(true);
 
   const animating = useAnimationsActive();
   const isEmpty = messages.length === 0;
@@ -91,14 +110,26 @@ export function AiChat({ activeModelName }: { activeModelName: string | null }) 
     if (preloadLocal) void aiRuntime.preload();
   }, [preloadLocal]);
 
-  const onScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
-    nearBottomRef.current = contentSize.height - (contentOffset.y + layoutMeasurement.height) < NEAR_BOTTOM_PX;
-  }, []);
+  const onScroll = useAnimatedScrollHandler((event) => {
+    scrollY.set(event.contentOffset.y);
+    nearBottom.set(event.contentSize.height - (event.contentOffset.y + event.layoutMeasurement.height) < NEAR_BOTTOM_PX);
+  });
 
   const onContentSizeChange = useCallback(() => {
-    if (nearBottomRef.current) scrollRef.current?.scrollToEnd({ animated: true });
-  }, []);
+    if (nearBottom.get()) scrollRef.current?.scrollToEnd({ animated: true });
+  }, [nearBottom]);
+
+  useEffect(() => {
+    if (isEmpty) scrollY.set(0);
+  }, [isEmpty, scrollY]);
+
+  const heroStyle = useAnimatedStyle(() => {
+    const progress = interpolate(scrollY.get(), [0, HERO_DOCK_DISTANCE], [0, 1], Extrapolation.CLAMP);
+    return {
+      opacity: 1 - progress,
+      transform: [{ translateY: progress * 24 }, { scale: 1 - progress * 0.45 }],
+    };
+  });
 
   // KeyboardAvoidingView measures itself relative to its parent, so the offset
   // must be the container's distance from the top of the window.
@@ -118,7 +149,7 @@ export function AiChat({ activeModelName }: { activeModelName: string | null }) 
     if (!accepted) return;
     track("ai_message_sent");
     setInput("");
-    nearBottomRef.current = true;
+    nearBottom.set(true);
   };
 
   const enableNotifications = async () => {
@@ -197,7 +228,7 @@ export function AiChat({ activeModelName }: { activeModelName: string | null }) 
               </AuraCard>
             ) : null}
 
-            <ScrollView
+            <Animated.ScrollView
               ref={scrollRef}
               contentContainerStyle={[
                 styles.content,
@@ -208,16 +239,33 @@ export function AiChat({ activeModelName }: { activeModelName: string | null }) 
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="interactive"
               onScroll={onScroll}
-              scrollEventThrottle={100}
+              scrollEventThrottle={16}
               onContentSizeChange={onContentSizeChange}
             >
+              {!isEmpty ? (
+                <Animated.View style={[styles.hero, heroStyle]}>
+                  <AiPlasmaOrb
+                    size={HERO_SIZE}
+                    mode={isGenerating ? "thinking" : "idle"}
+                    isDark={isDark}
+                    paused={!animating || heroDocked}
+                    interactive
+                  />
+                </Animated.View>
+              ) : null}
+              {temporary && !isEmpty ? (
+                <View style={[styles.tempTag, { borderColor: c.hairline }]}>
+                  <Icon name="messageDashed" size={12} color={c.textMuted} strokeWidth={2} />
+                  <Text style={[styles.tempTagText, { color: c.textMuted, fontFamily: f.medium }]}>{t("aiTab.temporary.tag")}</Text>
+                </View>
+              ) : null}
               {messages.map((m, i) => {
                 const previous = messages[i - 1];
                 const showDivider =
                   m.createdAt !== undefined &&
                   (previous?.createdAt === undefined || localDayKey(previous.createdAt) !== localDayKey(m.createdAt));
                 return (
-                  <React.Fragment key={i}>
+                  <React.Fragment key={`${m.createdAt ?? "x"}-${i}`}>
                     {showDivider && m.createdAt !== undefined ? <DayDivider label={dayLabel(m.createdAt)} /> : null}
                     <AiMessage
                       msg={m}
@@ -229,13 +277,25 @@ export function AiChat({ activeModelName }: { activeModelName: string | null }) 
               })}
 
               {isEmpty ? (
-                <Animated.View entering={FadeIn.duration(260)} style={styles.empty}>
-                  <AuraOrb size={124} mode="idle" isDark={isDark} paused={!animating} />
-                  <Text style={[styles.emptyTitle, { color: c.text, fontFamily: f.semibold }]}>{t("aiTab.introTitle")}</Text>
-                  <Text style={[styles.emptyHint, { color: c.textMuted, fontFamily: f.regular }]}>{onlineName ? t("aiTab.introHintOnline") : t("aiTab.introHint")}</Text>
-                </Animated.View>
+                temporary ? (
+                  <Animated.View key="temp" entering={FadeIn.duration(260)} style={styles.empty}>
+                    <View style={[styles.tempIcon, { borderColor: c.textMuted }]}>
+                      <Icon name="messageDashed" size={30} color={c.textSoft} strokeWidth={1.8} />
+                    </View>
+                    <Text style={[styles.emptyTitle, { color: c.text, fontFamily: f.semibold }]}>{t("aiTab.temporary.title")}</Text>
+                    <Text style={[styles.emptyHint, { color: c.textMuted, fontFamily: f.regular }]}>{t("aiTab.temporary.hint")}</Text>
+                  </Animated.View>
+                ) : (
+                  <Animated.View key="intro" entering={FadeIn.duration(260)} style={styles.empty}>
+                    <View style={styles.orb}>
+                      <AiPlasmaOrb size={132} mode="idle" isDark={isDark} paused={!animating} interactive />
+                    </View>
+                    <Text style={[styles.emptyTitle, { color: c.text, fontFamily: f.semibold }]}>{t("aiTab.introTitle")}</Text>
+                    <Text style={[styles.emptyHint, { color: c.textMuted, fontFamily: f.regular }]}>{onlineName ? t("aiTab.introHintOnline") : t("aiTab.introHint")}</Text>
+                  </Animated.View>
+                )
               ) : null}
-            </ScrollView>
+            </Animated.ScrollView>
           </BlurTargetView>
 
           <AiComposer
@@ -285,5 +345,29 @@ const styles = StyleSheet.create({
   dividerText: { fontSize: 12 },
   empty: { alignItems: "center" },
   emptyTitle: { fontSize: 22, letterSpacing: -0.6, textAlign: "center", marginTop: 6 },
+  orb: { marginBottom: 18 },
+  hero: { alignSelf: "center", marginTop: 18, marginBottom: 14 },
+  tempIcon: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    borderWidth: 1.5,
+    borderStyle: "dashed",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
+  },
+  tempTag: {
+    alignSelf: "center",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderStyle: "dashed",
+  },
+  tempTagText: { fontSize: 12 },
   emptyHint: { fontSize: 14.5, lineHeight: 21, textAlign: "center", marginTop: 8, maxWidth: 280 },
 });

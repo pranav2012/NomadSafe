@@ -666,7 +666,27 @@
     "cloudName": "NomadSafe Cloud",
     "onlinePill": "在线 · {{provider}}",
     "onlineNotice": "联网时，回答来自 {{provider}}。你的问题及所需的行程和资金信息会发送给它。你可以在设置中关闭此功能。",
-    "introHintOnline": "可以询问你的行程、支出或旅行建议。联网时由更强大的模型回答；离线时由设备端模型接手。"
+    "introHintOnline": "可以询问你的行程、支出或旅行建议。联网时由更强大的模型回答；离线时由设备端模型接手。",
+    "thinking": {
+      "thinking": "思考中…",
+      "reading": "正在查看你的行程…",
+      "working": "正在梳理…",
+      "composing": "正在整理回复…"
+    },
+    "temporary": {
+      "tag": "临时聊天 · 不会保存",
+      "title": "临时聊天",
+      "hint": "快速问个问题。此聊天不会保存，也不会记入你的行程聊天；离开此标签页后即被清除。",
+      "turnOn": "开始临时聊天",
+      "turnOff": "结束临时聊天"
+    },
+    "clear": {
+      "title": "清除此聊天？",
+      "action": "清除聊天",
+      "bodyTrip": "{{trip}} 聊天中的所有消息都将被删除，Nomad 会忘记这段对话。",
+      "bodyGeneral": "此聊天中的所有消息都将被删除，Nomad 会忘记这段对话。",
+      "bodyTemporary": "此临时聊天中的所有消息都将被删除。"
+    }
   },
   "safety": {
     "eyebrow": "安心引擎",

@@ -21,6 +21,8 @@ export interface ChatErrorLabels {
 }
 
 export const GENERAL_CHAT_KEY = "general";
+/** In-memory only conversation for temporary chats; never persisted. */
+export const TEMP_CHAT_KEY = "temp";
 
 type PromptTurn = Pick<ChatTurn, "role" | "content">;
 
@@ -33,6 +35,9 @@ export interface ChatConversation {
 interface ChatState {
   conversations: Record<string, ChatConversation>;
   generatingConversationKey: string | null;
+  /** Temporary chat mode: replies go to TEMP_CHAT_KEY, which is never saved. */
+  temporary: boolean;
+  setTemporary: (on: boolean) => void;
   /** Returns false when the message was not accepted (e.g. another reply is generating). */
   send: (conversationKey: string, text: string, labels: ChatErrorLabels) => boolean;
   /** Stops the reply being generated, keeping any partial text. */
@@ -59,6 +64,12 @@ export const useChatStreamStore = create<ChatStreamState>()(() => ({
 const STREAM_UPDATE_INTERVAL_MS = 50;
 
 let stopRequested = false;
+// Bumped when a conversation is cleared so an in-flight reply doesn't write into the emptied chat.
+const conversationEpochs: Record<string, number> = {};
+const epochOf = (conversationKey: string) => conversationEpochs[conversationKey] ?? 0;
+const bumpEpoch = (conversationKey: string) => {
+  conversationEpochs[conversationKey] = epochOf(conversationKey) + 1;
+};
 
 function emptyConversation(): ChatConversation {
   return { messages: [], summary: null, contextMessages: [] };
@@ -76,6 +87,12 @@ function historyFromMessages(messages: ChatMessage[]): PromptTurn[] {
 export const useChatStore = create<ChatState>()(
   persist(
     (set, get) => {
+      const stopIfGenerating = (conversationKey: string) => {
+        if (get().generatingConversationKey !== conversationKey) return;
+        stopRequested = true;
+        void aiService.stopChat();
+      };
+
       const updateLast = (conversationKey: string, updater: (message: ChatMessage) => ChatMessage) =>
         set((state) => {
           const conversation = state.conversations[conversationKey] ?? emptyConversation();
@@ -92,6 +109,13 @@ export const useChatStore = create<ChatState>()(
       return {
         conversations: {},
         generatingConversationKey: null,
+        temporary: false,
+
+        setTemporary: (on) => {
+          if (on === get().temporary) return;
+          get().clear(TEMP_CHAT_KEY);
+          set({ temporary: on });
+        },
 
         send: (conversationKey, text, labels) => {
           if (get().generatingConversationKey) return false;
@@ -99,6 +123,8 @@ export const useChatStore = create<ChatState>()(
           if (!question) return false;
           stopRequested = false;
           const now = Date.now();
+          const epoch = epochOf(conversationKey);
+          const stale = () => epochOf(conversationKey) !== epoch;
 
           set((state) => {
             const conversation = state.conversations[conversationKey] ?? emptyConversation();
@@ -150,6 +176,7 @@ export const useChatStore = create<ChatState>()(
                 systemContext,
                 conversationSummary: conversation.summary ?? undefined,
               });
+              if (stale()) return "";
               set((state) => {
                 const current = state.conversations[conversationKey] ?? emptyConversation();
                 return {
@@ -179,6 +206,7 @@ export const useChatStore = create<ChatState>()(
             })
             .then((reply) => {
               clearStream();
+              if (stale()) return;
               const text = reply.trim();
               set((state) => {
                 const current = state.conversations[conversationKey] ?? emptyConversation();
@@ -208,6 +236,7 @@ export const useChatStore = create<ChatState>()(
             .catch((error: unknown) => {
               clearStream();
               logger.warn("chatStore", "reply generation failed", error);
+              if (stale()) return;
               const noModel = error instanceof Error && error.message.includes("not downloaded");
               updateLast(conversationKey, (message) => ({
                 ...message,
@@ -233,26 +262,38 @@ export const useChatStore = create<ChatState>()(
           void aiService.stopChat();
         },
 
-        clear: (conversationKey) =>
+        clear: (conversationKey) => {
+          stopIfGenerating(conversationKey);
+          bumpEpoch(conversationKey);
           set((state) => ({
             conversations: {
               ...state.conversations,
               [conversationKey]: emptyConversation(),
             },
-          })),
+          }));
+        },
 
-        removeConversation: (conversationKey) =>
+        removeConversation: (conversationKey) => {
+          stopIfGenerating(conversationKey);
+          bumpEpoch(conversationKey);
           set((state) => {
             const { [conversationKey]: _removed, ...conversations } = state.conversations;
             return { conversations };
-          }),
-        reset: () => set({ conversations: {}, generatingConversationKey: null }),
+          });
+        },
+        reset: () => {
+          for (const key of Object.keys(get().conversations)) bumpEpoch(key);
+          set({ conversations: {}, generatingConversationKey: null, temporary: false });
+        },
       };
     },
     {
       name: "ai-chat-store",
       storage: createJSONStorage(() => mmkvStateStorage),
-      partialize: (state) => ({ conversations: state.conversations }),
+      partialize: (state) => {
+        const { [TEMP_CHAT_KEY]: _temporary, ...conversations } = state.conversations;
+        return { conversations };
+      },
       merge: (persisted, current) => {
         const stored = persisted as (Partial<ChatState> & Partial<ChatConversation>) | undefined;
         const conversations = Object.fromEntries(
@@ -279,6 +320,7 @@ export const useChatStore = create<ChatState>()(
           };
         }
 
+        delete conversations[TEMP_CHAT_KEY];
         return { ...current, conversations, generatingConversationKey: null };
       },
     },

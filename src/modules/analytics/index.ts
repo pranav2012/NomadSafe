@@ -28,6 +28,8 @@ export interface AnalyticsEvents {
   sos_cancelled: undefined;
   location_coords_action: { action: "share" | "copy" | "maps" };
   ai_message_sent: undefined;
+  ai_chat_cleared: { temporary: boolean };
+  ai_temporary_chat_started: undefined;
   settlement_recorded: { source: "manual" | "voice" };
   voice_capture_opened: { from_widget: boolean; locked: boolean };
   voice_capture_failed: { reason: VoiceCaptureFailure };

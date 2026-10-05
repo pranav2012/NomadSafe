@@ -666,7 +666,27 @@
     "cloudName": "NomadSafe Cloud",
     "onlinePill": "Online · {{provider}}",
     "onlineNotice": "Quando sei online, le risposte arrivano da {{provider}}. La tua domanda e i dati di viaggio e denaro necessari vengono inviati lì. Puoi disattivarlo nelle Impostazioni.",
-    "introHintOnline": "Chiedi del tuo viaggio, delle tue spese o consigli di viaggio. Online risponde un modello più potente; offline subentra il modello sul dispositivo."
+    "introHintOnline": "Chiedi del tuo viaggio, delle tue spese o consigli di viaggio. Online risponde un modello più potente; offline subentra il modello sul dispositivo.",
+    "thinking": {
+      "thinking": "Sto pensando…",
+      "reading": "Guardo il tuo viaggio…",
+      "working": "Faccio i conti…",
+      "composing": "Metto insieme la risposta…"
+    },
+    "temporary": {
+      "tag": "Chat temporanea · non salvata",
+      "title": "Chat temporanea",
+      "hint": "Fai una domanda veloce. Questa chat non viene salvata né ricordata nella chat del tuo viaggio e si cancella quando esci da questa scheda.",
+      "turnOn": "Avvia chat temporanea",
+      "turnOff": "Termina chat temporanea"
+    },
+    "clear": {
+      "title": "Cancellare questa chat?",
+      "action": "Cancella chat",
+      "bodyTrip": "Tutti i messaggi della chat di {{trip}} verranno eliminati e Nomad dimenticherà questa conversazione.",
+      "bodyGeneral": "Tutti i messaggi di questa chat verranno eliminati e Nomad dimenticherà questa conversazione.",
+      "bodyTemporary": "Tutti i messaggi di questa chat temporanea verranno eliminati."
+    }
   },
   "safety": {
     "eyebrow": "Motore per la tranquillità",

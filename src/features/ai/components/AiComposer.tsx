@@ -1,8 +1,10 @@
-import React, { type RefObject } from "react";
+import React, { useState, type RefObject } from "react";
 import { StyleSheet, Text, TextInput, View, type LayoutChangeEvent } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { GlassSurface, Icon, PressableScale, useAura } from "@/atoms";
+import { auraStatusAccent } from "@/constants/aura";
 import { useLocalization } from "@/localization";
+import { AiGlowRing, GLOW_BLEED } from "./AiGlowRing";
 
 export const MAX_INPUT = 300;
 const RADIUS = 26;
@@ -53,7 +55,9 @@ export function AiComposer({
 }: Props) {
   const { c, f, isDark } = useAura();
   const { t } = useLocalization();
+  const [focused, setFocused] = useState(false);
   const canSend = value.trim().length > 0 && !busy;
+  const lit = generating || focused;
   const privacy = t(online ? "aiTab.composer.online" : "aiTab.composer.private");
   const status = modelName ? `${t("aiTab.chatModel", { model: modelName })} · ${privacy}` : privacy;
   const statusContent = (
@@ -66,14 +70,19 @@ export function AiComposer({
   );
 
   return (
-    <View style={[styles.wrap, { bottom }]} pointerEvents="box-none" onLayout={onLayout}>
-      <View style={[styles.panel, { borderColor: c.hairline }]}>
+    <View style={[styles.wrap, { bottom: bottom - GLOW_BLEED }]} pointerEvents="box-none">
+      <View style={[styles.panel, { borderColor: c.hairline }]} onLayout={onLayout}>
         <GlassSurface isDark={isDark} radius={RADIUS} blurTarget={blurTarget} />
         <View style={styles.inputRow}>
+          <View style={styles.sparkle}>
+            <Icon name="sparkle" size={16} color={lit ? auraStatusAccent.calm : c.textMuted} strokeWidth={2} />
+          </View>
           <TextInput
             ref={inputRef}
             value={value}
             onChangeText={onChange}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
             placeholder={t("aiTab.chatPlaceholder")}
             placeholderTextColor={c.textMuted}
             multiline
@@ -134,6 +143,7 @@ export function AiComposer({
           ) : null}
         </View>
       </View>
+      <AiGlowRing mode={generating ? "active" : focused ? "focus" : "off"} radius={RADIUS} />
     </View>
   );
 }
@@ -141,7 +151,7 @@ export function AiComposer({
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   shrink: { flexShrink: 1 },
-  wrap: { position: "absolute", left: 12, right: 12 },
+  wrap: { position: "absolute", left: 12 - GLOW_BLEED, right: 12 - GLOW_BLEED, padding: GLOW_BLEED },
   panel: {
     borderRadius: RADIUS,
     borderWidth: StyleSheet.hairlineWidth,
@@ -152,7 +162,8 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     shadowOffset: { width: 0, height: 8 },
   },
-  inputRow: { flexDirection: "row", alignItems: "flex-end", gap: 8, paddingLeft: 16, paddingRight: 8 },
+  inputRow: { flexDirection: "row", alignItems: "flex-end", gap: 8, paddingLeft: 14, paddingRight: 8 },
+  sparkle: { height: 41, justifyContent: "center" },
   input: { flex: 1, fontSize: 15.5, lineHeight: 21, paddingTop: 10, paddingBottom: 10, maxHeight: 112 },
   send: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center", marginBottom: 2 },
   stop: { width: 12, height: 12, borderRadius: 3 },

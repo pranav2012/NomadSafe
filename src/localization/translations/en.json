@@ -686,7 +686,27 @@
     "cloudName": "NomadSafe Cloud",
     "onlinePill": "Online · {{provider}}",
     "onlineNotice": "While you're online, answers come from {{provider}}. Your question and the trip and money details it needs are sent there. You can turn this off in Settings.",
-    "introHintOnline": "Ask about your trip, your spending or travel tips. Online answers come from a more capable model; offline, the on-device model takes over."
+    "introHintOnline": "Ask about your trip, your spending or travel tips. Online answers come from a more capable model; offline, the on-device model takes over.",
+    "thinking": {
+      "thinking": "Thinking…",
+      "reading": "Looking through your trip…",
+      "working": "Working it out…",
+      "composing": "Putting it together…"
+    },
+    "temporary": {
+      "tag": "Temporary chat · not saved",
+      "title": "Temporary chat",
+      "hint": "Ask a quick question. This chat isn't saved or remembered in your trip chat, and it's cleared when you leave this tab.",
+      "turnOn": "Start temporary chat",
+      "turnOff": "End temporary chat"
+    },
+    "clear": {
+      "title": "Clear this chat?",
+      "action": "Clear chat",
+      "bodyTrip": "All messages in the {{trip}} chat will be deleted, and Nomad will forget this conversation.",
+      "bodyGeneral": "All messages in this chat will be deleted, and Nomad will forget this conversation.",
+      "bodyTemporary": "All messages in this temporary chat will be deleted."
+    }
   },
   "milestones": {
     "safetyEyebrow": "Safety",
