@@ -3,7 +3,7 @@ import { v } from "convex/values";
 
 export const tripRecordKindValidator = v.union(v.literal("expense"), v.literal("settlement"), v.literal("event"));
 
-export const syncKindValidator = v.union(v.literal("trip"), v.literal("expense"), v.literal("settlement"), v.literal("event"));
+export const syncKindValidator = v.union(v.literal("trip"), v.literal("expense"), v.literal("settlement"), v.literal("event"), v.literal("passport"));
 
 export default defineSchema({
   // Links a contact (owner) to another NomadSafe user (linkedUser) by email.

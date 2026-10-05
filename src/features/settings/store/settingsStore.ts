@@ -30,6 +30,8 @@ interface SettingsState {
   ambientSoundEnabled: boolean;
   /** Back up trips, expenses and itinerary to the signed-in account. */
   cloudBackupEnabled: boolean;
+  /** ISO 3166-1 alpha-2; null follows the phone's region. Read it with `useHomeCountry()`. */
+  homeCountry: string | null;
 
   setThemeMode: (mode: ThemeMode) => void;
   setOnboardingCompleted: (value: boolean) => void;
@@ -47,6 +49,7 @@ interface SettingsState {
   setAnalyticsEnabled: (value: boolean) => void;
   setAmbientSoundEnabled: (value: boolean) => void;
   setCloudBackupEnabled: (value: boolean) => void;
+  setHomeCountry: (code: string | null) => void;
   reset: () => void;
 }
 
@@ -72,6 +75,7 @@ export const useSettingsStore = create<SettingsState>()(
       analyticsEnabled: true,
       ambientSoundEnabled: true,
       cloudBackupEnabled: true,
+      homeCountry: null,
 
       setThemeMode: (mode) => set({ themeMode: mode }),
       setOnboardingCompleted: (value) =>
@@ -90,6 +94,7 @@ export const useSettingsStore = create<SettingsState>()(
       setAnalyticsEnabled: (value) => set({ analyticsEnabled: value }),
       setAmbientSoundEnabled: (value) => set({ ambientSoundEnabled: value }),
       setCloudBackupEnabled: (value) => set({ cloudBackupEnabled: value }),
+      setHomeCountry: (code) => set({ homeCountry: code }),
       reset: () =>
         set({
           themeMode: "dark",
@@ -108,6 +113,7 @@ export const useSettingsStore = create<SettingsState>()(
           analyticsEnabled: true,
           ambientSoundEnabled: true,
           cloudBackupEnabled: true,
+          homeCountry: null,
         }),
     }),
     {

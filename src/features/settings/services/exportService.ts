@@ -4,6 +4,7 @@ import { useAuthStore } from "@/features/auth/store/authStore";
 import { useTripsStore } from "@/features/trips/store/tripsStore";
 import { useExpensesStore } from "@/features/expenses/store/expensesStore";
 import { useEventsStore } from "@/features/itinerary/store/eventsStore";
+import { usePassportStore } from "@/features/passport/store/passportStore";
 import { useSafetyStore } from "@/features/safety/store/safetyStore";
 import { useSharingStore } from "@/features/location-sharing/store/sharingStore";
 import { useSettingsStore } from "@/features/settings/store/settingsStore";
@@ -18,6 +19,7 @@ export interface NomadSafeExport {
   trips: ReturnType<typeof useTripsStore.getState>["trips"];
   expenses: ReturnType<typeof useExpensesStore.getState>["expenses"];
   itineraryEvents: ReturnType<typeof useEventsStore.getState>["events"];
+  pastTravel: ReturnType<typeof usePassportStore.getState>["entries"];
   safetyEvents: ReturnType<typeof useSafetyStore.getState>["events"];
   trustedContacts: ReturnType<typeof useSafetyStore.getState>["trustedContacts"];
   shareRecipients: ReturnType<typeof useSharingStore.getState>["recipients"];
@@ -27,6 +29,7 @@ export interface NomadSafeExport {
     defaultCurrency: string;
     currencyOverride: string | null;
     localeOverride: string | null;
+    homeCountry: string | null;
     defaultTripMode: string;
     defaultCheckInDuration: number;
   };
@@ -50,6 +53,7 @@ function buildExport(): NomadSafeExport {
     trips: useTripsStore.getState().trips,
     expenses: useExpensesStore.getState().expenses,
     itineraryEvents: useEventsStore.getState().events,
+    pastTravel: usePassportStore.getState().entries,
     safetyEvents: useSafetyStore.getState().events,
     trustedContacts: useSafetyStore.getState().trustedContacts,
     shareRecipients: useSharingStore.getState().recipients,
@@ -58,6 +62,7 @@ function buildExport(): NomadSafeExport {
       themeMode: settings.themeMode,
       defaultCurrency: getDefaultCurrency(),
       currencyOverride: settings.currencyOverride,
+      homeCountry: settings.homeCountry,
       localeOverride: settings.localeOverride,
       defaultTripMode: settings.defaultTripMode,
       defaultCheckInDuration: settings.defaultCheckInDuration,

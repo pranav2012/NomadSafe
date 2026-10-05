@@ -40,6 +40,8 @@ import { wipeAllDeviceData } from "@/features/settings/services/wipeService";
 import { SettingsProfileHeader } from "@/features/settings/components/SettingsProfileHeader";
 import { SmsTemplatesSheet } from "@/features/settings/components/SmsTemplatesSheet";
 import { useSheetTopInset } from "@/hooks/useSheetTopInset";
+import { CountryPickerSheet, useHomeCountry } from "@/features/passport";
+import { countryDisplayName } from "@/features/trips/data/destinations";
 
 const CHECK_IN_OPTIONS = [15 * 60, 30 * 60, 60 * 60, 2 * 60 * 60, 4 * 60 * 60, 8 * 60 * 60];
 const AUTO_LOCK_OPTIONS = [0, 60_000, 5 * 60_000, 15 * 60_000];
@@ -48,7 +50,7 @@ const [INDIGO, TEAL, VIOLET] = auraStatusColors.calm;
 const AMBER = auraStatusAccent.live;
 
 type ThemeMode = "light" | "dark" | "system";
-type SheetId = "autoLock" | "checkIn" | "appearance" | "language" | "currency" | "units" | "timeFormat" | "sms" | "aiKey" | "aiUsage";
+type SheetId = "autoLock" | "checkIn" | "appearance" | "language" | "currency" | "units" | "timeFormat" | "homeCountry" | "sms" | "aiKey" | "aiUsage";
 type Translate = ReturnType<typeof useLocalization>["t"];
 
 function formatShortDuration(seconds: number, t: Translate): string {
@@ -136,6 +138,8 @@ export default function SettingsScreen() {
   const [deleting, setDeleting] = useState(false);
   const [backupBusy, setBackupBusy] = useState(false);
   const [sheet, setSheet] = useState<SheetId | null>(null);
+  const homeCountry = useHomeCountry();
+  const setHomeCountry = useSettingsStore((s) => s.setHomeCountry);
   const [restoring, setRestoring] = useState(false);
   // Remounts the key sheet on each open so it starts from what's saved.
   const [keySheetSession, setKeySheetSession] = useState(0);
@@ -627,6 +631,14 @@ export default function SettingsScreen() {
 
         <AuraListGroup title={t("settings.tripsSection")}>
           <AuraListRow
+            icon="globe"
+            tone={TEAL}
+            label={t("settings.homeCountry")}
+            detail={t("settings.homeCountrySub")}
+            value={homeCountry.code ? countryDisplayName(homeCountry.code, locale) : t("settings.homeCountryNone")}
+            onPress={() => setSheet("homeCountry")}
+          />
+          <AuraListRow
             icon="flag"
             tone={AMBER}
             label={t("settings.tripMode")}
@@ -790,6 +802,16 @@ export default function SettingsScreen() {
         selected={unitSystem}
         onSelect={setUnitSystem}
       />
+      <CountryPickerSheet
+        visible={sheet === "homeCountry"}
+        onClose={closeSheet}
+        title={t("settings.homeCountry")}
+        automaticLabel={
+          homeCountry.device ? t("settings.homeCountryAutomatic", { country: countryDisplayName(homeCountry.device, locale) }) : null
+        }
+        selected={homeCountry.automatic ? null : homeCountry.code}
+        onSelect={setHomeCountry}
+      />
       <AuraOptionSheet
         visible={sheet === "timeFormat"}
         onClose={closeSheet}
@@ -799,7 +821,7 @@ export default function SettingsScreen() {
         onSelect={setTimeFormat}
       />
       <SmsTemplatesSheet visible={sheet === "sms"} onClose={closeSheet} />
-      <AiKeySheet key={keySheetSession} visible={sheet === "aiKey"} onClose={closeSheet} />
+      <AiKeySheet key={`ai-key-${keySheetSession}`} visible={sheet === "aiKey"} onClose={closeSheet} />
       <AiUsageSheet visible={sheet === "aiUsage"} onClose={closeSheet} />
     </View>
   );

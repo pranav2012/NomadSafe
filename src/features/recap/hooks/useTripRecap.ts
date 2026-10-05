@@ -3,13 +3,14 @@ import { useTripExpenseSummary } from "@/features/expenses/hooks/useTripExpenseS
 import { formatMoney } from "@/features/expenses/utils/money";
 import { useEventsStore } from "@/features/itinerary/store/eventsStore";
 import type { TransitMode } from "@/features/itinerary/constants/eventTypes";
-import { countryDisplayName, nearestCityCountry } from "@/features/trips/data/destinations";
+import { placeCountry } from "@/features/passport/hooks/usePassport";
+import { countryDisplayName } from "@/features/trips/data/destinations";
 import { getOfflineCoordinates } from "@/features/trips/services/geocoding";
 import { getDestinationCoordinates, useTripsStore, type Trip } from "@/features/trips/store/tripsStore";
 import { fromDateKey } from "@/features/trips/utils/dates";
 import { useLocalization } from "@/localization";
 import type { RecapCardContent } from "../components/recapCard";
-import { countryAt, countryBox } from "../utils/countryShapes";
+import { countryBox } from "../utils/countryShapes";
 import { computeRecapFacts, type RecapFacts, type RecapMode } from "../utils/recapFacts";
 
 export interface RecapStat {
@@ -47,9 +48,6 @@ function listFormat(items: string[], locale: string) {
   }
 }
 
-const countryOf = (point: { latitude: number; longitude: number }) =>
-  countryAt(point.latitude, point.longitude) ?? nearestCityCountry(point.latitude, point.longitude);
-
 /** Everything the replay and share card show for one trip, formatted; null when the trip is gone. */
 export function useTripRecap(tripId: string | undefined) {
   const { t, locale, formatDistance, formatCurrency } = useLocalization();
@@ -65,7 +63,7 @@ export function useTripRecap(tripId: string | undefined) {
             coordinates: getDestinationCoordinates(trip),
             events: allEvents.filter((event) => event.tripId === trip.id),
             locate: getOfflineCoordinates,
-            countryOf,
+            countryOf: placeCountry,
           })
         : null,
     [trip, allEvents],

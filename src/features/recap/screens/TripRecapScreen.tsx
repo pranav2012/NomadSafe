@@ -27,6 +27,11 @@ import { useLocalization } from "@/localization";
 import { PrivateView, track } from "@/modules/analytics";
 import { useStartNewTrip } from "@/modules/billing";
 import { selectionChanged } from "@/utils/haptics";
+import { StampingMoment, type MomentItem } from "@/features/passport/components/StampingMoment";
+import { useHomeCountry } from "@/features/passport/hooks/usePassport";
+import { stampDate } from "@/features/passport/utils/passport";
+import { regionAt } from "@/features/passport/utils/regions";
+import { countryDisplayName } from "@/features/trips/data/destinations";
 import { FlapBoard } from "../components/FlapBoard";
 import { RecapMapCanvas } from "../components/RecapMapCanvas";
 import { CARD_HEIGHT, CARD_WIDTH, RECAP_FONT_FAMILY, encodeRecapCard, renderRecapCard } from "../components/recapCard";
@@ -35,16 +40,47 @@ import { shareRecapCard } from "../services/shareRecapCard";
 import { finishRecap, useRecapStore } from "../store/recapStore";
 import { cameraFor, frameRoute, type Camera, type Point, type Rect } from "../utils/recapMap";
 
-type Chapter = { kind: "intro" } | { kind: "stop"; index: number } | { kind: "numbers" } | { kind: "finale" };
+type Chapter = { kind: "intro" } | { kind: "stop"; index: number } | { kind: "numbers" } | { kind: "stamp" } | { kind: "finale" };
 type RecapSource = "home" | "notification" | "trips";
 
 const c = auraDark;
-const DURATION_MS: Record<Exclude<Chapter["kind"], "finale">, number> = { intro: 4200, stop: 3400, numbers: 5000 };
+const DURATION_MS: Record<Exclude<Chapter["kind"], "finale">, number> = { intro: 4200, stop: 3400, numbers: 5000, stamp: 4600 };
 const CAMERA_MS = 1300;
 const PREVIEW_PIXELS = 900;
 
-function buildChapters(recap: TripRecap): Chapter[] {
-  return [{ kind: "intro" }, ...recap.facts.stops.map((_, index): Chapter => ({ kind: "stop", index })), { kind: "numbers" }, { kind: "finale" }];
+function buildChapters(recap: TripRecap, stamped: boolean): Chapter[] {
+  return [
+    { kind: "intro" },
+    ...recap.facts.stops.map((_, index): Chapter => ({ kind: "stop", index })),
+    { kind: "numbers" },
+    ...(stamped ? [{ kind: "stamp" } as const] : []),
+    { kind: "finale" },
+  ];
+}
+
+/** New passport entries for this trip: a stamp per foreign country, a seal per home state. */
+function useMomentItems(recap: TripRecap): MomentItem[] {
+  const { locale } = useLocalization();
+  const { code: home } = useHomeCountry();
+  return useMemo(() => {
+    const date = stampDate(recap.trip.startDate, locale);
+    const stamps: MomentItem[] = [];
+    const seals: MomentItem[] = [];
+    const seen = new Set<string>();
+    for (const stop of recap.facts.stops) {
+      if (!stop.country) continue;
+      if (stop.country === home) {
+        const region = regionAt(stop.country, stop.latitude, stop.longitude);
+        if (!region || seen.has(region.key)) continue;
+        seen.add(region.key);
+        seals.push({ key: region.key, kind: "seal", seed: region.key, title: region.name, top: null, bottom: date });
+      } else if (!seen.has(stop.country)) {
+        seen.add(stop.country);
+        stamps.push({ key: `${recap.trip.id}:${stop.country}`, kind: "stamp", seed: stop.country, title: countryDisplayName(stop.country, locale), top: shortPlace(stop.name), bottom: date });
+      }
+    }
+    return [...stamps, ...seals];
+  }, [home, locale, recap.facts.stops, recap.trip.id, recap.trip.startDate]);
 }
 
 /** Full-screen trip replay: the route draws itself stop by stop, then the numbers, then the share card. */
@@ -75,7 +111,8 @@ function Replay({ recap, source }: { recap: TripRecap; source: RecapSource }) {
   const startNewTrip = useStartNewTrip();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
-  const chapters = useMemo(() => buildChapters(recap), [recap]);
+  const momentItems = useMomentItems(recap);
+  const chapters = useMemo(() => buildChapters(recap, momentItems.length > 0), [recap, momentItems.length]);
   const last = chapters.length - 1;
   const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState(true);
@@ -130,7 +167,7 @@ function Replay({ recap, source }: { recap: TripRecap; source: RecapSource }) {
     camY.set(withTiming(target.y, ease));
     camZoom.set(withTiming(target.zoom, ease));
     reveal.set(withTiming(shown, { duration: CAMERA_MS * 1.1, easing: Easing.inOut(Easing.quad) }));
-    mapOpacity.set(withTiming(chapter.kind === "finale" ? 0 : 1, { duration: 500 }));
+    mapOpacity.set(withTiming(chapter.kind === "finale" || chapter.kind === "stamp" ? 0 : 1, { duration: 500 }));
   }, [camX, camY, camZoom, chapter, height, insets.top, mapOpacity, points, recap.facts.legs.length, reveal, width]);
 
   // The chapter timer: a new chapter starts from 0; resuming continues where the pause left it.
@@ -228,6 +265,11 @@ function Replay({ recap, source }: { recap: TripRecap; source: RecapSource }) {
         {chapter.kind === "intro" ? <Intro recap={recap} top={insets.top + 92} /> : null}
         {chapter.kind === "stop" ? <StopChapter recap={recap} index={chapter.index} bottom={insets.bottom + 120} /> : null}
         {chapter.kind === "numbers" ? <Numbers recap={recap} top={insets.top + 80 + height * 0.25} /> : null}
+        {chapter.kind === "stamp" ? (
+          <View style={[styles.block, { top: insets.top + 84 }]}>
+            <StampingMoment items={momentItems} width={width - 48} onOpenPassport={() => router.push({ pathname: "/passport", params: { source: "replay" } })} />
+          </View>
+        ) : null}
         {chapter.kind === "finale" ? (
           <Finale recap={recap} top={insets.top + 64} bottom={insets.bottom + 20} onDone={done} onPlanNext={planNext} onCheckBalances={checkBalances} />
         ) : null}

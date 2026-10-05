@@ -179,3 +179,71 @@ test("the camera fits points into a region and caps zoom", () => {
   assert.equal(single.zoom, 3);
   assert.equal(50 * single.zoom + single.x, 200);
 });
+
+const passport = loadModule("src/features/passport/utils/passport.ts");
+const regions = loadModule("src/features/passport/utils/regions.ts");
+const CONTINENT = { IN: "Asia", JP: "Asia", FR: "Europe", TH: "Asia" };
+const trip = (id, status, stops, days = 5, startDate = "2026-01-10") => ({ id, name: id, startDate, endDate: startDate, days, status, stops });
+
+test("international stops become one stamp per country per trip; home stops become state seals", () => {
+  const model = passport.buildPassport({
+    home: "IN",
+    continentOf: (c) => CONTINENT[c] ?? null,
+    past: [],
+    trips: [
+      trip("t1", "complete", [
+        { name: "Tokyo", country: "JP", region: "JP-13" },
+        { name: "Kyoto", country: "JP", region: "JP-26" },
+        { name: "Paris", country: "FR", region: null },
+      ], 12),
+      trip("t2", "complete", [{ name: "Goa", country: "IN", region: "IN-GA" }], 4, "2026-03-01"),
+      trip("t3", "complete", [{ name: "Panaji", country: "IN", region: "IN-GA" }, { name: "Kochi", country: "IN", region: "IN-KL" }], 6, "2025-12-01"),
+      trip("t4", "upcoming", [{ name: "Bangkok", country: "TH", region: null }], 7, "2027-01-01"),
+    ],
+  });
+  assert.deepEqual(model.stamps.map((s) => [s.country, s.place, s.pending]), [["JP", "Tokyo", false], ["FR", "Paris", false], ["TH", "Bangkok", true]]);
+  assert.deepEqual(model.seals.map((s) => [s.region, s.visits]), [["IN-GA", 2], ["IN-KL", 1]]);
+  assert.equal(model.seals[0].first, "2025-12-01");
+  assert.equal(model.countries, 3, "Japan, France and home; the upcoming trip doesn't count yet");
+  assert.equal(model.continents, 2);
+  assert.equal(model.daysAbroad, 12);
+  assert.equal(model.latest.country, "FR");
+});
+
+test("past travel adds plain stamps and seals that aren't marked as app trips", () => {
+  const model = passport.buildPassport({
+    home: "IN",
+    continentOf: (c) => CONTINENT[c] ?? null,
+    trips: [],
+    past: [
+      { id: "p1", country: "FR", region: null, place: "Paris, France", year: 2019, month: 5 },
+      { id: "p2", country: "IN", region: "IN-KL", place: "Kochi", year: 2018, month: null },
+    ],
+  });
+  assert.equal(model.stamps.length, 1);
+  assert.equal(model.stamps[0].viaApp, false);
+  assert.equal(model.stamps[0].date, "2019-05");
+  assert.deepEqual(model.seals.map((s) => [s.region, s.viaApp, s.first]), [["IN-KL", false, "2018"]]);
+  assert.equal(model.countries, 2);
+});
+
+test("without a home country every stop is international", () => {
+  const model = passport.buildPassport({ home: null, continentOf: () => null, past: [], trips: [trip("t", "complete", [{ name: "Goa", country: "IN", region: "IN-GA" }])] });
+  assert.equal(model.stamps.length, 1);
+  assert.equal(model.seals.length, 0);
+});
+
+test("stamp styling is stable per country", () => {
+  assert.equal(passport.pick("JP", 4), passport.pick("JP", 4));
+  assert.ok(passport.pick("JP", 4) >= 0 && passport.pick("JP", 4) < 4);
+});
+
+test("finds the state for a city, falling back near coastlines", () => {
+  assert.equal(regions.regionAt("IN", 12.97, 77.59).key, "IN-KA");
+  assert.equal(regions.regionAt("IN", 15.49, 73.83).key, "IN-GA");
+  assert.equal(regions.regionAt("US", 40.71, -74.0).key, "US-NY");
+  assert.equal(regions.regionAt("FR", 43.7, 7.27).name, "Provence-Alpes-Côte-d'Azur");
+  assert.equal(regions.regionAt("GB", 55.95, -3.19).name, "Scotland");
+  assert.equal(regions.countryRegions("IN").length, 36);
+  assert.ok(regions.mainlandBox("FR").west > -10, "overseas regions are left out of the home map");
+});

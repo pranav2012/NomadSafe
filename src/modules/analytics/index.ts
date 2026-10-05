@@ -48,6 +48,8 @@ export interface AnalyticsEvents {
   recap_opened: { source: "home" | "notification" | "trips"; stops: number };
   recap_finished: { stops: number };
   recap_shared: { format: "image" | "video"; spend: boolean };
+  passport_opened: { source: "trips" | "replay"; stamps: number };
+  past_travel_added: { has_region: boolean; has_month: boolean };
 }
 
 export interface FeatureFlags {

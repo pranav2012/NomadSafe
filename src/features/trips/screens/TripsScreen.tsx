@@ -14,6 +14,7 @@ import { isArchived, TripPeopleSheet } from "@/features/trips/components/TripPeo
 import { selectActiveTrip, type Trip, useTripsStore } from "@/features/trips/store/tripsStore";
 import { countInclusiveDays, fromDateKey, getTripStatus, startOfLocalDay } from "@/features/trips/utils/dates";
 import { useChatStore } from "@/features/ai/store/chatStore";
+import { PassportCard } from "@/features/passport";
 import { useEventsStore } from "@/features/itinerary/store/eventsStore";
 import { clearTripGmailCoverage } from "@/features/expenses/store/tripGmailCoverageStore";
 import { useExpensesStore } from "@/features/expenses/store/expensesStore";
@@ -197,6 +198,8 @@ export default function TripsScreen() {
             <Icon name="x" size={16} color={c.text} />
           </PressableScale>
         </View>
+
+        <PassportCard onPress={() => router.push({ pathname: "/passport", params: { source: "trips" } })} />
 
         {trips.length === 0 ? (
           <Animated.View entering={FadeIn.duration(300)} style={[styles.empty, { backgroundColor: c.surface, borderColor: c.hairline }]}>
