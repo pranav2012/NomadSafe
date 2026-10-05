@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { useRouter } from "expo-router";
-import { AuraListGroup, AuraListRow, Icon, PressableScale, showAlert, useAura } from "@/atoms";
+import { AuraListGroup, AuraListRow, Icon, PressableScale, showAlert, useAura, AuraTopFade } from "@/atoms";
 import { useLocalization } from "@/localization";
 import { emergencyContactsStorage } from "@/features/onboarding/services/emergencyContactsStorage";
 import { TrustedContactsEditor } from "@/features/settings/components/TrustedContactsEditor";
@@ -58,6 +58,7 @@ export default function EmergencyContactsScreen() {
           </AuraListGroup>
         ) : null}
       </ScrollView>
+      <AuraTopFade />
     </View>
   );
 }

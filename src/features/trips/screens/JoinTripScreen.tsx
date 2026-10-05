@@ -10,6 +10,7 @@ import { useTripsStore } from "@/features/trips/store/tripsStore";
 import { track } from "@/modules/analytics";
 import { fromDateKey } from "@/features/trips/utils/dates";
 import { useLocalization } from "@/localization";
+import { useSheetTopInset } from "@/hooks/useSheetTopInset";
 
 const NEW_MEMBER = "__new__";
 const ARRIVAL_TIMEOUT_MS = 8000;
@@ -44,6 +45,7 @@ export default function JoinTripScreen() {
   const { t, formatDate } = useLocalization();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const sheetTop = useSheetTopInset();
   const { code, deferred } = useLocalSearchParams<{ code: string; deferred?: string }>();
   const preview = useQuery(api.groupTrips.previewInvite, code ? { code } : "skip");
   const join = useMutation(api.groupTrips.joinTrip);
@@ -90,7 +92,7 @@ export default function JoinTripScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: c.bg }]}>
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 32 }]}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.scroll, { paddingTop: sheetTop + 16, paddingBottom: insets.bottom + 32 }]}>
         <View style={styles.header}>
           <Text style={[styles.title, { color: c.text, fontFamily: f.semibold }]}>{t("groupTrip.joinTitle")}</Text>
           <PressableScale onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={t("common.close")} style={[styles.close, { backgroundColor: c.surfaceStrong }]}>

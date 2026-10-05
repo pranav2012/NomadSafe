@@ -15,6 +15,7 @@ import {
   showAlert,
   showToast,
   useAura,
+  AuraTopFade,
 } from "@/atoms";
 import { auraStatusAccent, auraStatusColors } from "@/constants/aura";
 import { LEGAL_URLS, openLegalPage } from "@/constants/legal";
@@ -38,6 +39,7 @@ import { exportEverything } from "@/features/settings/services/exportService";
 import { wipeAllDeviceData } from "@/features/settings/services/wipeService";
 import { SettingsProfileHeader } from "@/features/settings/components/SettingsProfileHeader";
 import { SmsTemplatesSheet } from "@/features/settings/components/SmsTemplatesSheet";
+import { useSheetTopInset } from "@/hooks/useSheetTopInset";
 
 const CHECK_IN_OPTIONS = [15 * 60, 30 * 60, 60 * 60, 2 * 60 * 60, 4 * 60 * 60, 8 * 60 * 60];
 const AUTO_LOCK_OPTIONS = [0, 60_000, 5 * 60_000, 15 * 60_000];
@@ -77,6 +79,7 @@ function nativeLanguageName(locale: SupportedLocale): string {
 export default function SettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const sheetTop = useSheetTopInset();
   const { c, f, isDark } = useAura();
   const { t, locale, deviceLocale, deviceCurrency, deviceUnits, deviceHour12 } = useLocalization();
 
@@ -427,7 +430,7 @@ export default function SettingsScreen() {
     <View style={[styles.root, { backgroundColor: c.bg }]}>
       <StatusBar style={isDark ? "light" : "dark"} />
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 32 }]}
+        contentContainerStyle={[styles.scroll, { paddingTop: sheetTop + 16, paddingBottom: insets.bottom + 32 }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
@@ -728,6 +731,7 @@ export default function SettingsScreen() {
           <Text style={[styles.credits, { color: c.textMuted, fontFamily: f.regular }]}>{t("settings.imageCredits")}</Text>
         </View>
       </ScrollView>
+      <AuraTopFade sheet />
 
       <AuraOptionSheet
         visible={sheet === "autoLock"}

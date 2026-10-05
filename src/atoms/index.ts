@@ -11,6 +11,7 @@ export { AuraProgressBar } from "./aura/AuraProgressBar";
 export { AuraSection } from "./aura/AuraSection";
 export { AuraSegmented } from "./aura/AuraSegmented";
 export { AuraSheet } from "./aura/AuraSheet";
+export { AuraTopFade } from "./aura/AuraTopFade";
 export { AuraSkyHero, SKY_INTRO_MS, consumeSkyIntro } from "./aura/AuraSkyHero";
 export { AuraSwitch } from "./aura/AuraSwitch";
 export { useAura } from "./aura/useAura";

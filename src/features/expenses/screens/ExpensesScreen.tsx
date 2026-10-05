@@ -16,6 +16,7 @@ import {
   useFloatingBarBottom,
   useKeyboardVisible,
   useTabBarInset,
+  AuraTopFade,
 } from "@/atoms";
 import { auraStatusAccent } from "@/constants/aura";
 import { useLocalization } from "@/localization";
@@ -206,6 +207,7 @@ export default function ExpensesScreen() {
             </Animated.View>
           )}
         </ScrollView>
+        <AuraTopFade />
       </BlurTargetView>
 
       {!keyboardVisible ? (

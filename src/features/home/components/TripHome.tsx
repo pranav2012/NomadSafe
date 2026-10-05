@@ -4,7 +4,7 @@ import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PrivateView } from "@/modules/analytics";
 import { LinearGradient } from "expo-linear-gradient";
-import { AuraButton, Icon, PressableScale, RollingNumber, useTabBarInset } from "@/atoms";
+import { AuraButton, Icon, PressableScale, RollingNumber, useTabBarInset, AuraTopFade } from "@/atoms";
 import { useGmailStatus } from "@/features/expenses/hooks/useGmailStatus";
 import { useScrollActivity } from "@/hooks/useScrollActivity";
 import { auraDark, auraFonts as f, auraLight, auraStatusAccent, auraStatusColors, type AuraStatus } from "@/constants/aura";
@@ -380,6 +380,7 @@ export function TripHome({
           <NearbyPlaces userLocation={userLocation} />
         </View>
       </Animated.ScrollView>
+      <AuraTopFade />
       <LinearGradient pointerEvents="none" colors={[c.bg, `${c.bg}00`]} style={[styles.topFade, { height: insets.top + 18 }]} />
       {forecast.active ? (
         <WeatherSheet

@@ -7,7 +7,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { api, useQuery } from "@/modules/backend";
 import { getCurrentPosition, getLastKnownPosition, requestForegroundPermission } from "@/modules/location";
-import { AuraButton, AuraCard, AuraChip, AuraSection, Icon, showAlert, useAura, useTabBarInset } from "@/atoms";
+import { AuraButton, AuraCard, AuraChip, AuraSection, Icon, showAlert, useAura, useTabBarInset, AuraTopFade } from "@/atoms";
 import { auraStatusAccent, type AuraStatus } from "@/constants/aura";
 import { ActionButton } from "@/features/home/components/aura/ActionButton";
 import { useLocalization } from "@/localization";
@@ -929,6 +929,7 @@ export default function SafetyScreen() {
           />
         </View>
       </ScrollView>
+      <AuraTopFade />
 
       <SosCountdownOverlay
         seconds={sosCountdown}
