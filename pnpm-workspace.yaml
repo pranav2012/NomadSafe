@@ -7,6 +7,9 @@ minimumReleaseAgeExclude:
   - react-native-skia-graphite-apple-ios
   - react-native-skia-graphite-apple-macos
 allowBuilds:
+  # Firebase's optional postinstall scripts (telemetry/build helpers); not needed by the app.
+  '@firebase/util': false
+  protobufjs: false
   '@posthog/cli': true
   '@prisma/engines': true
   esbuild: true

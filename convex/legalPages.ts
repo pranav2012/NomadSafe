@@ -87,6 +87,8 @@ export const privacyPolicy = httpAction(async () => {
 <li>Emergency contacts you pick, SMS templates and safety check-in history.</li>
 <li>AI chat history. With the on-device AI model, prompts and replies never leave your phone. When you use online AI (below), each question is sent to answer it, but the chat history is still stored only on your phone.</li>
 <li>Your app PIN (stored in the Android Keystore / iOS Keychain).</li>
+<li>Photos you add to a trip replay: small copies of only the photos you pick, with the time and place they were taken. They are never uploaded or backed up.</li>
+<li>Step counts and walking distance read from Health Connect or Apple Health for a trip's dates, if you turn this on.</li>
 </ul>
 <p>This data is kept in encrypted app storage and is excluded from cloud backups. Trips, expenses, itinerary and the past travel in your passport are kept in the same encrypted storage on your device as well as in your account backup (below). Your passport's stamps and state map are worked out on your device from this data; country and state outlines are built into the app, so no location lookup is sent anywhere. If you add the NomadSafe home-screen widget, your trip names are also kept in the widget's own storage on your device so it can show them. Uninstalling the app or using <em>Settings → Wipe device data</em> removes it.</p>
 
@@ -157,6 +159,8 @@ export const privacyPolicy = httpAction(async () => {
 <li><strong>Location, including background:</strong> live location sharing, SOS location and nearby places. Background location is used only while you have live sharing turned on.</li>
 <li><strong>Contacts:</strong> only to let you pick emergency contacts. We read the contact you pick; your address book is not uploaded.</li>
 <li><strong>Microphone and speech recognition:</strong> only when you tap Speak to add an expense by voice. Your phone's on-device speech recognizer turns speech into text; audio is never recorded or sent anywhere. The on-device AI reads the text, or, when online AI is in use, the text alone is sent to read the amount and who it is split with, as described under Online AI.</li>
+<li><strong>Photos:</strong> NomadSafe has no access to your photo library. When you add photos to a trip replay, the system photo picker gives the app only the photos you pick.</li>
+<li><strong>Health Connect / Apple Health (steps and distance, read only):</strong> only after you tap Add steps on a finished trip. NomadSafe reads your step count and walking distance for that trip's dates, including dates more than 30 days ago, to show how far you walked in its replay. This data is read and kept on your device; it is never uploaded, shared, used for advertising or written back. You can withdraw access at any time in Health Connect or the Health app.</li>
 <li><strong>Notifications:</strong> check-in reminders, sharing status, download progress, SOS and missed check-in alerts from your contacts, and changes to shared trips.</li>
 <li><strong>Biometrics:</strong> to unlock the app. Biometric data never leaves your device's secure hardware.</li>
 </ul>

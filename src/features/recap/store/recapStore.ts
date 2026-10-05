@@ -9,8 +9,14 @@ interface RecapState {
   finished: Record<string, string>;
   /** True while the replay screen is up, so Home drops its globe (one full-size Skia canvas at a time). */
   replayOpen: boolean;
+  /** The user allowed reading steps from Health Connect / Apple Health. */
+  healthLinked: boolean;
+  /** Steps and walking distance per trip, read once the trip has ended (stays on this phone). */
+  walking: Record<string, { steps: number; km: number; estimated: boolean; at: string }>;
   markFinished: (tripId: string) => void;
   setReplayOpen: (open: boolean) => void;
+  setHealthLinked: (linked: boolean) => void;
+  setWalking: (tripId: string, totals: { steps: number; km: number; estimated: boolean } | null) => void;
   reset: () => void;
 }
 
@@ -19,14 +25,24 @@ export const useRecapStore = create<RecapState>()(
     (set) => ({
       finished: {},
       replayOpen: false,
+      healthLinked: false,
+      walking: {},
       markFinished: (tripId) => set((state) => ({ finished: { ...state.finished, [tripId]: new Date().toISOString() } })),
       setReplayOpen: (replayOpen) => set({ replayOpen }),
-      reset: () => set({ finished: {}, replayOpen: false }),
+      setHealthLinked: (healthLinked) => set({ healthLinked }),
+      setWalking: (tripId, totals) =>
+        set((state) => {
+          const walking = { ...state.walking };
+          if (totals) walking[tripId] = { ...totals, at: new Date().toISOString() };
+          else delete walking[tripId];
+          return { walking };
+        }),
+      reset: () => set({ finished: {}, replayOpen: false, healthLinked: false, walking: {} }),
     }),
     {
       name: "trip-recap",
       storage: createJSONStorage(() => mmkvStateStorage),
-      partialize: (state) => ({ finished: state.finished }),
+      partialize: (state) => ({ finished: state.finished, healthLinked: state.healthLinked, walking: state.walking }),
     },
   ),
 );

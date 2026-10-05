@@ -63,7 +63,10 @@
         "android.permission.READ_CONTACTS",
         "android.permission.POST_NOTIFICATIONS",
         "android.permission.VIBRATE",
-        "android.permission.USE_FINGERPRINT"
+        "android.permission.USE_FINGERPRINT",
+        "android.permission.health.READ_STEPS",
+        "android.permission.health.READ_DISTANCE",
+        "android.permission.health.READ_HEALTH_DATA_HISTORY"
       ],
       "allowBackup": false,
       "softwareKeyboardLayoutMode": "resize",
@@ -75,7 +78,10 @@
         "android.permission.SYSTEM_ALERT_WINDOW",
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.READ_PHONE_STATE"
+        "android.permission.READ_PHONE_STATE",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED"
       ]
     },
     "web": {
@@ -133,6 +139,7 @@
       "expo-status-bar",
       "expo-background-task",
       "./plugins/withoutPushEntitlement",
+      "./plugins/withHealthKitGate",
       "./plugins/withGoogleMapsApiKey",
       "./plugins/withGradleHeap",
       "./plugins/withLlamaMemoryEntitlements",
@@ -229,6 +236,22 @@
           "iosAppId": "ca-app-pub-6692019921438774~8391947090",
           "delayAppMeasurementInit": true,
           "userTrackingUsageDescription": "NomadSafe uses this to show more relevant ads on the free plan. Your trips, expenses and location are never shared with advertisers."
+        }
+      ],
+      "react-native-health-connect",
+      [
+        "@kingstinct/react-native-healthkit",
+        {
+          "NSHealthShareUsageDescription": "NomadSafe reads your step count and walking distance during a trip's dates to show how far you walked in the trip replay. It stays on your phone.",
+          "NSHealthUpdateUsageDescription": false,
+          "background": false
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": false,
+          "cameraPermission": false
         }
       ]
     ],

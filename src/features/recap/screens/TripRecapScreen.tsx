@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Image, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
@@ -25,6 +25,7 @@ import { TRANSIT_MODES } from "@/features/itinerary/constants/eventTypes";
 import { useTripsStore } from "@/features/trips/store/tripsStore";
 import { useLocalization } from "@/localization";
 import { PrivateView, track } from "@/modules/analytics";
+import type { WalkingTotals } from "@/modules/health";
 import { useStartNewTrip } from "@/modules/billing";
 import { selectionChanged } from "@/utils/haptics";
 import { StampingMoment, type MomentItem } from "@/features/passport/components/StampingMoment";
@@ -32,28 +33,34 @@ import { useHomeCountry } from "@/features/passport/hooks/usePassport";
 import { stampDate } from "@/features/passport/utils/passport";
 import { regionAt } from "@/features/passport/utils/regions";
 import { countryDisplayName } from "@/features/trips/data/destinations";
+import { ExplainSheet } from "../components/ExplainSheet";
 import { FlapBoard } from "../components/FlapBoard";
 import { RecapMapCanvas } from "../components/RecapMapCanvas";
 import { CARD_HEIGHT, CARD_WIDTH, RECAP_FONT_FAMILY, encodeRecapCard, renderRecapCard } from "../components/recapCard";
+import { useRecapExtras } from "../hooks/useRecapExtras";
 import { placeCode, shortPlace, useTripRecap, type TripRecap } from "../hooks/useTripRecap";
 import { shareRecapCard } from "../services/shareRecapCard";
 import { shareRecapVideo } from "../services/shareRecapVideo";
+import { removeTripPhoto } from "../services/tripPhotos";
 import { videoEncoder } from "../services/videoEncoder";
 import { finishRecap, useRecapStore } from "../store/recapStore";
+import type { TripPhoto } from "../store/tripPhotosStore";
+import { nearestStop } from "../utils/moments";
 import { cameraFor, frameRoute, type Camera, type Point, type Rect } from "../utils/recapMap";
 
-type Chapter = { kind: "intro" } | { kind: "stop"; index: number } | { kind: "numbers" } | { kind: "stamp" } | { kind: "finale" };
+type Chapter = { kind: "intro" } | { kind: "stop"; index: number } | { kind: "moments" } | { kind: "numbers" } | { kind: "stamp" } | { kind: "finale" };
 type RecapSource = "home" | "notification" | "trips";
 
 const c = auraDark;
-const DURATION_MS: Record<Exclude<Chapter["kind"], "finale">, number> = { intro: 4200, stop: 3400, numbers: 5000, stamp: 4600 };
+const DURATION_MS: Record<Exclude<Chapter["kind"], "finale">, number> = { intro: 4200, stop: 3400, moments: 5600, numbers: 5000, stamp: 4600 };
 const CAMERA_MS = 1300;
 const PREVIEW_PIXELS = 900;
 
-function buildChapters(recap: TripRecap, stamped: boolean): Chapter[] {
+function buildChapters(recap: TripRecap, stamped: boolean, withPhotos: boolean): Chapter[] {
   return [
     { kind: "intro" },
     ...recap.facts.stops.map((_, index): Chapter => ({ kind: "stop", index })),
+    ...(withPhotos ? [{ kind: "moments" } as const] : []),
     { kind: "numbers" },
     ...(stamped ? [{ kind: "stamp" } as const] : []),
     { kind: "finale" },
@@ -78,7 +85,14 @@ function useMomentItems(recap: TripRecap): MomentItem[] {
         seals.push({ key: region.key, kind: "seal", seed: region.key, title: region.name, top: null, bottom: date });
       } else if (!seen.has(stop.country)) {
         seen.add(stop.country);
-        stamps.push({ key: `${recap.trip.id}:${stop.country}`, kind: "stamp", seed: stop.country, title: countryDisplayName(stop.country, locale), top: shortPlace(stop.name), bottom: date });
+        stamps.push({
+          key: `${recap.trip.id}:${stop.country}`,
+          kind: "stamp",
+          seed: stop.country,
+          title: countryDisplayName(stop.country, locale),
+          top: shortPlace(stop.name),
+          bottom: date,
+        });
       }
     }
     return [...stamps, ...seals];
@@ -114,10 +128,24 @@ function Replay({ recap, source }: { recap: TripRecap; source: RecapSource }) {
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const momentItems = useMomentItems(recap);
-  const chapters = useMemo(() => buildChapters(recap, momentItems.length > 0), [recap, momentItems.length]);
+  const extras = useRecapExtras(recap.trip);
+  const { photos } = extras;
+  const chapters = useMemo(() => buildChapters(recap, momentItems.length > 0, photos.length > 0), [recap, momentItems.length, photos.length]);
   const last = chapters.length - 1;
   const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState(true);
+  const shownLast = useRef(last);
+  const stopPhotos = useMemo(() => {
+    const byStop = new Map<number, TripPhoto>();
+    for (const photo of photos) {
+      const at = nearestStop(
+        photo.latitude !== null && photo.longitude !== null ? { latitude: photo.latitude, longitude: photo.longitude } : null,
+        recap.facts.stops,
+      );
+      if (at !== null && !byStop.has(at)) byStop.set(at, photo);
+    }
+    return byStop;
+  }, [photos, recap.facts.stops]);
   const progress = useSharedValue(0);
   const timedIndex = useRef(-1);
   const reachedEnd = useRef(false);
@@ -169,7 +197,7 @@ function Replay({ recap, source }: { recap: TripRecap; source: RecapSource }) {
     camY.set(withTiming(target.y, ease));
     camZoom.set(withTiming(target.zoom, ease));
     reveal.set(withTiming(shown, { duration: CAMERA_MS * 1.1, easing: Easing.inOut(Easing.quad) }));
-    mapOpacity.set(withTiming(chapter.kind === "finale" || chapter.kind === "stamp" ? 0 : 1, { duration: 500 }));
+    mapOpacity.set(withTiming(chapter.kind === "finale" || chapter.kind === "stamp" || chapter.kind === "moments" ? 0 : 1, { duration: 500 }));
   }, [camX, camY, camZoom, chapter, height, insets.top, mapOpacity, points, recap.facts.legs.length, reveal, width]);
 
   // The chapter timer: a new chapter starts from 0; resuming continues where the pause left it.
@@ -196,6 +224,23 @@ function Replay({ recap, source }: { recap: TripRecap; source: RecapSource }) {
       }),
     );
   }, [chapter.kind, index, last, playing, progress]);
+
+  // Adding or removing photos changes the chapter count; stay on the finale if that's where we were.
+  useLayoutEffect(() => {
+    if (shownLast.current === last) return;
+    const previousLast = shownLast.current;
+    shownLast.current = last;
+    setIndex((current) => (current === previousLast ? last : Math.min(current, last)));
+  }, [last]);
+
+  const askPhotos = () => {
+    setPlaying(false);
+    extras.askPhotos();
+  };
+  const askSteps = () => {
+    setPlaying(false);
+    extras.askSteps();
+  };
 
   const goTo = (next: number) => {
     const clamped = Math.max(0, Math.min(last, next));
@@ -265,25 +310,63 @@ function Replay({ recap, source }: { recap: TripRecap; source: RecapSource }) {
 
       <Animated.View key={index} entering={FadeIn.duration(380)} style={StyleSheet.absoluteFill} pointerEvents="box-none">
         {chapter.kind === "intro" ? <Intro recap={recap} top={insets.top + 92} /> : null}
-        {chapter.kind === "stop" ? <StopChapter recap={recap} index={chapter.index} bottom={insets.bottom + 120} /> : null}
-        {chapter.kind === "numbers" ? <Numbers recap={recap} top={insets.top + 80 + height * 0.25} /> : null}
+        {chapter.kind === "stop" ? (
+          <StopChapter recap={recap} index={chapter.index} photo={stopPhotos.get(chapter.index)} bottom={insets.bottom + 120} />
+        ) : null}
+        {chapter.kind === "moments" ? (
+          <Moments
+            tripId={tripId}
+            photos={photos}
+            width={width - 48}
+            maxHeight={height - insets.top - insets.bottom - 300}
+            top={insets.top + 84}
+            onPause={() => setPlaying(false)}
+          />
+        ) : null}
+        {chapter.kind === "numbers" ? (
+          <Numbers
+            recap={recap}
+            walking={extras.walking.totals}
+            linkSource={extras.walking.canLink ? extras.walking.source : null}
+            onLink={askSteps}
+            top={insets.top + 80 + height * 0.25}
+          />
+        ) : null}
         {chapter.kind === "stamp" ? (
           <View style={[styles.block, { top: insets.top + 84 }]}>
-            <StampingMoment items={momentItems} width={width - 48} onOpenPassport={() => router.push({ pathname: "/passport", params: { source: "replay" } })} />
+            <StampingMoment
+              items={momentItems}
+              width={width - 48}
+              onOpenPassport={() => router.push({ pathname: "/passport", params: { source: "replay" } })}
+            />
           </View>
         ) : null}
         {chapter.kind === "finale" ? (
-          <Finale recap={recap} top={insets.top + 64} bottom={insets.bottom + 20} onDone={done} onPlanNext={planNext} onCheckBalances={checkBalances} />
+          <Finale
+            recap={recap}
+            top={insets.top + 64}
+            bottom={insets.bottom + 20}
+            onDone={done}
+            onPlanNext={planNext}
+            onCheckBalances={checkBalances}
+            onAddPhotos={extras.canAddPhotos ? askPhotos : undefined}
+          />
         ) : null}
       </Animated.View>
 
       {chapter.kind !== "finale" ? (
         <View style={[styles.controls, { bottom: insets.bottom + 24 }]}>
           <ControlButton icon="chevronLeft" label={t("recap.previous")} onPress={() => goTo(index - 1)} disabled={index === 0} />
-          <ControlButton icon={playing ? "pause" : "play"} label={playing ? t("recap.pause") : t("recap.play")} onPress={() => setPlaying((value) => !value)} large />
+          <ControlButton
+            icon={playing ? "pause" : "play"}
+            label={playing ? t("recap.pause") : t("recap.play")}
+            onPress={() => setPlaying((value) => !value)}
+            large
+          />
           <ControlButton icon="chevronRight" label={t("recap.next")} onPress={() => goTo(index + 1)} />
         </View>
       ) : null}
+      {extras.sheets}
     </View>
   );
 }
@@ -307,7 +390,7 @@ function Intro({ recap, top }: { recap: TripRecap; top: number }) {
   );
 }
 
-function StopChapter({ recap, index, bottom }: { recap: TripRecap; index: number; bottom: number }) {
+function StopChapter({ recap, index, photo, bottom }: { recap: TripRecap; index: number; photo?: TripPhoto; bottom: number }) {
   const { t, formatDistance } = useLocalization();
   const stop = recap.facts.stops[index];
   const leg = index > 0 ? recap.facts.legs[index - 1] : null;
@@ -315,7 +398,14 @@ function StopChapter({ recap, index, bottom }: { recap: TripRecap; index: number
   const legText = leg ? t(`recap.arrivedBy.${leg.mode ?? "other"}`, { from: shortPlace(leg.from), distance: formatDistance(leg.km) }) : t("recap.firstStop");
   return (
     <View style={[styles.block, { bottom }]}>
-      <FlapBoard codes={[placeCode(stop.name)]} />
+      <View style={styles.stopTop}>
+        <FlapBoard codes={[placeCode(stop.name)]} />
+        {photo ? (
+          <Animated.View entering={FadeInDown.delay(260).springify().damping(16)} style={styles.snapshot}>
+            <Image source={{ uri: photo.uri }} style={styles.snapshotImage} accessibilityIgnoresInvertColors />
+          </Animated.View>
+        ) : null}
+      </View>
       <Text numberOfLines={2} style={[styles.headline, styles.stopName]}>
         {shortPlace(stop.name)}
       </Text>
@@ -328,8 +418,20 @@ function StopChapter({ recap, index, bottom }: { recap: TripRecap; index: number
   );
 }
 
-function Numbers({ recap, top }: { recap: TripRecap; top: number }) {
-  const { t } = useLocalization();
+function Numbers({
+  recap,
+  walking,
+  linkSource,
+  onLink,
+  top,
+}: {
+  recap: TripRecap;
+  walking: WalkingTotals | null;
+  linkSource: "health_connect" | "apple_health" | null;
+  onLink: () => void;
+  top: number;
+}) {
+  const { t, formatDistance, formatCompactNumber } = useLocalization();
   const { places } = recap;
   const rows = [
     { value: String(recap.facts.days), label: t("recap.daysAway", { count: recap.facts.days }) },
@@ -341,6 +443,17 @@ function Numbers({ recap, top }: { recap: TripRecap; top: number }) {
           ? t("recap.citiesFromTo", { count: places.length, from: places[0], to: places[places.length - 1] })
           : t("recap.cities", { count: places.length }),
     },
+    ...(walking && walking.km > 0
+      ? [
+          {
+            value: formatDistance(walking.km),
+            label: t(walking.estimated ? "recap.onFootAbout" : "recap.onFoot", {
+              count: Math.round(walking.steps),
+              steps: formatCompactNumber(Math.round(walking.steps)),
+            }),
+          },
+        ]
+      : []),
   ];
   return (
     <View style={[styles.block, { top }]}>
@@ -351,6 +464,14 @@ function Numbers({ recap, top }: { recap: TripRecap; top: number }) {
           <Text style={[styles.sub, styles.muted]}>{row.label}</Text>
         </Animated.View>
       ))}
+      {linkSource && !walking ? (
+        <Animated.View entering={FadeInDown.delay(180 * rows.length).duration(420)}>
+          <PressableScale onPress={onLink} accessibilityRole="button" style={[styles.chip, styles.linkChip]}>
+            <Icon name="footprints" size={15} color="#8B97FF" />
+            <Text style={styles.chipText}>{t("recap.addStepsFrom", { source: linkSource === "apple_health" ? "Apple Health" : "Health Connect" })}</Text>
+          </PressableScale>
+        </Animated.View>
+      ) : null}
     </View>
   );
 }
@@ -362,6 +483,7 @@ function Finale({
   onDone,
   onPlanNext,
   onCheckBalances,
+  onAddPhotos,
 }: {
   recap: TripRecap;
   top: number;
@@ -369,6 +491,7 @@ function Finale({
   onDone: () => void;
   onPlanNext: () => void;
   onCheckBalances: () => void;
+  onAddPhotos?: () => void;
 }) {
   const { t, formatDistance } = useLocalization();
   const { width, height } = useWindowDimensions();
@@ -432,6 +555,12 @@ function Finale({
         <View style={styles.finaleText}>
           <Text style={styles.wrap}>{t("recap.finaleTitle")}</Text>
           <Text style={[styles.sub, styles.center]}>{t("recap.finaleBody")}</Text>
+          {onAddPhotos ? (
+            <PressableScale onPress={onAddPhotos} accessibilityRole="button" style={[styles.chip, styles.photosChip]}>
+              <Icon name="camera" size={15} color="#8B97FF" />
+              <Text style={styles.chipText}>{t("recap.addPhotosToReplay")}</Text>
+            </PressableScale>
+          ) : null}
         </View>
       )}
       {recap.spend ? (
@@ -447,7 +576,17 @@ function Finale({
           <>
             <AuraButton label={t("recap.shareStory")} icon="share" onPress={share} loading={sharing} disabled={!fonts} />
             <View style={styles.actionRow}>
-              {videoEncoder ? <AuraButton label={t("recap.shareVideo")} icon="play" variant="secondary" size="md" onPress={shareVideo} disabled={!fonts} style={styles.flex} /> : null}
+              {videoEncoder ? (
+                <AuraButton
+                  label={t("recap.shareVideo")}
+                  icon="play"
+                  variant="secondary"
+                  size="md"
+                  onPress={shareVideo}
+                  disabled={!fonts}
+                  style={styles.flex}
+                />
+              ) : null}
               <AuraButton label={t("recap.planNext")} variant="secondary" size="md" onPress={onPlanNext} style={styles.flex} />
             </View>
             <View style={styles.actionRow}>
@@ -457,6 +596,81 @@ function Finale({
           </>
         )}
       </View>
+    </View>
+  );
+}
+
+/** The photos the user picked for this trip, laid out like prints on a table. Long-press one to remove it. */
+function Moments({
+  tripId,
+  photos,
+  width,
+  maxHeight,
+  top,
+  onPause,
+}: {
+  tripId: string;
+  photos: TripPhoto[];
+  width: number;
+  maxHeight: number;
+  top: number;
+  onPause: () => void;
+}) {
+  const { t } = useLocalization();
+  const columns = photos.length === 1 ? 1 : photos.length <= 4 ? 2 : 3;
+  const rowsCount = Math.ceil(photos.length / columns);
+  const gap = 8;
+  const tile = (width - gap * (columns - 1)) / columns;
+  const tileHeight =
+    columns === 1
+      ? Math.min(maxHeight, tile * (photos[0].height / photos[0].width))
+      : Math.min(tile * (columns === 2 ? 1.2 : 1), (maxHeight - gap * (rowsCount - 1)) / rowsCount);
+
+  // A sheet, not showAlert: the root alert modal can't present over this full-screen route on iOS.
+  const [removing, setRemoving] = useState<TripPhoto | null>(null);
+
+  return (
+    <View style={[styles.block, { top }]}>
+      <Text style={styles.sub}>{t("recap.momentsKicker")}</Text>
+      <Text style={[styles.headline, styles.momentsTitle]}>{t("recap.momentsTitle", { count: photos.length })}</Text>
+      <PrivateView style={[styles.grid, { gap }]}>
+        {photos.map((photo, i) => (
+          <Animated.View
+            key={photo.id}
+            entering={FadeInDown.delay(90 * i)
+              .springify()
+              .damping(18)}
+            style={{ width: columns === 2 && i === photos.length - 1 && i % 2 === 0 ? width : tile, height: tileHeight }}
+          >
+            <PressableScale
+              onLongPress={() => {
+                onPause();
+                setRemoving(photo);
+              }}
+              haptic={false}
+              accessibilityRole="image"
+              accessibilityHint={t("recap.removePhotoHint")}
+              style={styles.flex}
+            >
+              <Image source={{ uri: photo.uri }} style={styles.photo} accessibilityIgnoresInvertColors />
+            </PressableScale>
+          </Animated.View>
+        ))}
+      </PrivateView>
+      <ExplainSheet
+        visible={removing !== null}
+        onClose={() => setRemoving(null)}
+        icon="trash"
+        title={t("recap.removePhotoTitle")}
+        body={t("recap.removePhotoBody")}
+        action={t("recap.removePhoto")}
+        danger
+        onAction={() => {
+          if (removing) void removeTripPhoto(tripId, removing);
+          setRemoving(null);
+        }}
+        dismiss={t("common.cancel")}
+      />
     </View>
   );
 }
@@ -476,7 +690,13 @@ function TiltCard({ width, height, uri, label }: { width: number; height: number
     const e = enter.get();
     return {
       opacity: e,
-      transform: [{ perspective: 900 }, { translateY: (1 - e) * 60 }, { rotateY: `${x * 16}deg` }, { rotateX: `${-y * 12}deg` }, { rotateZ: `${(1 - e) * -6 - 1.2}deg` }],
+      transform: [
+        { perspective: 900 },
+        { translateY: (1 - e) * 60 },
+        { rotateY: `${x * 16}deg` },
+        { rotateX: `${-y * 12}deg` },
+        { rotateZ: `${(1 - e) * -6 - 1.2}deg` },
+      ],
     };
   });
   const sheen = useAnimatedStyle(() => {
@@ -529,7 +749,10 @@ function ControlButton({
       disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={label}
-      style={[styles.control, { width: size, height: size, borderRadius: size / 2, backgroundColor: large ? c.inverse : c.surfaceStrong, opacity: disabled ? 0.4 : 1 }]}
+      style={[
+        styles.control,
+        { width: size, height: size, borderRadius: size / 2, backgroundColor: large ? c.inverse : c.surfaceStrong, opacity: disabled ? 0.4 : 1 },
+      ]}
     >
       <Icon name={icon} size={large ? 22 : 18} color={large ? c.onInverse : c.text} />
     </PressableScale>
@@ -568,6 +791,14 @@ const styles = StyleSheet.create({
     borderColor: c.hairline,
   },
   chipText: { fontFamily: f.medium, fontSize: 14, color: c.text },
+  linkChip: { marginTop: 10 },
+  photosChip: { alignSelf: "center", marginTop: 12 },
+  stopTop: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" },
+  snapshot: { padding: 4, paddingBottom: 14, borderRadius: 6, backgroundColor: "#F4F2EE", transform: [{ rotate: "4deg" }] },
+  snapshotImage: { width: 78, height: 92, borderRadius: 3 },
+  momentsTitle: { fontSize: 38, lineHeight: 42, marginBottom: 10 },
+  grid: { flexDirection: "row", flexWrap: "wrap" },
+  photo: { flex: 1, borderRadius: 14, backgroundColor: c.card },
   numberRow: { marginTop: 4 },
   number: { fontFamily: f.semibold, fontSize: 58, letterSpacing: -2.4, color: c.text },
   finale: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", paddingHorizontal: 20 },

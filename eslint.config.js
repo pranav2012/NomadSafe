@@ -12,6 +12,7 @@ const vendorModules = [
   { group: ['expo-notifications'], message: 'Use @/modules/notifications.' },
   { group: ['expo-location', 'react-native-maps', 'expo-task-manager'], message: 'Use @/modules/location (or the owning module for other background tasks).' },
   { group: ['@react-native-firebase/*'], message: 'Use @/modules/appCheck.' },
+  { group: ['react-native-health-connect', '@kingstinct/react-native-healthkit'], message: 'Use @/modules/health.' },
   {
     group: ['convex/*', '@convex/*', '@convex-dev/*'],
     message: 'Use @/modules/backend for the Convex client, api and hooks.',

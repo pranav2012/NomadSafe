@@ -2,16 +2,19 @@ import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
-import { AuraButton, Icon, PressableScale, useAura } from "@/atoms";
+import { AuraButton, AuraChip, Icon, PressableScale, useAura } from "@/atoms";
 import { auraStatusColors } from "@/constants/aura";
 import { useLocalization } from "@/localization";
+import { useRecapExtras } from "../hooks/useRecapExtras";
 import { useTripRecap } from "../hooks/useTripRecap";
+import { WalkingLine } from "./WalkingLine";
 
 /** Shown on Home once the active trip has ended: watch the replay, extend the trip, or put it away. */
 export function RecapHomeCard({ tripId, onWatch, onExtend, onDismiss }: { tripId: string; onWatch: () => void; onExtend: () => void; onDismiss: () => void }) {
   const { c, f, isDark } = useAura();
   const { t } = useLocalization();
   const recap = useTripRecap(tripId);
+  const extras = useRecapExtras(recap?.trip ?? null);
   if (!recap) return null;
   const tint = auraStatusColors.calm;
   const highlights = recap.stats.slice(0, 3);
@@ -47,8 +50,16 @@ export function RecapHomeCard({ tripId, onWatch, onExtend, onDismiss }: { tripId
           </View>
         ))}
       </View>
+      {extras.walking.totals ? <WalkingLine totals={extras.walking.totals} /> : null}
+      {extras.canAddPhotos || extras.walking.canLink ? (
+        <View style={styles.chips}>
+          {extras.canAddPhotos ? <AuraChip icon="camera" label={extras.photos.length > 0 ? t("recap.morePhotos") : t("recap.addPhotos")} onPress={extras.askPhotos} /> : null}
+          {extras.walking.canLink ? <AuraChip icon="heart" label={t("recap.addSteps")} onPress={extras.askSteps} /> : null}
+        </View>
+      ) : null}
       <AuraButton label={t("recap.watchReplay")} icon="play" onPress={onWatch} />
       <AuraButton label={t("recap.extendTrip")} variant="ghost" size="md" onPress={onExtend} />
+      {extras.sheets}
     </Animated.View>
   );
 }
@@ -64,4 +75,5 @@ const styles = StyleSheet.create({
   stat: { flex: 1 },
   statValue: { fontSize: 22, letterSpacing: -0.6 },
   statLabel: { fontSize: 12.5, marginTop: 2 },
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
 });

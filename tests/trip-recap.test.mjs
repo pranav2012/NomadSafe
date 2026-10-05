@@ -320,3 +320,33 @@ test("flaps settle left to right and flip deterministically", () => {
   assert.equal(timeline.stampScale(1), 1);
   assert.ok(timeline.stampScale(0) > 2);
 });
+
+const moments = loadModule("src/features/recap/utils/moments.ts");
+
+test("walking covers the trip's local days", () => {
+  const { start, end } = moments.walkingWindow({ startDate: "2026-10-18", endDate: "2026-10-20" });
+  assert.equal(start.getDate(), 18);
+  assert.equal(end.getDate(), 21);
+  assert.equal(start.getHours(), 0);
+  assert.ok(moments.walkingStale(undefined, "2026-10-20"));
+  assert.ok(moments.walkingStale("2026-10-21T10:00:00Z", "2026-10-20"), "read before health apps finished syncing");
+  assert.ok(!moments.walkingStale("2026-10-30T10:00:00Z", "2026-10-20"));
+});
+
+test("reads photo dates and places from iOS and Android EXIF", () => {
+  assert.equal(moments.parseExifDate({ DateTimeOriginal: "2026:10:18 14:22:05" }), "2026-10-18T14:22:05");
+  assert.equal(moments.parseExifDate({ "{Exif}": { DateTimeOriginal: "2026:10:19 08:00:00" } }), "2026-10-19T08:00:00");
+  assert.equal(moments.parseExifDate({}), null);
+  const ios = moments.parseExifGps({ "{GPS}": { Latitude: 35.68, LatitudeRef: "N", Longitude: 139.69, LongitudeRef: "E" } });
+  assert.deepEqual(ios, { latitude: 35.68, longitude: 139.69 });
+  const android = moments.parseExifGps({ GPSLatitude: "33/1,52/1,1800/100", GPSLatitudeRef: "S", GPSLongitude: "151/1,12/1,0/1", GPSLongitudeRef: "E" });
+  assert.ok(Math.abs(android.latitude + 33.8717) < 0.001 && Math.abs(android.longitude - 151.2) < 0.001);
+  assert.equal(moments.parseExifGps({ GPSLatitude: 0, GPSLongitude: 0 }), null);
+});
+
+test("photos go to the nearest stop within range", () => {
+  const stops = [PLACES.tokyo, PLACES.kyoto, PLACES.osaka];
+  assert.equal(moments.nearestStop({ latitude: 35.0, longitude: 135.76 }, stops), 1);
+  assert.equal(moments.nearestStop({ latitude: 43.06, longitude: 141.35 }, stops), null, "Sapporo is too far from every stop");
+  assert.equal(moments.nearestStop(null, stops), null);
+});

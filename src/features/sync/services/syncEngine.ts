@@ -3,6 +3,7 @@ import { api, convex } from "@/modules/backend";
 import { useExpensesStore, type Expense, type Settlement } from "@/features/expenses/store/expensesStore";
 import { useEventsStore, type TripEvent } from "@/features/itinerary/store/eventsStore";
 import { usePassportStore, type PastTravel } from "@/features/passport/store/passportStore";
+import { deleteAllTripPhotos } from "@/features/recap/services/tripPhotos";
 import { pickDefaultActiveTripId, useTripsStore, type Trip } from "@/features/trips/store/tripsStore";
 import { syncWidgets } from "@/features/widget/syncWidgets";
 import { logger } from "@/modules/logger";
@@ -288,6 +289,7 @@ export function clearSyncedLocalData() {
   useExpensesStore.getState().reset();
   useEventsStore.getState().reset();
   usePassportStore.getState().reset();
+  void deleteAllTripPhotos();
   if (owner) storage.remove(ledgerKey(owner));
   storage.remove(OWNER_KEY);
   clearGroupLedgers();

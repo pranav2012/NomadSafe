@@ -50,6 +50,8 @@ export interface AnalyticsEvents {
   recap_shared: { format: "image" | "video"; spend: boolean };
   passport_opened: { source: "trips" | "replay"; stamps: number };
   past_travel_added: { has_region: boolean; has_month: boolean };
+  steps_linked: { source: "health_connect" | "apple_health" | "none"; granted: boolean };
+  trip_photos_added: { count: number };
 }
 
 export interface FeatureFlags {
