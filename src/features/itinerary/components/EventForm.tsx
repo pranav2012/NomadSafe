@@ -3,9 +3,10 @@ import { ScrollView, StyleSheet, View } from "react-native";
 import { AuraButton, AuraChip, AuraDateField, AuraField, AuraSheet } from "@/atoms";
 import { auraEventColors } from "@/constants/aura";
 import { useLocalization } from "@/localization";
-import { EVENT_TYPES, type EventType } from "@/features/itinerary/constants/eventTypes";
+import { EVENT_TYPES, TRANSIT_MODES, type EventType, type TransitMode } from "@/features/itinerary/constants/eventTypes";
 import type { TripEvent } from "@/features/itinerary/store/eventsStore";
 import { localizeEventDetail, localizeEventTitle } from "@/features/itinerary/utils/eventText";
+import { transitModeOf } from "@/features/itinerary/utils/transit";
 
 export interface EventFormValues {
   type: EventType;
@@ -14,6 +15,8 @@ export interface EventFormValues {
   startAt: string;
   /** Check-out for a stay, arrival for a transit; undefined when not set. */
   endAt?: string;
+  /** Set only for transit events. */
+  transitMode?: TransitMode;
 }
 
 const DAY_MS = 86_400_000;
@@ -53,6 +56,7 @@ export function EventForm({
   const [title, setTitle] = useState(event ? localizeEventTitle(event.title, t) : "");
   const [initialDetail] = useState(() => (event ? (localizeEventDetail(event.detail, t) ?? "") : ""));
   const [detail, setDetail] = useState(initialDetail);
+  const [transitMode, setTransitMode] = useState<TransitMode | undefined>(() => (event ? transitModeOf(event) : undefined));
   const [when, setWhen] = useState<Date>(event ? new Date(event.startAt) : new Date());
   const [until, setUntil] = useState<Date>(() =>
     event?.endAt ? new Date(event.endAt) : new Date((event ? new Date(event.startAt) : new Date()).getTime() + DAY_MS),
@@ -76,7 +80,14 @@ export function EventForm({
   const save = () => {
     if (!canSave) return;
     const endAt = hasEnd && until.getTime() > when.getTime() ? until.toISOString() : undefined;
-    onSave({ type, title: title.trim(), detail: savedDetail, startAt: when.toISOString(), endAt });
+    onSave({
+      type,
+      title: title.trim(),
+      detail: savedDetail,
+      startAt: when.toISOString(),
+      endAt,
+      transitMode: type === "transit" ? transitMode : undefined,
+    });
   };
 
   return (
@@ -111,6 +122,19 @@ export function EventForm({
             />
           ))}
         </View>
+        {type === "transit" ? (
+          <View style={styles.types}>
+            {TRANSIT_MODES.map((mode) => (
+              <AuraChip
+                key={mode.id}
+                label={t(`itinerary.transitModes.${mode.id}`)}
+                icon={mode.icon}
+                selected={mode.id === transitMode}
+                onPress={() => setTransitMode((current) => (current === mode.id ? undefined : mode.id))}
+              />
+            ))}
+          </View>
+        ) : null}
         <AuraField label={t("itinerary.form.title")} value={title} onChangeText={setTitle} placeholder={t("itinerary.form.titlePlaceholder")} returnKeyType="next" />
         <AuraField label={t("itinerary.form.detail")} value={detail} onChangeText={setDetail} placeholder={t("itinerary.form.detailPlaceholder")} />
         <AuraDateField

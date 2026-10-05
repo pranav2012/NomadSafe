@@ -172,6 +172,7 @@ export default function TripsScreen() {
         router.back();
       }}
       onEdit={() => setEditing(trip)}
+      onReplay={() => router.push({ pathname: "/trip-recap/[id]", params: { id: trip.id, source: "trips" } })}
       onPeople={() => setPeopleFor(trip.id)}
       onDelete={() => {
         if (trip.shared) {
@@ -294,6 +295,7 @@ function TripPass({
   onPress,
   onSwitch,
   onEdit,
+  onReplay,
   onPeople,
   onDelete,
 }: {
@@ -305,6 +307,7 @@ function TripPass({
   onPress: () => void;
   onSwitch: () => void;
   onEdit: () => void;
+  onReplay: () => void;
   onPeople: () => void;
   onDelete: () => void;
 }) {
@@ -373,6 +376,9 @@ function TripPass({
           <View style={[styles.fill, { width: `${progress * 100}%`, backgroundColor: c.text }]} />
         </View>
 
+        {expanded && status === "complete" ? (
+          <AuraButton label={t("recap.watchReplay")} icon="play" variant="secondary" size="md" onPress={onReplay} />
+        ) : null}
         {expanded && !active ? (
           <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(120)} style={styles.passActions}>
             <AuraButton label={t("trip.open")} size="md" onPress={onSwitch} style={styles.flex} />

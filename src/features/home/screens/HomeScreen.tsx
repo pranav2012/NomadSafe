@@ -9,6 +9,9 @@ import { BackgroundLocationDisclosure } from "@/features/location-sharing/compon
 import { useBroadcastToggle } from "@/features/location-sharing/hooks/useBroadcastToggle";
 import { cancelCheckInNotifications, useSafetyStore } from "@/features/safety";
 import { EmptyHome } from "@/features/home/components/EmptyHome";
+import { finishRecap, isRecapFinished, useRecapStore } from "@/features/recap";
+import { RecapHomeCard } from "@/features/recap/components/RecapHomeCard";
+import { TripFormSheet } from "@/features/trips/components/TripForm";
 import { selectActiveTrip, useTripsStore } from "@/features/trips/store/tripsStore";
 import { useTheme } from "@/hooks/useTheme";
 import { useStartNewTrip } from "@/modules/billing";
@@ -73,6 +76,8 @@ export default function HomeScreen() {
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [importTab, setImportTab] = useState<"gmail" | "paste" | null>(null);
+  const [extending, setExtending] = useState(false);
+  const recapFinished = useRecapStore((s) => (activeTrip ? isRecapFinished(activeTrip, s.finished) : true));
 
   useEffect(() => {
     let mounted = true;
@@ -123,7 +128,19 @@ export default function HomeScreen() {
         onSos={() => router.navigate("/(tabs)/sos")}
         onSwitchTrip={() => router.push("/trips")}
         onOpenSettings={() => router.push("/settings")}
+        topSlot={
+          data.phase === "complete" && !recapFinished ? (
+            <RecapHomeCard
+              tripId={activeTrip.id}
+              onWatch={() => router.push({ pathname: "/trip-recap/[id]", params: { id: activeTrip.id, source: "home" } })}
+              onExtend={() => setExtending(true)}
+              onDismiss={() => finishRecap(activeTrip.id)}
+            />
+          ) : null
+        }
       />
+
+      <TripFormSheet visible={extending} editingTrip={extending ? activeTrip : null} onClose={() => setExtending(false)} />
 
       <ExpenseForm
         visible={formOpen}

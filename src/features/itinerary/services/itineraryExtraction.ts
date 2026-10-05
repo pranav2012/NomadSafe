@@ -12,7 +12,8 @@ import {
   useEventsStore,
   type EventSource,
 } from "@/features/itinerary/store/eventsStore";
-import type { EventType } from "@/features/itinerary/constants/eventTypes";
+import type { EventType, TransitMode } from "@/features/itinerary/constants/eventTypes";
+import { inferTransitMode } from "@/features/itinerary/utils/transit";
 import { fromDateKey } from "@/features/trips/utils/dates";
 import { countAttributes, logger } from "@/modules/logger";
 import { floatingTime, parseBookingEmail } from "@/features/itinerary/services/bookingEmailParser";
@@ -27,6 +28,7 @@ export interface EventCandidate {
   type: EventType;
   title: string;
   detail?: string;
+  transitMode?: TransitMode;
   startAt: string;
   /** Check-out for a stay, arrival for a flight. */
   endAt?: string;
@@ -45,6 +47,7 @@ interface ExtractedEvent {
   type: EventType;
   title: string;
   detail: string;
+  transitMode?: TransitMode;
   date: string;
   endDate?: string;
   bookingRef?: string;
@@ -248,6 +251,7 @@ function extractEvents(message: RawMessage, trip: Trip | null): ExtractedEvent[]
         type: booking.type,
         title: booking.title,
         detail: booking.detail,
+        transitMode: booking.transitMode,
         date: booking.startAt,
         endDate: booking.endAt,
         bookingRef: booking.bookingRef,
@@ -314,6 +318,7 @@ function extractEventsHeuristic(message: RawMessage, trip: Trip | null): Extract
         type: "transit",
         title,
         detail: route,
+        transitMode: inferTransitMode(context) ?? (provider.provider === "flight" ? "flight" : undefined),
         date: departure,
         endDate: arrival && arrival > departure ? arrival : undefined,
       });
@@ -407,6 +412,7 @@ export async function buildEventCandidates(
         type: event.type,
         title: event.title,
         detail: event.detail || undefined,
+        transitMode: event.transitMode,
         startAt,
         endAt: event.endDate,
         source,

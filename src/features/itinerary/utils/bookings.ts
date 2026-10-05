@@ -1,4 +1,4 @@
-import type { EventType } from "@/features/itinerary/constants/eventTypes";
+import type { EventType, TransitMode } from "@/features/itinerary/constants/eventTypes";
 
 export interface BookingLike {
   type: EventType;
@@ -10,6 +10,7 @@ export interface BookingLike {
   externalId?: string;
   sourceIds?: string[];
   bookingRef?: string;
+  transitMode?: TransitMode;
 }
 
 interface StoredBooking extends BookingLike {
@@ -118,6 +119,7 @@ export function mergeBooking(existing: BookingLike, incoming: BookingLike): Part
       detail: incoming.detail || existing.detail,
       startAt: incoming.startAt,
       endAt: incoming.endAt ?? existing.endAt,
+      transitMode: existing.transitMode ?? incoming.transitMode,
       sourceIds,
     };
   }
@@ -126,6 +128,7 @@ export function mergeBooking(existing: BookingLike, incoming: BookingLike): Part
     detail: existing.detail || routeOf(incoming.detail) || undefined,
     endAt: existing.endAt ?? incoming.endAt,
     bookingRef: existing.bookingRef ?? incoming.bookingRef,
+    transitMode: existing.transitMode ?? incoming.transitMode,
     sourceIds: sourceIds.length > 0 ? sourceIds : undefined,
   };
 }

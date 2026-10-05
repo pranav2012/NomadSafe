@@ -13,6 +13,7 @@ import { useHotelPin, useSafetyPlaces } from "@/features/home/hooks/useTripSafet
 import type { HomeData } from "@/features/home/types";
 import { todayStopIndex } from "@/features/home/utils/globeTiles";
 import { TripItinerary } from "@/features/itinerary";
+import { useRecapStore } from "@/features/recap";
 import { emergencyContactsStorage } from "@/features/onboarding/services/emergencyContactsStorage";
 import { NearbyPlaces } from "@/features/places/components/NearbyPlaces";
 import { useTripForecast } from "@/features/trips/hooks/useTripForecast";
@@ -49,6 +50,8 @@ interface TripHomeProps {
   onSos: () => void;
   onSwitchTrip: () => void;
   onOpenSettings: () => void;
+  /** Rendered above the trip pass, e.g. the recap card once the trip has ended. */
+  topSlot?: React.ReactNode;
 }
 
 /**
@@ -70,6 +73,7 @@ export function TripHome({
   onSos,
   onSwitchTrip,
   onOpenSettings,
+  topSlot,
 }: TripHomeProps) {
   const gmail = useGmailStatus();
   const c = isDark ? auraDark : auraLight;
@@ -84,6 +88,7 @@ export function TripHome({
   const [weatherOpen, setWeatherOpen] = useState(false);
   const [railDay, setRailDay] = useState<number | null>(null);
   const [spendDay, setSpendDay] = useState<number | null>(null);
+  const replayOpen = useRecapStore((state) => state.replayOpen);
 
   const globeHeight = Math.round(width * 0.8);
   const headerSpace = insets.top + 62;
@@ -192,7 +197,7 @@ export function TripHome({
         </View>
 
         <PrivateView style={StyleSheet.absoluteFill}>
-          {hero.mode === "globe" ? (
+          {hero.mode === "globe" && replayOpen ? null : hero.mode === "globe" ? (
             <Animated.View
               key={hero.entry ? `globe-${hero.entry.latitude}` : "globe"}
               entering={FadeIn.duration(hero.entry ? 300 : 450)}
@@ -265,6 +270,8 @@ export function TripHome({
             ))}
           </Animated.View>
         ) : null}
+
+        {topSlot}
 
         <PrivateView style={styles.passWrap}>
           <BoardingPass data={data} palette={c} accent={heroAccent} gradient={auraStatusColors.calm} isDark={isDark} emergency={emergency} scrolling={scrolling} />

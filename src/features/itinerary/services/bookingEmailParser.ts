@@ -1,10 +1,11 @@
 import { hotelNameFromEmail, type RawMessage } from "@/features/expenses/services/transactionParser";
-import type { EventType } from "@/features/itinerary/constants/eventTypes";
+import type { EventType, TransitMode } from "@/features/itinerary/constants/eventTypes";
 
 export interface ParsedBooking {
   type: EventType;
   title: string;
   detail: string;
+  transitMode?: TransitMode;
   /** Wall-clock time at the place, without a zone ("2026-10-18T15:00:00"), so it reads the same in any time zone. */
   startAt: string;
   endAt?: string;
@@ -193,6 +194,7 @@ function parseFlights(body: string, received: Date): ParsedBooking[] {
       type: "transit",
       title: number,
       detail: `${leg[4].trim()} → ${leg[6].trim()}`,
+      transitMode: "flight",
       startAt,
       endAt: floatingTime(overnight ? addDays(date, 1) : date, arrives.hour, arrives.minute),
       bookingRef: ref ? `${ref}-${number}` : undefined,

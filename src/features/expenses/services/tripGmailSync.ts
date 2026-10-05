@@ -129,6 +129,7 @@ async function addNewEvents(messages: RawMessage[], trip: Trip): Promise<EmailMe
       type: candidate.type,
       title: candidate.title,
       detail: candidate.detail,
+      transitMode: candidate.transitMode,
       startAt: candidate.startAt,
       endAt: candidate.endAt,
       source: candidate.source,

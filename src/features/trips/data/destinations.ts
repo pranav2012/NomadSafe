@@ -183,3 +183,25 @@ export function findOfflineCoordinates(label: string, locale = "en"): LatLng | n
   );
   return (match ?? candidates[0]).coordinates;
 }
+
+/** Country code of the bundled city nearest to a point (rough: compares squared degrees). */
+export function nearestCityCountry(latitude: number, longitude: number): string | null {
+  let best: City | null = null;
+  let bestDistance = Infinity;
+  const squash = Math.cos((latitude * Math.PI) / 180) ** 2;
+  for (const city of getCities()) {
+    const dLat = city.coordinates.latitude - latitude;
+    const dLon = city.coordinates.longitude - longitude;
+    const distance = dLat * dLat + dLon * dLon * squash;
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      best = city;
+    }
+  }
+  return best?.country ?? null;
+}
+
+/** A country's name in `locale`, falling back to English, then the code. */
+export function countryDisplayName(code: string, locale: string): string {
+  return countryNamer(locale)(code);
+}

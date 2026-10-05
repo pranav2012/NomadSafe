@@ -8,6 +8,8 @@ import { useExpensesStore } from "@/features/expenses/store/expensesStore";
 import { clearGlobeImagery } from "@/features/home/services/globeImagery";
 import { clearLegacyGmailCheckpoints } from "@/features/expenses/services/legacyGmailCheckpoints";
 import { useEventsStore } from "@/features/itinerary/store/eventsStore";
+import { useRecapStore } from "@/features/recap/store/recapStore";
+import { syncRecapNotifications } from "@/features/recap/services/recapNotifications";
 import { resetBackgroundDisclosure } from "@/features/location-sharing/components/BackgroundLocationDisclosure";
 import { emergencyContactsStorage } from "@/features/onboarding/services/emergencyContactsStorage";
 import { useSafetyStore } from "@/features/safety/store/safetyStore";
@@ -47,6 +49,7 @@ export async function wipeAllDeviceData({ keepModels = false }: { keepModels?: b
   useSafetyStore.getState().reset();
   useSharingStore.getState().reset();
   useChatStore.getState().reset();
+  useRecapStore.getState().reset();
 
   emergencyContactsStorage.clear();
   resetBackgroundDisclosure();
@@ -59,6 +62,7 @@ export async function wipeAllDeviceData({ keepModels = false }: { keepModels?: b
   resetAiPreference();
   clearAiUsageLog();
   usePlanStore.getState().reset();
+  await attempt(() => syncRecapNotifications([], {}));
 
   storage.clearAll();
   // Rewrites the widgets (and the iOS App Group copy of trip names) from the now-empty trip store.

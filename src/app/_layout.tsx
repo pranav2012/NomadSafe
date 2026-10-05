@@ -30,6 +30,7 @@ import {
 import { checkDeferredInvite } from "@/features/trips/services/deferredInvite";
 import { WidgetSync } from "@/features/widget/WidgetSync";
 import { BillingEffects } from "@/modules/billing";
+import { useRecapEffects } from "@/features/recap";
 import { AdsEffects } from "@/modules/ads";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { useTheme } from "@/hooks/useTheme";
@@ -231,6 +232,7 @@ function SessionEffects() {
   useSafetyNotificationRouting();
   useSafetyServerSync();
   useTripNotificationRouting();
+  useRecapEffects();
 
   useEffect(() => {
     void checkDeferredInvite();
@@ -310,6 +312,7 @@ function AppStack() {
           <Stack.Screen name="join/[code]" options={{ presentation: "modal" }} />
           <Stack.Screen name="paywall" options={{ presentation: "modal" }} />
           <Stack.Screen name="emergency-contacts" />
+          <Stack.Screen name="trip-recap/[id]" options={{ presentation: "fullScreenModal", animation: "fade" }} />
           <Stack.Screen
             name="voice-expense"
             options={{ presentation: "fullScreenModal", animation: "slide_from_bottom" }}

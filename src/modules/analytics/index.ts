@@ -45,6 +45,9 @@ export interface AnalyticsEvents {
   ai_key_saved: { provider: "openai" | "anthropic" | "gemini" | "openai_compatible" };
   ad_shown: { placement: AdPlacement };
   ad_failed: { placement: AdPlacement | "preload"; stage: "load" | "show" };
+  recap_opened: { source: "home" | "notification" | "trips"; stops: number };
+  recap_finished: { stops: number };
+  recap_shared: { format: "image" | "video"; spend: boolean };
 }
 
 export interface FeatureFlags {

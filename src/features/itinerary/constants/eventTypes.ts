@@ -2,6 +2,21 @@ import type { IconName } from "@/atoms";
 
 export type EventType = "transit" | "stay" | "activity";
 
+/** How a transit event travels; drives the replay's leg colours and distance-by-mode stats. */
+export type TransitMode = "flight" | "train" | "bus" | "car" | "ferry";
+
+export const TRANSIT_MODES: { id: TransitMode; icon: IconName }[] = [
+  { id: "flight", icon: "plane" },
+  { id: "train", icon: "train" },
+  { id: "bus", icon: "bus" },
+  { id: "car", icon: "car" },
+  { id: "ferry", icon: "ship" },
+];
+
+export function isTransitMode(value: unknown): value is TransitMode {
+  return typeof value === "string" && TRANSIT_MODES.some((mode) => mode.id === value);
+}
+
 export interface EventTypeMeta {
   id: EventType;
   icon: IconName;

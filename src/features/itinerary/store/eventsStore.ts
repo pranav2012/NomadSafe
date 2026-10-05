@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { mmkvStateStorage } from "@/modules/storage";
-import type { EventType } from "@/features/itinerary/constants/eventTypes";
+import type { EventType, TransitMode } from "@/features/itinerary/constants/eventTypes";
 import { consolidateEmailBookings, mergeBooking, sameBooking } from "@/features/itinerary/utils/bookings";
 
 export type EventSource = "manual" | "email";
@@ -13,6 +13,8 @@ export interface TripEvent {
   title: string;
   /** Secondary line, e.g. "Hoi An → Hue" or "SE2 sleeper · car 4". */
   detail?: string;
+  /** Transit only; older events have none and are guessed with `transitModeOf`. */
+  transitMode?: TransitMode;
   /** ISO datetime the event starts. */
   startAt: string;
   endAt?: string;
@@ -35,6 +37,7 @@ export interface CreateEventInput {
   type: EventType;
   title: string;
   detail?: string;
+  transitMode?: TransitMode;
   startAt: string;
   endAt?: string;
   source: EventSource;

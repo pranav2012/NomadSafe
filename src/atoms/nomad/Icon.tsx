@@ -61,7 +61,11 @@ export type IconName =
   | "volumeOff"
   | "logout"
   | "copy"
-  | "share";
+  | "share"
+  | "plane"
+  | "train"
+  | "bus"
+  | "ship";
 
 const DIRECTIONAL: ReadonlySet<IconName> = new Set(["chevronRight", "chevronLeft", "send", "logout"]);
 
@@ -474,6 +478,41 @@ export function Icon({
       body = (
         <G {...p}>
           <Path d="M5 21V5a2 2 0 012-2h6a2 2 0 012 2v16M15 21V11h3a1 1 0 011 1v9M8 7h2M8 11h2M8 15h2" />
+        </G>
+      );
+      break;
+    case "plane":
+      body = (
+        <G {...p}>
+          <Path d="M10.5 20l1.5-6-6 2.5V14l6-4.5V4.5a1.5 1.5 0 013 0v5L21 14v2.5L15 14l1.5 6-3-1.2-3 1.2z" />
+        </G>
+      );
+      break;
+    case "train":
+      body = (
+        <G {...p}>
+          <Rect x="5" y="3" width="14" height="14" rx="3" />
+          <Path d="M5 10.5h14M9 21l1.5-4M15 21l-1.5-4" />
+          <Circle cx="9" cy="13.8" r="1" fill={color} stroke="none" />
+          <Circle cx="15" cy="13.8" r="1" fill={color} stroke="none" />
+        </G>
+      );
+      break;
+    case "bus":
+      body = (
+        <G {...p}>
+          <Rect x="4" y="3" width="16" height="15" rx="2.5" />
+          <Path d="M4 11h16M7 18v2.5M17 18v2.5" />
+          <Circle cx="8" cy="14.5" r="1" fill={color} stroke="none" />
+          <Circle cx="16" cy="14.5" r="1" fill={color} stroke="none" />
+        </G>
+      );
+      break;
+    case "ship":
+      body = (
+        <G {...p}>
+          <Path d="M3 15l2.5 5h13L21 15H3z" />
+          <Path d="M6 15V9h12v6M12 9V4M9.5 6.5H12" />
         </G>
       );
       break;
