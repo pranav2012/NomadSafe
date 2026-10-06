@@ -6,6 +6,7 @@ import {
   AuraChip,
   AuraDateField,
   AuraField,
+  AuraOptionSheet,
   AuraSheet,
   Icon,
   PressableScale,
@@ -15,10 +16,11 @@ import {
 import { auraCategoryColors } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { CURRENCY_OPTIONS } from "@/utils/currency";
+import { findMoneyGroup, isTrip, selectMoneyGroups, useTripsStore } from "@/features/trips/store/tripsStore";
 import { EXPENSE_CATEGORIES, type ExpenseCategory } from "@/features/expenses/constants/categories";
 import { type Expense, type ExpenseLocation, type ExpenseSource, useExpensesStore } from "@/features/expenses/store/expensesStore";
 import { roundMoney, SELF_ID, type ExpenseShare, type ExpensePayer, type ExpenseSplit } from "@/features/expenses/utils/split";
-import { initialSplitValue, SplitEditor, splitValueToPayers, splitValueToShares, splitValueToStored, type SplitValue } from "@/features/expenses/components/SplitEditor";
+import { initialSplitValue, personLabel, SplitEditor, splitValueToPayers, splitValueToShares, splitValueToStored, type SplitValue } from "@/features/expenses/components/SplitEditor";
 import { categorizeHeuristic } from "@/features/expenses/services/categorizer";
 import { getCurrentExpenseLocation } from "@/features/expenses/services/locationTagging";
 import { useGmailStatus } from "@/features/expenses/hooks/useGmailStatus";
@@ -44,8 +46,11 @@ export interface ExpenseFormProps {
   /** Prefills a new spend (e.g. from voice). */
   initialDraft?: ExpenseDraftValues;
   source?: ExpenseSource;
+  /** The trip or group a new spend goes to (null: not in a group); the "In" picker can change it. */
   groupId: string | null;
-  tripCurrency: string;
+  /** Currency for a new spend; defaults to the trip or group's, else yours. */
+  tripCurrency?: string;
+  /** Overrides the people of the trip or group (voice). */
   companions?: string[];
   onSave: () => void;
   onCancel: () => void;
@@ -145,13 +150,19 @@ function ExpenseFormBody({
   source = "manual",
   groupId,
   tripCurrency,
-  companions = [],
+  companions: companionsOverride,
   onSave,
   onImport,
   onDelete,
 }: ExpenseFormProps & { onDelete: () => void }) {
   const { c, f } = useAura();
-  const { t, locale } = useLocalization();
+  const { t, locale, currency: defaultCurrency } = useLocalization();
+  const [targetId, setTargetId] = useState<string | null>(editingExpense ? editingExpense.groupId : groupId);
+  const target = useTripsStore((state) => findMoneyGroup(state, targetId));
+  const allGroups = useTripsStore(selectMoneyGroups);
+  const companions = useMemo(() => companionsOverride ?? target?.companions ?? [], [companionsOverride, target?.companions]);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [currencyTouched, setCurrencyTouched] = useState(Boolean(editingExpense ?? initialDraft));
   const addExpense = useExpensesStore((state) => state.addExpense);
   const updateExpense = useExpensesStore((state) => state.updateExpense);
 
@@ -161,7 +172,7 @@ function ExpenseFormBody({
   const [merchant, setMerchant] = useState(prefill?.merchant ?? "");
   const [category, setCategory] = useState<ExpenseCategory>(prefill?.category ?? "other");
   const [categoryTouched, setCategoryTouched] = useState(Boolean(prefill));
-  const [currency, setCurrency] = useState(prefill?.currency ?? tripCurrency);
+  const [currency, setCurrency] = useState(prefill?.currency ?? tripCurrency ?? target?.currency ?? defaultCurrency);
   const [note, setNote] = useState(editingExpense?.note ?? "");
   const [date, setDate] = useState<Date>(prefill ? new Date(prefill.date) : new Date());
   // Companions removed from the trip still show if an existing split names them.
@@ -177,14 +188,38 @@ function ExpenseFormBody({
     ],
     [companions, prefill],
   );
+  // A new spend with people is split equally with everyone until changed.
+  const defaultSplit = (people: string[]): SplitValue => {
+    const base = initialSplitValue(people, decimalSeparator);
+    return people.length > 1 ? { ...base, mode: "equal", people } : base;
+  };
   const [split, setSplit] = useState<SplitValue>(() => {
     const hint = editingExpense?.splitHint;
     // A Gmail split suggestion: prefill the proposed shares, or start with the known people selected.
-    if (hint?.shares) return initialSplitValue(everyone, decimalSeparator, { paidBy: SELF_ID, shares: hint.shares, currency: editingExpense?.currency ?? tripCurrency });
+    if (hint?.shares) return initialSplitValue(everyone, decimalSeparator, { paidBy: SELF_ID, shares: hint.shares, currency: editingExpense?.currency ?? currency });
     if (hint) return { ...initialSplitValue(everyone, decimalSeparator), mode: "equal", people: hint.people };
-    return initialSplitValue(everyone, decimalSeparator, prefill ? { ...prefill } : undefined);
+    if (!prefill) return defaultSplit(everyone);
+    return initialSplitValue(everyone, decimalSeparator, { ...prefill });
   });
+  const [splitOpen, setSplitOpen] = useState(split.multiPay || split.mode === "custom" || split.mode === "percent");
   const canSplit = everyone.length > 1;
+
+  const chooseTarget = (value: string) => {
+    const nextId = value === NO_GROUP ? null : value;
+    if (nextId === targetId) return;
+    setTargetId(nextId);
+    const next = nextId ? allGroups.find((group) => group.id === nextId) : null;
+    if (!currencyTouched) setCurrency(next?.currency ?? defaultCurrency);
+    setSplit(defaultSplit([SELF_ID, ...(next?.companions ?? [])]));
+    setSplitOpen(false);
+  };
+  const targetOptions = [
+    { value: NO_GROUP, label: t("money.notInGroup") },
+    ...allGroups
+      .filter((group) => !group.shared?.archived || group.id === targetId)
+      .map((group) => ({ value: group.id, label: isTrip(group) ? group.name : `${group.emoji ?? "👥"} ${group.name}`, detail: isTrip(group) ? t("money.tripBadge") : undefined })),
+  ];
+  const showTarget = source !== "voice" && !companionsOverride;
   const [location, setLocation] = useState<ExpenseLocation | null>(editingExpense?.location ?? null);
   const [isLocating, setIsLocating] = useState(false);
   const [isCurrencyOpen, setIsCurrencyOpen] = useState(false);
@@ -232,7 +267,7 @@ function ExpenseFormBody({
     }
     const payers = payerResolution?.ok ? payerResolution.payers : undefined;
     const payload = {
-      groupId,
+      groupId: targetId,
       merchant: trimmedMerchant,
       amount: numericAmount,
       currency,
@@ -262,6 +297,20 @@ function ExpenseFormBody({
     <PrivateView style={styles.flex}>
       <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
         {onImport && !editingExpense && !initialDraft ? <ImportShortcuts onImport={onImport} /> : null}
+        {showTarget ? (
+          <PressableScale
+            onPress={() => setPickerOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel={t("money.inLabel", { name: target?.name ?? t("money.notInGroup") })}
+            style={[styles.target, { backgroundColor: c.surfaceStrong }]}
+          >
+            <Text style={[styles.targetLabel, { color: c.textSoft, fontFamily: f.regular }]}>{t("money.in")}</Text>
+            <Text style={[styles.targetName, { color: c.text, fontFamily: f.semibold }]} numberOfLines={1}>
+              {target ? (isTrip(target) ? target.name : `${target.emoji ?? "👥"} ${target.name}`) : t("money.notInGroup")}
+            </Text>
+            <Icon name="chevronDown" size={12} color={c.textMuted} />
+          </PressableScale>
+        ) : null}
         <AuraField
           large
           label={t("expenses.amount")}
@@ -288,6 +337,7 @@ function ExpenseFormBody({
                 selected={option.code === currency}
                 onPress={() => {
                   setCurrency(option.code);
+                  setCurrencyTouched(true);
                   setIsCurrencyOpen(false);
                 }}
               />
@@ -339,7 +389,10 @@ function ExpenseFormBody({
           )}
         </PressableScale>
 
-        {canSplit ? (
+        {canSplit && !splitOpen ? (
+          <SplitSummary split={split} everyone={everyone} onOpen={() => setSplitOpen(true)} />
+        ) : null}
+        {canSplit && splitOpen ? (
           <View style={[styles.splitCard, { backgroundColor: c.surface, borderColor: c.hairline }]}>
             <SplitEditor
               everyone={everyone}
@@ -353,6 +406,14 @@ function ExpenseFormBody({
         ) : null}
       </ScrollView>
 
+      <AuraOptionSheet
+        visible={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        title={editingExpense ? t("money.moveTo") : t("money.addTo")}
+        options={targetOptions}
+        selected={targetId ?? NO_GROUP}
+        onSelect={chooseTarget}
+      />
       <View style={styles.footer}>
         {editingExpense ? <AuraButton label={t("common.delete")} icon="trash" variant="secondary" onPress={onDelete} style={styles.deleteButton} /> : null}
         <AuraButton
@@ -363,6 +424,35 @@ function ExpenseFormBody({
         />
       </View>
     </PrivateView>
+  );
+}
+
+/** "Paid by · Split · With" at a glance; tapping opens the full split editor. */
+function SplitSummary({ split, everyone, onOpen }: { split: SplitValue; everyone: string[]; onOpen: () => void }) {
+  const { c, f } = useAura();
+  const { t } = useLocalization();
+  const payer = split.multiPay ? t("split.severalPayers") : personLabel(split.paidBy, t);
+  const how = t(`split.mode.${split.mode}`);
+  const withWhom =
+    split.mode === "equal"
+      ? split.people.length === everyone.length
+        ? t("money.everyone")
+        : t("money.people", { count: split.people.length })
+      : null;
+  const pill = (label: string, value: string) => (
+    <PressableScale key={label} onPress={onOpen} accessibilityRole="button" accessibilityLabel={`${label}: ${value}`} style={[styles.pill, { backgroundColor: c.surface, borderColor: c.hairline }]}>
+      <Text style={[styles.pillLabel, { color: c.textMuted, fontFamily: f.regular }]}>{label}</Text>
+      <Text style={[styles.pillValue, { color: c.text, fontFamily: f.semibold }]} numberOfLines={1}>
+        {value}
+      </Text>
+    </PressableScale>
+  );
+  return (
+    <View style={styles.pills}>
+      {pill(t("split.paidBy"), payer)}
+      {pill(t("split.title"), how)}
+      {withWhom ? pill(t("money.with"), withWhom) : null}
+    </View>
   );
 }
 
@@ -410,8 +500,17 @@ function ImportShortcuts({ onImport }: { onImport: (source: "gmail" | "paste") =
   );
 }
 
+const NO_GROUP = "__none__";
+
 const styles = StyleSheet.create({
   flex: { flex: 1 },
+  target: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", height: 34, paddingHorizontal: 14, borderRadius: 17, maxWidth: "100%" },
+  targetLabel: { fontSize: 13.5 },
+  targetName: { fontSize: 13.5, flexShrink: 1 },
+  pills: { flexDirection: "row", gap: 8 },
+  pill: { flex: 1, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 12, paddingVertical: 10, gap: 2 },
+  pillLabel: { fontSize: 12 },
+  pillValue: { fontSize: 14.5 },
   shortcuts: { borderRadius: 18, borderWidth: StyleSheet.hairlineWidth, overflow: "hidden" },
   shortcut: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 58, paddingHorizontal: 14, paddingVertical: 10 },
   shortcutIcon: { width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center" },

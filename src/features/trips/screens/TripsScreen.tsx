@@ -10,7 +10,7 @@ import { auraStatusColors } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { useStartNewTrip } from "@/modules/billing";
 import { TripFormSheet } from "@/features/trips/components/TripForm";
-import { isArchived, TripPeopleSheet } from "@/features/trips/components/TripPeopleSheet";
+import { isArchived, GroupPeopleSheet } from "@/features/trips/components/GroupPeopleSheet";
 import { selectActiveTrip, type Trip, useTripsStore } from "@/features/trips/store/tripsStore";
 import { countInclusiveDays, fromDateKey, getTripStatus, startOfLocalDay } from "@/features/trips/utils/dates";
 import { useChatStore } from "@/features/ai/store/chatStore";
@@ -235,7 +235,7 @@ export default function TripsScreen() {
       <AuraTopFade sheet />
 
       <TripFormSheet visible={editing !== null} editingTrip={editing} onClose={() => setEditing(null)} />
-      <TripPeopleSheet tripId={peopleFor} onClose={() => setPeopleFor(null)} />
+      <GroupPeopleSheet groupId={peopleFor} onClose={() => setPeopleFor(null)} />
 
       <AuraSheet
         visible={joinOpen}

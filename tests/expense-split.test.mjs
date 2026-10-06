@@ -210,3 +210,34 @@ test("split mode is the stored one, else equal or custom from the shares", () =>
   assert.equal(split.splitModeOf({ currency: "USD", shares: split.splitEqually(10, "USD", ["a", "b", "c"]) }), "equal");
   assert.equal(split.splitModeOf({ currency: "USD" }), null);
 });
+
+const myMoney = loadModule("src/features/expenses/utils/myMoney.ts");
+
+test("your spend is your share of split expenses and the whole of unsplit ones", () => {
+  const dinner = { amount: 3000, date: "2026-10-01", shares: split.splitEqually(3000, "INR", [SELF_ID, "Raj", "Priya", "Sam"]) };
+  assert.equal(myMoney.myShareOf(dinner), 750);
+  assert.equal(myMoney.myLentOf(dinner), 2250);
+  const theyPaid = { ...dinner, paidBy: "Raj" };
+  assert.equal(myMoney.myShareOf(theyPaid), 750);
+  assert.equal(myMoney.myLentOf(theyPaid), -750);
+  const notMine = { amount: 400, date: "2026-10-01", paidBy: "Raj", shares: [{ person: "Raj", amount: 200 }, { person: "Priya", amount: 200 }] };
+  assert.equal(myMoney.myShareOf(notMine), 0);
+  const souvenir = { amount: 500, date: "2026-10-01" };
+  assert.equal(myMoney.myShareOf(souvenir), 500);
+  assert.equal(myMoney.myLentOf(souvenir), null);
+});
+
+test("spending periods: Monday-first weeks and calendar months", () => {
+  const wednesday = new Date(2026, 9, 7, 15, 0);
+  const week = myMoney.periodRange("week", 0, wednesday);
+  assert.equal(week.start.getDay(), 1);
+  assert.equal(week.start.getDate(), 5);
+  assert.equal(week.end.getDate(), 12);
+  const lastWeek = myMoney.periodRange("week", 1, wednesday);
+  assert.equal(lastWeek.start.getDate(), 28);
+  const month = myMoney.periodRange("month", 1, wednesday);
+  assert.equal(month.start.getMonth(), 8);
+  assert.equal(month.end.getMonth(), 9);
+  assert.equal(myMoney.inRange(new Date(2026, 9, 11, 23).toISOString(), week), true);
+  assert.equal(myMoney.inRange(new Date(2026, 9, 12, 0, 1).toISOString(), week), false);
+});

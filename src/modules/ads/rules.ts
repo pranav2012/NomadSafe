@@ -1,5 +1,6 @@
 export type AdPlacement =
   | "trip_created"
+  | "group_created"
   | "expenses_imported"
   | "expense_saved"
   | "settlement_recorded"
@@ -28,8 +29,9 @@ export const DEFAULT_AD_CONFIG: AdConfig = {
   perDay: 6,
   every: {
     trip_created: 1,
+    group_created: 1,
     expenses_imported: 1,
-    expense_saved: 4,
+    expense_saved: 5,
     settlement_recorded: 1,
     itinerary_refined: 1,
     itinerary_event_added: 3,

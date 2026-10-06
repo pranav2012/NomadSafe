@@ -1,15 +1,12 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import { Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import { BlurTargetView } from "expo-blur";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
+import Animated, { FadeIn } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
-  AuraButton,
   AuraCard,
-  AuraSection,
-  AuraSegmented,
   Icon,
   PressableScale,
   useAura,
@@ -21,79 +18,66 @@ import {
 import { auraStatusAccent } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { PrivateView } from "@/modules/analytics";
-import { selectActiveTrip, useTripsStore } from "@/features/trips/store/tripsStore";
-import { daysLeftInTrip } from "@/features/trips/utils/dates";
+import { useStartNewGroup } from "@/modules/billing";
+import { findMoneyGroup, isTrip, selectActiveTrip, useTripsStore } from "@/features/trips/store/tripsStore";
+import { GroupPeopleSheet } from "@/features/trips/components/GroupPeopleSheet";
 import { useExpensesStore, type Expense } from "@/features/expenses/store/expensesStore";
-import { categoryBreakdown, filterByGroup, sumAmount } from "@/features/expenses/utils/aggregate";
-import { useConvertedExpenses } from "@/features/expenses/hooks/useTripExpenseSummary";
+import { OVERVIEW, useMoneySelection, useMoneyViewStore } from "@/features/expenses/store/moneyViewStore";
 import { dismissGmailSyncBanner, useTripGmailSyncStatus } from "@/features/expenses/store/gmailSyncStatusStore";
 import { dismissGmailLostAccess, hasGmailGrant, useGmailConnectionStore } from "@/features/expenses/store/gmailConnectionStore";
-import { formatMoney } from "@/features/expenses/utils/money";
-import { SELF_ID, isSplitExpense } from "@/features/expenses/utils/split";
+import { SELF_ID } from "@/features/expenses/utils/split";
 import { CAPTURE_BAR_HEIGHT, CaptureBar } from "@/features/expenses/components/CaptureBar";
 import { ExpenseForm } from "@/features/expenses/components/ExpenseForm";
-import { ExpenseRow } from "@/features/expenses/components/ExpenseRow";
+import { GroupMoney } from "@/features/expenses/components/GroupMoney";
 import { ImportSheet } from "@/features/expenses/components/ImportSheet";
-import { SpendHero } from "@/features/expenses/components/SpendHero";
-import { TripBalances } from "@/features/expenses/components/TripBalances";
+import { MoneyOverview } from "@/features/expenses/components/MoneyOverview";
+import { MoneySwitcher } from "@/features/expenses/components/MoneySwitcher";
+import { NewGroupSheet } from "@/features/expenses/components/NewGroupSheet";
 
-const LEDGER_PAGE = 30;
-
-type MoneyView = "spending" | "splits";
-
-/** Money tab: total-spent hero, the ledger or splits, and a floating capture bar. */
+/** Money tab: the active trip's money (or the Overview with no trip), a switcher to any group, and a floating capture bar. */
 export default function ExpensesScreen() {
-  const { c, f, isDark } = useAura();
-  const { t, currency: deviceCurrency, formatCurrency } = useLocalization();
+  const { c, isDark } = useAura();
+  const { t } = useLocalization();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const tabBarInset = useTabBarInset();
   const keyboardVisible = useKeyboardVisible();
   const blurTarget = useRef<View>(null);
   const activeTrip = useTripsStore(selectActiveTrip);
+  const selected = useMoneySelection();
+  const select = useMoneyViewStore((state) => state.select);
+  const chosen = useTripsStore((state) => (selected && selected !== OVERVIEW ? findMoneyGroup(state, selected) : null));
+  const group = selected === OVERVIEW ? null : (chosen ?? activeTrip);
+  const viewId = group?.id ?? OVERVIEW;
   const expenses = useExpensesStore((state) => state.expenses);
-  const settlements = useExpensesStore((state) => state.settlements);
-  const [view, setView] = useState<MoneyView>("spending");
+  const updateExpense = useExpensesStore((state) => state.updateExpense);
+  const startNewGroup = useStartNewGroup();
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Expense | null>(null);
   const [importTab, setImportTab] = useState<"paste" | "gmail" | null>(null);
-  const [ledgerLimit, setLedgerLimit] = useState(LEDGER_PAGE);
-  const gmailAdded = useTripGmailSyncStatus(activeTrip?.id).unseenExpenses;
+  const [peopleOpen, setPeopleOpen] = useState(false);
+  const [newGroupOpen, setNewGroupOpen] = useState(false);
+  const [reviewDismissed, setReviewDismissed] = useState(false);
+  const viewingActiveTrip = !!activeTrip && group?.id === activeTrip.id;
+  const gmailAdded = useTripGmailSyncStatus(viewingActiveTrip ? activeTrip.id : undefined).unseenExpenses;
   const gmailLostAccess = useGmailConnectionStore((state) => state.lostAccess && !hasGmailGrant(state.tokens));
 
-  const currency = activeTrip?.currency ?? deviceCurrency;
-  const scoped = useMemo(() => filterByGroup(expenses, activeTrip?.id ?? null), [expenses, activeTrip?.id]);
-  const updateExpense = useExpensesStore((state) => state.updateExpense);
-  const [reviewDismissed, setReviewDismissed] = useState(false);
-  const reviewable = scoped.filter((expense) => expense.splitHint?.shares);
+  const reviewable = group ? expenses.filter((expense) => expense.groupId === group.id && expense.splitHint?.shares) : [];
   const confirmSplits = () => {
-    for (const expense of reviewable) {
-      updateExpense(expense.id, { paidBy: SELF_ID, shares: expense.splitHint?.shares, splitHint: undefined });
-    }
+    for (const expense of reviewable) updateExpense(expense.id, { paidBy: SELF_ID, shares: expense.splitHint?.shares, splitHint: undefined });
   };
-  const sorted = useMemo(() => [...scoped].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()), [scoped]);
-  const conversion = useConvertedExpenses(scoped, currency);
-  // Aggregates run on amounts converted to the display currency so they match Home.
-  const converted: Expense[] = conversion.convertedExpenses.map(({ expense, amount }) => ({ ...expense, amount, currency }));
-  const convertedById = new Map(conversion.convertedExpenses.map(({ expense, amount }) => [expense.id, amount]));
-  const total = sumAmount(converted);
-  const daysLeft = activeTrip ? daysLeftInTrip(activeTrip) : 0;
-  const unconvertedLabel = conversion.unconvertedTotals.map((entry) => formatMoney(formatCurrency, entry.amount, entry.currency)).join(" + ");
-
-  const hasSplits =
-    !!activeTrip &&
-    (activeTrip.companions.length > 0 ||
-      scoped.some(isSplitExpense) ||
-      settlements.some((settlement) => settlement.groupId === activeTrip.id));
-  const shownView = hasSplits ? view : "spending";
 
   const openAdd = () => {
     setEditing(null);
     setFormOpen(true);
   };
+  const openExpense = (expense: Expense) => {
+    setEditing(expense);
+    setFormOpen(true);
+  };
   const openVoice = () => {
     setFormOpen(false);
-    router.push({ pathname: "/voice-expense", params: activeTrip ? { tripId: activeTrip.id } : {} });
+    router.push({ pathname: "/voice-expense", params: group && isTrip(group) ? { tripId: group.id } : {} });
   };
 
   const captureBottom = useFloatingBarBottom();
@@ -107,19 +91,31 @@ export default function ExpensesScreen() {
           contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: tabBarInset + CAPTURE_BAR_HEIGHT + 28 }]}
         >
           <View style={styles.header}>
-            <Text style={[styles.title, { color: c.text, fontFamily: f.semibold }]}>{t("tabs.money")}</Text>
-            <PressableScale
-              onPress={() => setImportTab("paste")}
-              accessibilityRole="button"
-              accessibilityLabel={t("expenses.importTitle")}
-              style={[styles.headerButton, { backgroundColor: c.surfaceStrong }]}
-            >
-              <Icon name="download" size={17} color={c.text} />
-            </PressableScale>
+            <MoneySwitcher selected={viewId} onSelect={select} />
+            <View style={styles.headerButtons}>
+              {group ? (
+                <PressableScale
+                  onPress={() => setPeopleOpen(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("groupTrip.peopleTitle")}
+                  style={[styles.headerButton, { backgroundColor: c.surfaceStrong }]}
+                >
+                  <Icon name="users" size={17} color={c.text} />
+                </PressableScale>
+              ) : null}
+              <PressableScale
+                onPress={() => setImportTab("paste")}
+                accessibilityRole="button"
+                accessibilityLabel={t("expenses.importTitle")}
+                style={[styles.headerButton, { backgroundColor: c.surfaceStrong }]}
+              >
+                <Icon name="download" size={17} color={c.text} />
+              </PressableScale>
+            </View>
           </View>
 
-          {gmailAdded > 0 ? (
-            <Banner icon="mail" text={t("expenses.autoSynced", { count: gmailAdded })} onDismiss={() => activeTrip && dismissGmailSyncBanner(activeTrip.id)} />
+          {gmailAdded > 0 && activeTrip ? (
+            <Banner icon="mail" text={t("expenses.autoSynced", { count: gmailAdded })} onDismiss={() => dismissGmailSyncBanner(activeTrip.id)} />
           ) : null}
           {reviewable.length > 0 && !reviewDismissed ? (
             <Banner
@@ -141,73 +137,13 @@ export default function ExpensesScreen() {
           ) : null}
 
           <PrivateView>
-          <SpendHero
-            label={activeTrip?.name ?? null}
-            currency={currency}
-            total={total}
-            daysLeft={daysLeft}
-            breakdown={categoryBreakdown(converted)}
-            note={
-              unconvertedLabel
-                ? conversion.isConverting
-                  ? t("expenses.convertingAmounts", { amount: unconvertedLabel })
-                  : t("expenses.notConverted", { amount: unconvertedLabel })
-                : null
-            }
-          />
-
-          {hasSplits ? (
-            <AuraSegmented
-              options={[
-                { value: "spending", label: t("expenses.tabSpending") },
-                { value: "splits", label: t("expenses.tabSplits") },
-              ]}
-              value={shownView}
-              onChange={setView}
-              style={styles.segmented}
-            />
-          ) : null}
-
-          {shownView === "splits" && activeTrip ? (
-            <Animated.View key="splits" entering={FadeIn.duration(220)} style={styles.panel}>
-              <TripBalances trip={activeTrip} />
+            <Animated.View key={viewId} entering={FadeIn.duration(220)}>
+              {group ? (
+                <GroupMoney group={group} onOpenExpense={openExpense} onAddPeople={() => setPeopleOpen(true)} onImport={() => setImportTab("paste")} />
+              ) : (
+                <MoneyOverview onOpenGroup={select} onOpenExpense={openExpense} onNewGroup={() => startNewGroup(() => setNewGroupOpen(true))} />
+              )}
             </Animated.View>
-          ) : sorted.length === 0 ? (
-            <Animated.View key="empty" entering={FadeIn.duration(220)}>
-              <AuraCard style={styles.empty}>
-                <Icon name="wallet" size={22} color={c.textSoft} />
-                <Text style={[styles.emptyTitle, { color: c.text, fontFamily: f.semibold }]}>{t("expenses.noExpensesTitle")}</Text>
-                <Text style={[styles.emptyBody, { color: c.textSoft, fontFamily: f.regular }]}>{t("expenses.noExpensesBody")}</Text>
-                <AuraButton label={t("expenses.importTitle")} icon="download" variant="secondary" size="md" onPress={() => setImportTab("paste")} style={styles.emptyButton} />
-              </AuraCard>
-            </Animated.View>
-          ) : (
-            <Animated.View key="spending" entering={FadeIn.duration(220)}>
-              <AuraSection title={t("expenses.recent")} style={hasSplits ? styles.sectionTight : undefined} />
-              {sorted.slice(0, ledgerLimit).map((expense, index) => (
-                <Animated.View key={expense.id} entering={index < 12 ? FadeInDown.duration(220).delay(index * 25) : undefined}>
-                  <ExpenseRow
-                    expense={expense}
-                    convertedAmount={convertedById.get(expense.id)}
-                    displayCurrency={currency}
-                    onPress={() => {
-                      setEditing(expense);
-                      setFormOpen(true);
-                    }}
-                  />
-                </Animated.View>
-              ))}
-              {sorted.length > ledgerLimit ? (
-                <AuraButton
-                  label={t("expenses.seeAll", { count: sorted.length })}
-                  variant="secondary"
-                  size="md"
-                  onPress={() => setLedgerLimit(sorted.length)}
-                  style={styles.more}
-                />
-              ) : null}
-            </Animated.View>
-          )}
           </PrivateView>
         </ScrollView>
         <AuraTopFade />
@@ -220,21 +156,21 @@ export default function ExpensesScreen() {
       <ExpenseForm
         visible={formOpen}
         editingExpense={editing}
-        groupId={activeTrip?.id ?? null}
-        tripCurrency={currency}
-        companions={activeTrip?.companions}
+        groupId={group?.id ?? null}
         onSave={() => setFormOpen(false)}
         onCancel={() => setFormOpen(false)}
         onSpeak={openVoice}
       />
       <ImportSheet
         visible={importTab !== null}
-        groupId={activeTrip?.id ?? null}
-        trip={activeTrip}
+        groupId={group?.id ?? null}
+        trip={group && isTrip(group) ? group : null}
         initialTab={importTab ?? "paste"}
         onClose={() => setImportTab(null)}
         onImported={() => setImportTab(null)}
       />
+      <GroupPeopleSheet groupId={peopleOpen ? (group?.id ?? null) : null} onClose={() => setPeopleOpen(false)} onDeleted={() => select(OVERVIEW)} />
+      <NewGroupSheet visible={newGroupOpen} onClose={() => setNewGroupOpen(false)} onCreated={(created) => select(created.id)} />
     </View>
   );
 }
@@ -276,18 +212,10 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   scroll: { paddingHorizontal: 20 },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 },
-  title: { fontSize: 34, letterSpacing: -1.2 },
+  headerButtons: { flexDirection: "row", gap: 8 },
   headerButton: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center" },
   banner: { marginBottom: 12, paddingVertical: 12 },
   bannerRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   bannerText: { flex: 1, fontSize: 13.5, lineHeight: 19 },
   bannerAction: { fontSize: 13.5 },
-  segmented: { marginTop: 28 },
-  panel: { marginTop: 22 },
-  sectionTight: { marginTop: 22 },
-  empty: { marginTop: 28, gap: 8 },
-  emptyTitle: { fontSize: 18, marginTop: 4 },
-  emptyBody: { fontSize: 14.5, lineHeight: 21 },
-  emptyButton: { alignSelf: "flex-start", marginTop: 8 },
-  more: { alignSelf: "center", marginTop: 12 },
 });

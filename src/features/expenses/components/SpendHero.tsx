@@ -15,6 +15,10 @@ export interface SpendHeroProps {
   daysLeft: number;
   breakdown: { category: ExpenseCategory; amount: number }[];
   note: string | null;
+  /** Replaces "spent so far" under the number. */
+  caption?: string;
+  /** A second line under the caption, e.g. the group's total. */
+  detail?: string | null;
 }
 
 const BAR_H = 10;
@@ -22,7 +26,7 @@ const NUMBER_SIZE = 50;
 const NUMBER_LINE = 58;
 
 /** Total spent so far, with a category breakdown bar and legend. */
-export function SpendHero({ label, currency, total, daysLeft, breakdown, note }: SpendHeroProps) {
+export function SpendHero({ label, currency, total, daysLeft, breakdown, note, caption, detail }: SpendHeroProps) {
   const { c, f } = useAura();
   const { t, formatCurrency } = useLocalization();
   const money = (amount: number) => formatMoney(formatCurrency, amount, currency);
@@ -41,7 +45,8 @@ export function SpendHero({ label, currency, total, daysLeft, breakdown, note }:
         lineHeight={NUMBER_LINE}
         style={[styles.number, { color: c.text, fontFamily: f.semibold }]}
       />
-      <Text style={[styles.caption, { color: c.textSoft, fontFamily: f.regular }]}>{t("expenses.spentSoFar")}</Text>
+      <Text style={[styles.caption, { color: c.textSoft, fontFamily: f.regular }]}>{caption ?? t("expenses.spentSoFar")}</Text>
+      {detail ? <Text style={[styles.note, { color: c.textMuted, fontFamily: f.regular }]}>{detail}</Text> : null}
 
       {breakdown.length > 0 ? (
         <>

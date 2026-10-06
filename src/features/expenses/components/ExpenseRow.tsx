@@ -5,6 +5,11 @@ import { auraCategoryColors, auraStatusAccent } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { getCategoryMeta } from "@/features/expenses/constants/categories";
 import type { Expense } from "@/features/expenses/store/expensesStore";
+import { personLabel } from "@/features/expenses/components/SplitEditor";
+import { myLentOf } from "@/features/expenses/utils/myMoney";
+import { payersOf } from "@/features/expenses/utils/split";
+
+const OWED_COLOR = "#3DDC97";
 
 const SOURCE_KEYS: Partial<Record<Expense["source"], string>> = {
   sms: "expenses.sourceSms",
@@ -34,24 +39,39 @@ export function ExpenseRow({
   convertedAmount,
   displayCurrency,
   onPress,
+  showYourPart = false,
 }: {
   expense: Expense;
   convertedAmount?: number;
   displayCurrency?: string;
   onPress: () => void;
+  /** In a trip or group with people: who paid, what you lent or borrowed, and "Only you" for unsplit spends. */
+  showYourPart?: boolean;
 }) {
   const { c, f } = useAura();
   const { t, locale, formatCurrency } = useLocalization();
   const meta = getCategoryMeta(expense.category);
   const tone = auraCategoryColors[expense.category];
   const sourceKey = SOURCE_KEYS[expense.source];
+  const payers = payersOf(expense);
+  const lent = showYourPart ? myLentOf(expense) : null;
   const details = [
     dayFormatter(locale).format(new Date(expense.date)),
+    showYourPart && expense.shares?.length
+      ? payers.length > 1
+        ? t("money.severalPaid", { count: payers.length })
+        : t("money.whoPaid", { name: personLabel(payers[0].person, t) })
+      : null,
     sourceKey ? t(sourceKey) : null,
     expense.shares?.length ? t("split.badge", { count: expense.shares.length }) : null,
+    showYourPart && !expense.shares?.length ? t("money.onlyYou") : null,
   ]
     .filter(Boolean)
     .join(" · ");
+  const yourPart =
+    lent === null || Math.abs(lent) < 0.005
+      ? null
+      : { text: lent > 0 ? t("money.youLent", { amount: formatCurrency(lent, expense.currency, {}) }) : t("money.youBorrowed", { amount: formatCurrency(-lent, expense.currency, {}) }), color: lent > 0 ? OWED_COLOR : auraStatusAccent.alert };
 
   return (
     <PressableScale onPress={onPress} haptic={false} pressedScale={0.98} accessibilityRole="button" style={styles.row}>
@@ -77,20 +97,19 @@ export function ExpenseRow({
           </View>
         ) : null}
       </View>
-      {displayCurrency && expense.currency !== displayCurrency && convertedAmount !== undefined ? (
-        <View style={styles.amounts}>
-          <Text style={[styles.amount, { color: c.text, fontFamily: f.semibold }]}>
-            {formatCurrency(convertedAmount, displayCurrency, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-          </Text>
-          <Text style={[styles.original, { color: c.textMuted, fontFamily: f.regular }]}>
-            {formatCurrency(expense.amount, expense.currency, {})}
-          </Text>
-        </View>
-      ) : (
-        <Text style={[styles.amount, { color: c.text, fontFamily: f.semibold }]}>
-          {formatCurrency(expense.amount, expense.currency, {})}
-        </Text>
-      )}
+      <View style={styles.amounts}>
+        {displayCurrency && expense.currency !== displayCurrency && convertedAmount !== undefined ? (
+          <>
+            <Text style={[styles.amount, { color: c.text, fontFamily: f.semibold }]}>
+              {formatCurrency(convertedAmount, displayCurrency, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+            </Text>
+            <Text style={[styles.original, { color: c.textMuted, fontFamily: f.regular }]}>{formatCurrency(expense.amount, expense.currency, {})}</Text>
+          </>
+        ) : (
+          <Text style={[styles.amount, { color: c.text, fontFamily: f.semibold }]}>{formatCurrency(expense.amount, expense.currency, {})}</Text>
+        )}
+        {yourPart ? <Text style={[styles.original, { color: yourPart.color, fontFamily: f.medium }]}>{yourPart.text}</Text> : null}
+      </View>
     </PressableScale>
   );
 }
