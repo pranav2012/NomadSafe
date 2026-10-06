@@ -1254,7 +1254,8 @@
     "mode": {
       "none": "Sin dividir",
       "equal": "A partes iguales",
-      "custom": "Personalizado"
+      "custom": "Personalizado",
+      "percent": "Porcentaje"
     },
     "eachPays_one": "{{amount}} para {{count}} persona",
     "eachPays_other": "{{amount}} cada uno · {{count}} personas",
@@ -1263,7 +1264,9 @@
     "invalid": {
       "no-people": "Elige al menos una persona con quien dividir.",
       "over-total": "Las partes suman más que el total.",
-      "under-total": "Las partes suman menos que el total."
+      "under-total": "Las partes suman menos que el total.",
+      "not-100": "Los porcentajes deben sumar 100 %.",
+      "payers-total": "Lo que pagó cada persona debe sumar el total."
     },
     "notSplit": "Sin dividir: un gasto personal",
     "badge_one": "Dividido",
@@ -1290,7 +1293,10 @@
     "suggestFor_other": "¿Repartir entre {{count}}?",
     "reviewBanner_one": "{{count}} gasto de Gmail tiene un reparto sugerido",
     "reviewBanner_other": "{{count}} gastos de Gmail tienen repartos sugeridos",
-    "confirmAll": "Confirmar todo"
+    "confirmAll": "Confirmar todo",
+    "severalPayers": "Varias personas",
+    "paidSoFar": "Pagado {{paid}} de {{total}}",
+    "percentLeft": "Por asignar: {{percent}} %"
   },
   "voiceExpense": {
     "speakToAdd": "Añadir gasto por voz",

@@ -1254,7 +1254,8 @@
     "mode": {
       "none": "不分摊",
       "equal": "平均分摊",
-      "custom": "自定义"
+      "custom": "自定义",
+      "percent": "按比例"
     },
     "eachPays_one": "{{count}} 人 {{amount}}",
     "eachPays_other": "每人 {{amount}} · {{count}} 人",
@@ -1263,7 +1264,9 @@
     "invalid": {
       "no-people": "请至少选择一人进行分摊。",
       "over-total": "各份额之和超过了总额。",
-      "under-total": "各份额之和少于总额。"
+      "under-total": "各份额之和少于总额。",
+      "not-100": "比例之和需为 100%。",
+      "payers-total": "每个人支付的金额之和需等于总额。"
     },
     "notSplit": "不分摊 — 个人支出",
     "badge_one": "分摊",
@@ -1290,7 +1293,10 @@
     "suggestFor_other": "分给 {{count}} 人？",
     "reviewBanner_one": "{{count}} 笔 Gmail 支出有建议的分摊",
     "reviewBanner_other": "{{count}} 笔 Gmail 支出有建议的分摊",
-    "confirmAll": "全部确认"
+    "confirmAll": "全部确认",
+    "severalPayers": "多人",
+    "paidSoFar": "已付 {{paid}} / {{total}}",
+    "percentLeft": "待分配：{{percent}}%"
   },
   "voiceExpense": {
     "speakToAdd": "语音添加支出",

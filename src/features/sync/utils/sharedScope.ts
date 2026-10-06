@@ -16,9 +16,11 @@ export function clearGroupLedgers() {
   for (const key of storage.getAllKeys()) if (key.startsWith(GROUP_LEDGER_PREFIX)) storage.remove(key);
 }
 
-/** An expense other members need to see: it's split, or someone else paid it. */
-export function isGroupExpense(expense: Pick<Expense, "shares" | "paidBy">): boolean {
-  return (expense.shares?.length ?? 0) > 0 || (expense.paidBy !== undefined && expense.paidBy !== SELF_ID);
+/** An expense other members need to see: it's split, or someone else paid (some of) it. */
+export function isGroupExpense(expense: Pick<Expense, "shares" | "paidBy" | "payers">): boolean {
+  if ((expense.shares?.length ?? 0) > 0) return true;
+  if (expense.payers?.some((payer) => payer.person !== SELF_ID)) return true;
+  return expense.paidBy !== undefined && expense.paidBy !== SELF_ID;
 }
 
 type LocalOnly = { rawText?: string; note?: string; source?: string };
@@ -63,7 +65,7 @@ export function makeSharedScope(uid: string | null, trips: readonly Pick<GroupBa
   return {
     isSharedTrip: (groupId: string | null) => groupId !== null && sharedById.has(groupId),
     /** Expenses and settlements carry `groupId`; itinerary events carry `tripId`. */
-    has: (kind: SharedKind, record: { id: string; groupId?: string | null; tripId?: string | null } & Partial<Pick<Expense, "shares" | "paidBy">>) => {
+    has: (kind: SharedKind, record: { id: string; groupId?: string | null; tripId?: string | null } & Partial<Pick<Expense, "shares" | "paidBy" | "payers">>) => {
       const owner = record.groupId ?? record.tripId ?? null;
       const serverTripId = owner === null ? undefined : sharedById.get(owner);
       if (!serverTripId) return false;

@@ -1254,7 +1254,8 @@
     "mode": {
       "none": "بدون تقسيم",
       "equal": "بالتساوي",
-      "custom": "مخصص"
+      "custom": "مخصص",
+      "percent": "بالنسبة المئوية"
     },
     "eachPays_one": "{{amount}} لشخص واحد ({{count}})",
     "eachPays_other": "{{amount}} لكل شخص · {{count}} أشخاص",
@@ -1263,7 +1264,9 @@
     "invalid": {
       "no-people": "اختر شخصًا واحدًا على الأقل للتقسيم معه.",
       "over-total": "مجموع الحصص أكبر من الإجمالي.",
-      "under-total": "مجموع الحصص أقل من الإجمالي."
+      "under-total": "مجموع الحصص أقل من الإجمالي.",
+      "not-100": "يجب أن يكون مجموع النسب 100%.",
+      "payers-total": "يجب أن يساوي مجموع ما دفعه الجميع المبلغ الإجمالي."
     },
     "notSplit": "بدون تقسيم — إنفاق شخصي",
     "badge_one": "مقسّم",
@@ -1290,7 +1293,10 @@
     "suggestFor_other": "تقسيم على {{count}}؟",
     "reviewBanner_one": "نفقة واحدة من Gmail لها تقسيم مقترح",
     "reviewBanner_other": "{{count}} نفقات من Gmail لها تقسيمات مقترحة",
-    "confirmAll": "تأكيد الكل"
+    "confirmAll": "تأكيد الكل",
+    "severalPayers": "عدة أشخاص",
+    "paidSoFar": "تم دفع {{paid}} من {{total}}",
+    "percentLeft": "المتبقي للتوزيع: {{percent}}%"
   },
   "voiceExpense": {
     "speakToAdd": "أضف نفقة بالصوت",

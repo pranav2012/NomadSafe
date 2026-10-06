@@ -1254,7 +1254,8 @@
     "mode": {
       "none": "बाँटा नहीं गया",
       "equal": "बराबर",
-      "custom": "कस्टम"
+      "custom": "कस्टम",
+      "percent": "प्रतिशत"
     },
     "eachPays_one": "{{count}} व्यक्ति के लिए {{amount}}",
     "eachPays_other": "हर एक {{amount}} · {{count}} लोग",
@@ -1263,7 +1264,9 @@
     "invalid": {
       "no-people": "बाँटने के लिए कम से कम एक व्यक्ति चुनें।",
       "over-total": "हिस्सों का जोड़ कुल राशि से ज़्यादा है।",
-      "under-total": "हिस्सों का जोड़ कुल राशि से कम है।"
+      "under-total": "हिस्सों का जोड़ कुल राशि से कम है।",
+      "not-100": "प्रतिशत का जोड़ 100% होना चाहिए।",
+      "payers-total": "सबके चुकाए पैसे का जोड़ कुल रकम के बराबर होना चाहिए।"
     },
     "notSplit": "बाँटा नहीं गया — निजी खर्च",
     "badge_one": "बँटा हुआ",
@@ -1290,7 +1293,10 @@
     "suggestFor_other": "{{count}} में बांटें?",
     "reviewBanner_one": "Gmail के {{count}} खर्च के लिए बंटवारा सुझाया गया है",
     "reviewBanner_other": "Gmail के {{count}} खर्चों के लिए बंटवारे सुझाए गए हैं",
-    "confirmAll": "सभी की पुष्टि करें"
+    "confirmAll": "सभी की पुष्टि करें",
+    "severalPayers": "कई लोग",
+    "paidSoFar": "{{total}} में से {{paid}} चुकाए",
+    "percentLeft": "बाँटना बाकी: {{percent}}%"
   },
   "voiceExpense": {
     "speakToAdd": "बोलकर खर्च जोड़ें",

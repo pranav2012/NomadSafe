@@ -172,3 +172,41 @@ test("voice: unclear or zero amounts are unclear", () => {
   assert.equal(voice.interpretVoiceExtraction({ ...baseExtraction, amount: 0 }, "hello", context).kind, "unclear");
   assert.equal(voice.interpretVoiceExtraction(null, "hello", context).kind, "unclear");
 });
+
+test("percent split rounds in minor units and always adds up to the total", () => {
+  const result = split.splitByPercent(100, "USD", { [SELF_ID]: 60, Raj: 40 });
+  assert.deepEqual(result, { ok: true, shares: [{ person: SELF_ID, amount: 60 }, { person: "Raj", amount: 40 }] });
+  const thirds = split.splitByPercent(100, "USD", { a: 33.33, b: 33.33, c: 33.34 });
+  assert.equal(thirds.ok, true);
+  assert.equal(Math.round(thirds.shares.reduce((sum, share) => sum + share.amount, 0) * 100), 10000);
+  const yen = split.splitByPercent(1000, "JPY", { a: 50, b: 25, c: 25 });
+  assert.deepEqual(yen.shares.map((share) => share.amount), [500, 250, 250]);
+  assert.deepEqual(split.splitByPercent(100, "USD", { a: 50, b: 40 }), { ok: false, reason: "not-100" });
+  assert.deepEqual(split.splitByPercent(100, "USD", {}), { ok: false, reason: "no-people" });
+});
+
+test("several payers are each credited what they paid", () => {
+  const expense = {
+    amount: 400,
+    currency: "INR",
+    date: "2026-05-27",
+    payers: [{ person: "Aagam", amount: 200 }, { person: "Suhas", amount: 200 }],
+    shares: split.splitEqually(400, "INR", ["Aagam", "Suhas", SELF_ID, "Venkat", "Yash"]),
+  };
+  const { net } = split.computeNetBalances([expense], [], same);
+  assert.equal(net.get("Aagam"), 120);
+  assert.equal(net.get("Suhas"), 120);
+  assert.equal(net.get(SELF_ID), -80);
+  assert.equal(split.payersMatchTotal(400, "INR", expense.payers), true);
+  assert.equal(split.payersMatchTotal(400, "INR", [{ person: "Aagam", amount: 200 }]), false);
+  assert.deepEqual(split.payersOf({ amount: 50, paidBy: "Raj" }), [{ person: "Raj", amount: 50 }]);
+  assert.deepEqual(split.payersOf({ amount: 50 }), [{ person: SELF_ID, amount: 50 }]);
+});
+
+test("split mode is the stored one, else equal or custom from the shares", () => {
+  const shares = [{ person: SELF_ID, amount: 60 }, { person: "Raj", amount: 40 }];
+  assert.equal(split.splitModeOf({ currency: "USD", shares, split: { mode: "percent", percents: { [SELF_ID]: 60, Raj: 40 } } }), "percent");
+  assert.equal(split.splitModeOf({ currency: "USD", shares }), "custom");
+  assert.equal(split.splitModeOf({ currency: "USD", shares: split.splitEqually(10, "USD", ["a", "b", "c"]) }), "equal");
+  assert.equal(split.splitModeOf({ currency: "USD" }), null);
+});

@@ -1,7 +1,7 @@
 import { api, convex, type Id } from "@/modules/backend";
 import { useChatStore } from "@/features/ai/store/chatStore";
 import { useExpensesStore, type Expense, type Settlement } from "@/features/expenses/store/expensesStore";
-import { SELF_ID, type ExpenseShare } from "@/features/expenses/utils/split";
+import { payersOf, SELF_ID, type ExpenseShare, type ExpenseSplit } from "@/features/expenses/utils/split";
 import { useEventsStore, type TripEvent } from "@/features/itinerary/store/eventsStore";
 import { isTrip, selectMoneyGroups, setMoneyGroups, useTripsStore, type GroupBase, type MoneyGroup, type SharedGroupInfo } from "@/features/trips/store/tripsStore";
 import { syncWidgets } from "@/features/widget/syncWidgets";
@@ -115,6 +115,17 @@ function mapShares(shares: ExpenseShare[] | undefined, map: Translate): ExpenseS
   return out;
 }
 
+function mapSplit(split: ExpenseSplit | undefined, map: Translate): ExpenseSplit | undefined | null {
+  if (!split?.percents) return split;
+  const percents: Record<string, number> = {};
+  for (const [person, percent] of Object.entries(split.percents)) {
+    const mapped = map(person);
+    if (mapped === null) return null;
+    percents[mapped] = percent;
+  }
+  return { ...split, percents };
+}
+
 function mapPeople(people: string[] | undefined, map: Translate): string[] | undefined | null {
   if (!people) return undefined;
   const out: string[] = [];
@@ -143,8 +154,10 @@ function toServerRecord(kind: SharedKind, record: LocalRecord, map: Translate): 
   const { groupId: _group, externalId: _external, ...rest } = stripRaw(record as Expense);
   const paidBy = map(rest.paidBy ?? SELF_ID);
   const shares = mapShares(rest.shares, map);
-  if (paidBy === null || shares === null) return null;
-  return { ...rest, paidBy, shares };
+  const payers = mapShares(rest.payers, map);
+  const split = mapSplit(rest.split, map);
+  if (paidBy === null || shares === null || payers === null || split === null) return null;
+  return { ...rest, paidBy, shares, payers, split };
 }
 
 /** The server form back in this phone's terms, or null if it mentions a member this phone doesn't know yet. */
@@ -164,8 +177,10 @@ function toLocalRecord(kind: SharedKind, data: unknown, localId: string, map: Tr
   const expense = data as Expense;
   const paidBy = expense.paidBy === undefined ? SELF_ID : map(expense.paidBy);
   const shares = mapShares(expense.shares, map);
-  if (paidBy === null || shares === null) return null;
-  return { ...expense, groupId: localId, paidBy: paidBy === SELF_ID ? undefined : paidBy, shares };
+  const payers = mapShares(expense.payers, map);
+  const split = mapSplit(expense.split, map);
+  if (paidBy === null || shares === null || payers === null || split === null) return null;
+  return { ...expense, groupId: localId, paidBy: paidBy === SELF_ID ? undefined : paidBy, shares, payers, split };
 }
 
 function groupRecordsOf(owner: string, trip: GroupBase): { kind: SharedKind; record: LocalRecord }[] {
@@ -589,7 +604,7 @@ export function isSettledUp(trip: Pick<GroupBase, "id">): boolean {
   const add = (currency: string, value: number) => totals.set(currency, (totals.get(currency) ?? 0) + value);
   for (const expense of useExpensesStore.getState().expenses) {
     if (expense.groupId !== trip.id || !expense.shares?.length) continue;
-    if ((expense.paidBy ?? SELF_ID) === SELF_ID) add(expense.currency, expense.amount);
+    for (const payer of payersOf(expense)) if (payer.person === SELF_ID) add(expense.currency, payer.amount);
     for (const share of expense.shares) if (share.person === SELF_ID) add(expense.currency, -share.amount);
   }
   for (const settlement of useExpensesStore.getState().settlements) {

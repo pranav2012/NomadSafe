@@ -1254,7 +1254,8 @@
     "mode": {
       "none": "나누지 않음",
       "equal": "균등하게",
-      "custom": "직접 설정"
+      "custom": "직접 설정",
+      "percent": "비율"
     },
     "eachPays_one": "{{count}}명 · {{amount}}",
     "eachPays_other": "1인당 {{amount}} · {{count}}명",
@@ -1263,7 +1264,9 @@
     "invalid": {
       "no-people": "함께 나눌 사람을 한 명 이상 선택하세요.",
       "over-total": "나눈 금액의 합이 총액보다 많아요.",
-      "under-total": "나눈 금액의 합이 총액보다 적어요."
+      "under-total": "나눈 금액의 합이 총액보다 적어요.",
+      "not-100": "비율의 합이 100%가 되어야 해요.",
+      "payers-total": "각자 낸 금액의 합이 총액과 같아야 해요."
     },
     "notSplit": "나누지 않음 — 개인 지출",
     "badge_one": "나눔",
@@ -1290,7 +1293,10 @@
     "suggestFor_other": "{{count}}명이 나눌까요?",
     "reviewBanner_one": "Gmail 지출 {{count}}건에 제안된 분할이 있어요",
     "reviewBanner_other": "Gmail 지출 {{count}}건에 제안된 분할이 있어요",
-    "confirmAll": "모두 확인"
+    "confirmAll": "모두 확인",
+    "severalPayers": "여러 명",
+    "paidSoFar": "{{total}} 중 {{paid}} 결제됨",
+    "percentLeft": "남은 비율: {{percent}}%"
   },
   "voiceExpense": {
     "speakToAdd": "말로 지출 추가",

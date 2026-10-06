@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { mmkvStateStorage } from "@/modules/storage";
 import type { ExpenseCategory } from "@/features/expenses/constants/categories";
 import { toLocalDayKey } from "@/features/expenses/utils/dateKey";
-import type { ExpenseShare } from "@/features/expenses/utils/split";
+import type { ExpensePayer, ExpenseShare, ExpenseSplit } from "@/features/expenses/utils/split";
 import type { SplitHint } from "@/features/expenses/utils/party";
 
 /** "sms" is legacy (device SMS import, removed); kept so stored expenses stay valid. */
@@ -29,8 +29,12 @@ export interface Expense {
   location?: ExpenseLocation | null;
   /** Person id (`SELF_ID` or a companion name); unset means the user paid. */
   paidBy?: string;
+  /** Set instead of `paidBy` when several people paid; amounts add up to `amount`. */
+  payers?: ExpensePayer[];
   /** Unset for personal spends; otherwise sums to `amount`. */
   shares?: ExpenseShare[];
+  /** How the split was entered (equal, percent, custom), for editing. */
+  split?: ExpenseSplit;
   /** Suggested split from a Gmail booking, waiting for the user; cleared once they save the spend. */
   splitHint?: SplitHint;
   autoCategorized?: boolean;
@@ -51,7 +55,9 @@ export interface CreateExpenseInput {
   source: ExpenseSource;
   location?: ExpenseLocation | null;
   paidBy?: string;
+  payers?: ExpensePayer[];
   shares?: ExpenseShare[];
+  split?: ExpenseSplit;
   splitHint?: SplitHint;
   autoCategorized?: boolean;
   rawText?: string;

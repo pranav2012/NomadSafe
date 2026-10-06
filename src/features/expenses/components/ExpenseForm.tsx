@@ -17,8 +17,8 @@ import { useLocalization } from "@/localization";
 import { CURRENCY_OPTIONS } from "@/utils/currency";
 import { EXPENSE_CATEGORIES, type ExpenseCategory } from "@/features/expenses/constants/categories";
 import { type Expense, type ExpenseLocation, type ExpenseSource, useExpensesStore } from "@/features/expenses/store/expensesStore";
-import { roundMoney, SELF_ID, type ExpenseShare } from "@/features/expenses/utils/split";
-import { initialSplitValue, SplitEditor, splitValueToShares, type SplitValue } from "@/features/expenses/components/SplitEditor";
+import { roundMoney, SELF_ID, type ExpenseShare, type ExpensePayer, type ExpenseSplit } from "@/features/expenses/utils/split";
+import { initialSplitValue, SplitEditor, splitValueToPayers, splitValueToShares, splitValueToStored, type SplitValue } from "@/features/expenses/components/SplitEditor";
 import { categorizeHeuristic } from "@/features/expenses/services/categorizer";
 import { getCurrentExpenseLocation } from "@/features/expenses/services/locationTagging";
 import { useGmailStatus } from "@/features/expenses/hooks/useGmailStatus";
@@ -33,7 +33,9 @@ export interface ExpenseDraftValues {
   category: ExpenseCategory;
   date: string;
   paidBy?: string;
+  payers?: ExpensePayer[];
   shares?: ExpenseShare[];
+  split?: ExpenseSplit;
   rawText?: string;
 }
 
@@ -165,7 +167,13 @@ function ExpenseFormBody({
   // Companions removed from the trip still show if an existing split names them.
   const everyone = useMemo(
     () => [
-      ...new Set([SELF_ID, ...companions, ...(prefill?.shares ?? []).map((share) => share.person), ...(prefill?.paidBy ? [prefill.paidBy] : [])]),
+      ...new Set([
+        SELF_ID,
+        ...companions,
+        ...(prefill?.shares ?? []).map((share) => share.person),
+        ...(prefill?.payers ?? []).map((payer) => payer.person),
+        ...(prefill?.paidBy ? [prefill.paidBy] : []),
+      ]),
     ],
     [companions, prefill],
   );
@@ -173,7 +181,7 @@ function ExpenseFormBody({
     const hint = editingExpense?.splitHint;
     // A Gmail split suggestion: prefill the proposed shares, or start with the known people selected.
     if (hint?.shares) return initialSplitValue(everyone, decimalSeparator, { paidBy: SELF_ID, shares: hint.shares, currency: editingExpense?.currency ?? tripCurrency });
-    if (hint) return { paidBy: SELF_ID, mode: "equal", people: hint.people, custom: {} };
+    if (hint) return { ...initialSplitValue(everyone, decimalSeparator), mode: "equal", people: hint.people };
     return initialSplitValue(everyone, decimalSeparator, prefill ? { ...prefill } : undefined);
   });
   const canSplit = everyone.length > 1;
@@ -217,6 +225,12 @@ function ExpenseFormBody({
       return;
     }
     const shares = resolution?.ok ? resolution.shares.filter((share) => share.amount > 0) : undefined;
+    const payerResolution = shares ? splitValueToPayers(split, numericAmount, currency, decimalSeparator) : null;
+    if (payerResolution && !payerResolution.ok) {
+      showAlert(t("split.invalidTitle"), t("split.invalid.payers-total"));
+      return;
+    }
+    const payers = payerResolution?.ok ? payerResolution.payers : undefined;
     const payload = {
       groupId,
       merchant: trimmedMerchant,
@@ -226,8 +240,10 @@ function ExpenseFormBody({
       note: note.trim() || undefined,
       date: date.toISOString(),
       location,
-      paidBy: shares ? split.paidBy : undefined,
+      paidBy: shares && !payers ? split.paidBy : undefined,
+      payers,
       shares,
+      split: shares ? splitValueToStored(split, decimalSeparator) : undefined,
       splitHint: undefined,
     };
     if (editingExpense) {

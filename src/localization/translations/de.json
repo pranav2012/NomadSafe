@@ -1254,7 +1254,8 @@
     "mode": {
       "none": "Nicht aufgeteilt",
       "equal": "Gleichmäßig",
-      "custom": "Individuell"
+      "custom": "Individuell",
+      "percent": "Prozent"
     },
     "eachPays_one": "{{amount}} für {{count}} Person",
     "eachPays_other": "je {{amount}} · {{count}} Personen",
@@ -1263,7 +1264,9 @@
     "invalid": {
       "no-people": "Wählen Sie mindestens eine Person zum Aufteilen.",
       "over-total": "Die Anteile ergeben mehr als den Gesamtbetrag.",
-      "under-total": "Die Anteile ergeben weniger als den Gesamtbetrag."
+      "under-total": "Die Anteile ergeben weniger als den Gesamtbetrag.",
+      "not-100": "Die Prozente müssen zusammen 100 % ergeben.",
+      "payers-total": "Was alle bezahlt haben, muss zusammen den Gesamtbetrag ergeben."
     },
     "notSplit": "Nicht aufgeteilt – eine persönliche Ausgabe",
     "badge_one": "Aufgeteilt",
@@ -1290,7 +1293,10 @@
     "suggestFor_other": "Auf {{count}} aufteilen?",
     "reviewBanner_one": "{{count}} Gmail-Ausgabe hat eine vorgeschlagene Aufteilung",
     "reviewBanner_other": "{{count}} Gmail-Ausgaben haben vorgeschlagene Aufteilungen",
-    "confirmAll": "Alle bestätigen"
+    "confirmAll": "Alle bestätigen",
+    "severalPayers": "Mehrere Personen",
+    "paidSoFar": "{{paid}} von {{total}} bezahlt",
+    "percentLeft": "Noch zu verteilen: {{percent}} %"
   },
   "voiceExpense": {
     "speakToAdd": "Ausgabe per Sprache hinzufügen",

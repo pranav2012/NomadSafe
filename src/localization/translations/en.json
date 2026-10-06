@@ -1254,7 +1254,8 @@
     "mode": {
       "none": "Not split",
       "equal": "Equally",
-      "custom": "Custom"
+      "custom": "Custom",
+      "percent": "Percent"
     },
     "eachPays_one": "{{amount}} for {{count}} person",
     "eachPays_other": "{{amount}} each · {{count}} people",
@@ -1263,7 +1264,9 @@
     "invalid": {
       "no-people": "Pick at least one person to split with.",
       "over-total": "The shares add up to more than the total.",
-      "under-total": "The shares add up to less than the total."
+      "under-total": "The shares add up to less than the total.",
+      "not-100": "The percentages need to add up to 100%.",
+      "payers-total": "What everyone paid needs to add up to the total."
     },
     "notSplit": "Not split — a personal spend",
     "badge_one": "Split",
@@ -1290,7 +1293,10 @@
     "suggestFor_other": "Split for {{count}}?",
     "reviewBanner_one": "{{count}} Gmail spend has a suggested split",
     "reviewBanner_other": "{{count}} Gmail spends have suggested splits",
-    "confirmAll": "Confirm all"
+    "confirmAll": "Confirm all",
+    "severalPayers": "Several people",
+    "paidSoFar": "Paid {{paid}} of {{total}}",
+    "percentLeft": "Left to assign: {{percent}}%"
   },
   "voiceExpense": {
     "speakToAdd": "Speak to add expense",

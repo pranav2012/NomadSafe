@@ -1254,7 +1254,8 @@
     "mode": {
       "none": "割り勘なし",
       "equal": "均等",
-      "custom": "カスタム"
+      "custom": "カスタム",
+      "percent": "割合"
     },
     "eachPays_one": "{{count}}人で{{amount}}",
     "eachPays_other": "1人あたり{{amount}} · {{count}}人",
@@ -1263,7 +1264,9 @@
     "invalid": {
       "no-people": "割り勘する人を1人以上選んでください。",
       "over-total": "分担額の合計が総額を超えています。",
-      "under-total": "分担額の合計が総額に足りません。"
+      "under-total": "分担額の合計が総額に足りません。",
+      "not-100": "割合の合計を100%にしてください。",
+      "payers-total": "各自の支払額の合計を総額と同じにしてください。"
     },
     "notSplit": "割り勘なし — 個人の支出",
     "badge_one": "割り勘",
@@ -1290,7 +1293,10 @@
     "suggestFor_other": "{{count}}人で割り勘？",
     "reviewBanner_one": "Gmailの支出{{count}}件に割り勘の提案があります",
     "reviewBanner_other": "Gmailの支出{{count}}件に割り勘の提案があります",
-    "confirmAll": "すべて確定"
+    "confirmAll": "すべて確定",
+    "severalPayers": "複数人",
+    "paidSoFar": "{{total}} のうち {{paid}} 支払い済み",
+    "percentLeft": "未割り当て：{{percent}}%"
   },
   "voiceExpense": {
     "speakToAdd": "話して支出を追加",

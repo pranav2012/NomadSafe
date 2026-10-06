@@ -1254,7 +1254,8 @@
     "mode": {
       "none": "Non divisa",
       "equal": "In parti uguali",
-      "custom": "Personalizzata"
+      "custom": "Personalizzata",
+      "percent": "Percentuale"
     },
     "eachPays_one": "{{amount}} per {{count}} persona",
     "eachPays_other": "{{amount}} a testa · {{count}} persone",
@@ -1263,7 +1264,9 @@
     "invalid": {
       "no-people": "Scegli almeno una persona con cui dividere.",
       "over-total": "Le quote superano il totale.",
-      "under-total": "Le quote sono inferiori al totale."
+      "under-total": "Le quote sono inferiori al totale.",
+      "not-100": "Le percentuali devono sommare al 100%.",
+      "payers-total": "Quanto pagato da tutti deve sommare al totale."
     },
     "notSplit": "Non divisa — spesa personale",
     "badge_one": "Divisa",
@@ -1290,7 +1293,10 @@
     "suggestFor_other": "Dividere tra {{count}}?",
     "reviewBanner_one": "{{count}} spesa Gmail ha una divisione suggerita",
     "reviewBanner_other": "{{count}} spese Gmail hanno divisioni suggerite",
-    "confirmAll": "Conferma tutto"
+    "confirmAll": "Conferma tutto",
+    "severalPayers": "Più persone",
+    "paidSoFar": "Pagati {{paid}} su {{total}}",
+    "percentLeft": "Da assegnare: {{percent}}%"
   },
   "voiceExpense": {
     "speakToAdd": "Aggiungi spesa a voce",

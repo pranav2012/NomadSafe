@@ -6,11 +6,28 @@ export interface ExpenseShare {
   amount: number;
 }
 
+/** Someone who paid part of an expense paid by several people. */
+export interface ExpensePayer {
+  person: string;
+  amount: number;
+}
+
+/** How the split was entered, so editing reopens it the same way; balances only use `shares`. */
+export type SplitMode = "equal" | "percent" | "custom";
+
+export interface ExpenseSplit {
+  mode: SplitMode;
+  /** Percent per person for `percent` splits; adds up to 100. */
+  percents?: Record<string, number>;
+}
+
 export interface SplitExpenseLike {
   amount: number;
   currency: string;
   date: string;
   paidBy?: string;
+  /** Set when several people paid; amounts add up to `amount`. Otherwise `paidBy` (or you) paid it all. */
+  payers?: ExpensePayer[];
   shares?: ExpenseShare[];
 }
 
@@ -111,6 +128,53 @@ export function isSplitExpense(expense: SplitExpenseLike): boolean {
   return Array.isArray(expense.shares) && expense.shares.length > 0;
 }
 
+/** Who paid how much: the several payers, else the single payer (unset means you) for the full amount. */
+export function payersOf(expense: Pick<SplitExpenseLike, "amount" | "paidBy" | "payers">): ExpensePayer[] {
+  if (expense.payers && expense.payers.length > 0) return expense.payers;
+  return [{ person: expense.paidBy ?? SELF_ID, amount: expense.amount }];
+}
+
+/** True when the payers' amounts add up to the total (in minor units). */
+export function payersMatchTotal(amount: number, currency: string, payers: ExpensePayer[]): boolean {
+  const digits = currencyFractionDigits(currency);
+  const paid = payers.reduce((sum, payer) => sum + toMinor(payer.amount, digits), 0);
+  return payers.length > 0 && paid === toMinor(amount, digits);
+}
+
+export type PercentResolution =
+  | { ok: true; shares: ExpenseShare[] }
+  | { ok: false; reason: "no-people" | "not-100" };
+
+/**
+ * Splits `amount` by percent in minor units. Rounding leftovers go to the largest remainders, so the
+ * shares always add up to the total. Percents must add up to 100.
+ */
+export function splitByPercent(amount: number, currency: string, percents: Record<string, number>): PercentResolution {
+  const entries = Object.entries(percents).filter(([, percent]) => Number.isFinite(percent) && percent > 0);
+  if (entries.length === 0) return { ok: false, reason: "no-people" };
+  const totalPercent = entries.reduce((sum, [, percent]) => sum + percent, 0);
+  if (Math.abs(totalPercent - 100) > 0.001) return { ok: false, reason: "not-100" };
+  const digits = currencyFractionDigits(currency);
+  const total = toMinor(amount, digits);
+  const raw = entries.map(([person, percent]) => ({ person, exact: (total * percent) / 100 }));
+  const floors = raw.map((entry) => ({ ...entry, minor: Math.floor(entry.exact) }));
+  let left = total - floors.reduce((sum, entry) => sum + entry.minor, 0);
+  const byRemainder = [...floors].sort((a, b) => b.exact - b.minor - (a.exact - a.minor));
+  for (const entry of byRemainder) {
+    if (left <= 0) break;
+    entry.minor += 1;
+    left -= 1;
+  }
+  return { ok: true, shares: floors.map((entry) => ({ person: entry.person, amount: fromMinor(entry.minor, digits) })) };
+}
+
+/** The split mode to show: the stored one, else equal when shares are equal, else custom. */
+export function splitModeOf(expense: { split?: ExpenseSplit; shares?: ExpenseShare[]; currency: string }): SplitMode | null {
+  if (!expense.shares || expense.shares.length === 0) return null;
+  if (expense.split) return expense.split.mode;
+  return isEqualSplit(expense.shares, expense.currency) ? "equal" : "custom";
+}
+
 /** What each person is owed (positive) or owes (negative), in the target currency. */
 export function computeNetBalances(
   expenses: SplitExpenseLike[],
@@ -128,7 +192,7 @@ export function computeNetBalances(
       unconverted += 1;
       continue;
     }
-    add(expense.paidBy ?? SELF_ID, expense.amount * rate);
+    for (const payer of payersOf(expense)) add(payer.person, payer.amount * rate);
     for (const share of expense.shares ?? []) add(share.person, -share.amount * rate);
   }
   for (const settlement of settlements) {
