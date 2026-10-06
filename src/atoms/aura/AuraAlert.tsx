@@ -22,13 +22,21 @@ interface PendingAlert {
   buttons: AuraAlertButton[];
 }
 
+export interface ToastAction {
+  label: string;
+  onPress: () => void;
+}
+
 interface Toast {
   id: number;
   title: string;
   message?: string;
+  action?: ToastAction;
 }
 
 const TOAST_MS = 2800;
+// Longer when there's a button, so there's time to reach it.
+const ACTION_TOAST_MS = 4500;
 
 
 const useAlertStore = create<{ queue: PendingAlert[]; toast: Toast | null }>(() => ({ queue: [], toast: null }));
@@ -46,15 +54,21 @@ export function showAlert(title: string, message?: string, buttons?: AuraAlertBu
   }));
 }
 
-/** A short confirmation that fades out on its own; never use it for errors or questions. */
-export function showToast(title: string, message?: string) {
+/** A short confirmation that fades out on its own, optionally with one follow-up action; never use it for errors or questions. */
+export function showToast(title: string, message?: string, action?: ToastAction) {
   if (toastTimer) clearTimeout(toastTimer);
-  useAlertStore.setState({ toast: { id: nextId++, title, message } });
+  useAlertStore.setState({ toast: { id: nextId++, title, message, action } });
   AccessibilityInfo.announceForAccessibility(message ? `${title}. ${message}` : title);
   toastTimer = setTimeout(() => {
     toastTimer = null;
     useAlertStore.setState({ toast: null });
-  }, TOAST_MS);
+  }, action ? ACTION_TOAST_MS : TOAST_MS);
+}
+
+function dismissToast() {
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = null;
+  useAlertStore.setState({ toast: null });
 }
 
 function dismiss(alert: PendingAlert, button?: AuraAlertButton) {
@@ -151,13 +165,14 @@ function ToastOverlay({ toast }: { toast: Toast | null }) {
   const insets = useSafeAreaInsets();
 
   const content = (
-    <View pointerEvents="none" style={[StyleSheet.absoluteFill, { paddingTop: insets.top + 8 }]}>
+    <View pointerEvents="box-none" style={[StyleSheet.absoluteFill, { paddingTop: insets.top + 8 }]}>
       {toast ? (
         <Animated.View
           key={toast.id}
           entering={FadeInUp.duration(220)}
           exiting={FadeOutUp.duration(180)}
           accessibilityLiveRegion="polite"
+          pointerEvents={toast.action ? "auto" : "none"}
           style={[styles.toast, { backgroundColor: c.card, borderColor: c.hairline }]}
         >
           <View style={styles.toastIcon}>
@@ -173,6 +188,18 @@ function ToastOverlay({ toast }: { toast: Toast | null }) {
               </Text>
             ) : null}
           </View>
+          {toast.action ? (
+            <AuraButton
+              size="md"
+              variant="secondary"
+              label={toast.action.label}
+              onPress={() => {
+                const { onPress } = toast.action!;
+                dismissToast();
+                onPress();
+              }}
+            />
+          ) : null}
         </Animated.View>
       ) : null}
     </View>

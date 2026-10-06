@@ -91,8 +91,10 @@
       "save": "저장",
       "mustDos_one": "{{place}}의 필수 코스 {{count}}곳",
       "mustDos_other": "{{place}}의 필수 코스 {{count}}곳",
-      "savedTitle": "위시리스트에 저장했어요",
-      "savedBody": "{{name}}이(가) 전체 일정에 있어요. 날짜를 정해 보세요"
+      "ideas_one": "저장한 아이디어 {{count}}개",
+      "ideas_other": "저장한 아이디어 {{count}}개",
+      "mustDosRoute_one": "경로의 필수 코스 {{count}}곳",
+      "mustDosRoute_other": "경로의 필수 코스 {{count}}곳"
     },
     "everyday": {
       "owed_one": "{{count}}개 그룹에서 {{amount}} 받을 돈",
@@ -1228,15 +1230,14 @@
       "togetherAgain": "다시 함께",
       "splitUp_one": "{{from}}–{{to}} 따로 · {{names}}의 일정 {{count}}개",
       "splitUp_other": "{{from}}–{{to}} 따로 · {{names}}의 일정 {{count}}개",
-      "freeBodyWishlist": "계획된 일정이 없어요. 위시리스트에서 골라 보세요:",
       "addToDay": "추가"
     },
     "anytime": "언제든",
-    "wishlistTitle": "위시리스트",
     "mustDo": {
       "title": "{{place}} 필수 코스",
       "dismiss": "{{name}} 숨기기"
-    }
+    },
+    "plannedTitle": "계획됨"
   },
   "places": {
     "nearYou": "내 주변",
@@ -2056,5 +2057,30 @@
     "deleteInTrips": "여행에서 삭제",
     "sharedNote": "보관하면 나에게만 숨겨지고 다른 사람에게는 그대로예요.",
     "localNote": "이건 내 휴대폰에 있어요(백업이 켜져 있으면 백업에도)."
+  },
+  "ideas": {
+    "sheetTitle": "저장한 아이디어",
+    "savedTitle": "{{trip}} 아이디어에 저장했어요",
+    "view": "보기",
+    "all": "전체",
+    "noPlace": "장소 없음",
+    "yourIdeas": "내 아이디어 · {{count}}",
+    "popular": "인기 · {{count}}",
+    "planFor": "{{title}} 날짜 정하기",
+    "dayNumber": "{{day}}일차",
+    "plannedOn": "{{title}}을(를) {{day}}에 추가했어요",
+    "remove": "아이디어 삭제",
+    "removed": "{{title}}을(를) 삭제했어요",
+    "savedNotice": "{{title}}을(를) 저장했어요",
+    "cardHint": "날짜를 정하거나 삭제하세요",
+    "empty": "아직 저장한 것이 없어요. 인기 탭에서 필수 코스를 저장하거나 일정에서 아이디어를 추가하세요.",
+    "seePopular": "인기 코스 보기",
+    "inCity": "{{city}}의 내 아이디어",
+    "yourIdeasTitle": "내 아이디어",
+    "seeAll_one": "저장한 아이디어 {{count}}개 보기",
+    "seeAll_other": "저장한 아이디어 {{count}}개 모두 보기",
+    "savedBy": "{{name}}님이 저장",
+    "savedByYou": "내가 저장",
+    "popularHere": "이 근처 인기 코스"
   }
 }

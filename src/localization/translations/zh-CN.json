@@ -91,8 +91,10 @@
       "save": "保存",
       "mustDos_one": "{{place}}必去 {{count}} 处",
       "mustDos_other": "{{place}}必去 {{count}} 处",
-      "savedTitle": "已存入心愿单",
-      "savedBody": "{{name}} 已在完整行程中，可安排到某一天"
+      "ideas_one": "{{count}} 个已存想法",
+      "ideas_other": "{{count}} 个已存想法",
+      "mustDosRoute_one": "沿途必去 {{count}} 处",
+      "mustDosRoute_other": "沿途必去 {{count}} 处"
     },
     "everyday": {
       "owed_one": "在 {{count}} 个群组中应收 {{amount}}",
@@ -1228,15 +1230,14 @@
       "togetherAgain": "再次会合",
       "splitUp_one": "{{from}}–{{to}} 分头行动 · {{names}} 的 {{count}} 项安排",
       "splitUp_other": "{{from}}–{{to}} 分头行动 · {{names}} 的 {{count}} 项安排",
-      "freeBodyWishlist": "暂无安排。从心愿单里挑一个吧：",
       "addToDay": "添加"
     },
     "anytime": "随时",
-    "wishlistTitle": "心愿单",
     "mustDo": {
       "title": "{{place}}必去",
       "dismiss": "隐藏 {{name}}"
-    }
+    },
+    "plannedTitle": "已安排"
   },
   "places": {
     "nearYou": "你附近",
@@ -2056,5 +2057,30 @@
     "deleteInTrips": "在旅行中删除",
     "sharedNote": "归档只对你隐藏，其他人仍可见。",
     "localNote": "这些数据在你的手机上（开启备份时也在备份中）。"
+  },
+  "ideas": {
+    "sheetTitle": "已存的想法",
+    "savedTitle": "已存入{{trip}}的想法",
+    "view": "查看",
+    "all": "全部",
+    "noPlace": "无地点",
+    "yourIdeas": "我的想法 · {{count}}",
+    "popular": "热门 · {{count}}",
+    "planFor": "把{{title}}安排在…",
+    "dayNumber": "第 {{day}} 天",
+    "plannedOn": "已把{{title}}加到{{day}}",
+    "remove": "移除想法",
+    "removed": "已移除{{title}}",
+    "savedNotice": "已保存{{title}}",
+    "cardHint": "安排到某一天或移除",
+    "empty": "还没有保存任何内容。可在“热门”里保存必去景点，或在行程中添加想法。",
+    "seePopular": "查看热门推荐",
+    "inCity": "我在{{city}}的想法",
+    "yourIdeasTitle": "我的想法",
+    "seeAll_one": "查看 {{count}} 个已存想法",
+    "seeAll_other": "查看全部 {{count}} 个已存想法",
+    "savedBy": "{{name}} 保存",
+    "savedByYou": "你保存的",
+    "popularHere": "附近热门"
   }
 }

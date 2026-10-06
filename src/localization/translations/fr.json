@@ -91,8 +91,10 @@
       "save": "Enregistrer",
       "mustDos_one": "{{count}} incontournable à {{place}}",
       "mustDos_other": "{{count}} incontournables à {{place}}",
-      "savedTitle": "Ajouté à tes envies",
-      "savedBody": "{{name}} est dans ton itinéraire complet, prêt à être placé sur un jour"
+      "ideas_one": "{{count}} idée enregistrée",
+      "ideas_other": "{{count}} idées enregistrées",
+      "mustDosRoute_one": "{{count}} incontournable sur ton trajet",
+      "mustDosRoute_other": "{{count}} incontournables sur ton trajet"
     },
     "everyday": {
       "owed_one": "On te doit {{amount}} dans {{count}} groupe",
@@ -1228,15 +1230,14 @@
       "togetherAgain": "De nouveau ensemble",
       "splitUp_one": "Séparés {{from}}–{{to}} · {{count}} programme pour {{names}}",
       "splitUp_other": "Séparés {{from}}–{{to}} · {{count}} programmes pour {{names}}",
-      "freeBodyWishlist": "Rien de prévu. Choisissez quelque chose dans votre liste d'envies :",
       "addToDay": "Ajouter"
     },
     "anytime": "N'importe quand",
-    "wishlistTitle": "Liste d'envies",
     "mustDo": {
       "title": "Incontournables à {{place}}",
       "dismiss": "Masquer {{name}}"
-    }
+    },
+    "plannedTitle": "Prévu"
   },
   "places": {
     "nearYou": "Près de vous",
@@ -2056,5 +2057,30 @@
     "deleteInTrips": "Supprimer dans Voyages",
     "sharedNote": "Archiver le masque seulement pour toi ; il reste pour les autres.",
     "localNote": "Ceci est sur ton téléphone (et dans ta sauvegarde, si elle est active)."
+  },
+  "ideas": {
+    "sheetTitle": "Idées enregistrées",
+    "savedTitle": "Enregistré dans les idées {{trip}}",
+    "view": "Voir",
+    "all": "Toutes",
+    "noPlace": "Sans lieu",
+    "yourIdeas": "Tes idées · {{count}}",
+    "popular": "Populaires · {{count}}",
+    "planFor": "Prévoir {{title}} pour…",
+    "dayNumber": "Jour {{day}}",
+    "plannedOn": "{{title}} ajouté au {{day}}",
+    "remove": "Retirer l'idée",
+    "removed": "{{title}} retiré",
+    "savedNotice": "{{title}} enregistré",
+    "cardHint": "Le prévoir pour un jour ou le retirer",
+    "empty": "Rien d'enregistré pour l'instant. Enregistre des incontournables depuis Populaires, ou ajoute une idée depuis l'itinéraire.",
+    "seePopular": "Voir les populaires",
+    "inCity": "Tes idées à {{city}}",
+    "yourIdeasTitle": "Tes idées",
+    "seeAll_one": "Voir {{count}} idée enregistrée",
+    "seeAll_other": "Voir les {{count}} idées enregistrées",
+    "savedBy": "Enregistré par {{name}}",
+    "savedByYou": "Enregistré par toi",
+    "popularHere": "Populaire ici"
   }
 }

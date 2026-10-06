@@ -91,8 +91,10 @@
       "save": "Save",
       "mustDos_one": "{{count}} must-do in {{place}}",
       "mustDos_other": "{{count}} must-dos in {{place}}",
-      "savedTitle": "Saved to your wishlist",
-      "savedBody": "{{name}} is in your full itinerary, ready to plan for a day"
+      "ideas_one": "{{count}} saved idea",
+      "ideas_other": "{{count}} saved ideas",
+      "mustDosRoute_one": "{{count}} must-do on your route",
+      "mustDosRoute_other": "{{count}} must-dos on your route"
     },
     "everyday": {
       "owed_one": "You're owed {{amount}} in {{count}} group",
@@ -350,15 +352,14 @@
       "togetherAgain": "Together again",
       "splitUp_one": "Split up {{from}}–{{to}} · {{count}} plan for {{names}}",
       "splitUp_other": "Split up {{from}}–{{to}} · {{count}} plans for {{names}}",
-      "freeBodyWishlist": "Nothing planned. Pick something from your wishlist:",
       "addToDay": "Add"
     },
     "anytime": "Anytime",
-    "wishlistTitle": "Wishlist",
     "mustDo": {
       "title": "Must-dos in {{place}}",
       "dismiss": "Hide {{name}}"
-    }
+    },
+    "plannedTitle": "Planned"
   },
   "places": {
     "nearYou": "Near you",
@@ -2056,5 +2057,30 @@
     "deleteInTrips": "Delete from Trips",
     "sharedNote": "Archiving only hides it for you; it stays for everyone else.",
     "localNote": "This lives on your phone (and your backup, if it's on)."
+  },
+  "ideas": {
+    "sheetTitle": "Saved ideas",
+    "savedTitle": "Saved to {{trip}} ideas",
+    "view": "View",
+    "all": "All",
+    "noPlace": "No place",
+    "yourIdeas": "Your ideas · {{count}}",
+    "popular": "Popular · {{count}}",
+    "planFor": "Plan {{title}} for…",
+    "dayNumber": "Day {{day}}",
+    "plannedOn": "{{title}} added to {{day}}",
+    "remove": "Remove idea",
+    "removed": "Removed {{title}}",
+    "savedNotice": "Saved {{title}}",
+    "cardHint": "Plan it for a day or remove it",
+    "empty": "Nothing saved yet. Save must-dos from Popular, or add an idea from the itinerary.",
+    "seePopular": "See popular picks",
+    "inCity": "Your ideas in {{city}}",
+    "yourIdeasTitle": "Your ideas",
+    "seeAll_one": "See {{count}} saved idea",
+    "seeAll_other": "See all {{count}} saved ideas",
+    "savedBy": "Saved by {{name}}",
+    "savedByYou": "Saved by you",
+    "popularHere": "Popular here"
   }
 }

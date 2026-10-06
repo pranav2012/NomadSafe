@@ -7,6 +7,13 @@ import { normalizeWallClock } from "@/features/itinerary/utils/wallClock";
 
 export type EventSource = "manual" | "email";
 
+/** Where an idea is, so it can be offered on the day you're near it. */
+export interface EventPlace {
+  name: string;
+  latitude: number;
+  longitude: number;
+}
+
 export interface TripEvent {
   id: string;
   tripId: string | null;
@@ -35,6 +42,9 @@ export interface TripEvent {
   sourceIds?: string[];
   /** Confirmation number from the booking email; cancellations and updates match on it. */
   bookingRef?: string;
+  /** Saved ideas: who saved it (SELF_ID or a companion name; a member id on the server). */
+  savedBy?: string;
+  place?: EventPlace;
   /** Set when the user edits the event, so Gmail re-imports leave it alone. */
   editedAt?: string;
   createdAt: string;
@@ -56,6 +66,8 @@ export interface CreateEventInput {
   externalId?: string;
   sourceIds?: string[];
   bookingRef?: string;
+  savedBy?: string;
+  place?: EventPlace;
 }
 
 export interface EmailEventInput extends CreateEventInput {

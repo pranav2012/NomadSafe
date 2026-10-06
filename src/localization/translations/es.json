@@ -91,8 +91,10 @@
       "save": "Guardar",
       "mustDos_one": "{{count}} imprescindible en {{place}}",
       "mustDos_other": "{{count}} imprescindibles en {{place}}",
-      "savedTitle": "Guardado en tu lista de deseos",
-      "savedBody": "{{name}} está en tu itinerario completo, listo para asignarle un día"
+      "ideas_one": "{{count}} idea guardada",
+      "ideas_other": "{{count}} ideas guardadas",
+      "mustDosRoute_one": "{{count}} imprescindible en tu ruta",
+      "mustDosRoute_other": "{{count}} imprescindibles en tu ruta"
     },
     "everyday": {
       "owed_one": "Te deben {{amount}} en {{count}} grupo",
@@ -1228,15 +1230,14 @@
       "togetherAgain": "Juntos de nuevo",
       "splitUp_one": "Separados {{from}}–{{to}} · {{count}} plan para {{names}}",
       "splitUp_other": "Separados {{from}}–{{to}} · {{count}} planes para {{names}}",
-      "freeBodyWishlist": "No hay nada planeado. Elige algo de tu lista de deseos:",
       "addToDay": "Añadir"
     },
     "anytime": "En cualquier momento",
-    "wishlistTitle": "Lista de deseos",
     "mustDo": {
       "title": "Imprescindibles en {{place}}",
       "dismiss": "Ocultar {{name}}"
-    }
+    },
+    "plannedTitle": "Planeado"
   },
   "places": {
     "nearYou": "Cerca de ti",
@@ -2056,5 +2057,30 @@
     "deleteInTrips": "Eliminar en Viajes",
     "sharedNote": "Archivar solo lo oculta para ti; los demás lo siguen viendo.",
     "localNote": "Esto vive en tu teléfono (y en tu copia, si está activada)."
+  },
+  "ideas": {
+    "sheetTitle": "Ideas guardadas",
+    "savedTitle": "Guardado en ideas de {{trip}}",
+    "view": "Ver",
+    "all": "Todas",
+    "noPlace": "Sin lugar",
+    "yourIdeas": "Tus ideas · {{count}}",
+    "popular": "Populares · {{count}}",
+    "planFor": "Planear {{title}} para…",
+    "dayNumber": "Día {{day}}",
+    "plannedOn": "{{title}} añadido al {{day}}",
+    "remove": "Quitar idea",
+    "removed": "{{title}} quitado",
+    "savedNotice": "{{title}} guardado",
+    "cardHint": "Planéalo para un día o quítalo",
+    "empty": "Aún no has guardado nada. Guarda imprescindibles desde Populares o añade una idea desde el itinerario.",
+    "seePopular": "Ver populares",
+    "inCity": "Tus ideas en {{city}}",
+    "yourIdeasTitle": "Tus ideas",
+    "seeAll_one": "Ver {{count}} idea guardada",
+    "seeAll_other": "Ver las {{count}} ideas guardadas",
+    "savedBy": "Guardado por {{name}}",
+    "savedByYou": "Guardado por ti",
+    "popularHere": "Popular aquí"
   }
 }

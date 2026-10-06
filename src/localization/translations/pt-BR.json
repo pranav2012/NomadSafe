@@ -91,8 +91,10 @@
       "save": "Salvar",
       "mustDos_one": "{{count}} imperdível em {{place}}",
       "mustDos_other": "{{count}} imperdíveis em {{place}}",
-      "savedTitle": "Salvo na sua lista de desejos",
-      "savedBody": "{{name}} está no seu roteiro completo, pronto para um dia"
+      "ideas_one": "{{count}} ideia salva",
+      "ideas_other": "{{count}} ideias salvas",
+      "mustDosRoute_one": "{{count}} imperdível no seu roteiro",
+      "mustDosRoute_other": "{{count}} imperdíveis no seu roteiro"
     },
     "everyday": {
       "owed_one": "Te devem {{amount}} em {{count}} grupo",
@@ -1228,15 +1230,14 @@
       "togetherAgain": "Juntos de novo",
       "splitUp_one": "Separados {{from}}–{{to}} · {{count}} plano para {{names}}",
       "splitUp_other": "Separados {{from}}–{{to}} · {{count}} planos para {{names}}",
-      "freeBodyWishlist": "Nada planejado. Escolha algo da sua lista de desejos:",
       "addToDay": "Adicionar"
     },
     "anytime": "A qualquer hora",
-    "wishlistTitle": "Lista de desejos",
     "mustDo": {
       "title": "Imperdíveis em {{place}}",
       "dismiss": "Ocultar {{name}}"
-    }
+    },
+    "plannedTitle": "Planejado"
   },
   "places": {
     "nearYou": "Perto de você",
@@ -2056,5 +2057,30 @@
     "deleteInTrips": "Excluir em Viagens",
     "sharedNote": "Arquivar só esconde para você; os outros continuam vendo.",
     "localNote": "Isto fica no seu celular (e no seu backup, se estiver ativo)."
+  },
+  "ideas": {
+    "sheetTitle": "Ideias salvas",
+    "savedTitle": "Salvo nas ideias de {{trip}}",
+    "view": "Ver",
+    "all": "Todas",
+    "noPlace": "Sem lugar",
+    "yourIdeas": "Suas ideias · {{count}}",
+    "popular": "Populares · {{count}}",
+    "planFor": "Planejar {{title}} para…",
+    "dayNumber": "Dia {{day}}",
+    "plannedOn": "{{title}} adicionado a {{day}}",
+    "remove": "Remover ideia",
+    "removed": "{{title}} removido",
+    "savedNotice": "{{title}} salvo",
+    "cardHint": "Planeje para um dia ou remova",
+    "empty": "Nada salvo ainda. Salve imperdíveis em Populares ou adicione uma ideia pelo roteiro.",
+    "seePopular": "Ver populares",
+    "inCity": "Suas ideias em {{city}}",
+    "yourIdeasTitle": "Suas ideias",
+    "seeAll_one": "Ver {{count}} ideia salva",
+    "seeAll_other": "Ver todas as {{count}} ideias salvas",
+    "savedBy": "Salvo por {{name}}",
+    "savedByYou": "Salvo por você",
+    "popularHere": "Popular aqui"
   }
 }

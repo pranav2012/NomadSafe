@@ -91,8 +91,10 @@
       "save": "Salva",
       "mustDos_one": "{{count}} da non perdere a {{place}}",
       "mustDos_other": "{{count}} da non perdere a {{place}}",
-      "savedTitle": "Salvato nella tua lista dei desideri",
-      "savedBody": "{{name}} è nel tuo itinerario completo, pronto per un giorno"
+      "ideas_one": "{{count}} idea salvata",
+      "ideas_other": "{{count}} idee salvate",
+      "mustDosRoute_one": "{{count}} da non perdere sul percorso",
+      "mustDosRoute_other": "{{count}} da non perdere sul percorso"
     },
     "everyday": {
       "owed_one": "Ti devono {{amount}} in {{count}} gruppo",
@@ -1228,15 +1230,14 @@
       "togetherAgain": "Di nuovo insieme",
       "splitUp_one": "Separati {{from}}–{{to}} · {{count}} piano per {{names}}",
       "splitUp_other": "Separati {{from}}–{{to}} · {{count}} piani per {{names}}",
-      "freeBodyWishlist": "Niente in programma. Scegli qualcosa dalla tua lista dei desideri:",
       "addToDay": "Aggiungi"
     },
     "anytime": "In qualsiasi momento",
-    "wishlistTitle": "Lista dei desideri",
     "mustDo": {
       "title": "Da non perdere a {{place}}",
       "dismiss": "Nascondi {{name}}"
-    }
+    },
+    "plannedTitle": "In programma"
   },
   "places": {
     "nearYou": "Vicino a te",
@@ -2056,5 +2057,30 @@
     "deleteInTrips": "Elimina in Viaggi",
     "sharedNote": "Archiviare lo nasconde solo a te; per gli altri resta.",
     "localNote": "Questo è sul tuo telefono (e nel backup, se attivo)."
+  },
+  "ideas": {
+    "sheetTitle": "Idee salvate",
+    "savedTitle": "Salvato nelle idee di {{trip}}",
+    "view": "Vedi",
+    "all": "Tutte",
+    "noPlace": "Senza luogo",
+    "yourIdeas": "Le tue idee · {{count}}",
+    "popular": "Popolari · {{count}}",
+    "planFor": "Programma {{title}} per…",
+    "dayNumber": "Giorno {{day}}",
+    "plannedOn": "{{title}} aggiunto a {{day}}",
+    "remove": "Rimuovi idea",
+    "removed": "{{title}} rimosso",
+    "savedNotice": "{{title}} salvato",
+    "cardHint": "Programmalo per un giorno o rimuovilo",
+    "empty": "Ancora niente di salvato. Salva i luoghi da non perdere da Popolari o aggiungi un'idea dall'itinerario.",
+    "seePopular": "Vedi i più popolari",
+    "inCity": "Le tue idee a {{city}}",
+    "yourIdeasTitle": "Le tue idee",
+    "seeAll_one": "Vedi {{count}} idea salvata",
+    "seeAll_other": "Vedi tutte le {{count}} idee salvate",
+    "savedBy": "Salvato da {{name}}",
+    "savedByYou": "Salvato da te",
+    "popularHere": "Popolari qui"
   }
 }

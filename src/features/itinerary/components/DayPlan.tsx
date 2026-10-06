@@ -7,20 +7,16 @@ import { track } from "@/modules/analytics";
 import { SELF_ID } from "@/features/expenses/utils/split";
 import { TRANSIT_MODES, getEventTypeMeta } from "@/features/itinerary/constants/eventTypes";
 import type { TripEvent } from "@/features/itinerary/store/eventsStore";
-import { anytimeOnDay, entriesOnDay, livePlan, tonightStay, wishlistOf } from "@/features/itinerary/utils/dayPlan";
+import { anytimeOnDay, entriesOnDay, livePlan, tonightStay } from "@/features/itinerary/utils/dayPlan";
 import { describeEntry, formatters } from "@/features/itinerary/utils/entryText";
 import { localizeEventTitle } from "@/features/itinerary/utils/eventText";
 import { isForEveryone, isForMe } from "@/features/itinerary/utils/people";
 import type { TimelineEntry } from "@/features/itinerary/utils/timeline";
 import { transitModeOf } from "@/features/itinerary/utils/transit";
-import type { MustDo } from "@/features/itinerary/utils/mustDos";
-import { MustDoRow } from "@/features/itinerary/components/MustDoRow";
 
 type Entry = TimelineEntry<TripEvent>;
 type Row = { kind: "mine"; entry: Entry; together: boolean } | { kind: "theirs"; entries: Entry[] };
 
-const WISHLIST_PICKS = 3;
-const MUST_DO_PICKS = 3;
 
 function mapsSearchUrl(place: string, city: string | undefined) {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(city ? `${place}, ${city}` : place)}`;
@@ -48,20 +44,16 @@ function toRows(entries: Entry[]): Row[] {
 
 /**
  * One day of the trip: "anytime" to-dos, then the timed plan with a now marker, Maps links and done
- * ticks; other people's plans fold away, tonight's stay closes it, and a free day offers wishlist picks.
+ * ticks; other people's plans fold away and tonight's stay closes it. Ideas and must-dos sit below it (DayIdeas).
  */
 export function DayPlan({
   events,
   day,
   now,
   city,
-  mustDos,
   onPress,
   onAdd,
   onToggleDone,
-  onSchedule,
-  onAddMustDo,
-  onDismissMustDo,
   ticketEventIds,
   onOpenTickets,
   onAskForTicket,
@@ -70,19 +62,14 @@ export function DayPlan({
   day: Date;
   now: Date;
   city?: string;
-  /** Suggestions for this day's place, offered when it's free. */
-  mustDos: MustDo[];
-  onAddMustDo: (item: MustDo) => void;
   /** Items with tickets saved on this phone get a ticket button. */
   ticketEventIds: Set<string>;
   onOpenTickets: (eventId: string) => void;
   /** Shared trips: items only someone else holds a ticket for offer to ask them for it. */
   onAskForTicket?: (event: TripEvent) => void;
-  onDismissMustDo: (item: MustDo) => void;
   onPress: (event: TripEvent) => void;
   onAdd: () => void;
   onToggleDone: (event: TripEvent) => void;
-  onSchedule: (event: TripEvent, day: Date) => void;
 }) {
   const { c, f } = useAura();
   const { t, locale, hour12 } = useLocalization();
@@ -233,7 +220,6 @@ export function DayPlan({
   };
 
   if (anytime.length === 0 && timed.length === 0 && !tonight) {
-    const picks = wishlistOf(events).filter((event) => !event.doneAt).slice(0, WISHLIST_PICKS);
     return (
       <View style={[styles.card, styles.free, { backgroundColor: c.surface, borderColor: c.hairline }]}>
         <View style={styles.freeHead}>
@@ -243,27 +229,10 @@ export function DayPlan({
           <View style={styles.text}>
             <Text style={[styles.title, { color: c.text, fontFamily: f.semibold }]}>{t("home.live.freeDay")}</Text>
             <Text style={[styles.sub, { color: c.textMuted, fontFamily: f.regular }]}>
-              {picks.length > 0 ? t("itinerary.day.freeBodyWishlist") : t("itinerary.day.freeBody")}
+              {t("itinerary.day.freeBody")}
             </Text>
           </View>
         </View>
-        {picks.map((event) => (
-          <View key={event.id} style={styles.pick}>
-            <Icon name={iconOf(event)} size={15} color={auraEventColors[event.type]} />
-            <Text numberOfLines={1} style={[styles.pickTitle, { color: c.text, fontFamily: f.medium }]}>
-              {localizeEventTitle(event.title, t)}
-            </Text>
-            <AuraButton size="md" variant="secondary" label={t("itinerary.day.addToDay")} onPress={() => onSchedule(event, day)} />
-          </View>
-        ))}
-        {mustDos.length > 0 ? (
-          <>
-            <Text style={[styles.label, { color: c.textSoft, fontFamily: f.semibold }]}>{t("itinerary.mustDo.title", { place: city ?? "" })}</Text>
-            {mustDos.slice(0, MUST_DO_PICKS).map((item) => (
-              <MustDoRow key={item.key} item={item} actionLabel={t("itinerary.day.addToDay")} onAdd={() => onAddMustDo(item)} onDismiss={() => onDismissMustDo(item)} />
-            ))}
-          </>
-        ) : null}
         <AuraButton size="md" variant="secondary" icon="plus" label={t("itinerary.day.addStop")} onPress={onAdd} style={styles.freeAction} />
       </View>
     );
@@ -309,8 +278,6 @@ const styles = StyleSheet.create({
   free: { padding: 16, gap: 14 },
   freeHead: { flexDirection: "row", alignItems: "center", gap: 12 },
   freeAction: { alignSelf: "flex-start" },
-  pick: { flexDirection: "row", alignItems: "center", gap: 10 },
-  pickTitle: { flex: 1, fontSize: 14.5 },
   row: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, paddingVertical: 12 },
   time: { width: 54, fontSize: 12.5, fontVariant: ["tabular-nums"] },
   icon: { width: 36, height: 36, borderRadius: 11, alignItems: "center", justifyContent: "center" },

@@ -91,8 +91,10 @@
       "save": "حفظ",
       "mustDos_one": "{{count}} مكان لا يُفوَّت في {{place}}",
       "mustDos_other": "{{count}} أماكن لا تُفوَّت في {{place}}",
-      "savedTitle": "حُفظ في قائمة رغباتك",
-      "savedBody": "{{name}} في خط رحلتك الكامل، جاهز لتحديد يوم له"
+      "ideas_one": "{{count}} فكرة محفوظة",
+      "ideas_other": "{{count}} أفكار محفوظة",
+      "mustDosRoute_one": "{{count}} مكان لا يُفوَّت على طريقك",
+      "mustDosRoute_other": "{{count}} أماكن لا تُفوَّت على طريقك"
     },
     "everyday": {
       "owed_one": "لك {{amount}} في مجموعة واحدة",
@@ -1228,15 +1230,14 @@
       "togetherAgain": "معًا من جديد",
       "splitUp_one": "افتراق {{from}}–{{to}} · خطة واحدة لـ {{names}}",
       "splitUp_other": "افتراق {{from}}–{{to}} · {{count}} خطط لـ {{names}}",
-      "freeBodyWishlist": "لا شيء مخطط. اختر شيئًا من قائمة أمنياتك:",
       "addToDay": "إضافة"
     },
     "anytime": "في أي وقت",
-    "wishlistTitle": "قائمة الأمنيات",
     "mustDo": {
       "title": "لا تفوّت في {{place}}",
       "dismiss": "إخفاء {{name}}"
-    }
+    },
+    "plannedTitle": "مُخطَّط"
   },
   "places": {
     "nearYou": "بالقرب منك",
@@ -2056,5 +2057,30 @@
     "deleteInTrips": "احذف من الرحلات",
     "sharedNote": "الأرشفة تخفيه عنك فقط؛ ويبقى لدى الآخرين.",
     "localNote": "هذا موجود على هاتفك (وفي نسختك الاحتياطية إن كانت مفعّلة)."
+  },
+  "ideas": {
+    "sheetTitle": "الأفكار المحفوظة",
+    "savedTitle": "حُفظت في أفكار {{trip}}",
+    "view": "عرض",
+    "all": "الكل",
+    "noPlace": "بلا مكان",
+    "yourIdeas": "أفكارك · {{count}}",
+    "popular": "الشائع · {{count}}",
+    "planFor": "خطّط لـ{{title}} في…",
+    "dayNumber": "اليوم {{day}}",
+    "plannedOn": "أُضيف {{title}} إلى {{day}}",
+    "remove": "إزالة الفكرة",
+    "removed": "أُزيل {{title}}",
+    "savedNotice": "حُفظ {{title}}",
+    "cardHint": "خطّط لها في يوم أو أزلها",
+    "empty": "لم تحفظ شيئًا بعد. احفظ أماكن لا تُفوَّت من «الشائع» أو أضف فكرة من خط الرحلة.",
+    "seePopular": "عرض الأماكن الشائعة",
+    "inCity": "أفكارك في {{city}}",
+    "yourIdeasTitle": "أفكارك",
+    "seeAll_one": "عرض {{count}} فكرة محفوظة",
+    "seeAll_other": "عرض كل الأفكار المحفوظة ({{count}})",
+    "savedBy": "حفظها {{name}}",
+    "savedByYou": "حفظتها أنت",
+    "popularHere": "شائع هنا"
   }
 }

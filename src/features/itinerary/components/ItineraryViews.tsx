@@ -63,6 +63,36 @@ export function UpNextList({ events, onPress }: { events: TripEvent[]; onPress: 
   );
 }
 
+/** Items planned for a day without a time (e.g. ideas picked for a day), in day order; tap to edit. */
+export function PlannedList({ events, onPress }: { events: TripEvent[]; onPress: (event: TripEvent) => void }) {
+  const { c, f } = useAura();
+  const { t, locale, hour12 } = useLocalization();
+  const format = formatters(locale, hour12);
+
+  return (
+    <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.hairline }]}>
+      {events.map((event, index) => (
+        <PressableScale
+          key={event.id}
+          onPress={() => onPress(event)}
+          pressedScale={0.98}
+          accessibilityRole="button"
+          style={[styles.row, index > 0 ? { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.hairline } : null]}
+        >
+          <TypeIcon event={event} />
+          <Text numberOfLines={1} style={[styles.title, styles.text, { color: c.text, fontFamily: f.semibold }]}>
+            {localizeEventTitle(event.title, t)}
+          </Text>
+          <View style={styles.when}>
+            <Text style={[styles.whenDay, { color: c.text, fontFamily: f.medium }]}>{format.weekdayDay.format(new Date(event.startAt))}</Text>
+            <Text style={[styles.whenTime, { color: c.textMuted, fontFamily: f.regular }]}>{t("itinerary.anytime")}</Text>
+          </View>
+        </PressableScale>
+      ))}
+    </View>
+  );
+}
+
 /** The full itinerary: wishlist ideas first, then each day, with stays shown once at check-in and check-out. */
 export function TimelineList({
   events,
@@ -84,10 +114,10 @@ export function TimelineList({
     <ScrollView contentContainerStyle={styles.timeline} showsVerticalScrollIndicator={false}>
       {wishlist.length > 0 ? (
         <View style={styles.day}>
-          <Text style={[styles.dayHeader, { color: c.textSoft, fontFamily: f.semibold }]}>{t("itinerary.wishlistTitle")}</Text>
+          <Text style={[styles.dayHeader, { color: c.textSoft, fontFamily: f.semibold }]}>{t("ideas.sheetTitle")}</Text>
           {wishlist.map((event) => (
-            <PressableScale key={event.id} onPress={() => onPress(event)} pressedScale={0.98} accessibilityRole="button" style={styles.entry}>
-              <View style={styles.entryTime}>
+            <PressableScale key={event.id} onPress={() => onPress(event)} pressedScale={0.98} accessibilityRole="button" style={[styles.entry, styles.idea, { borderColor: c.textMuted }]}>
+              <View style={styles.ideaMark}>
                 <Icon name="bookmark" size={14} color={c.textMuted} />
               </View>
               <TypeIcon event={event} />
@@ -173,6 +203,8 @@ const styles = StyleSheet.create({
   dayHeader: { fontSize: 13.5, marginBottom: 2 },
   entry: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 6 },
   entryTime: { width: 58, fontSize: 12.5, fontVariant: ["tabular-nums"] },
+  idea: { borderWidth: 1.2, borderStyle: "dashed", borderRadius: 14, paddingHorizontal: 10, paddingVertical: 9 },
+  ideaMark: { width: 22, alignItems: "center" },
   staying: { flexDirection: "row", alignItems: "center", gap: 8, paddingLeft: 70 },
   stayingText: { flex: 1, fontSize: 12.5 },
 });

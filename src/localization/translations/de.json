@@ -91,8 +91,10 @@
       "save": "Merken",
       "mustDos_one": "{{count}} Highlight in {{place}}",
       "mustDos_other": "{{count}} Highlights in {{place}}",
-      "savedTitle": "Auf deiner Wunschliste",
-      "savedBody": "{{name}} steht in deinem Reiseplan und wartet auf einen Tag"
+      "ideas_one": "{{count}} gespeicherte Idee",
+      "ideas_other": "{{count}} gespeicherte Ideen",
+      "mustDosRoute_one": "{{count}} Highlight auf deiner Route",
+      "mustDosRoute_other": "{{count}} Highlights auf deiner Route"
     },
     "everyday": {
       "owed_one": "Du bekommst {{amount}} aus {{count}} Gruppe",
@@ -1228,15 +1230,14 @@
       "togetherAgain": "Wieder zusammen",
       "splitUp_one": "Getrennt {{from}}–{{to}} · {{count}} Plan für {{names}}",
       "splitUp_other": "Getrennt {{from}}–{{to}} · {{count}} Pläne für {{names}}",
-      "freeBodyWishlist": "Nichts geplant. Such dir etwas von deiner Wunschliste aus:",
       "addToDay": "Hinzufügen"
     },
     "anytime": "Jederzeit",
-    "wishlistTitle": "Wunschliste",
     "mustDo": {
       "title": "Das Beste in {{place}}",
       "dismiss": "{{name}} ausblenden"
-    }
+    },
+    "plannedTitle": "Eingeplant"
   },
   "places": {
     "nearYou": "In deiner Nähe",
@@ -2056,5 +2057,30 @@
     "deleteInTrips": "In Reisen löschen",
     "sharedNote": "Archivieren blendet es nur für dich aus; für alle anderen bleibt es.",
     "localNote": "Das liegt auf deinem Handy (und in deinem Backup, falls aktiv)."
+  },
+  "ideas": {
+    "sheetTitle": "Gespeicherte Ideen",
+    "savedTitle": "In {{trip}}-Ideen gespeichert",
+    "view": "Ansehen",
+    "all": "Alle",
+    "noPlace": "Kein Ort",
+    "yourIdeas": "Deine Ideen · {{count}}",
+    "popular": "Beliebt · {{count}}",
+    "planFor": "{{title}} einplanen für…",
+    "dayNumber": "Tag {{day}}",
+    "plannedOn": "{{title}} zu {{day}} hinzugefügt",
+    "remove": "Idee entfernen",
+    "removed": "{{title}} entfernt",
+    "savedNotice": "{{title}} gespeichert",
+    "cardHint": "Für einen Tag einplanen oder entfernen",
+    "empty": "Noch nichts gespeichert. Speichere Highlights unter „Beliebt“ oder füge im Reiseplan eine Idee hinzu.",
+    "seePopular": "Beliebte Tipps ansehen",
+    "inCity": "Deine Ideen in {{city}}",
+    "yourIdeasTitle": "Deine Ideen",
+    "seeAll_one": "{{count}} gespeicherte Idee ansehen",
+    "seeAll_other": "Alle {{count}} gespeicherten Ideen ansehen",
+    "savedBy": "Gespeichert von {{name}}",
+    "savedByYou": "Von dir gespeichert",
+    "popularHere": "Beliebt hier"
   }
 }

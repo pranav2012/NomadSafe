@@ -82,3 +82,13 @@ export function mustDosNear(point: { latitude: number; longitude: number }, loca
     .filter((item) => !skip.has(normalize(item.key)) && !skip.has(normalize(item.name)));
   return { place: best.place.name, items };
 }
+
+/** Must-dos for each destination along a route, once per destination (neighbouring stops can share one), skipping empty lists. */
+export function mustDosAlong(stops: { latitude: number; longitude: number }[], locale: string, exclude: string[] = []): { place: string; items: MustDo[] }[] {
+  const out: { place: string; items: MustDo[] }[] = [];
+  for (const stop of stops) {
+    const group = mustDosNear(stop, locale, exclude);
+    if (group && group.items.length > 0 && !out.some((other) => other.place === group.place)) out.push(group);
+  }
+  return out;
+}

@@ -91,8 +91,10 @@
       "save": "ಉಳಿಸಿ",
       "mustDos_one": "{{place}}ನಲ್ಲಿ {{count}} ನೋಡಲೇಬೇಕಾದದ್ದು",
       "mustDos_other": "{{place}}ನಲ್ಲಿ {{count}} ನೋಡಲೇಬೇಕಾದವು",
-      "savedTitle": "ವಿಶ್‌ಲಿಸ್ಟ್‌ಗೆ ಉಳಿಸಲಾಗಿದೆ",
-      "savedBody": "{{name}} ನಿಮ್ಮ ಪೂರ್ಣ ಪ್ರವಾಸ ಯೋಜನೆಯಲ್ಲಿದೆ, ಒಂದು ದಿನಕ್ಕೆ ಯೋಜಿಸಿ"
+      "ideas_one": "{{count}} ಉಳಿಸಿದ ಐಡಿಯಾ",
+      "ideas_other": "{{count}} ಉಳಿಸಿದ ಐಡಿಯಾಗಳು",
+      "mustDosRoute_one": "ನಿಮ್ಮ ಮಾರ್ಗದಲ್ಲಿ {{count}} ನೋಡಲೇಬೇಕಾದದ್ದು",
+      "mustDosRoute_other": "ನಿಮ್ಮ ಮಾರ್ಗದಲ್ಲಿ {{count}} ನೋಡಲೇಬೇಕಾದವು"
     },
     "everyday": {
       "owed_one": "{{count}} ಗುಂಪಿನಲ್ಲಿ ನಿಮಗೆ {{amount}} ಬರಬೇಕು",
@@ -1228,15 +1230,14 @@
       "togetherAgain": "ಮತ್ತೆ ಜೊತೆಯಾಗಿ",
       "splitUp_one": "{{from}}–{{to}} ಬೇರೆ ಬೇರೆ · {{names}} ಗೆ {{count}} ಯೋಜನೆ",
       "splitUp_other": "{{from}}–{{to}} ಬೇರೆ ಬೇರೆ · {{names}} ಗೆ {{count}} ಯೋಜನೆಗಳು",
-      "freeBodyWishlist": "ಏನೂ ಯೋಜಿಸಿಲ್ಲ. ನಿಮ್ಮ ವಿಶ್‌ಲಿಸ್ಟ್‌ನಿಂದ ಏನಾದರೂ ಆಯ್ಕೆಮಾಡಿ:",
       "addToDay": "ಸೇರಿಸಿ"
     },
     "anytime": "ಯಾವಾಗ ಬೇಕಾದರೂ",
-    "wishlistTitle": "ವಿಶ್‌ಲಿಸ್ಟ್",
     "mustDo": {
       "title": "{{place}} ನಲ್ಲಿ ತಪ್ಪದೇ ನೋಡಿ",
       "dismiss": "{{name}} ಮರೆಮಾಡಿ"
-    }
+    },
+    "plannedTitle": "ಯೋಜಿಸಿದವು"
   },
   "places": {
     "nearYou": "ನಿಮ್ಮ ಸಮೀಪದಲ್ಲಿ",
@@ -2056,5 +2057,30 @@
     "deleteInTrips": "ಪ್ರವಾಸಗಳಲ್ಲಿ ಅಳಿಸಿ",
     "sharedNote": "ಆರ್ಕೈವ್ ನಿಮಗೆ ಮಾತ್ರ ಮರೆಮಾಡುತ್ತದೆ; ಇತರರಿಗೆ ಉಳಿಯುತ್ತದೆ.",
     "localNote": "ಇದು ನಿಮ್ಮ ಫೋನ್‌ನಲ್ಲಿದೆ (ಬ್ಯಾಕಪ್ ಆನ್ ಇದ್ದರೆ ಬ್ಯಾಕಪ್‌ನಲ್ಲೂ)."
+  },
+  "ideas": {
+    "sheetTitle": "ಉಳಿಸಿದ ಐಡಿಯಾಗಳು",
+    "savedTitle": "{{trip}} ಐಡಿಯಾಗಳಿಗೆ ಉಳಿಸಲಾಗಿದೆ",
+    "view": "ನೋಡಿ",
+    "all": "ಎಲ್ಲಾ",
+    "noPlace": "ಸ್ಥಳವಿಲ್ಲ",
+    "yourIdeas": "ನಿಮ್ಮ ಐಡಿಯಾಗಳು · {{count}}",
+    "popular": "ಜನಪ್ರಿಯ · {{count}}",
+    "planFor": "{{title}} ಯಾವ ದಿನಕ್ಕೆ…",
+    "dayNumber": "ದಿನ {{day}}",
+    "plannedOn": "{{title}} ಅನ್ನು {{day}}ಕ್ಕೆ ಸೇರಿಸಲಾಗಿದೆ",
+    "remove": "ಐಡಿಯಾ ತೆಗೆದುಹಾಕಿ",
+    "removed": "{{title}} ತೆಗೆದುಹಾಕಲಾಗಿದೆ",
+    "savedNotice": "{{title}} ಉಳಿಸಲಾಗಿದೆ",
+    "cardHint": "ಒಂದು ದಿನಕ್ಕೆ ಯೋಜಿಸಿ ಅಥವಾ ತೆಗೆದುಹಾಕಿ",
+    "empty": "ಇನ್ನೂ ಏನೂ ಉಳಿಸಿಲ್ಲ. ಜನಪ್ರಿಯದಿಂದ ಉಳಿಸಿ, ಅಥವಾ ಪ್ರವಾಸ ಯೋಜನೆಯಿಂದ ಐಡಿಯಾ ಸೇರಿಸಿ.",
+    "seePopular": "ಜನಪ್ರಿಯವನ್ನು ನೋಡಿ",
+    "inCity": "{{city}}ನಲ್ಲಿ ನಿಮ್ಮ ಐಡಿಯಾಗಳು",
+    "yourIdeasTitle": "ನಿಮ್ಮ ಐಡಿಯಾಗಳು",
+    "seeAll_one": "{{count}} ಉಳಿಸಿದ ಐಡಿಯಾ ನೋಡಿ",
+    "seeAll_other": "ಎಲ್ಲಾ {{count}} ಉಳಿಸಿದ ಐಡಿಯಾಗಳನ್ನು ನೋಡಿ",
+    "savedBy": "{{name}} ಉಳಿಸಿದ್ದು",
+    "savedByYou": "ನೀವು ಉಳಿಸಿದ್ದು",
+    "popularHere": "ಇಲ್ಲಿ ಜನಪ್ರಿಯ"
   }
 }

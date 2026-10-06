@@ -91,8 +91,10 @@
       "save": "保存",
       "mustDos_one": "{{place}}の必見スポット{{count}}件",
       "mustDos_other": "{{place}}の必見スポット{{count}}件",
-      "savedTitle": "ウィッシュリストに保存しました",
-      "savedBody": "{{name}}は旅程に入っています。日にちを決めましょう"
+      "ideas_one": "保存したアイデア{{count}}件",
+      "ideas_other": "保存したアイデア{{count}}件",
+      "mustDosRoute_one": "ルート上の必見スポット{{count}}件",
+      "mustDosRoute_other": "ルート上の必見スポット{{count}}件"
     },
     "everyday": {
       "owed_one": "{{count}}件のグループで{{amount}}受け取り",
@@ -1228,15 +1230,14 @@
       "togetherAgain": "再び合流",
       "splitUp_one": "{{from}}〜{{to}} 別行動 · {{names}}の予定{{count}}件",
       "splitUp_other": "{{from}}〜{{to}} 別行動 · {{names}}の予定{{count}}件",
-      "freeBodyWishlist": "予定はありません。行きたいリストから選びましょう：",
       "addToDay": "追加"
     },
     "anytime": "いつでも",
-    "wishlistTitle": "行きたいリスト",
     "mustDo": {
       "title": "{{place}}の必見スポット",
       "dismiss": "{{name}}を非表示"
-    }
+    },
+    "plannedTitle": "予定"
   },
   "places": {
     "nearYou": "近くのスポット",
@@ -2056,5 +2057,30 @@
     "deleteInTrips": "旅行タブで削除",
     "sharedNote": "アーカイブは自分だけ非表示になり、ほかの人には残ります。",
     "localNote": "これは端末上にあります（バックアップがオンならバックアップにも）。"
+  },
+  "ideas": {
+    "sheetTitle": "保存したアイデア",
+    "savedTitle": "{{trip}}のアイデアに保存しました",
+    "view": "見る",
+    "all": "すべて",
+    "noPlace": "場所なし",
+    "yourIdeas": "あなたのアイデア · {{count}}",
+    "popular": "人気 · {{count}}",
+    "planFor": "{{title}}をいつにする？",
+    "dayNumber": "{{day}}日目",
+    "plannedOn": "{{title}}を{{day}}に追加しました",
+    "remove": "アイデアを削除",
+    "removed": "{{title}}を削除しました",
+    "savedNotice": "{{title}}を保存しました",
+    "cardHint": "日にちを決めるか削除します",
+    "empty": "まだ保存したものはありません。「人気」から必見スポットを保存するか、旅程からアイデアを追加しましょう。",
+    "seePopular": "人気スポットを見る",
+    "inCity": "{{city}}でのアイデア",
+    "yourIdeasTitle": "あなたのアイデア",
+    "seeAll_one": "保存したアイデア{{count}}件を見る",
+    "seeAll_other": "保存したアイデア{{count}}件をすべて見る",
+    "savedBy": "{{name}}が保存",
+    "savedByYou": "あなたが保存",
+    "popularHere": "この辺りの人気スポット"
   }
 }

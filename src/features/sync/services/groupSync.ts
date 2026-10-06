@@ -146,13 +146,21 @@ function mapPeople(people: string[] | undefined, map: Translate): string[] | und
   return out;
 }
 
+/** Who saved an idea is only a label, so an unknown member drops it rather than holding the record back. */
+function withSaver<T extends { savedBy?: string }>(record: T, map: Translate): T {
+  if (record.savedBy === undefined) return record;
+  const { savedBy, ...rest } = record;
+  const mapped = map(savedBy);
+  return (mapped === null ? rest : { ...rest, savedBy: mapped }) as T;
+}
+
 /** A local record in server form (member ids, no local trip id, raw text or Gmail id), or null if someone isn't a member yet. */
 function toServerRecord(kind: SharedKind, record: LocalRecord, map: Translate): unknown {
   if (kind === "event") {
     const { tripId: _trip, externalId: _external, sourceIds: _sources, ...rest } = stripRaw(record as TripEvent);
     const people = mapPeople(rest.people, map);
     const ticketHolders = mapPeople(rest.ticketHolders, map);
-    return people === null || ticketHolders === null ? null : { ...rest, people, ticketHolders };
+    return people === null || ticketHolders === null ? null : withSaver({ ...rest, people, ticketHolders }, map);
   }
   if (kind === "settlement") {
     const { groupId: _group, ...rest } = record as Settlement;
@@ -175,7 +183,7 @@ function toLocalRecord(kind: SharedKind, data: unknown, localId: string, map: Tr
     const event = data as TripEvent;
     const people = mapPeople(event.people, map);
     const ticketHolders = mapPeople(event.ticketHolders, map);
-    return people === null || ticketHolders === null ? null : { ...event, tripId: localId, people, ticketHolders };
+    return people === null || ticketHolders === null ? null : withSaver({ ...event, tripId: localId, people, ticketHolders }, map);
   }
   if (kind === "settlement") {
     const settlement = data as Settlement;

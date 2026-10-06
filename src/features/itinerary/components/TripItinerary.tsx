@@ -9,11 +9,15 @@ import { aiRuntime, aiService, useAiAvailability } from "@/modules/ai";
 import type { Trip } from "@/features/trips/store/tripsStore";
 import { useEventsStore, type TripEvent } from "@/features/itinerary/store/eventsStore";
 import { EventForm, type EventFormValues } from "@/features/itinerary/components/EventForm";
-import { TimelineList, UpNextList } from "@/features/itinerary/components/ItineraryViews";
+import { PlannedList, TimelineList, UpNextList } from "@/features/itinerary/components/ItineraryViews";
 import { DayPlan } from "@/features/itinerary/components/DayPlan";
+import { DayIdeas } from "@/features/itinerary/components/DayIdeas";
+import { useSaveMustDo } from "@/features/itinerary/hooks/useSaveMustDo";
+import { useSavedSheetStore } from "@/features/itinerary/store/savedSheetStore";
+import { ideasNear, ideasOf } from "@/features/itinerary/utils/ideas";
 import { formatters } from "@/features/itinerary/utils/entryText";
 import { toWallClock } from "@/features/itinerary/utils/wallClock";
-import { mustDosNear, type MustDo } from "@/features/itinerary/utils/mustDos";
+import { mustDosNear } from "@/features/itinerary/utils/mustDos";
 import { useMustDoStore } from "@/features/itinerary/store/mustDoStore";
 import { useTicketsStore } from "@/features/itinerary/store/ticketsStore";
 import { pruneTickets, reconcileTicketHolders, removeTickets } from "@/features/itinerary/services/tickets";
@@ -29,6 +33,7 @@ import { syncTripGmail } from "@/features/expenses/services/tripGmailSync";
 import { useTripGmailSyncStatus } from "@/features/expenses/store/gmailSyncStatusStore";
 
 const UP_NEXT_COUNT = 3;
+const PLANNED_COUNT = 5;
 
 /** Where a new event starts: the next full hour on today, 09:00 on another day, now without a day. */
 function defaultStartFor(day: Date | null | undefined, now: number): Date | undefined {
@@ -120,17 +125,14 @@ export function TripItinerary({
   const city = place?.name.split(",")[0];
   const mustDos = place ? (mustDosNear(place, locale, [...ordered.map((event) => event.title), ...(dismissed ?? [])])?.items ?? []) : [];
 
-  const addMustDo = (item: MustDo) => {
-    if (!day) return;
-    track("must_do_suggestion", { action: "added", where: "free_day" });
-    addEvent({
-      tripId: trip.id,
-      type: item.type,
-      title: item.name,
-      startAt: toWallClock(new Date(day.getFullYear(), day.getMonth(), day.getDate())),
-      timing: "anytime",
-      source: "manual",
-    });
+  const saveMustDo = useSaveMustDo();
+  const showSaved = useSavedSheetStore((state) => state.show);
+  const ideas = ideasOf(ordered);
+  const dayIdeas = place ? ideasNear(ideas, place) : [];
+  const planned = ordered.filter((event) => event.timing === "anytime" && !event.doneAt);
+  const openAll = () => {
+    setAllOpen(true);
+    track("itinerary_sheet_opened", { events: ordered.length });
   };
   const isToday = day ? day.toDateString() === new Date(now).toDateString() : false;
   const sectionTitle = day ? (isToday ? t("home.live.todayTitle") : formatters(locale, hour12).dayHeader.format(day)) : t("itinerary.title");
@@ -174,7 +176,7 @@ export function TripItinerary({
   };
 
   const scheduleOn = (event: TripEvent, target: Date) => {
-    track("today_action", { action: "schedule_wishlist" });
+    track("saved_idea_action", { action: "planned", where: "day_ideas" });
     updateEvent(event.id, { timing: "anytime", startAt: toWallClock(new Date(target.getFullYear(), target.getMonth(), target.getDate())) });
   };
 
@@ -221,6 +223,16 @@ export function TripItinerary({
                 onPress={() => void handleRefine()}
               />
             ) : null}
+            {ideas.length > 0 ? (
+              <AuraButton
+                label={String(ideas.length)}
+                icon="bookmark"
+                variant="secondary"
+                size="md"
+                accessibilityHint={t("ideas.seeAll", { count: ideas.length })}
+                onPress={() => showSaved(trip.id, "ideas", "header")}
+              />
+            ) : null}
             <AuraButton label={t("itinerary.add")} icon="plus" variant="secondary" size="md" onPress={() => setEditing("new")} />
           </>
         }
@@ -233,18 +245,11 @@ export function TripItinerary({
             day={day}
             now={new Date(now)}
             city={city}
-            mustDos={mustDos}
-            onAddMustDo={addMustDo}
-            onDismissMustDo={(item) => {
-              track("must_do_suggestion", { action: "dismissed", where: "free_day" });
-              dismissMustDo(trip.id, item.key);
-            }}
             onPress={setEditing}
             ticketEventIds={ticketEventIds}
             onOpenTickets={openTickets}
             onAskForTicket={trip.shared ? askForTicket : undefined}
             onToggleDone={toggleDone}
-            onSchedule={scheduleOn}
             onAdd={() => {
               track("today_action", { action: "add_stop" });
               setEditing("new");
@@ -266,22 +271,37 @@ export function TripItinerary({
       ) : next.length > 0 ? (
         <Animated.View entering={FadeIn.duration(300)}>
           <UpNextList events={next} onPress={setEditing} />
-          {ordered.length > 1 ? (
-            <AuraButton
-              label={t("itinerary.fullItinerary", { total: ordered.length })}
-              variant="ghost"
-              size="md"
-              onPress={() => {
-                setAllOpen(true);
-                track("itinerary_sheet_opened", { events: ordered.length });
-              }}
-              style={styles.viewAll}
-            />
+          {ordered.length > 1 && planned.length === 0 ? (
+            <AuraButton label={t("itinerary.fullItinerary", { total: ordered.length })} variant="ghost" size="md" onPress={openAll} style={styles.viewAll} />
           ) : null}
         </Animated.View>
       ) : (
         <ItineraryEmpty trip={trip} onAdd={() => setEditing("new")} />
       )}
+
+      {!day && planned.length > 0 ? (
+        <Animated.View entering={FadeIn.duration(300)}>
+          <AuraSection title={t("itinerary.plannedTitle")} style={styles.planned} />
+          <PlannedList events={planned.slice(0, PLANNED_COUNT)} onPress={setEditing} />
+          <AuraButton label={t("itinerary.fullItinerary", { total: ordered.length })} variant="ghost" size="md" onPress={openAll} style={styles.viewAll} />
+        </Animated.View>
+      ) : null}
+
+      {day ? (
+        <DayIdeas
+          city={city}
+          ideas={dayIdeas}
+          totalIdeas={ideas.length}
+          mustDos={mustDos}
+          onAddToDay={(idea) => scheduleOn(idea, day)}
+          onSeeAll={() => showSaved(trip.id, "ideas", "day")}
+          onSaveMustDo={(item) => saveMustDo(trip, item, "day_ideas")}
+          onDismissMustDo={(item) => {
+            track("must_do_suggestion", { action: "dismissed", where: "day_ideas" });
+            dismissMustDo(trip.id, item.key);
+          }}
+        />
+      ) : null}
 
       <AuraSheet visible={allOpen} onClose={() => setAllOpen(false)} title={t("itinerary.title")} subtitle={trip.name} full>
         <PrivateView style={styles.flex}>
@@ -414,6 +434,7 @@ function ItineraryEmpty({ trip, onAdd }: { trip: Trip; onAdd: () => void }) {
 }
 
 const styles = StyleSheet.create({
+  planned: { marginTop: 24, marginBottom: 12 },
   viewAll: { alignSelf: "center", marginTop: 6 },
   empty: { gap: 14, padding: 16, borderRadius: 22, borderWidth: StyleSheet.hairlineWidth },
   emptyHead: { flexDirection: "row", alignItems: "center", gap: 12 },

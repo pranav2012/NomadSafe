@@ -91,8 +91,10 @@
       "save": "సేవ్ చేయి",
       "mustDos_one": "{{place}}లో {{count}} తప్పక చూడాల్సినది",
       "mustDos_other": "{{place}}లో {{count}} తప్పక చూడాల్సినవి",
-      "savedTitle": "విష్‌లిస్ట్‌లో సేవ్ అయింది",
-      "savedBody": "{{name}} మీ పూర్తి ప్రయాణ ప్రణాళికలో ఉంది, ఏదో ఒక రోజుకు ప్లాన్ చేయండి"
+      "ideas_one": "{{count}} సేవ్ చేసిన ఆలోచన",
+      "ideas_other": "{{count}} సేవ్ చేసిన ఆలోచనలు",
+      "mustDosRoute_one": "మీ దారిలో {{count}} తప్పక చూడాల్సినది",
+      "mustDosRoute_other": "మీ దారిలో {{count}} తప్పక చూడాల్సినవి"
     },
     "everyday": {
       "owed_one": "{{count}} గ్రూప్‌లో మీకు {{amount}} రావాలి",
@@ -1228,15 +1230,14 @@
       "togetherAgain": "మళ్లీ కలిసి",
       "splitUp_one": "{{from}}–{{to}} విడివిడిగా · {{names}} కి {{count}} ప్లాన్",
       "splitUp_other": "{{from}}–{{to}} విడివిడిగా · {{names}} కి {{count}} ప్లాన్లు",
-      "freeBodyWishlist": "ఏమీ ప్లాన్ చేయలేదు. మీ విష్‌లిస్ట్ నుండి ఏదైనా ఎంచుకోండి:",
       "addToDay": "జోడించు"
     },
     "anytime": "ఎప్పుడైనా",
-    "wishlistTitle": "విష్‌లిస్ట్",
     "mustDo": {
       "title": "{{place}} లో తప్పక చూడాల్సినవి",
       "dismiss": "{{name}} దాచు"
-    }
+    },
+    "plannedTitle": "ప్లాన్ చేసినవి"
   },
   "places": {
     "nearYou": "మీ సమీపంలో",
@@ -2056,5 +2057,30 @@
     "deleteInTrips": "ట్రిప్‌లలో తొలగించండి",
     "sharedNote": "ఆర్కైవ్ మీకు మాత్రమే దాచుతుంది; ఇతరులకు ఉంటుంది.",
     "localNote": "ఇది మీ ఫోన్‌లో ఉంది (బ్యాకప్ ఆన్‌లో ఉంటే బ్యాకప్‌లో కూడా)."
+  },
+  "ideas": {
+    "sheetTitle": "సేవ్ చేసిన ఆలోచనలు",
+    "savedTitle": "{{trip}} ఆలోచనల్లో సేవ్ అయింది",
+    "view": "చూడండి",
+    "all": "అన్నీ",
+    "noPlace": "స్థలం లేదు",
+    "yourIdeas": "మీ ఆలోచనలు · {{count}}",
+    "popular": "ప్రసిద్ధి · {{count}}",
+    "planFor": "{{title}}ని ఏ రోజుకు…",
+    "dayNumber": "రోజు {{day}}",
+    "plannedOn": "{{title}}ని {{day}}కి జోడించాం",
+    "remove": "ఆలోచనను తీసివేయి",
+    "removed": "{{title}} తీసివేయబడింది",
+    "savedNotice": "{{title}} సేవ్ అయింది",
+    "cardHint": "ఒక రోజుకు ప్లాన్ చేయండి లేదా తీసివేయండి",
+    "empty": "ఇంకా ఏదీ సేవ్ చేయలేదు. ప్రసిద్ధి నుండి సేవ్ చేయండి, లేదా ప్రయాణ ప్రణాళిక నుండి ఆలోచనను జోడించండి.",
+    "seePopular": "ప్రసిద్ధమైనవి చూడండి",
+    "inCity": "{{city}}లో మీ ఆలోచనలు",
+    "yourIdeasTitle": "మీ ఆలోచనలు",
+    "seeAll_one": "{{count}} సేవ్ చేసిన ఆలోచన చూడండి",
+    "seeAll_other": "మొత్తం {{count}} సేవ్ చేసిన ఆలోచనలు చూడండి",
+    "savedBy": "{{name}} సేవ్ చేశారు",
+    "savedByYou": "మీరు సేవ్ చేశారు",
+    "popularHere": "ఇక్కడ ప్రసిద్ధి"
   }
 }

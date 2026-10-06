@@ -91,8 +91,10 @@
       "save": "सहेजें",
       "mustDos_one": "{{place}} में {{count}} ज़रूर देखने वाली जगह",
       "mustDos_other": "{{place}} में {{count}} ज़रूर देखने वाली जगहें",
-      "savedTitle": "विशलिस्ट में सेव हो गया",
-      "savedBody": "{{name}} आपकी पूरी यात्रा योजना में है, किसी दिन के लिए तैयार"
+      "ideas_one": "{{count}} सेव आइडिया",
+      "ideas_other": "{{count}} सेव आइडिया",
+      "mustDosRoute_one": "आपके रास्ते में {{count}} ज़रूर देखने वाली जगह",
+      "mustDosRoute_other": "आपके रास्ते में {{count}} ज़रूर देखने वाली जगहें"
     },
     "everyday": {
       "owed_one": "{{count}} ग्रुप में आपको {{amount}} मिलने हैं",
@@ -1228,15 +1230,14 @@
       "togetherAgain": "फिर से साथ",
       "splitUp_one": "{{from}}–{{to}} अलग · {{names}} के लिए {{count}} योजना",
       "splitUp_other": "{{from}}–{{to}} अलग · {{names}} के लिए {{count}} योजनाएँ",
-      "freeBodyWishlist": "कुछ तय नहीं है। अपनी विशलिस्ट से कुछ चुनें:",
       "addToDay": "जोड़ें"
     },
     "anytime": "कभी भी",
-    "wishlistTitle": "विशलिस्ट",
     "mustDo": {
       "title": "{{place}} में ज़रूर देखें",
       "dismiss": "{{name}} छिपाएँ"
-    }
+    },
+    "plannedTitle": "प्लान किया"
   },
   "places": {
     "nearYou": "आपके पास",
@@ -2056,5 +2057,30 @@
     "deleteInTrips": "ट्रिप में जाकर हटाएँ",
     "sharedNote": "आर्काइव करने से यह सिर्फ़ आपके लिए छिपता है; बाकी सबके लिए रहता है।",
     "localNote": "यह आपके फ़ोन पर है (और बैकअप चालू हो तो बैकअप में)।"
+  },
+  "ideas": {
+    "sheetTitle": "सेव किए आइडिया",
+    "savedTitle": "{{trip}} के आइडिया में सेव हुआ",
+    "view": "देखें",
+    "all": "सभी",
+    "noPlace": "कोई जगह नहीं",
+    "yourIdeas": "आपके आइडिया · {{count}}",
+    "popular": "लोकप्रिय · {{count}}",
+    "planFor": "{{title}} किस दिन के लिए…",
+    "dayNumber": "दिन {{day}}",
+    "plannedOn": "{{title}} को {{day}} में जोड़ा",
+    "remove": "आइडिया हटाएँ",
+    "removed": "{{title}} हटाया",
+    "savedNotice": "{{title}} सेव हुआ",
+    "cardHint": "किसी दिन के लिए प्लान करें या हटाएँ",
+    "empty": "अभी कुछ सेव नहीं है। लोकप्रिय से ज़रूर देखने वाली जगहें सेव करें, या यात्रा योजना से आइडिया जोड़ें।",
+    "seePopular": "लोकप्रिय जगहें देखें",
+    "inCity": "{{city}} में आपके आइडिया",
+    "yourIdeasTitle": "आपके आइडिया",
+    "seeAll_one": "{{count}} सेव आइडिया देखें",
+    "seeAll_other": "सभी {{count}} सेव आइडिया देखें",
+    "savedBy": "{{name}} ने सेव किया",
+    "savedByYou": "आपने सेव किया",
+    "popularHere": "यहाँ लोकप्रिय"
   }
 }

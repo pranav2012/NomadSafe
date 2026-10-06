@@ -69,8 +69,10 @@ export interface AnalyticsEvents {
   itinerary_day_viewed: { relative_day: number };
   ticket_opened: { kind: "pdf" | "image"; count: number };
   ticket_added: { source: "gmail" | "file" | "photo" | "received"; count: number };
-  must_do_suggestion: { action: "added" | "dismissed"; where: "free_day" | "trip_prep" };
-  today_action: { action: "maps" | "add_stop" | "expand_globe" | "collapse_globe" | "back_to_today" | "done" | "undone" | "schedule_wishlist" | "ask_ticket" };
+  must_do_suggestion: { action: "added" | "dismissed"; where: "free_day" | "trip_prep" | "day_ideas" | "saved_sheet" };
+  saved_ideas_opened: { from: "prep" | "must_dos" | "day" | "header" | "toast"; ideas: number };
+  saved_idea_action: { action: "planned" | "removed"; where: "saved_sheet" | "day_ideas" };
+  today_action: { action: "maps" | "add_stop" | "expand_globe" | "collapse_globe" | "back_to_today" | "done" | "undone" | "ask_ticket" };
   recap_opened: { source: "home" | "notification" | "trips"; stops: number };
   recap_finished: { stops: number };
   recap_shared: { format: "image" | "video"; spend: boolean };

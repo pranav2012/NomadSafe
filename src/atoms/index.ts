@@ -1,5 +1,5 @@
 /** Public API of the shared UI atoms. Files inside src/atoms import each other by path, never through this barrel, to avoid cycles. */
-export { showAlert, showToast, AuraAlertHost, type AuraAlertButton } from "./aura/AuraAlert";
+export { showAlert, showToast, AuraAlertHost, type AuraAlertButton, type ToastAction } from "./aura/AuraAlert";
 export { AuraButton, type AuraButtonVariant } from "./aura/AuraButton";
 export { AuraCard } from "./aura/AuraCard";
 export { AuraChip } from "./aura/AuraChip";
