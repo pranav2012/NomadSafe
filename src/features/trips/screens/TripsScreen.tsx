@@ -229,7 +229,7 @@ export default function TripsScreen() {
           </View>
         ))}
 
-        <AuraButton label={t("trip.addTrip")} icon="plus" variant="secondary" onPress={startNewTrip} style={styles.add} />
+        <AuraButton label={t("trip.addTrip")} icon="plus" variant="secondary" onPress={() => startNewTrip()} style={styles.add} />
         <AuraButton label={t("groupTrip.joinWithCode")} icon="users" variant="ghost" onPress={() => setJoinOpen(true)} style={styles.join} />
       </ScrollView>
       <AuraTopFade sheet />

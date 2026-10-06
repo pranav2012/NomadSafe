@@ -2,7 +2,7 @@ import React from "react";
 import { Platform } from "react-native";
 import { requestWidgetUpdate } from "react-native-android-widget";
 import { ExtensionStorage } from "@bacons/apple-targets";
-import { useTripsStore } from "@/features/trips/store/tripsStore";
+import { selectMoneyGroups, useTripsStore } from "@/features/trips/store/tripsStore";
 import { translate } from "@/localization/translate";
 import { logger } from "@/modules/logger";
 import { VOICE_WIDGET_NAME, VoiceExpenseWidget } from "@/features/widget/VoiceExpenseWidget";
@@ -34,7 +34,7 @@ export async function syncWidgets() {
         widgetNotFound: () => {},
       });
     } else if (Platform.OS === "ios") {
-      const { trips } = useTripsStore.getState();
+      const trips = selectMoneyGroups(useTripsStore.getState());
       const shared = new ExtensionStorage(APP_GROUP);
       shared.set("trips", JSON.stringify(trips.map((trip) => ({ id: trip.id, name: trip.name }))));
       shared.set("defaultTripId", resolveWidgetTrip()?.id ?? undefined);

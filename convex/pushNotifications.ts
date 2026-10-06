@@ -68,6 +68,25 @@ const TICKET_ASK: Record<string, string> = {
   "zh-CN": "{actor} 需要 {title} 的票据。点按即可发送。",
 };
 
+// Placeholders: {actor}, {title} (the trip or group name).
+const ADDED: Record<string, string> = {
+  en: "{actor} added you to {title}",
+  ar: "أضافك {actor} إلى {title}",
+  de: "{actor} hat dich zu {title} hinzugefügt",
+  es: "{actor} te añadió a {title}",
+  fr: "{actor} t'a ajouté à {title}",
+  hi: "{actor} ने आपको {title} में जोड़ा",
+  it: "{actor} ti ha aggiunto a {title}",
+  ja: "{actor}さんがあなたを{title}に追加しました",
+  kn: "{actor} ನಿಮ್ಮನ್ನು {title} ಗೆ ಸೇರಿಸಿದ್ದಾರೆ",
+  ko: "{actor}님이 회원님을 {title}에 추가했어요",
+  ml: "{actor} നിങ്ങളെ {title} ൽ ചേർത്തു",
+  "pt-BR": "{actor} adicionou você a {title}",
+  ta: "{actor} உங்களை {title} இல் சேர்த்தார்",
+  te: "{actor} మిమ్మల్ని {title} లో చేర్చారు",
+  "zh-CN": "{actor} 把你加入了 {title}",
+};
+
 function fill(template: string, values: Record<string, string>) {
   return template.replace(/\{(\w+)\}/g, (_, key: string) => values[key] ?? "");
 }
@@ -313,6 +332,27 @@ export const notifyTicketAsk = internalAction({
       sound: "default" as const,
       channelId: CHANNEL_ID,
       data: { source: SOURCE, groupId: String(groupId), type: "ticket_ask", eventId: clientId },
+    }));
+    await sendPushMessages(ctx, messages);
+  },
+});
+
+/** Tells people they were added straight to a trip or group (planned from a group they're in). */
+export const notifyAddedToGroup = internalAction({
+  args: { groupId: v.id("sharedGroups"), actorMemberId: v.string(), memberIds: v.array(v.string()) },
+  handler: async (ctx, { groupId, actorMemberId, memberIds }) => {
+    const info = await ctx.runQuery(internal.groups.memberPushTargets, { groupId, memberIds, actorMemberId });
+    if (!info || info.targets.length === 0) return;
+    const messages = info.targets.map(({ token, locale }) => ({
+      to: token,
+      title: truncate(info.groupName, NOTIFY_TITLE_CHARS),
+      body: fill(ADDED[locale] ?? ADDED[locale.split("-")[0]] ?? ADDED.en, {
+        actor: truncate(info.actorName, NOTIFY_TITLE_CHARS),
+        title: truncate(info.groupName, NOTIFY_TITLE_CHARS),
+      }),
+      sound: "default" as const,
+      channelId: CHANNEL_ID,
+      data: { source: SOURCE, groupId: String(groupId), type: "added" },
     }));
     await sendPushMessages(ctx, messages);
   },

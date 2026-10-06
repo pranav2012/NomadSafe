@@ -1818,7 +1818,13 @@
     "moveTo": "Move to",
     "addTo": "Add to",
     "everyone": "Everyone",
-    "with": "With"
+    "with": "With",
+    "keepTitle": "Keep splitting with these people?",
+    "keepBody": "The trip is over. Keep its people as a group for everyday spends; the trip, its recap and passport stamps stay as they are.",
+    "keepAction": "Keep as a group",
+    "notNow": "Not now",
+    "planTrip": "Plan a trip with this group",
+    "planTripBody": "Going somewhere together? Start a trip with these people already in it."
   },
   "groupShare": {
     "deleteBlocked": "Remove everyone who joined before deleting this group. You can archive it to hide it from your list instead.",
@@ -1839,6 +1845,12 @@
     "resetLinkBody": "The current link and code stop working. People already in the group stay.",
     "settingUp": "Setting up the shared group…",
     "shareIntro": "Create an invite link for this group. Anyone who opens it can join and see the expenses you split, and everyone's balances stay up to date. Expenses you don't split stay private.",
-    "shareTitle": "Share this group"
+    "shareTitle": "Share this group",
+    "joinAlready": "You're already in this group.",
+    "joinButton": "Join group",
+    "joinNameLabel": "Your name in this group",
+    "joinPrivacy": "Members see the group and its shared expenses, including where they were added. Expenses you don't split stay private.",
+    "openTrip": "Open group",
+    "joinTitle": "Join group"
   }
 }

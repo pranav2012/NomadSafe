@@ -1818,7 +1818,13 @@
     "moveTo": "Verschieben nach",
     "addTo": "Hinzufügen zu",
     "everyone": "Alle",
-    "with": "Mit"
+    "with": "Mit",
+    "keepTitle": "Weiter mit diesen Leuten teilen?",
+    "keepBody": "Die Reise ist vorbei. Behalte ihre Leute als Gruppe für Alltagsausgaben; Reise, Rückblick und Passstempel bleiben, wie sie sind.",
+    "keepAction": "Als Gruppe behalten",
+    "notNow": "Nicht jetzt",
+    "planTrip": "Reise mit dieser Gruppe planen",
+    "planTripBody": "Ihr fahrt zusammen weg? Starte eine Reise, in der diese Leute schon dabei sind."
   },
   "groupShare": {
     "deleteBlocked": "Entferne alle, die beigetreten sind, bevor du diese Gruppe löschst. Du kannst sie stattdessen archivieren, um sie auszublenden.",
@@ -1839,6 +1845,12 @@
     "resetLinkBody": "Der aktuelle Link und Code funktionieren nicht mehr. Wer schon in der Gruppe ist, bleibt.",
     "settingUp": "Geteilte Gruppe wird eingerichtet…",
     "shareIntro": "Erstelle einen Einladungslink für diese Gruppe. Wer ihn öffnet, kann beitreten und die geteilten Ausgaben sehen, und alle Salden bleiben aktuell. Nicht geteilte Ausgaben bleiben privat.",
-    "shareTitle": "Diese Gruppe teilen"
+    "shareTitle": "Diese Gruppe teilen",
+    "joinAlready": "Du bist schon in dieser Gruppe.",
+    "joinButton": "Gruppe beitreten",
+    "joinNameLabel": "Dein Name in dieser Gruppe",
+    "joinPrivacy": "Mitglieder sehen die Gruppe und ihre geteilten Ausgaben, auch wo sie hinzugefügt wurden. Nicht geteilte Ausgaben bleiben privat.",
+    "openTrip": "Gruppe öffnen",
+    "joinTitle": "Gruppe beitreten"
   }
 }

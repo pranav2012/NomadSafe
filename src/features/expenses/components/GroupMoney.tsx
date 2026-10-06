@@ -3,7 +3,8 @@ import { StyleSheet, Text, View } from "react-native";
 import { AuraButton, AuraCard, AuraSection, Icon, useAura } from "@/atoms";
 import { useLocalization } from "@/localization";
 import { isTrip, type MoneyGroup } from "@/features/trips/store/tripsStore";
-import { daysLeftInTrip } from "@/features/trips/utils/dates";
+import { daysLeftInTrip, getTripStatus } from "@/features/trips/utils/dates";
+import { useKeepGroupStore } from "@/features/expenses/store/keepGroupStore";
 import { useExpensesStore, type Expense } from "@/features/expenses/store/expensesStore";
 import { useConvertedExpenses } from "@/features/expenses/hooks/useTripExpenseSummary";
 import { categoryBreakdown, sumAmount } from "@/features/expenses/utils/aggregate";
@@ -20,11 +21,15 @@ export function GroupMoney({
   onOpenExpense,
   onAddPeople,
   onImport,
+  onPlanTrip,
+  onKeepAsGroup,
 }: {
   group: MoneyGroup;
   onOpenExpense: (expense: Expense) => void;
   onAddPeople: () => void;
   onImport: () => void;
+  onPlanTrip: () => void;
+  onKeepAsGroup: () => void;
 }) {
   const { c, f } = useAura();
   const { t, formatCurrency } = useLocalization();
@@ -45,9 +50,22 @@ export function GroupMoney({
   const hasPeople = group.companions.length > 0 || expenses.some(isSplitExpense) || settlements.length > 0;
   const hasActivity = expenses.length > 0 || settlements.length > 0;
   const trip = isTrip(group) ? group : null;
+  const keepHandled = useKeepGroupStore((state) => (trip ? state.handled.includes(trip.id) : true));
+  const showKeep = !!trip && !keepHandled && trip.companions.length > 0 && getTripStatus(trip) === "complete";
 
   return (
     <View>
+      {showKeep && trip ? (
+        <AuraCard style={styles.keep}>
+          <Text style={[styles.keepTitle, { color: c.text, fontFamily: f.semibold }]}>{t("money.keepTitle")}</Text>
+          <Text style={[styles.addPeopleText, { color: c.textSoft, fontFamily: f.regular }]}>{t("money.keepBody")}</Text>
+          <View style={styles.keepActions}>
+            <AuraButton label={t("money.keepAction")} icon="users" size="md" onPress={onKeepAsGroup} />
+            <AuraButton label={t("money.notNow")} variant="ghost" size="md" onPress={() => useKeepGroupStore.getState().markHandled(trip.id)} />
+          </View>
+        </AuraCard>
+      ) : null}
+
       {hasPeople && hasActivity ? (
         <View style={styles.block}>
           <GroupBalances group={group} />
@@ -107,12 +125,25 @@ export function GroupMoney({
           />
         </>
       )}
+
+      {!trip && group.companions.length > 0 ? (
+        <AuraCard style={styles.addPeople}>
+          <View style={styles.addPeopleRow}>
+            <Icon name="compass" size={18} color={c.textSoft} />
+            <Text style={[styles.addPeopleText, { color: c.textSoft, fontFamily: f.regular }]}>{t("money.planTripBody")}</Text>
+          </View>
+          <AuraButton label={t("money.planTrip")} icon="plus" variant="secondary" size="md" onPress={onPlanTrip} style={styles.addPeopleButton} />
+        </AuraCard>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   block: { marginTop: 4 },
+  keep: { marginBottom: 22, gap: 8 },
+  keepTitle: { fontSize: 17 },
+  keepActions: { flexDirection: "row", gap: 8, marginTop: 6 },
   spendAfterBalances: { marginTop: 28 },
   addPeople: { marginTop: 22, gap: 12 },
   addPeopleRow: { flexDirection: "row", alignItems: "center", gap: 10 },

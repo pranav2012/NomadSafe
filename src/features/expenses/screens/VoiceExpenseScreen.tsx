@@ -21,7 +21,7 @@ import { logger } from "@/modules/logger";
 import { useAuthStore } from "@/features/auth";
 import { useSettingsStore } from "@/features/settings";
 import { aiRuntime, aiService, remoteLabel, useAiAvailability } from "@/modules/ai";
-import { useTripsStore } from "@/features/trips/store/tripsStore";
+import { useTripsStore, isTrip, selectMoneyGroups } from "@/features/trips/store/tripsStore";
 import { useExpensesStore } from "@/features/expenses/store/expensesStore";
 import { useSpeechCapture } from "@/features/expenses/hooks/useSpeechCapture";
 import { ExpenseForm } from "@/features/expenses/components/ExpenseForm";
@@ -55,9 +55,10 @@ export default function VoiceExpenseScreen() {
   const params = useLocalSearchParams<{ tripId?: string; autostart?: string; pickTrip?: string; source?: string }>();
   const fromWidget = params.source === "widget";
 
-  const trips = useTripsStore((state) => state.trips);
+  const trips = useTripsStore(selectMoneyGroups);
   const activeTripId = useTripsStore((state) => state.activeTripId);
   const updateTrip = useTripsStore((state) => state.updateTrip);
+  const updateGroup = useTripsStore((state) => state.updateGroup);
   const addExpense = useExpensesStore((state) => state.addExpense);
   const addSettlement = useExpensesStore((state) => state.addSettlement);
   const locked = useAuthStore((state) => state.isSignedIn && state.isPinSet && !state.isUnlocked);
@@ -163,7 +164,8 @@ export default function VoiceExpenseScreen() {
   // Locked capture only adds expenses; changing who is on the trip needs the PIN.
   const addPerson = (name: string) => {
     if (!trip || !draft || locked) return;
-    updateTrip(trip.id, { companions: [...trip.companions, name], mode: "group" });
+    if (isTrip(trip)) updateTrip(trip.id, { companions: [...trip.companions, name], mode: "group" });
+    else updateGroup(trip.id, { companions: [...trip.companions, name] });
     updateDraft(replaceDraftPerson(draft, name, name));
   };
 

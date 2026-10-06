@@ -558,7 +558,7 @@ export function clearSharedLocalData(owner: string | null) {
  * Shares a trip or group: creates it on the server, then re-keys it locally to the shared id so every
  * phone (including the owner's others) agrees on the id its expenses point to.
  */
-export async function shareGroup(trip: MoneyGroup, ownerName: string): Promise<string> {
+export async function shareGroup(trip: MoneyGroup, ownerName: string, fromGroupId?: string): Promise<string> {
   sharingInFlight += 1;
   let serverId: Id<"sharedGroups">;
   try {
@@ -567,6 +567,7 @@ export async function shareGroup(trip: MoneyGroup, ownerName: string): Promise<s
       dataUpdatedAt: Date.now(),
       ownerName,
       companions: trip.companions,
+      ...(fromGroupId ? { fromGroupId: fromGroupId as Id<"sharedGroups"> } : {}),
     }));
   } finally {
     sharingInFlight -= 1;

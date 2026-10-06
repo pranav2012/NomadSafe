@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   AuraCard,
   Icon,
+  showToast,
   PressableScale,
   useAura,
   useFloatingBarBottom,
@@ -17,8 +18,11 @@ import {
 } from "@/atoms";
 import { auraStatusAccent } from "@/constants/aura";
 import { useLocalization } from "@/localization";
-import { PrivateView } from "@/modules/analytics";
-import { useStartNewGroup } from "@/modules/billing";
+import { PrivateView, track } from "@/modules/analytics";
+import { useStartNewGroup, useStartNewTrip } from "@/modules/billing";
+import { useAuthStore } from "@/features/auth/store/authStore";
+import { shareGroup } from "@/features/sync";
+import { useKeepGroupStore } from "@/features/expenses/store/keepGroupStore";
 import { findMoneyGroup, isTrip, selectActiveTrip, useTripsStore } from "@/features/trips/store/tripsStore";
 import { GroupPeopleSheet } from "@/features/trips/components/GroupPeopleSheet";
 import { useExpensesStore, type Expense } from "@/features/expenses/store/expensesStore";
@@ -52,6 +56,7 @@ export default function ExpensesScreen() {
   const expenses = useExpensesStore((state) => state.expenses);
   const updateExpense = useExpensesStore((state) => state.updateExpense);
   const startNewGroup = useStartNewGroup();
+  const startNewTrip = useStartNewTrip();
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Expense | null>(null);
   const [importTab, setImportTab] = useState<"paste" | "gmail" | null>(null);
@@ -79,6 +84,23 @@ export default function ExpensesScreen() {
     setFormOpen(false);
     router.push({ pathname: "/voice-expense", params: group && isTrip(group) ? { tripId: group.id } : {} });
   };
+
+  // A new group with an ended trip's people; on a shared trip its members join it directly.
+  const keepAsGroup = () =>
+    startNewGroup(() => {
+      if (!group || !isTrip(group)) return;
+      const trip = group;
+      const created = useTripsStore.getState().createGroup({ name: trip.name, emoji: "✈️", currency: trip.currency, companions: trip.companions });
+      useKeepGroupStore.getState().markHandled(trip.id);
+      track("group_created", { people: trip.companions.length + 1 });
+      select(created.id);
+      if (trip.shared) {
+        const ownerName = useAuthStore.getState().user?.name ?? "";
+        shareGroup(created, ownerName.split(" ")[0] || ownerName, trip.shared.groupId)
+          .then((sharedId) => select(sharedId))
+          .catch(() => showToast(t("groupTrip.actionFailed")));
+      }
+    });
 
   const captureBottom = useFloatingBarBottom();
 
@@ -139,7 +161,14 @@ export default function ExpensesScreen() {
           <PrivateView>
             <Animated.View key={viewId} entering={FadeIn.duration(220)}>
               {group ? (
-                <GroupMoney group={group} onOpenExpense={openExpense} onAddPeople={() => setPeopleOpen(true)} onImport={() => setImportTab("paste")} />
+                <GroupMoney
+                  group={group}
+                  onOpenExpense={openExpense}
+                  onAddPeople={() => setPeopleOpen(true)}
+                  onImport={() => setImportTab("paste")}
+                  onPlanTrip={() => startNewTrip(group.id)}
+                  onKeepAsGroup={keepAsGroup}
+                />
               ) : (
                 <MoneyOverview onOpenGroup={select} onOpenExpense={openExpense} onNewGroup={() => startNewGroup(() => setNewGroupOpen(true))} />
               )}

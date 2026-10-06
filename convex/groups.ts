@@ -94,10 +94,20 @@ function publicMember(member: Doc<"groupMembers">) {
   };
 }
 
-/** Turns a group group into a shared one: the caller becomes owner, companions become name-only members. */
+/**
+ * Shares a trip or group: the caller becomes owner and companions become name-only members. With
+ * `fromGroupId` (a shared group the caller is in), the people who joined that group are added
+ * directly, linked to their accounts, and told by push.
+ */
 export const shareGroup = mutation({
-  args: { data: v.any(), dataUpdatedAt: v.number(), ownerName: v.string(), companions: v.array(v.string()) },
-  handler: async (ctx, { data, dataUpdatedAt, ownerName, companions }) => {
+  args: {
+    data: v.any(),
+    dataUpdatedAt: v.number(),
+    ownerName: v.string(),
+    companions: v.array(v.string()),
+    fromGroupId: v.optional(v.id("sharedGroups")),
+  },
+  handler: async (ctx, { data, dataUpdatedAt, ownerName, companions, fromGroupId }) => {
     const user = await requireUser(ctx);
     if (companions.length >= MAX_MEMBERS) throw new Error("Too many members");
     assertNames(companions);
@@ -123,14 +133,22 @@ export const shareGroup = mutation({
     });
     // Companion names are kept exactly as typed, since the owner's expenses already refer to them;
     // on a clash it's the owner who gets a suffix (on their own phone they're always "You").
+    const source = fromGroupId ? await requireMember(ctx, fromGroupId, user.id).then(() => membersOf(ctx, fromGroupId)) : [];
+    const linkable = source.filter((member) => member.userId && member.userId !== user.id && member.status === "active");
     const names: string[] = [];
+    const added: string[] = [];
     for (const companion of companions) {
       const name = uniqueName(companion, names);
       names.push(name);
+      const from = linkable.find((member) => member.name.trim().toLowerCase() === companion.trim().toLowerCase());
+      const linked = from?.userId && (await canJoinMore(ctx, from.userId)) ? from.userId : undefined;
+      const memberId = crypto.randomUUID();
+      if (linked) added.push(memberId);
       await ctx.db.insert("groupMembers", {
         groupId,
-        memberId: crypto.randomUUID(),
+        memberId,
         name,
+        ...(linked ? { userId: linked } : {}),
         role: "member",
         status: "active",
         archived: false,
@@ -149,9 +167,28 @@ export const shareGroup = mutation({
       muted: false,
       joinedAt: now,
     });
+    if (added.length > 0) {
+      const owner = await ctx.db
+        .query("groupMembers")
+        .withIndex("by_group_user", (q) => q.eq("groupId", groupId).eq("userId", user.id))
+        .unique();
+      await ctx.scheduler.runAfter(0, internal.pushNotifications.notifyAddedToGroup, {
+        groupId,
+        actorMemberId: owner?.memberId ?? "",
+        memberIds: added,
+      });
+    }
     return { groupId };
   },
 });
+
+async function canJoinMore(ctx: QueryCtx, userId: string) {
+  const joined = await ctx.db
+    .query("groupMembers")
+    .withIndex("by_user", (q) => q.eq("userId", userId))
+    .collect();
+  return joined.filter((member) => member.status === "active").length < MAX_JOINED_GROUPS;
+}
 
 /**
  * Every shared group the caller belongs to, with members; reactive so phones learn about changes live.

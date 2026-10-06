@@ -16,10 +16,10 @@ export function usePlan() {
 /** Opens trip planning, or the paywall when a free user already owns the maximum number of trips. */
 export function useStartNewTrip() {
   const router = useRouter();
-  return useCallback(() => {
+  return useCallback((fromGroupId?: string) => {
     const plan = usePlanStore.getState();
     if (canCreateTrip(useTripsStore.getState().trips, plan)) {
-      router.push("/plan-trip");
+      router.push(fromGroupId ? { pathname: "/plan-trip", params: { fromGroup: fromGroupId } } : "/plan-trip");
       return;
     }
     track("trip_limit_reached");

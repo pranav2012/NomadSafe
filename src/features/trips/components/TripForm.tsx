@@ -12,7 +12,10 @@ import {
   PressableScale,
   showAlert,
   useAura,
+  showToast,
 } from "@/atoms";
+import { useAuthStore } from "@/features/auth/store/authStore";
+import { shareGroup } from "@/features/sync";
 import { aiRuntime, aiService, useAiAvailability, type TripBudgetEstimate } from "@/modules/ai";
 import { normalizeSearchText } from "@/features/trips/data/destinations";
 import {
@@ -59,6 +62,8 @@ export interface TripFormProps {
   onCancel?: () => void;
   /** Cities picked outside the form (the trip planner); hides the form's own destination search. */
   destinations?: string[];
+  /** Plan this trip with a group's people (and, for a shared group, add its members directly). */
+  fromGroupId?: string;
   /** Coordinates already resolved for `destinations`, so saving doesn't geocode them again. */
   knownCoordinates?: ReadonlyMap<string, LatLng | null>;
 }
@@ -131,21 +136,22 @@ function tripToFormState(trip: Trip): FormState {
   };
 }
 
-export function TripForm({ editingTrip, onSave, onCancel, destinations, knownCoordinates }: TripFormProps) {
+export function TripForm({ editingTrip, onSave, onCancel, destinations, knownCoordinates, fromGroupId }: TripFormProps) {
   const { c, f } = useAura();
   const { t, locale, formatCurrency } = useLocalization();
   const defaultCurrency = useDefaultCurrency();
   const createTrip = useTripsStore((state) => state.createTrip);
   const updateTrip = useTripsStore((state) => state.updateTrip);
 
+  const fromGroup = useTripsStore((state) => (fromGroupId ? (state.groups.find((group) => group.id === fromGroupId) ?? null) : null));
   const initialForm = useMemo(
     () =>
       editingTrip
         ? tripToFormState(editingTrip)
-        : makeInitialForm(
-            defaultCurrency,
-            destinations?.length ? { destinations, name: defaultTripName(destinations, t) } : undefined,
-          ),
+        : makeInitialForm(fromGroup?.currency ?? defaultCurrency, {
+            ...(destinations?.length ? { destinations, name: defaultTripName(destinations, t) } : {}),
+            ...(fromGroup && fromGroup.companions.length > 0 ? { mode: "group" as const, companions: fromGroup.companions } : {}),
+          }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [editingTrip, defaultCurrency],
   );
@@ -499,7 +505,11 @@ export function TripForm({ editingTrip, onSave, onCancel, destinations, knownCoo
       if (editingTrip) {
         updateTrip(editingTrip.id, input satisfies UpdateTripInput);
       } else {
-        createTrip(input satisfies CreateTripInput);
+        const created = createTrip(input satisfies CreateTripInput);
+        if (fromGroup?.shared && input.companions.length > 0) {
+          const ownerName = useAuthStore.getState().user?.name ?? "";
+          shareGroup(created, ownerName.split(" ")[0] || ownerName, fromGroup.shared.groupId).catch(() => showToast(t("groupTrip.actionFailed")));
+        }
         track("trip_created", {
           mode: input.mode,
           destinations: input.destinations.length,

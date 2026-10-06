@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AuraButton, AuraCard, AuraChip, AuraField, AuraLoader, Icon, PressableScale, useAura } from "@/atoms";
 import { useAuthStore } from "@/features/auth/store/authStore";
 import { registerGroupPush } from "@/features/sync";
+import { useMoneyViewStore } from "@/features/expenses/store/moneyViewStore";
 import { isTrip, selectMoneyGroups, useTripsStore, type MoneyGroup } from "@/features/trips/store/tripsStore";
 import { track, PrivateView } from "@/modules/analytics";
 import { fromDateKey } from "@/features/trips/utils/dates";
@@ -58,9 +59,11 @@ export default function JoinTripScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const selected = choice ?? (preview?.unclaimed.length ? null : NEW_MEMBER);
+  const k = (key: string) => (preview?.kind === "group" ? `groupShare.${key}` : `groupTrip.${key}`);
 
   const finish = async (tripId: string) => {
     const joined = await openWhenSynced(tripId);
+    if (joined && !isTrip(joined)) useMoneyViewStore.getState().select(joined.id);
     router.dismissAll();
     router.replace(joined && !isTrip(joined) ? "/(tabs)/expenses" : "/(tabs)");
   };
@@ -96,7 +99,7 @@ export default function JoinTripScreen() {
     <View style={[styles.root, { backgroundColor: c.bg }]}>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.scroll, { paddingTop: sheetTop + 16, paddingBottom: insets.bottom + 32 }]}>
         <View style={styles.header}>
-          <Text style={[styles.title, { color: c.text, fontFamily: f.semibold }]}>{t("groupTrip.joinTitle")}</Text>
+          <Text style={[styles.title, { color: c.text, fontFamily: f.semibold }]}>{t(k("joinTitle"))}</Text>
           <PressableScale onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={t("common.close")} style={[styles.close, { backgroundColor: c.surfaceStrong }]}>
             <Icon name="x" size={16} color={c.text} />
           </PressableScale>
@@ -121,8 +124,8 @@ export default function JoinTripScreen() {
 
             {preview.alreadyMember ? (
               <>
-                <Text style={[styles.body, styles.section, { color: c.textSoft, fontFamily: f.regular }]}>{t("groupTrip.joinAlready")}</Text>
-                <AuraButton label={t("groupTrip.openTrip")} onPress={() => void finish(preview.groupId)} style={styles.section} />
+                <Text style={[styles.body, styles.section, { color: c.textSoft, fontFamily: f.regular }]}>{t(k("joinAlready"))}</Text>
+                <AuraButton label={t(k("openTrip"))} onPress={() => void finish(preview.groupId)} style={styles.section} />
               </>
             ) : (
               <>
@@ -140,7 +143,7 @@ export default function JoinTripScreen() {
                 ) : null}
                 {selected === NEW_MEMBER ? (
                   <AuraField
-                    label={t("groupTrip.joinNameLabel")}
+                    label={t(k("joinNameLabel"))}
                     value={name}
                     onChangeText={setName}
                     placeholder={t("groupTrip.joinNamePlaceholder")}
@@ -149,8 +152,8 @@ export default function JoinTripScreen() {
                   />
                 ) : null}
                 {error ? <Text style={[styles.error, { fontFamily: f.medium }]}>{error}</Text> : null}
-                <Text style={[styles.note, { color: c.textMuted, fontFamily: f.regular }]}>{t("groupTrip.joinPrivacy")}</Text>
-                <AuraButton label={t("groupTrip.joinButton")} onPress={handleJoin} loading={busy} disabled={!selected} style={styles.section} />
+                <Text style={[styles.note, { color: c.textMuted, fontFamily: f.regular }]}>{t(k("joinPrivacy"))}</Text>
+                <AuraButton label={t(k("joinButton"))} onPress={handleJoin} loading={busy} disabled={!selected} style={styles.section} />
               </>
             )}
           </>

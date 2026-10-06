@@ -1,10 +1,6 @@
 import { storage } from "@/modules/storage";
 import { WIDGET_TOKEN_PARAM } from "@/features/widget/widgetToken";
-import {
-  pickDefaultActiveTripId,
-  useTripsStore,
-  type Trip,
-} from "@/features/trips/store/tripsStore";
+import { pickDefaultActiveTripId, selectMoneyGroups, useTripsStore, type MoneyGroup } from "@/features/trips/store/tripsStore";
 
 const WIDGET_TRIP_KEY = "widget.voiceTripId";
 
@@ -13,11 +9,13 @@ export function setWidgetTripId(tripId: string | null) {
   else storage.remove(WIDGET_TRIP_KEY);
 }
 
-/** The trip the widget adds to: its own pick, else the active trip, else the current/next trip. */
-export function resolveWidgetTrip(): Trip | null {
-  const { trips, activeTripId } = useTripsStore.getState();
+/** The trip or group the widget adds to: its own pick, else the active trip, else the current/next trip. */
+export function resolveWidgetTrip(): MoneyGroup | null {
+  const state = useTripsStore.getState();
+  const { trips, activeTripId } = state;
+  const all = selectMoneyGroups(state);
   const pickedId = storage.getString(WIDGET_TRIP_KEY);
-  const byId = (id: string | null | undefined) => (id ? trips.find((trip) => trip.id === id) : undefined);
+  const byId = (id: string | null | undefined) => (id ? all.find((item) => item.id === id) : undefined);
   return byId(pickedId) ?? byId(activeTripId) ?? byId(pickDefaultActiveTripId(trips)) ?? trips[0] ?? null;
 }
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { BackHandler, Keyboard, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import Animated, {
   Extrapolation,
   FadeIn,
@@ -38,6 +38,7 @@ type Step = "cities" | "details";
 /** New trip in two steps under a live globe: pick cities (pinned and joined by arcs), then the details. */
 export default function PlanTripScreen() {
   const router = useRouter();
+  const { fromGroup } = useLocalSearchParams<{ fromGroup?: string }>();
   const { c, f, isDark } = useAura();
   const { t } = useLocalization();
   const insets = useSafeAreaInsets();
@@ -208,7 +209,7 @@ export default function PlanTripScreen() {
               <Icon name="chevronRight" size={12} color={c.textMuted} />
             </PressableScale>
           </View>
-          <TripForm destinations={destinations} knownCoordinates={coordinates} onSave={() => router.back()} />
+          <TripForm destinations={destinations} knownCoordinates={coordinates} fromGroupId={fromGroup} onSave={() => router.back()} />
         </Animated.View>
       ) : null}
 

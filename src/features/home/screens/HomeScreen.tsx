@@ -92,7 +92,7 @@ export default function HomeScreen() {
   }, []);
 
   if (!activeTrip || !data) {
-    return <EmptyHome tripCount={tripCount} onViewTrips={() => router.push("/trips")} onPlanTrip={startNewTrip} />;
+    return <EmptyHome tripCount={tripCount} onViewTrips={() => router.push("/trips")} onPlanTrip={() => startNewTrip()} />;
   }
 
   const status: AuraStatus = safetyStatus === "emergency" ? "alert" : share.isBroadcasting ? "live" : "calm";

@@ -1818,7 +1818,13 @@
     "moveTo": "Sposta in",
     "addTo": "Aggiungi a",
     "everyone": "Tutti",
-    "with": "Con"
+    "with": "Con",
+    "keepTitle": "Continuare a dividere con queste persone?",
+    "keepBody": "Il viaggio è finito. Tieni le sue persone come gruppo per le spese di tutti i giorni; il viaggio, il riepilogo e i timbri del passaporto restano come sono.",
+    "keepAction": "Tieni come gruppo",
+    "notNow": "Non ora",
+    "planTrip": "Pianifica un viaggio con questo gruppo",
+    "planTripBody": "Partite insieme? Inizia un viaggio con queste persone già dentro."
   },
   "groupShare": {
     "deleteBlocked": "Rimuovi chi si è unito prima di eliminare questo gruppo. Puoi anche archiviarlo per nasconderlo dalla lista.",
@@ -1839,6 +1845,12 @@
     "resetLinkBody": "Il link e il codice attuali smettono di funzionare. Chi è già nel gruppo resta.",
     "settingUp": "Preparazione del gruppo condiviso…",
     "shareIntro": "Crea un link di invito per questo gruppo. Chi lo apre può unirsi e vedere le spese che dividi, e i saldi di tutti restano aggiornati. Le spese che non dividi restano private.",
-    "shareTitle": "Condividi questo gruppo"
+    "shareTitle": "Condividi questo gruppo",
+    "joinAlready": "Sei già in questo gruppo.",
+    "joinButton": "Unisciti al gruppo",
+    "joinNameLabel": "Il tuo nome in questo gruppo",
+    "joinPrivacy": "I membri vedono il gruppo e le spese condivise, anche dove sono state aggiunte. Le spese che non dividi restano private.",
+    "openTrip": "Apri gruppo",
+    "joinTitle": "Unisciti al gruppo"
   }
 }
