@@ -194,6 +194,7 @@ export default defineSchema({
         tripName: v.optional(v.number()),
         itinerary: v.optional(v.number()),
         voiceExpense: v.optional(v.number()),
+        receiptItems: v.optional(v.number()),
       }),
     ),
   }).index("by_user_month", ["userId", "month"]),

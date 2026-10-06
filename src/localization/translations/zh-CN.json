@@ -1589,7 +1589,9 @@
     "use_tripBudget": "旅行预算",
     "use_tripName": "旅行名称",
     "use_itinerary": "行程整理",
-    "use_voiceExpense": "语音记账"
+    "use_voiceExpense": "语音记账",
+    "feature_receiptItems": "收据项目",
+    "use_receiptItems": "收据项目"
   },
   "units": {
     "km": "{{value}}公里",
@@ -1931,5 +1933,21 @@
     "paidBy": "付款人",
     "yourShare": "你的份额",
     "split": "分摊"
+  },
+  "receipt": {
+    "scan": "扫描收据",
+    "reading": "正在手机上读取收据…",
+    "noTotal": "未找到总额，请核对金额。",
+    "failed": "无法读取这张照片，请换一张更清晰的。",
+    "unavailableTitle": "请更新应用以扫描收据",
+    "unavailableBody": "此版本尚不支持读取收据。",
+    "splitByItem": "按项目分摊",
+    "readingItems": "正在读取项目…",
+    "itemsFailedTitle": "无法读取项目",
+    "itemsFailedBody": "需要在线 AI 和网络连接。你仍可按金额分摊。",
+    "itemsTitle": "谁点了什么？",
+    "itemsIntro": "把没吃某项的人从该项中去掉。共享的项目平均分摊；税费和小费按每人份额分摊。在线只读取了收据文字，从未上传照片。",
+    "extras": "税费、服务费和小费：{{amount}}，按比例分摊",
+    "apply": "使用此分摊"
   }
 }

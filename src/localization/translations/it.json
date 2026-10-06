@@ -1589,7 +1589,9 @@
     "use_tripBudget": "Budget di viaggio",
     "use_tripName": "Nome del viaggio",
     "use_itinerary": "Itinerario riordinato",
-    "use_voiceExpense": "Spesa vocale"
+    "use_voiceExpense": "Spesa vocale",
+    "feature_receiptItems": "Voci delle ricevute",
+    "use_receiptItems": "Voci ricevuta"
   },
   "units": {
     "km": "{{value}} km",
@@ -1931,5 +1933,21 @@
     "paidBy": "Pagato da",
     "yourShare": "La tua quota",
     "split": "Divisione"
+  },
+  "receipt": {
+    "scan": "Scansiona una ricevuta",
+    "reading": "Lettura della ricevuta sul telefono…",
+    "noTotal": "Totale non trovato. Controlla l'importo.",
+    "failed": "Impossibile leggere la foto. Provane una più nitida.",
+    "unavailableTitle": "Aggiorna l'app per scansionare ricevute",
+    "unavailableBody": "La lettura delle ricevute non è ancora in questa versione.",
+    "splitByItem": "Dividi per voce",
+    "readingItems": "Lettura delle voci…",
+    "itemsFailedTitle": "Impossibile leggere le voci",
+    "itemsFailedBody": "Servono l'IA online e una connessione. Puoi comunque dividere per importo.",
+    "itemsTitle": "Chi ha preso cosa?",
+    "itemsIntro": "Togli le persone dalle voci che non hanno preso. Le voci condivise si dividono in parti uguali; tasse e mance seguono la quota di ciascuno. Online è stato letto solo il testo della ricevuta, mai la foto.",
+    "extras": "Tasse, servizio e mancia: {{amount}}, divisi in proporzione",
+    "apply": "Usa questa divisione"
   }
 }

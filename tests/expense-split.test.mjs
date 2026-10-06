@@ -295,3 +295,45 @@ test("CSV export: quoted cells, your share, payers and split, sorted by date", (
   assert.ok(csv.includes('"Pizza, wine"'));
   assert.equal(exportRowsModule.csvCell('say "hi"'), '"say ""hi"""');
 });
+
+const receipt = loadModule("src/features/expenses/utils/receiptText.ts");
+
+test("receipt text: total, shop, date and items", () => {
+  const guess = receipt.guessReceipt([
+    "CAFE MOCHA",
+    "Indiranagar, Bengaluru",
+    "Date: 05/10/2026  21:14",
+    "Paneer Tikka 320.00",
+    "Butter Naan x2 120.00",
+    "Mojito 1,250.00",
+    "Sub Total 1,690.00",
+    "CGST 2.5% 42.25",
+    "SGST 2.5% 42.25",
+    "Grand Total",
+    "1,774.50",
+    "Paid by UPI",
+  ]);
+  assert.equal(guess.amount, 1774.5);
+  assert.equal(guess.merchant, "CAFE MOCHA");
+  assert.equal(guess.date, "2026-10-05");
+  assert.deepEqual(guess.items.map((item) => item.name), ["Paneer Tikka", "Butter Naan x2", "Mojito"]);
+  assert.equal(receipt.parseAmount("1.234,50"), 1234.5);
+  assert.equal(receipt.parseAmount("1,234"), 1234);
+  assert.equal(receipt.guessReceipt(["SHOP", "12.00", "5.00"]).amount, 12);
+});
+
+test("itemised receipt: items per person, extras in proportion, exact total", () => {
+  const weights = receipt.itemWeights(
+    [
+      { amount: 600, people: [SELF_ID] },
+      { amount: 300, people: ["Rahul"] },
+      { amount: 300, people: [SELF_ID, "Rahul", "Asha"] },
+    ],
+    120,
+  );
+  assert.equal(weights[SELF_ID], 770);
+  assert.equal(weights.Rahul, 440);
+  assert.equal(weights.Asha, 110);
+  const shares = split.splitByUnits(1320, "INR", weights).shares;
+  assert.equal(shares.reduce((sum, share) => sum + share.amount, 0), 1320);
+});

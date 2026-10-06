@@ -1589,7 +1589,9 @@
     "use_tripBudget": "Orçamento de viagem",
     "use_tripName": "Nome da viagem",
     "use_itinerary": "Roteiro organizado",
-    "use_voiceExpense": "Despesa por voz"
+    "use_voiceExpense": "Despesa por voz",
+    "feature_receiptItems": "Itens de recibos",
+    "use_receiptItems": "Itens de recibo"
   },
   "units": {
     "km": "{{value}} km",
@@ -1931,5 +1933,21 @@
     "paidBy": "Pago por",
     "yourShare": "Sua parte",
     "split": "Divisão"
+  },
+  "receipt": {
+    "scan": "Escanear um recibo",
+    "reading": "Lendo o recibo no seu celular…",
+    "noTotal": "Não encontramos o total. Confira o valor.",
+    "failed": "Não foi possível ler a foto. Tente uma mais nítida.",
+    "unavailableTitle": "Atualize o app para escanear recibos",
+    "unavailableBody": "A leitura de recibos ainda não está nesta versão.",
+    "splitByItem": "Dividir por item",
+    "readingItems": "Lendo os itens…",
+    "itemsFailedTitle": "Não foi possível ler os itens",
+    "itemsFailedBody": "Precisa de IA online e conexão. Você ainda pode dividir por valor.",
+    "itemsTitle": "Quem consumiu o quê?",
+    "itemsIntro": "Toque para tirar quem não consumiu um item. Itens compartilhados são divididos igualmente; impostos e gorjeta seguem a parte de cada um. Só o texto do recibo foi lido online, nunca a foto.",
+    "extras": "Impostos, serviço e gorjeta: {{amount}}, divididos proporcionalmente",
+    "apply": "Usar esta divisão"
   }
 }

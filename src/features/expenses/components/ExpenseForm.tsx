@@ -12,6 +12,7 @@ import {
   PressableScale,
   showAlert,
   useAura,
+  showToast,
 } from "@/atoms";
 import { auraCategoryColors } from "@/constants/aura";
 import { useLocalization } from "@/localization";
@@ -20,10 +21,17 @@ import { findMoneyGroup, isTrip, selectMoneyGroups, useTripsStore } from "@/feat
 import { useRecurringStore } from "@/features/expenses/store/recurringStore";
 import { toLocalDayKey } from "@/features/expenses/utils/dateKey";
 import type { RepeatFrequency } from "@/features/expenses/utils/recurring";
-import { usePlusGate } from "@/modules/billing";
+import { usePlanStore, usePlusGate } from "@/modules/billing";
+import { aiService, type ReceiptItems } from "@/modules/ai";
+import { ocr } from "@/modules/ocr";
+import * as ImagePicker from "expo-image-picker";
+import { useRouter } from "expo-router";
+import { withSystemPrompt } from "@/utils/systemPrompt";
+import { guessReceipt } from "@/features/expenses/utils/receiptText";
+import { ReceiptItemsSheet } from "@/features/expenses/components/ReceiptItemsSheet";
 import { EXPENSE_CATEGORIES, type ExpenseCategory } from "@/features/expenses/constants/categories";
 import { type Expense, type ExpenseLocation, type ExpenseSource, useExpensesStore } from "@/features/expenses/store/expensesStore";
-import { roundMoney, SELF_ID, type ExpenseShare, type ExpensePayer, type ExpenseSplit } from "@/features/expenses/utils/split";
+import { roundMoney, SELF_ID, type ExpenseShare, type ExpensePayer, type ExpenseSplit, splitByUnits } from "@/features/expenses/utils/split";
 import { initialSplitValue, personLabel, SplitEditor, splitValueToPayers, splitValueToShares, splitValueToStored, type SplitValue } from "@/features/expenses/components/SplitEditor";
 import { categorizeHeuristic } from "@/features/expenses/services/categorizer";
 import { getCurrentExpenseLocation } from "@/features/expenses/services/locationTagging";
@@ -167,6 +175,12 @@ function ExpenseFormBody({
   const companions = useMemo(() => companionsOverride ?? target?.companions ?? [], [companionsOverride, target?.companions]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [repeat, setRepeat] = useState<RepeatFrequency | null>(null);
+  const [receiptLines, setReceiptLines] = useState<string[] | null>(null);
+  const [scanning, setScanning] = useState(false);
+  const [readingItems, setReadingItems] = useState(false);
+  const [receiptItems, setReceiptItems] = useState<ReceiptItems | null>(null);
+  const router = useRouter();
+  const cloudAi = usePlanStore((state) => state.cloudAi);
   const plus = usePlusGate();
   const canRepeat = !editingExpense && source === "manual";
   const [currencyTouched, setCurrencyTouched] = useState(Boolean(editingExpense ?? initialDraft));
@@ -253,6 +267,61 @@ function ExpenseFormBody({
     else showAlert(t("expenses.tagLocation"), t("expenses.locationUnavailable"));
   };
 
+  const scanReceipt = () =>
+    plus.run("receiptScan", () => {
+      void (async () => {
+        if (!ocr.isAvailable) {
+          showAlert(t("receipt.unavailableTitle"), t("receipt.unavailableBody"));
+          return;
+        }
+        const picked = await withSystemPrompt(() => ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.9 }));
+        if (picked.canceled || !picked.assets[0]) return;
+        setScanning(true);
+        try {
+          const lines = await ocr.readLines(picked.assets[0].uri);
+          const guess = guessReceipt(lines);
+          if (guess.amount !== null) setAmount(String(guess.amount).replace(".", decimalSeparator));
+          if (guess.merchant && !merchant.trim()) handleMerchantChange(guess.merchant);
+          if (guess.date) setDate(new Date(`${guess.date}T12:00:00`));
+          setReceiptLines(lines);
+          track("receipt_scanned", { found_total: guess.amount !== null, lines: Math.min(lines.length, 200) });
+          if (guess.amount === null) showToast(t("receipt.noTotal"));
+        } catch {
+          showAlert(t("receipt.failed"));
+        } finally {
+          setScanning(false);
+        }
+      })();
+    });
+
+  const splitByItem = () => {
+    if (!receiptLines) return;
+    if (!cloudAi) {
+      router.push({ pathname: "/paywall", params: { reason: "ai" } });
+      return;
+    }
+    setReadingItems(true);
+    aiService
+      .readReceiptItems(receiptLines)
+      .then((items) => {
+        setReceiptItems(items);
+        if (!Number.isFinite(parseAmountInput(amount, decimalSeparator))) setAmount(String(items.total).replace(".", decimalSeparator));
+      })
+      .catch(() => showAlert(t("receipt.itemsFailedTitle"), t("receipt.itemsFailedBody")))
+      .finally(() => setReadingItems(false));
+  };
+
+  const applyItemWeights = (weights: Record<string, number>) => {
+    const parsed = parseAmountInput(amount, decimalSeparator);
+    const total = Number.isFinite(parsed) && parsed > 0 ? parsed : (receiptItems?.total ?? 0);
+    const resolution = splitByUnits(total, currency, weights);
+    if (!resolution.ok) return;
+    const custom = Object.fromEntries(resolution.shares.map((share) => [share.person, String(share.amount).replace(".", decimalSeparator)]));
+    setSplit({ ...split, mode: "custom", custom });
+    setSplitOpen(true);
+    track("receipt_items_split", { items: receiptItems?.items.length ?? 0, people: resolution.shares.length });
+  };
+
   const handleSave = () => {
     const parsedAmount = parseAmountInput(amount, decimalSeparator);
     const numericAmount = Number.isFinite(parsedAmount) ? roundMoney(parsedAmount, currency) : parsedAmount;
@@ -325,6 +394,18 @@ function ExpenseFormBody({
     <PrivateView style={styles.flex}>
       <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
         {onImport && !editingExpense && !initialDraft ? <ImportShortcuts onImport={onImport} /> : null}
+        {canRepeat ? (
+          <PressableScale
+            onPress={scanReceipt}
+            disabled={scanning}
+            accessibilityRole="button"
+            style={[styles.scan, { backgroundColor: c.surface, borderColor: c.hairline }]}
+          >
+            <Icon name={plus.isPlus ? "receipt" : "lock"} size={16} color={c.text} />
+            <Text style={[styles.scanText, { color: c.text, fontFamily: f.medium }]}>{scanning ? t("receipt.reading") : t("receipt.scan")}</Text>
+            {scanning ? <ActivityIndicator size="small" color={c.textSoft} /> : null}
+          </PressableScale>
+        ) : null}
         {showTarget ? (
           <PressableScale
             onPress={() => setPickerOpen(true)}
@@ -375,6 +456,17 @@ function ExpenseFormBody({
 
         <AuraField label={t("expenses.merchant")} value={merchant} onChangeText={handleMerchantChange} placeholder={t("expenses.merchantPlaceholder")} autoCapitalize="words" />
 
+        {receiptLines && canSplit ? (
+          <AuraButton
+            label={readingItems ? t("receipt.readingItems") : t("receipt.splitByItem")}
+            icon={cloudAi ? "receipt" : "lock"}
+            variant="secondary"
+            size="md"
+            loading={readingItems}
+            onPress={splitByItem}
+            style={styles.itemButton}
+          />
+        ) : null}
         {canSplit && !splitOpen ? (
           <SplitSummary split={split} everyone={everyone} onOpen={() => setSplitOpen(true)} />
         ) : null}
@@ -452,6 +544,7 @@ function ExpenseFormBody({
 
       </ScrollView>
 
+      <ReceiptItemsSheet receipt={receiptItems} everyone={everyone} currency={currency} onClose={() => setReceiptItems(null)} onApply={applyItemWeights} />
       <AuraOptionSheet
         visible={pickerOpen}
         onClose={() => setPickerOpen(false)}
@@ -550,6 +643,9 @@ const NO_GROUP = "__none__";
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
+  scan: { flexDirection: "row", alignItems: "center", gap: 10, minHeight: 48, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 14 },
+  scanText: { flex: 1, fontSize: 14.5 },
+  itemButton: { alignSelf: "flex-start" },
   target: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", height: 34, paddingHorizontal: 14, borderRadius: 17, maxWidth: "100%" },
   targetLabel: { fontSize: 13.5 },
   targetName: { fontSize: 13.5, flexShrink: 1 },

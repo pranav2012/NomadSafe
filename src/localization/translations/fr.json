@@ -1589,7 +1589,9 @@
     "use_tripBudget": "Budget de voyage",
     "use_tripName": "Nom de voyage",
     "use_itinerary": "Itinéraire rangé",
-    "use_voiceExpense": "Dépense vocale"
+    "use_voiceExpense": "Dépense vocale",
+    "feature_receiptItems": "Articles de reçus",
+    "use_receiptItems": "Articles de reçu"
   },
   "units": {
     "km": "{{value}} km",
@@ -1931,5 +1933,21 @@
     "paidBy": "Payé par",
     "yourShare": "Ta part",
     "split": "Partage"
+  },
+  "receipt": {
+    "scan": "Scanner un reçu",
+    "reading": "Lecture du reçu sur ton téléphone…",
+    "noTotal": "Total introuvable. Vérifie le montant.",
+    "failed": "Impossible de lire cette photo. Essaie une plus nette.",
+    "unavailableTitle": "Mets l'app à jour pour scanner des reçus",
+    "unavailableBody": "La lecture des reçus n'est pas encore dans cette version.",
+    "splitByItem": "Partager par article",
+    "readingItems": "Lecture des articles…",
+    "itemsFailedTitle": "Impossible de lire les articles",
+    "itemsFailedBody": "Il faut l'IA en ligne et une connexion. Tu peux toujours partager par montant.",
+    "itemsTitle": "Qui a pris quoi ?",
+    "itemsIntro": "Retire les personnes des articles qu'elles n'ont pas pris. Les articles partagés sont divisés à parts égales ; taxes et pourboire suivent la part de chacun. Seul le texte du reçu a été lu en ligne, jamais la photo.",
+    "extras": "Taxes, service et pourboire : {{amount}}, répartis au prorata",
+    "apply": "Utiliser ce partage"
   }
 }

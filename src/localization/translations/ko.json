@@ -1589,7 +1589,9 @@
     "use_tripBudget": "여행 예산",
     "use_tripName": "여행 이름",
     "use_itinerary": "일정 정리",
-    "use_voiceExpense": "음성 지출"
+    "use_voiceExpense": "음성 지출",
+    "feature_receiptItems": "영수증 항목",
+    "use_receiptItems": "영수증 항목"
   },
   "units": {
     "km": "{{value}}km",
@@ -1931,5 +1933,21 @@
     "paidBy": "결제한 사람",
     "yourShare": "내 몫",
     "split": "분배"
+  },
+  "receipt": {
+    "scan": "영수증 스캔",
+    "reading": "휴대폰에서 영수증을 읽는 중…",
+    "noTotal": "합계를 찾지 못했어요. 금액을 확인하세요.",
+    "failed": "사진을 읽을 수 없어요. 더 선명한 사진으로 해 보세요.",
+    "unavailableTitle": "영수증을 스캔하려면 앱을 업데이트하세요",
+    "unavailableBody": "이 버전에는 아직 영수증 읽기가 없어요.",
+    "splitByItem": "항목별로 나누기",
+    "readingItems": "항목을 읽는 중…",
+    "itemsFailedTitle": "항목을 읽지 못했어요",
+    "itemsFailedBody": "온라인 AI와 연결이 필요해요. 금액으로 나누기는 계속 쓸 수 있어요.",
+    "itemsTitle": "누가 무엇을?",
+    "itemsIntro": "먹지 않은 항목에서 사람을 빼세요. 함께 먹은 항목은 똑같이, 세금과 팁은 각자 몫에 따라 나눠요. 온라인으로는 영수증 글자만 읽었고 사진은 보내지 않았어요.",
+    "extras": "세금·서비스·팁: {{amount}}, 비율대로 나눔",
+    "apply": "이 분배 사용"
   }
 }

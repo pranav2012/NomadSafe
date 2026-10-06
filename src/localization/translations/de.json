@@ -1589,7 +1589,9 @@
     "use_tripBudget": "Reisebudget",
     "use_tripName": "Reisename",
     "use_itinerary": "Reiseplan aufgeräumt",
-    "use_voiceExpense": "Sprach-Ausgabe"
+    "use_voiceExpense": "Sprach-Ausgabe",
+    "feature_receiptItems": "Belegposten",
+    "use_receiptItems": "Belegposten"
   },
   "units": {
     "km": "{{value}} km",
@@ -1931,5 +1933,21 @@
     "paidBy": "Bezahlt von",
     "yourShare": "Dein Anteil",
     "split": "Aufteilung"
+  },
+  "receipt": {
+    "scan": "Beleg scannen",
+    "reading": "Beleg wird auf deinem Handy gelesen…",
+    "noTotal": "Gesamtbetrag nicht gefunden. Prüf den Betrag.",
+    "failed": "Das Foto ließ sich nicht lesen. Versuch ein schärferes.",
+    "unavailableTitle": "Aktualisiere die App, um Belege zu scannen",
+    "unavailableBody": "Das Lesen von Belegen ist in dieser App-Version noch nicht enthalten.",
+    "splitByItem": "Nach Posten aufteilen",
+    "readingItems": "Posten werden gelesen…",
+    "itemsFailedTitle": "Posten konnten nicht gelesen werden",
+    "itemsFailedBody": "Dafür brauchst du Online-KI und eine Verbindung. Nach Beträgen aufteilen geht weiterhin.",
+    "itemsTitle": "Wer hatte was?",
+    "itemsIntro": "Tippe Leute bei Posten weg, die sie nicht hatten. Geteilte Posten werden gleich aufgeteilt; Steuer und Trinkgeld folgen den Anteilen. Online wurde nur der Text des Belegs gelesen, nie das Foto.",
+    "extras": "Steuer, Service und Trinkgeld: {{amount}}, anteilig verteilt",
+    "apply": "Diese Aufteilung nutzen"
   }
 }

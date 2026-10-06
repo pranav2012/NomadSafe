@@ -38,6 +38,7 @@ const taskValidator = v.union(
   v.literal("tripBudget"),
   v.literal("tripName"),
   v.literal("voiceExpense"),
+  v.literal("receiptItems"),
 );
 // Structured tasks `complete` accepts; chat replies only stream through /ai/chat.
 const completeTaskValidator = v.union(
@@ -45,6 +46,7 @@ const completeTaskValidator = v.union(
   v.literal("tripBudget"),
   v.literal("tripName"),
   v.literal("voiceExpense"),
+  v.literal("receiptItems"),
 );
 const STREAM_TASKS: readonly CloudAiTask[] = ["chat"];
 

@@ -37,6 +37,10 @@ import {
   type TripBudgetEstimateInput,
   type TripNameInput,
   type TripNameSuggestion,
+  parseReceiptItems,
+  RECEIPT_ITEMS_SYSTEM_PROMPT,
+  receiptItemsRequest,
+  type ReceiptItems,
 } from "./prompts";
 import { compactChatMemory } from "./chatMemory";
 import { localModelService } from "./local/localModelService";
@@ -49,7 +53,7 @@ import type { ByokConfig, RemoteMessage } from "./remote/providers";
 
 type Route = { kind: "byok"; config: ByokConfig } | { kind: "cloud" } | { kind: "local" };
 type RemoteRoute = Exclude<Route, { kind: "local" }>;
-type TrackedTask = "chat" | "budget" | "trip_name" | "itinerary" | "voice";
+type TrackedTask = "chat" | "budget" | "trip_name" | "itinerary" | "voice" | "receipt";
 
 const TRACKED_TASKS: Partial<Record<AiTask, TrackedTask>> = {
   chat: "chat",
@@ -57,6 +61,7 @@ const TRACKED_TASKS: Partial<Record<AiTask, TrackedTask>> = {
   tripName: "trip_name",
   itinerary: "itinerary",
   voiceExpense: "voice",
+  receiptItems: "receipt",
 };
 
 let chatAbort: AbortController | null = null;
@@ -210,6 +215,13 @@ export const aiService = {
       voiceExtractionRequest(transcript, companions),
       parseVoiceExtraction,
       () => localModelService.extractVoiceExpense(transcript, companions),
+    );
+  },
+
+  /** Pro: line items read from a receipt's text (never the photo). There is no on-device fallback. */
+  readReceiptItems(lines: string[]): Promise<ReceiptItems> {
+    return runTask("receiptItems", AI_TASKS.receiptItems, RECEIPT_ITEMS_SYSTEM_PROMPT, receiptItemsRequest(lines), parseReceiptItems, () =>
+      Promise.reject(new Error("Receipt items need online AI")),
     );
   },
 

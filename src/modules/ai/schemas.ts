@@ -43,6 +43,21 @@ export const AI_TASKS = {
     }),
   },
   voice: { name: "voice_expense", schema: strictSchema(VOICE_EXTRACTION_SCHEMA) },
+  receiptItems: {
+    name: "receipt_items",
+    schema: strictSchema({
+      type: "object",
+      properties: {
+        items: {
+          type: "array",
+          items: { type: "object", properties: { name: { type: "string" }, amount: { type: "number" } }, required: ["name", "amount"] },
+        },
+        extras: { type: "number" },
+        total: { type: "number" },
+      },
+      required: ["items", "extras", "total"],
+    }),
+  },
   category: {
     name: "expense_category",
     schema: strictSchema({

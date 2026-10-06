@@ -1589,7 +1589,9 @@
     "use_tripBudget": "Trip budget",
     "use_tripName": "Trip name",
     "use_itinerary": "Itinerary tidy-up",
-    "use_voiceExpense": "Voice expense"
+    "use_voiceExpense": "Voice expense",
+    "feature_receiptItems": "Receipt items",
+    "use_receiptItems": "Receipt items"
   },
   "units": {
     "km": "{{value}} km",
@@ -1931,5 +1933,21 @@
     "paidBy": "Paid by",
     "yourShare": "Your share",
     "split": "Split"
+  },
+  "receipt": {
+    "scan": "Scan a receipt",
+    "reading": "Reading the receipt on your phone…",
+    "noTotal": "Couldn't find the total. Check the amount.",
+    "failed": "Couldn't read that photo. Try a sharper one.",
+    "unavailableTitle": "Update the app to scan receipts",
+    "unavailableBody": "Receipt reading isn't in this version of the app yet.",
+    "splitByItem": "Split by item",
+    "readingItems": "Reading the items…",
+    "itemsFailedTitle": "Couldn't read the items",
+    "itemsFailedBody": "This needs online AI and a connection. You can still split by amount.",
+    "itemsTitle": "Who had what?",
+    "itemsIntro": "Tap people off the items they didn't have. Shared items are split equally; tax and tips follow everyone's share. Only the receipt's text was read online, never the photo.",
+    "extras": "Tax, service and tip: {{amount}}, shared in proportion",
+    "apply": "Use this split"
   }
 }

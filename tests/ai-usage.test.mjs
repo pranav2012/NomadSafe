@@ -48,6 +48,7 @@ test("per-feature counts move up and down without going negative", () => {
     tripBudget: 2,
     tripName: 0,
     voiceExpense: 0,
+    receiptItems: 0,
   });
 });
 

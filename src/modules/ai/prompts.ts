@@ -207,6 +207,35 @@ export function parseBudgetEstimate(text: string): TripBudgetEstimate {
   };
 }
 
+export interface ReceiptItems {
+  items: { name: string; amount: number }[];
+  /** Tax, service charge and tip together, shared in proportion to the items. */
+  extras: number;
+  total: number;
+}
+
+export const RECEIPT_ITEMS_SYSTEM_PROMPT =
+  "You read the text of a shop or restaurant receipt (from on-device OCR, so it can be noisy) and list what was bought. " +
+  "Return JSON with items (one entry per line item: a short name and its line total, quantities already multiplied), " +
+  "extras (tax, VAT/GST, service charge and tip added on top, summed; 0 when none or already included) and total (the amount paid). " +
+  "Leave out subtotals, payments, change and discounts that are not line items. Use numbers without currency symbols.";
+
+export function receiptItemsRequest(lines: string[]): string {
+  return `Receipt text:\n${lines.slice(0, 120).join("\n")}`;
+}
+
+export function parseReceiptItems(text: string): ReceiptItems {
+  const parsed = parseJsonObject(text) as Partial<ReceiptItems>;
+  const items = (Array.isArray(parsed.items) ? parsed.items : [])
+    .filter((item): item is { name: string; amount: number } => typeof item?.name === "string" && typeof item?.amount === "number" && item.amount > 0)
+    .map((item) => ({ name: item.name.trim().slice(0, 60), amount: item.amount }))
+    .slice(0, 60);
+  if (items.length === 0) throw new Error("No items found on the receipt.");
+  const extras = typeof parsed.extras === "number" && parsed.extras > 0 ? parsed.extras : 0;
+  const total = typeof parsed.total === "number" && parsed.total > 0 ? parsed.total : items.reduce((sum, item) => sum + item.amount, 0) + extras;
+  return { items, extras, total };
+}
+
 export function parseTripName(text: string): TripNameSuggestion {
   const parsed = parseJsonObject(text) as Partial<TripNameSuggestion>;
   const name = typeof parsed.name === "string" ? parsed.name.trim() : "";

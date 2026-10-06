@@ -1589,7 +1589,9 @@
     "use_tripBudget": "旅行の予算",
     "use_tripName": "旅行の名前",
     "use_itinerary": "旅程の整理",
-    "use_voiceExpense": "音声での支出"
+    "use_voiceExpense": "音声での支出",
+    "feature_receiptItems": "レシートの品目",
+    "use_receiptItems": "レシートの品目"
   },
   "units": {
     "km": "{{value}}km",
@@ -1931,5 +1933,21 @@
     "paidBy": "支払った人",
     "yourShare": "あなたの負担",
     "split": "割り方"
+  },
+  "receipt": {
+    "scan": "レシートを読み取る",
+    "reading": "端末でレシートを読み取り中…",
+    "noTotal": "合計が見つかりませんでした。金額を確認してください。",
+    "failed": "写真を読み取れませんでした。より鮮明な写真でお試しください。",
+    "unavailableTitle": "レシートを読み取るにはアプリを更新してください",
+    "unavailableBody": "このバージョンにはレシート読み取りがまだありません。",
+    "splitByItem": "品目ごとに割る",
+    "readingItems": "品目を読み取り中…",
+    "itemsFailedTitle": "品目を読み取れませんでした",
+    "itemsFailedBody": "オンラインAIと接続が必要です。金額での割り勘はそのまま使えます。",
+    "itemsTitle": "誰が何を？",
+    "itemsIntro": "食べていない品目から人を外してください。共有の品目は均等に、税やチップは各自の負担に応じて分けます。オンラインで読んだのはレシートの文字だけで、写真は送っていません。",
+    "extras": "税・サービス料・チップ：{{amount}}（負担に応じて按分）",
+    "apply": "この割り方にする"
   }
 }

@@ -18,6 +18,7 @@ export {
   type ExpenseCategoryInput,
   type ItineraryEventRefinement,
   type ItineraryEventRefinementInput,
+  type ReceiptItems,
   type TripBudgetEstimate,
   type TripBudgetEstimateInput,
   type TripNameInput,

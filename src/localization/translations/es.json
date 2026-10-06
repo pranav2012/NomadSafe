@@ -1589,7 +1589,9 @@
     "use_tripBudget": "Presupuesto de viaje",
     "use_tripName": "Nombre de viaje",
     "use_itinerary": "Itinerario ordenado",
-    "use_voiceExpense": "Gasto por voz"
+    "use_voiceExpense": "Gasto por voz",
+    "feature_receiptItems": "Artículos de recibos",
+    "use_receiptItems": "Artículos de recibo"
   },
   "units": {
     "km": "{{value}} km",
@@ -1931,5 +1933,21 @@
     "paidBy": "Pagado por",
     "yourShare": "Tu parte",
     "split": "Reparto"
+  },
+  "receipt": {
+    "scan": "Escanear un recibo",
+    "reading": "Leyendo el recibo en tu teléfono…",
+    "noTotal": "No se encontró el total. Revisa el importe.",
+    "failed": "No se pudo leer la foto. Prueba con una más nítida.",
+    "unavailableTitle": "Actualiza la app para escanear recibos",
+    "unavailableBody": "La lectura de recibos aún no está en esta versión de la app.",
+    "splitByItem": "Dividir por artículo",
+    "readingItems": "Leyendo los artículos…",
+    "itemsFailedTitle": "No se pudieron leer los artículos",
+    "itemsFailedBody": "Necesita IA en línea y conexión. Aún puedes dividir por importe.",
+    "itemsTitle": "¿Quién tomó qué?",
+    "itemsIntro": "Toca para quitar a quien no tomó un artículo. Los compartidos se dividen por igual; impuestos y propinas siguen la parte de cada uno. Solo se leyó el texto del recibo en línea, nunca la foto.",
+    "extras": "Impuestos, servicio y propina: {{amount}}, repartidos en proporción",
+    "apply": "Usar este reparto"
   }
 }

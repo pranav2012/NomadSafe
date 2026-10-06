@@ -11,7 +11,7 @@ type SmsResult = "sent" | "cancelled" | "opened" | "failed";
 type PaidTier = "plus" | "pro";
 type BillingPeriod = "monthly" | "annual" | "lifetime";
 type AiProvider = "local" | "cloud" | "byok";
-type AiTask = "chat" | "budget" | "trip_name" | "itinerary" | "voice";
+type AiTask = "chat" | "budget" | "trip_name" | "itinerary" | "voice" | "receipt";
 type HomeStage = "none" | "upcoming" | "eve" | "active" | "ended";
 type EventSource = "manual" | "email";
 
@@ -28,6 +28,8 @@ export interface AnalyticsEvents {
   recurring_added: { count: number };
   recurring_created: { frequency: "weekly" | "monthly" | "yearly" };
   money_exported: { format: "csv" | "pdf"; count: number };
+  receipt_scanned: { found_total: boolean; lines: number };
+  receipt_items_split: { items: number; people: number };
   plus_feature_blocked: { feature: "shares" | "presets" | "recurring" | "charts" | "export" | "receiptScan" };
   trip_joined: { deferred: boolean; claimed_member: boolean };
   invite_deferred_found: { source: "install_referrer" | "clipboard" };

@@ -7,7 +7,7 @@
 export type AiProvider = "byok" | "cloud" | "local";
 export type RemoteProvider = Exclude<AiProvider, "local">;
 
-export type AiTask = "chat" | "chatSummary" | "tripBudget" | "tripName" | "itinerary" | "voiceExpense" | "expenseCategory";
+export type AiTask = "chat" | "chatSummary" | "tripBudget" | "tripName" | "itinerary" | "voiceExpense" | "expenseCategory" | "receiptItems";
 
 const ONLINE_FIRST = ["byok", "cloud", "local"] as const satisfies readonly AiProvider[];
 
@@ -27,6 +27,8 @@ export const AI_TASK_ROUTES: Record<AiTask, readonly AiProvider[]> = {
   voiceExpense: ONLINE_FIRST,
   // Imports carry raw Gmail/SMS text, which must never leave the device (Google Limited Use).
   expenseCategory: ["local"],
+  // Pro's itemised receipt split: only the text read on the phone goes online, never the photo.
+  receiptItems: ["byok", "cloud"],
 };
 
 /** Monthly NomadSafe Cloud allowance a task draws from (`CLOUD_AI_LIMITS` in convex/billingRules.ts). */
