@@ -59,7 +59,7 @@ export default function LockScreen() {
 
   const compact = height < 720;
   const passcode = mode === "passcode";
-  const orbSize = Math.round(Math.min(width * 0.62, passcode ? (compact ? 112 : 148) : 248));
+  const orbSize = Math.round(Math.min(width * 0.62, passcode ? (compact ? 112 : 136) : 248));
   const label =
     phase === "idle" ? t("auth.tapToUnlock") : phase === "scanning" ? t("auth.scanning") : biometric.matchedLabel;
 
@@ -243,7 +243,7 @@ export default function LockScreen() {
     <View style={[styles.root, { backgroundColor: c.bg }]}>
       <StatusBar style={isDark ? "light" : "dark"} />
       <SafeAreaView style={styles.safe} edges={["top", "bottom", "left", "right"]}>
-        <Animated.View layout={LinearTransition.springify().damping(20)} style={[styles.identity, { paddingTop: compact ? 8 : 28 }]}>
+        <Animated.View layout={LinearTransition.springify().damping(20)} style={[styles.identity, { paddingTop: compact || passcode ? 8 : 28 }]}>
           <PressableScale
             onPress={mode === "biometric" ? runScan : undefined}
             disabled={mode !== "biometric" || phase !== "idle"}
@@ -368,7 +368,8 @@ export default function LockScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   safe: { flex: 1, alignItems: "center" },
-  identity: { alignItems: "center" },
+  // Keeps the PIN dots clear of the "Locked" line; the keypad block below is centred and can fill all the slack.
+  identity: { alignItems: "center", marginBottom: 24 },
   avatar: { alignItems: "center", justifyContent: "center", borderWidth: 1 },
   initial: { letterSpacing: -0.5 },
   name: { fontSize: 22, letterSpacing: -0.5, marginTop: 6, maxWidth: 280, textAlign: "center" },
