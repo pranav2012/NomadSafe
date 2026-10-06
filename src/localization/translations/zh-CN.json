@@ -1719,5 +1719,32 @@
     "receiveNothing": "没有可添加的内容。",
     "receiveNoItems": "此行程还没有安排，请先添加一项。",
     "receiveFailed": "无法保存此文件。"
+  },
+  "passBack": {
+    "police": "报警",
+    "ambulance": "急救",
+    "fire": "火警",
+    "general": "紧急",
+    "callNumber": "拨打{{service}} {{number}}",
+    "watchReplay": "观看回顾",
+    "afterTitle": "你的旅程",
+    "days_one": "天",
+    "days_other": "天",
+    "places_one": "个地点",
+    "places_other": "个地点",
+    "spent": "花费",
+    "sameTime": "{{place}}与你时间相同",
+    "ahead": "{{place}}比你快 {{duration}}",
+    "behind": "{{place}}比你慢 {{duration}}",
+    "plugs": "插头 {{types}} 型",
+    "bringAdapter": "请带转换插头",
+    "plugsFit": "你的插头可直接用",
+    "beforeTitle": "去{{place}}之前",
+    "duringTitle": "万一遇到状况",
+    "showDriver": "给司机看",
+    "sharingWith_one": "正在与 {{count}} 人共享",
+    "sharingWith_other": "正在与 {{count}} 人共享",
+    "openMaps": "在地图中打开",
+    "addressUnavailable": "找不到当地地址。可出示预订名称，或联网后重试。"
   }
 }

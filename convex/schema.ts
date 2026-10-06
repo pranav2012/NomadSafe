@@ -207,6 +207,19 @@ export default defineSchema({
   }).index("by_email", ["email"]),
 
   // MET Norway forecast summaries per ~11 km cell (key "lat,lng" at 0.1°), shared by every user asking about that place.
+  // An embassy of one country in another, from Google Places, shared by everyone making that trip.
+  // `name` is unset when Google found none. Refreshed after 30 days (convex/places.ts embassyFor).
+  embassies: defineTable({
+    key: v.string(),
+    name: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    address: v.optional(v.string()),
+    mapsUrl: v.optional(v.string()),
+    latitude: v.optional(v.number()),
+    longitude: v.optional(v.number()),
+    fetchedAt: v.number(),
+  }).index("by_key", ["key"]),
+
   weatherCells: defineTable({
     key: v.string(),
     summary: v.string(),

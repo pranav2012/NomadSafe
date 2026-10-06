@@ -16,6 +16,7 @@ import type * as auth from "../auth.js";
 import type * as billing from "../billing.js";
 import type * as billingRules from "../billingRules.js";
 import type * as crons from "../crons.js";
+import type * as embassies from "../embassies.js";
 import type * as groupTrips from "../groupTrips.js";
 import type * as http from "../http.js";
 import type * as legalPages from "../legalPages.js";
@@ -45,6 +46,7 @@ declare const fullApi: ApiFromModules<{
   billing: typeof billing;
   billingRules: typeof billingRules;
   crons: typeof crons;
+  embassies: typeof embassies;
   groupTrips: typeof groupTrips;
   http: typeof http;
   legalPages: typeof legalPages;

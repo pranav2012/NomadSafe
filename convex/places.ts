@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { DAY, HOUR, RateLimiter } from "@convex-dev/rate-limiter";
-import { components } from "./_generated/api";
+import { components, internal } from "./_generated/api";
+import type { Doc } from "./_generated/dataModel";
 import { action, type ActionCtx } from "./_generated/server";
 import { requireAppCheck } from "./appCheck";
 import { authComponent } from "./auth";
@@ -211,6 +212,8 @@ interface GoogleSafetyPlace {
   types?: string[];
   shortFormattedAddress?: string;
   nationalPhoneNumber?: string;
+  primaryType?: string;
+  utcOffsetMinutes?: number;
 }
 
 const SAFETY_KINDS: SafetyKind[] = ["hospital", "police", "pharmacy"];
@@ -241,6 +244,8 @@ export const searchSafetyPlaces = action({
           "places.types",
           "places.shortFormattedAddress",
           "places.nationalPhoneNumber",
+          "places.primaryType",
+          "places.utcOffsetMinutes",
         ].join(","),
       },
       body: JSON.stringify({
@@ -271,6 +276,9 @@ export const searchSafetyPlaces = action({
           latitude: lat,
           longitude: lng,
           mapsUrl: place.googleMapsUri ?? null,
+          // A real hospital rather than a clinic Google also files under "hospital".
+          primary: place.primaryType === kind,
+          utcOffsetMinutes: typeof place.utcOffsetMinutes === "number" ? place.utcOffsetMinutes : null,
         },
       ];
     });
@@ -441,5 +449,132 @@ export const geocodeDestination = action({
     const sessionToken = crypto.randomUUID();
     const [top] = await autocompleteRegions(apiKey, query, language, sessionToken);
     return top ? placeLocation(apiKey, top.placeId, sessionToken) : null;
+  },
+});
+
+const COUNTRY_CODE = /^[A-Z]{2}$/;
+const MAX_COUNTRY_NAME = 80;
+const EMBASSY_MAX_AGE_MS = 30 * 86_400_000;
+
+interface Embassy {
+  name: string;
+  phone: string | null;
+  address: string | null;
+  mapsUrl: string | null;
+  latitude: number | null;
+  longitude: number | null;
+}
+
+interface GoogleEmbassy {
+  displayName?: { text?: string };
+  internationalPhoneNumber?: string;
+  nationalPhoneNumber?: string;
+  formattedAddress?: string;
+  googleMapsUri?: string;
+  location?: { latitude?: number; longitude?: number };
+}
+
+/**
+ * The home country's embassy in the destination country, from Google Places; one lookup per pair
+ * of countries serves everyone, kept 30 days. Null when Google found none.
+ */
+export const embassyFor = action({
+  args: {
+    home: v.string(),
+    homeName: v.string(),
+    destination: v.string(),
+    destinationName: v.string(),
+    appCheckToken: appCheckArg,
+  },
+  handler: async (ctx, { home, homeName, destination, destinationName, appCheckToken }): Promise<Embassy | null> => {
+    if (!COUNTRY_CODE.test(home) || !COUNTRY_CODE.test(destination) || home === destination) throw new Error("Invalid countries");
+    assertMaxLength(homeName, MAX_COUNTRY_NAME, "Country");
+    assertMaxLength(destinationName, MAX_COUNTRY_NAME, "Country");
+    // The names are part of the key, so a client sending odd names only caches its own odd answer.
+    const key = `${home}:${destination}:${homeName.toLowerCase()}:${destinationName.toLowerCase()}`;
+    const toResult = (row: { name?: string; phone?: string; address?: string; mapsUrl?: string; latitude?: number; longitude?: number }): Embassy | null =>
+      row.name
+        ? { name: row.name, phone: row.phone ?? null, address: row.address ?? null, mapsUrl: row.mapsUrl ?? null, latitude: row.latitude ?? null, longitude: row.longitude ?? null }
+        : null;
+
+    const cached: Doc<"embassies"> | null = await ctx.runQuery(internal.embassies.cached, { key });
+    if (cached && Date.now() - cached.fetchedAt < EMBASSY_MAX_AGE_MS) return toResult(cached);
+
+    await authorize(ctx, appCheckToken, "safety");
+    const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+    if (!apiKey) throw new Error("Places search is unavailable");
+    const response = await fetch("https://places.googleapis.com/v1/places:searchText", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": apiKey,
+        "X-Goog-FieldMask": [
+          "places.displayName",
+          "places.internationalPhoneNumber",
+          "places.nationalPhoneNumber",
+          "places.formattedAddress",
+          "places.googleMapsUri",
+          "places.location",
+        ].join(","),
+      },
+      body: JSON.stringify({ textQuery: `Embassy of ${homeName} in ${destinationName}`, includedType: "embassy", languageCode: "en", pageSize: 1 }),
+    });
+    if (!response.ok) {
+      console.warn("[places] Embassy search failed", response.status, await response.text());
+      return cached ? toResult(cached) : null;
+    }
+    const place = ((await response.json()) as { places?: GoogleEmbassy[] }).places?.[0];
+    const row = {
+      name: place?.displayName?.text,
+      phone: place?.internationalPhoneNumber ?? place?.nationalPhoneNumber,
+      address: place?.formattedAddress,
+      mapsUrl: place?.googleMapsUri,
+      latitude: place?.location?.latitude,
+      longitude: place?.location?.longitude,
+    };
+    await ctx.runMutation(internal.embassies.store, { key, ...row });
+    return toResult(row);
+  },
+});
+
+/** A stay's name and address in the destination's language, for showing a driver; null when not found. */
+export const localAddress = action({
+  args: {
+    query: v.string(),
+    latitude: v.number(),
+    longitude: v.number(),
+    language: v.string(),
+    appCheckToken: appCheckArg,
+  },
+  handler: async (ctx, { query, latitude, longitude, language, appCheckToken }) => {
+    assertMaxLength(query, MAX_QUERY_CHARS, "Query");
+    assertMaxLength(language, MAX_LANGUAGE_CHARS, "Language");
+    if (!LANGUAGE.test(language)) throw new Error("Invalid language");
+    assertCoordinate(latitude, longitude);
+    await authorize(ctx, appCheckToken, "safety");
+    const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+    if (!apiKey) throw new Error("Places search is unavailable");
+    const response = await fetch("https://places.googleapis.com/v1/places:searchText", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": apiKey,
+        "X-Goog-FieldMask": "places.displayName,places.formattedAddress,places.googleMapsUri",
+      },
+      body: JSON.stringify({
+        textQuery: query.slice(0, 120),
+        pageSize: 1,
+        languageCode: language,
+        locationBias: { circle: { center: { latitude, longitude }, radius: 50_000 } },
+      }),
+    });
+    if (!response.ok) {
+      console.warn("[places] Address search failed", response.status, await response.text());
+      return null;
+    }
+    const place = ((await response.json()) as { places?: { displayName?: { text?: string }; formattedAddress?: string; googleMapsUri?: string }[] })
+      .places?.[0];
+    if (!place?.formattedAddress) return null;
+    return { name: place.displayName?.text ?? query, address: place.formattedAddress, mapsUrl: place.googleMapsUri ?? null };
   },
 });

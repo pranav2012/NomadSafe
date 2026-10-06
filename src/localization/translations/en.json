@@ -1719,5 +1719,32 @@
     "receiveNothing": "Nothing to add.",
     "receiveNoItems": "This trip has no items yet. Add one first.",
     "receiveFailed": "Couldn't save this file."
+  },
+  "passBack": {
+    "police": "Police",
+    "ambulance": "Ambulance",
+    "fire": "Fire",
+    "general": "Emergency",
+    "callNumber": "Call {{service}}, {{number}}",
+    "watchReplay": "Watch replay",
+    "afterTitle": "Your trip",
+    "days_one": "day",
+    "days_other": "days",
+    "places_one": "place",
+    "places_other": "places",
+    "spent": "spent",
+    "sameTime": "{{place}} is on your time",
+    "ahead": "{{place}} is {{duration}} ahead",
+    "behind": "{{place}} is {{duration}} behind",
+    "plugs": "Plug type {{types}}",
+    "bringAdapter": "Bring an adapter",
+    "plugsFit": "Your plugs fit",
+    "beforeTitle": "Before you go to {{place}}",
+    "duringTitle": "If something goes wrong",
+    "showDriver": "Show to driver",
+    "sharingWith_one": "Sharing with {{count}}",
+    "sharingWith_other": "Sharing with {{count}}",
+    "openMaps": "Open in Maps",
+    "addressUnavailable": "Couldn't find the local address. Show the booking name, or try again when you're online."
   }
 }

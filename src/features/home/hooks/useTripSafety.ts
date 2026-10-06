@@ -15,6 +15,10 @@ export interface SafetyPlace {
   latitude: number;
   longitude: number;
   mapsUrl: string | null;
+  /** Google's main type is this kind (a hospital, not a clinic filed under hospitals). */
+  primary?: boolean;
+  /** The place's UTC offset, which gives the destination's time difference. */
+  utcOffsetMinutes?: number | null;
 }
 
 export interface PlacePin {
@@ -30,7 +34,7 @@ const keyFor = (stop: HomeStop) => areaKey(stop.latitude, stop.longitude);
 /** Hospitals, police and pharmacies near a stop (nearest first), or null while loading. */
 export function useSafetyPlaces(stop: HomeStop | undefined) {
   const search = useAction(api.places.searchSafetyPlaces);
-  const key = stop ? `safety:${keyFor(stop)}` : null;
+  const key = stop ? `safety:v2:${keyFor(stop)}` : null;
   const [fetched, setFetched] = useState<{ key: string; places: SafetyPlace[] } | null>(null);
   const cached = useMemo(() => (key ? readPlacesCache<SafetyPlace[]>(key) : undefined), [key]);
 

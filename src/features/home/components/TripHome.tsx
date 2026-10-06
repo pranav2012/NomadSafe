@@ -21,7 +21,13 @@ import { homeStage } from "@/features/home/utils/stage";
 import { addDays, fromDateKey } from "@/features/trips/utils/dates";
 import { useNow } from "@/hooks/useNow";
 import { useRecapStore } from "@/features/recap";
-import { emergencyContactsStorage } from "@/features/onboarding/services/emergencyContactsStorage";
+import type { TripEvent } from "@/features/itinerary";
+import { usePassBack } from "@/features/home/hooks/usePassBack";
+import { countryAt } from "@/features/recap/utils/countryShapes";
+import { nearestCityCountry } from "@/features/trips/data/destinations";
+import { countryFacts } from "@/features/trips/utils/countryFacts";
+import { DriverCard } from "./DriverCard";
+import { PassBack } from "./aura/PassBack";
 import { NearbyPlaces } from "@/features/places/components/NearbyPlaces";
 import { useTripForecast } from "@/features/trips/hooks/useTripForecast";
 import { describeWeather } from "@/features/trips/services/weatherService";
@@ -33,7 +39,6 @@ import { ActionButton } from "./aura/ActionButton";
 import { BoardingPass } from "./aura/BoardingPass";
 import { DayRail } from "./aura/DayRail";
 import { Globe } from "./aura/globe/Globe";
-import { distanceKm } from "./aura/globe/sun";
 import { InlineSafetyMap } from "./aura/safety/InlineSafetyMap";
 import { SpendChart } from "./aura/SpendChart";
 
@@ -133,24 +138,20 @@ export function TripHome({
   };
   const safetyPlaces = useSafetyPlaces(focusStop);
   const hotel = useHotelPin(focusStop, data.stayName ?? undefined);
-  const [contacts] = useState(() => emergencyContactsStorage.get());
-
-  const nearest = (kind: "hospital" | "police") => {
-    if (!focusStop || !safetyPlaces) return null;
-    return (
-      safetyPlaces
-        .filter((place) => place.kind === kind)
-        .map((place) => ({ place, km: distanceKm(focusStop, place) }))
-        .sort((a, b) => a.km - b.km)[0] ?? null
-    );
-  };
-  const emergency = {
-    hospital: nearest("hospital"),
-    police: nearest("police"),
-    stayName: data.stayName,
-    contacts,
-    loading: Boolean(focusStop) && safetyPlaces === null,
-  };
+  const [driverStay, setDriverStay] = useState<TripEvent | null>(null);
+  const passBack = usePassBack({
+    trip,
+    data,
+    stage,
+    stop: focusStop,
+    here,
+    places: safetyPlaces,
+    events: tripEvents,
+    now,
+    onShowDriver: setDriverStay,
+    onReplay: () => router.push({ pathname: "/trip-recap/[id]", params: { id: trip.id, source: "home" } }),
+  });
+  const destinationCountry = focusStop ? (countryAt(focusStop.latitude, focusStop.longitude) ?? nearestCityCountry(focusStop.latitude, focusStop.longitude)) : null;
 
   const lead = forecast.active?.days[0];
   const weatherLabel = lead
@@ -413,7 +414,9 @@ export function TripHome({
             accent={heroAccent}
             gradient={auraStatusColors.calm}
             isDark={isDark}
-            emergency={emergency}
+            backTitle={passBack.title}
+            backAside={passBack.aside}
+            back={<PassBack content={passBack.content} palette={c} />}
             scrolling={scrolling}
             live={live}
           />
@@ -498,6 +501,12 @@ export function TripHome({
       </Animated.ScrollView>
       <AuraTopFade />
       <LinearGradient pointerEvents="none" colors={[c.bg, `${c.bg}00`]} style={[styles.topFade, { height: insets.top + 18 }]} />
+      <DriverCard
+        stay={driverStay}
+        stop={focusStop}
+        language={countryFacts(destinationCountry)?.language ?? "en"}
+        onClose={() => setDriverStay(null)}
+      />
       {forecast.active ? (
         <WeatherSheet
           visible={weatherOpen}

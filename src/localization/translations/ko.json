@@ -1719,5 +1719,32 @@
     "receiveNothing": "추가할 것이 없어요.",
     "receiveNoItems": "이 여행에 아직 항목이 없어요. 먼저 추가하세요.",
     "receiveFailed": "이 파일을 저장할 수 없어요."
+  },
+  "passBack": {
+    "police": "경찰",
+    "ambulance": "구급",
+    "fire": "소방",
+    "general": "긴급",
+    "callNumber": "{{service}}에 전화 {{number}}",
+    "watchReplay": "다시보기",
+    "afterTitle": "나의 여행",
+    "days_one": "일",
+    "days_other": "일",
+    "places_one": "곳",
+    "places_other": "곳",
+    "spent": "지출",
+    "sameTime": "{{place}}는 같은 시간대예요",
+    "ahead": "{{place}}는 {{duration}} 빨라요",
+    "behind": "{{place}}는 {{duration}} 느려요",
+    "plugs": "플러그 {{types}} 타입",
+    "bringAdapter": "어댑터를 챙기세요",
+    "plugsFit": "플러그가 그대로 맞아요",
+    "beforeTitle": "{{place}} 가기 전에",
+    "duringTitle": "문제가 생기면",
+    "showDriver": "기사님께 보여주기",
+    "sharingWith_one": "{{count}}명과 공유 중",
+    "sharingWith_other": "{{count}}명과 공유 중",
+    "openMaps": "지도에서 열기",
+    "addressUnavailable": "현지 주소를 찾지 못했어요. 예약 이름을 보여주거나 온라인일 때 다시 시도하세요."
   }
 }

@@ -1719,5 +1719,32 @@
     "receiveNothing": "لا شيء لإضافته.",
     "receiveNoItems": "لا عناصر في هذه الرحلة بعد. أضف عنصرًا أولًا.",
     "receiveFailed": "تعذّر حفظ هذا الملف."
+  },
+  "passBack": {
+    "police": "الشرطة",
+    "ambulance": "الإسعاف",
+    "fire": "الإطفاء",
+    "general": "الطوارئ",
+    "callNumber": "اتصل بـ{{service}}، {{number}}",
+    "watchReplay": "شاهد الإعادة",
+    "afterTitle": "رحلتك",
+    "days_one": "يوم",
+    "days_other": "أيام",
+    "places_one": "مكان",
+    "places_other": "أماكن",
+    "spent": "مُنفق",
+    "sameTime": "{{place}} على توقيتك",
+    "ahead": "{{place}} متقدّمة بـ{{duration}}",
+    "behind": "{{place}} متأخّرة بـ{{duration}}",
+    "plugs": "نوع القابس {{types}}",
+    "bringAdapter": "أحضر محوّلًا",
+    "plugsFit": "قوابسك مناسبة",
+    "beforeTitle": "قبل السفر إلى {{place}}",
+    "duringTitle": "إذا حدث مكروه",
+    "showDriver": "اعرضه على السائق",
+    "sharingWith_one": "تشارك مع {{count}}",
+    "sharingWith_other": "تشارك مع {{count}}",
+    "openMaps": "افتح في الخرائط",
+    "addressUnavailable": "تعذّر العثور على العنوان المحلي. اعرض اسم الحجز أو حاول مجددًا عند الاتصال."
   }
 }

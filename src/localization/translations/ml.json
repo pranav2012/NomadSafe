@@ -1719,5 +1719,32 @@
     "receiveNothing": "ചേർക്കാൻ ഒന്നുമില്ല.",
     "receiveNoItems": "ഈ യാത്രയിൽ ഇനങ്ങളില്ല. ആദ്യം ഒന്ന് ചേർക്കുക.",
     "receiveFailed": "ഈ ഫയൽ സേവ് ചെയ്യാനായില്ല."
+  },
+  "passBack": {
+    "police": "പോലീസ്",
+    "ambulance": "ആംബുലൻസ്",
+    "fire": "ഫയർ",
+    "general": "അടിയന്തരം",
+    "callNumber": "{{service}} വിളിക്കുക, {{number}}",
+    "watchReplay": "റീപ്ലേ കാണുക",
+    "afterTitle": "നിങ്ങളുടെ യാത്ര",
+    "days_one": "ദിവസം",
+    "days_other": "ദിവസങ്ങൾ",
+    "places_one": "സ്ഥലം",
+    "places_other": "സ്ഥലങ്ങൾ",
+    "spent": "ചെലവ്",
+    "sameTime": "{{place}} നിങ്ങളുടെ അതേ സമയം",
+    "ahead": "{{place}} {{duration}} മുന്നിലാണ്",
+    "behind": "{{place}} {{duration}} പിന്നിലാണ്",
+    "plugs": "പ്ലഗ് തരം {{types}}",
+    "bringAdapter": "അഡാപ്റ്റർ കരുതുക",
+    "plugsFit": "നിങ്ങളുടെ പ്ലഗുകൾ ചേരും",
+    "beforeTitle": "{{place}} ലേക്ക് പോകുംമുമ്പ്",
+    "duringTitle": "എന്തെങ്കിലും സംഭവിച്ചാൽ",
+    "showDriver": "ഡ്രൈവറെ കാണിക്കുക",
+    "sharingWith_one": "{{count}} പേരുമായി പങ്കിടുന്നു",
+    "sharingWith_other": "{{count}} പേരുമായി പങ്കിടുന്നു",
+    "openMaps": "മാപ്സിൽ തുറക്കുക",
+    "addressUnavailable": "പ്രാദേശിക വിലാസം കിട്ടിയില്ല. ബുക്കിംഗ് പേര് കാണിക്കുക, അല്ലെങ്കിൽ ഓൺലൈനിൽ വീണ്ടും ശ്രമിക്കുക."
   }
 }

@@ -60,3 +60,28 @@ test("trip prep lists no gaps until some stay is booked", () => {
   assert.equal(prep.bookedNights, 0);
   assert.deepEqual(prep.gaps, []);
 });
+
+const { countryFacts, emergencyTiles, needsAdapter } = loadModule("src/features/trips/utils/countryFacts.ts");
+const tiles = (iso) => emergencyTiles(countryFacts(iso)).map((tile) => `${tile.kinds.join("+")} ${tile.number}`);
+
+test("emergency tiles merge shared numbers and fall back to the general one", () => {
+  assert.deepEqual(tiles("JP"), ["police 110", "ambulance+fire 119"]);
+  assert.deepEqual(tiles("GB"), ["general 999"]);
+  assert.deepEqual(tiles("IN"), ["police 100", "ambulance 102", "fire 101"]);
+  assert.deepEqual(tiles("DE"), ["general 112", "police 110"]);
+  assert.equal(countryFacts("XX"), null);
+});
+
+test("an adapter is needed only when no plug type matches", () => {
+  assert.equal(needsAdapter(countryFacts("IN"), countryFacts("JP")), true);
+  assert.equal(needsAdapter(countryFacts("US"), countryFacts("JP")), false);
+  assert.equal(needsAdapter(null, countryFacts("JP")), null);
+});
+
+test("currency quotes use enough units to read well", () => {
+  const { quoteUnits } = loadModule("src/features/trips/utils/countryFacts.ts");
+  assert.equal(quoteUnits(0.56), 100);
+  assert.equal(quoteUnits(84), 1);
+  assert.equal(quoteUnits(0.012), 1000);
+  assert.equal(countryFacts("JP").currency, "JPY");
+});

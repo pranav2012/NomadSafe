@@ -1719,5 +1719,32 @@
     "receiveNothing": "Niente da aggiungere.",
     "receiveNoItems": "Questo viaggio non ha ancora elementi. Aggiungine uno prima.",
     "receiveFailed": "Impossibile salvare questo file."
+  },
+  "passBack": {
+    "police": "Polizia",
+    "ambulance": "Ambulanza",
+    "fire": "Vigili del fuoco",
+    "general": "Emergenza",
+    "callNumber": "Chiama {{service}}, {{number}}",
+    "watchReplay": "Guarda il riepilogo",
+    "afterTitle": "Il tuo viaggio",
+    "days_one": "giorno",
+    "days_other": "giorni",
+    "places_one": "luogo",
+    "places_other": "luoghi",
+    "spent": "spesi",
+    "sameTime": "{{place}} ha il tuo stesso orario",
+    "ahead": "{{place}} è {{duration}} avanti",
+    "behind": "{{place}} è {{duration}} indietro",
+    "plugs": "Presa tipo {{types}}",
+    "bringAdapter": "Porta un adattatore",
+    "plugsFit": "Le tue spine vanno bene",
+    "beforeTitle": "Prima di partire per {{place}}",
+    "duringTitle": "Se qualcosa va storto",
+    "showDriver": "Mostra all'autista",
+    "sharingWith_one": "Condivisione con {{count}}",
+    "sharingWith_other": "Condivisione con {{count}}",
+    "openMaps": "Apri in Mappe",
+    "addressUnavailable": "Indirizzo locale non trovato. Mostra il nome della prenotazione o riprova online."
   }
 }

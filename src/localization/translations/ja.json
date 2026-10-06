@@ -1719,5 +1719,32 @@
     "receiveNothing": "追加するものはありません。",
     "receiveNoItems": "この旅行にはまだ予定がありません。先に追加してください。",
     "receiveFailed": "このファイルを保存できませんでした。"
+  },
+  "passBack": {
+    "police": "警察",
+    "ambulance": "救急",
+    "fire": "消防",
+    "general": "緊急",
+    "callNumber": "{{service}}に電話 {{number}}",
+    "watchReplay": "振り返りを見る",
+    "afterTitle": "あなたの旅",
+    "days_one": "日",
+    "days_other": "日",
+    "places_one": "か所",
+    "places_other": "か所",
+    "spent": "支出",
+    "sameTime": "{{place}}は同じ時刻です",
+    "ahead": "{{place}}は{{duration}}進んでいます",
+    "behind": "{{place}}は{{duration}}遅れています",
+    "plugs": "プラグ {{types}} 型",
+    "bringAdapter": "変換プラグが必要",
+    "plugsFit": "プラグはそのまま使えます",
+    "beforeTitle": "{{place}}へ行く前に",
+    "duringTitle": "もしものときは",
+    "showDriver": "運転手に見せる",
+    "sharingWith_one": "{{count}}人と共有中",
+    "sharingWith_other": "{{count}}人と共有中",
+    "openMaps": "マップで開く",
+    "addressUnavailable": "現地の住所が見つかりませんでした。予約名を見せるか、オンラインで再度お試しください。"
   }
 }

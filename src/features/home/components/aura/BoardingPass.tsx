@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Linking, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import {
   Canvas,
   DashPathEffect,
@@ -29,13 +29,10 @@ import Animated, {
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import { Icon, LiveDot, PressableScale, RollingNumber, springs, type IconName } from "@/atoms";
-import type { EmergencyContact } from "@/features/onboarding/services/emergencyContactsStorage";
 import { lightImpact } from "@/utils/haptics";
 import { useAnimationsActive } from "@/hooks/useAnimationsActive";
 import type { HomeData, LivePass } from "@/features/home/types";
-import { SAFETY_KIND_META } from "./safety/kinds";
 import { useLocalization } from "@/localization";
-import type { SafetyPlace } from "@/features/home/hooks/useTripSafety";
 import { auraFonts as f, type AuraPalette } from "@/constants/aura";
 
 // Holographic foil: rainbow bands and fine diagonal ridges whose phase follows the card's tilt,
@@ -85,8 +82,6 @@ half4 main(float2 xy) {
 
 const HEIGHT = 200;
 const RADIUS = 24;
-// Matches the server's hospital/police search radius (convex/places.ts).
-const SAFETY_RADIUS_KM = 2;
 const MAX_TILT = 0.45;
 const STUB_Y = 130;
 // The aura pools drift slowly, so ~15 fps is indistinguishable from full rate; tilt samples at ~30 Hz.
@@ -103,13 +98,6 @@ function toRgb(hex: string): [number, number, number] {
   return [parseInt(hex.slice(1, 3), 16) / 255, parseInt(hex.slice(3, 5), 16) / 255, parseInt(hex.slice(5, 7), 16) / 255];
 }
 
-export interface EmergencyInfo {
-  hospital: { place: SafetyPlace; km: number } | null;
-  police: { place: SafetyPlace; km: number } | null;
-  stayName: string | null;
-  contacts: EmergencyContact[];
-  loading: boolean;
-}
 
 interface BoardingPassProps {
   data: HomeData;
@@ -117,7 +105,10 @@ interface BoardingPassProps {
   accent: string;
   gradient: [string, string, string];
   isDark: boolean;
-  emergency: EmergencyInfo;
+  /** The back of the pass (see PassBack), its title and an optional note beside it. */
+  backTitle: string;
+  backAside?: string;
+  back: React.ReactNode;
   /** True while the page scrolls; the aura and tilt hold still so scroll frames aren't dropped. */
   scrolling?: SharedValue<boolean>;
   /** During the trip (and the day before): what's on now and next, instead of the route and day count. */
@@ -126,9 +117,9 @@ interface BoardingPassProps {
 
 /**
  * Trip as a Wallet-style pass: the safety-state aura glows inside it under a holographic foil
- * that shifts as the phone tilts (or as you drag it). Tap to flip it to an emergency card.
+ * that shifts as the phone tilts (or as you drag it). Tap to flip it to its back.
  */
-export function BoardingPass({ data, palette: c, accent, gradient, isDark, emergency, scrolling, live }: BoardingPassProps) {
+export function BoardingPass({ data, palette: c, accent, gradient, isDark, backTitle, backAside, back, scrolling, live }: BoardingPassProps) {
   const { width: windowWidth } = useWindowDimensions();
   const width = windowWidth - 40;
   const [isBack, setIsBack] = useState(false);
@@ -322,7 +313,14 @@ export function BoardingPass({ data, palette: c, accent, gradient, isDark, emerg
           style={[StyleSheet.absoluteFill, styles.back, { backgroundColor: isDark ? "#151924" : "#FFFFFF", borderColor: c.highlight }, backStyle]}
         >
           <View style={styles.backHeader}>
-            <Text style={[styles.backTitle, { color: c.text }]}>{t("home.emergencyTitle")}</Text>
+            <Text numberOfLines={1} style={[styles.backTitle, { color: c.text }]}>
+              {backTitle}
+            </Text>
+            {backAside ? (
+              <Text numberOfLines={1} style={[styles.backAside, { color: c.textMuted }]}>
+                {backAside}
+              </Text>
+            ) : null}
             <PressableScale
               onPress={() => setSide(false)}
               accessibilityRole="button"
@@ -332,79 +330,10 @@ export function BoardingPass({ data, palette: c, accent, gradient, isDark, emerg
               <Icon name="swap" size={14} color={c.text} />
             </PressableScale>
           </View>
-          <EmergencyRow kind="hospital" entry={emergency.hospital} loading={emergency.loading} palette={c} />
-          <EmergencyRow kind="police" entry={emergency.police} loading={emergency.loading} palette={c} />
-          {emergency.stayName ? (
-            <View style={styles.row}>
-              <View style={[styles.rowIcon, { backgroundColor: c.inverse }]}>
-                <Icon name="building" size={12} color={c.onInverse} />
-              </View>
-              <Text numberOfLines={1} style={[styles.rowName, { color: c.text }]}>
-                {emergency.stayName}
-              </Text>
-              <Text style={[styles.rowMeta, { color: c.textMuted }]}>{t("home.yourStay")}</Text>
-            </View>
-          ) : null}
-          {emergency.contacts.length > 0 ? (
-            <View style={styles.contactsRow}>
-              {emergency.contacts.slice(0, 3).map((contact) => (
-                <PressableScale
-                  key={contact.id}
-                  disabled={!contact.phone}
-                  onPress={() => {
-                    if (contact.phone) void Linking.openURL(`tel:${contact.phone}`);
-                  }}
-                  style={[styles.contactChip, { backgroundColor: c.surfaceStrong, opacity: contact.phone ? 1 : 0.5 }]}
-                >
-                  <Icon name="phone" size={12} color={c.text} />
-                  <Text numberOfLines={1} style={[styles.contactName, { color: c.text }]}>
-                    {contact.name.split(" ")[0]}
-                  </Text>
-                </PressableScale>
-              ))}
-            </View>
-          ) : null}
+          <View style={styles.backBody}>{back}</View>
         </Animated.View>
       </Animated.View>
     </GestureDetector>
-  );
-}
-
-function EmergencyRow({
-  kind,
-  entry,
-  loading,
-  palette: c,
-}: {
-  kind: "hospital" | "police";
-  entry: { place: SafetyPlace; km: number } | null;
-  loading: boolean;
-  palette: AuraPalette;
-}) {
-  const meta = SAFETY_KIND_META[kind];
-  const { t, formatDistance } = useLocalization();
-  const finding = kind === "hospital" ? t("home.findingHospital") : t("home.findingPolice");
-  const none = kind === "hospital" ? t("home.noHospital", { distance: formatDistance(SAFETY_RADIUS_KM) }) : t("home.noPolice", { distance: formatDistance(SAFETY_RADIUS_KM) });
-  return (
-    <View style={styles.row}>
-      <View style={[styles.rowIcon, { backgroundColor: meta.color }]}>
-        <Icon name={meta.icon} size={12} color="#FFFFFF" strokeWidth={2.4} />
-      </View>
-      <Text numberOfLines={1} style={[styles.rowName, { color: c.text }]}>
-        {entry ? entry.place.name : loading ? finding : none}
-      </Text>
-      {entry ? <Text style={[styles.rowMeta, { color: c.textMuted }]}>{formatDistance(entry.km)}</Text> : null}
-      {entry?.place.phone ? (
-        <PressableScale
-          onPress={() => void Linking.openURL(`tel:${entry.place.phone}`)}
-          accessibilityRole="button"
-          accessibilityLabel={t("home.callPlace", { name: entry.place.name })}
-          style={[styles.call, { backgroundColor: c.inverse }]}
-        >
-          <Icon name="phone" size={12} color={c.onInverse} />
-        </PressableScale>
-      ) : null}
-    </View>
   );
 }
 
@@ -491,17 +420,11 @@ const styles = StyleSheet.create({
     gap: 8,
     transform: [{ rotateY: "180deg" }],
   },
-  backHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  backTitle: { fontFamily: f.semibold, fontSize: 15 },
+  backHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
+  backBody: { flex: 1 },
+  backAside: { fontFamily: f.medium, fontSize: 12 },
+  backTitle: { fontFamily: f.semibold, fontSize: 15, flex: 1 },
   flipBack: { width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center" },
-  row: { flexDirection: "row", alignItems: "center", gap: 9, minHeight: 28 },
-  rowIcon: { width: 22, height: 22, borderRadius: 11, alignItems: "center", justifyContent: "center" },
-  rowName: { fontFamily: f.medium, fontSize: 13.5, flex: 1 },
-  rowMeta: { fontFamily: f.regular, fontSize: 12.5, fontVariant: ["tabular-nums"] },
-  call: { width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center" },
-  contactsRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 2 },
-  contactChip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, height: 28, borderRadius: 14, maxWidth: 110 },
-  contactName: { fontFamily: f.semibold, fontSize: 12.5 },
 });
 
 /** Mounted only while the pass is visible, so the gravity sensor is released otherwise. */

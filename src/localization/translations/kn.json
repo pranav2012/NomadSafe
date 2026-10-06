@@ -1719,5 +1719,32 @@
     "receiveNothing": "ಸೇರಿಸಲು ಏನೂ ಇಲ್ಲ.",
     "receiveNoItems": "ಈ ಪ್ರವಾಸದಲ್ಲಿ ಇನ್ನೂ ಐಟಂಗಳಿಲ್ಲ. ಮೊದಲು ಒಂದನ್ನು ಸೇರಿಸಿ.",
     "receiveFailed": "ಈ ಫೈಲ್ ಉಳಿಸಲಾಗಲಿಲ್ಲ."
+  },
+  "passBack": {
+    "police": "ಪೊಲೀಸ್",
+    "ambulance": "ಆಂಬ್ಯುಲೆನ್ಸ್",
+    "fire": "ಅಗ್ನಿಶಾಮಕ",
+    "general": "ತುರ್ತು",
+    "callNumber": "{{service}} ಗೆ ಕರೆ ಮಾಡಿ, {{number}}",
+    "watchReplay": "ರಿಪ್ಲೇ ನೋಡಿ",
+    "afterTitle": "ನಿಮ್ಮ ಪ್ರವಾಸ",
+    "days_one": "ದಿನ",
+    "days_other": "ದಿನಗಳು",
+    "places_one": "ಸ್ಥಳ",
+    "places_other": "ಸ್ಥಳಗಳು",
+    "spent": "ಖರ್ಚು",
+    "sameTime": "{{place}} ನಿಮ್ಮದೇ ಸಮಯದಲ್ಲಿದೆ",
+    "ahead": "{{place}} {{duration}} ಮುಂದಿದೆ",
+    "behind": "{{place}} {{duration}} ಹಿಂದಿದೆ",
+    "plugs": "ಪ್ಲಗ್ ಪ್ರಕಾರ {{types}}",
+    "bringAdapter": "ಅಡಾಪ್ಟರ್ ತನ್ನಿ",
+    "plugsFit": "ನಿಮ್ಮ ಪ್ಲಗ್‌ಗಳು ಹೊಂದುತ್ತವೆ",
+    "beforeTitle": "{{place}} ಗೆ ಹೋಗುವ ಮುನ್ನ",
+    "duringTitle": "ಏನಾದರೂ ತಪ್ಪಾದರೆ",
+    "showDriver": "ಚಾಲಕರಿಗೆ ತೋರಿಸಿ",
+    "sharingWith_one": "{{count}} ಜೊತೆ ಹಂಚಿಕೆ",
+    "sharingWith_other": "{{count}} ಜೊತೆ ಹಂಚಿಕೆ",
+    "openMaps": "ಮ್ಯಾಪ್ಸ್‌ನಲ್ಲಿ ತೆರೆಯಿರಿ",
+    "addressUnavailable": "ಸ್ಥಳೀಯ ವಿಳಾಸ ಸಿಗಲಿಲ್ಲ. ಬುಕಿಂಗ್ ಹೆಸರು ತೋರಿಸಿ ಅಥವಾ ಆನ್‌ಲೈನ್ ಆದಾಗ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ."
   }
 }

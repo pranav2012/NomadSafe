@@ -1719,5 +1719,32 @@
     "receiveNothing": "जोड़ने को कुछ नहीं।",
     "receiveNoItems": "इस यात्रा में अभी कोई आइटम नहीं। पहले एक जोड़ें।",
     "receiveFailed": "यह फ़ाइल सहेजी नहीं जा सकी।"
+  },
+  "passBack": {
+    "police": "पुलिस",
+    "ambulance": "एम्बुलेंस",
+    "fire": "फ़ायर",
+    "general": "आपातकाल",
+    "callNumber": "{{service}} को कॉल करें, {{number}}",
+    "watchReplay": "रीप्ले देखें",
+    "afterTitle": "आपकी यात्रा",
+    "days_one": "दिन",
+    "days_other": "दिन",
+    "places_one": "जगह",
+    "places_other": "जगहें",
+    "spent": "खर्च",
+    "sameTime": "{{place}} में आपका ही समय है",
+    "ahead": "{{place}} {{duration}} आगे है",
+    "behind": "{{place}} {{duration}} पीछे है",
+    "plugs": "प्लग टाइप {{types}}",
+    "bringAdapter": "एडैप्टर साथ रखें",
+    "plugsFit": "आपके प्लग चलेंगे",
+    "beforeTitle": "{{place}} जाने से पहले",
+    "duringTitle": "अगर कुछ गड़बड़ हो",
+    "showDriver": "ड्राइवर को दिखाएँ",
+    "sharingWith_one": "{{count}} के साथ शेयर",
+    "sharingWith_other": "{{count}} के साथ शेयर",
+    "openMaps": "मैप्स में खोलें",
+    "addressUnavailable": "स्थानीय पता नहीं मिला। बुकिंग का नाम दिखाएँ या ऑनलाइन होने पर फिर कोशिश करें।"
   }
 }

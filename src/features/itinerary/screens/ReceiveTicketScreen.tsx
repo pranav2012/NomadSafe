@@ -36,6 +36,17 @@ export default function ReceiveTicketScreen() {
 
   useEffect(() => {
     if (!uri) return;
+    const store = useIncomingTicketStore.getState();
+    if (store.wasHandled(uri)) {
+      store.set(null);
+      router.replace("/");
+      return;
+    }
+    store.markHandled(uri);
+  }, [router, uri]);
+
+  useEffect(() => {
+    if (!uri) return;
     FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64, position: 0, length: 6 })
       .then((head) => setKind(head.startsWith(PDF_MAGIC) ? "pdf" : "image"))
       .catch(() => setKind("pdf"));

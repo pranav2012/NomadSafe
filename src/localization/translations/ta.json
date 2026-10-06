@@ -1719,5 +1719,32 @@
     "receiveNothing": "சேர்க்க எதுவும் இல்லை.",
     "receiveNoItems": "இந்தப் பயணத்தில் இன்னும் உருப்படிகள் இல்லை. முதலில் ஒன்றைச் சேர்க்கவும்.",
     "receiveFailed": "இந்தக் கோப்பைச் சேமிக்க முடியவில்லை."
+  },
+  "passBack": {
+    "police": "காவல்",
+    "ambulance": "ஆம்புலன்ஸ்",
+    "fire": "தீயணைப்பு",
+    "general": "அவசரம்",
+    "callNumber": "{{service}} அழை, {{number}}",
+    "watchReplay": "மீள்பார்வை பார்",
+    "afterTitle": "உங்கள் பயணம்",
+    "days_one": "நாள்",
+    "days_other": "நாட்கள்",
+    "places_one": "இடம்",
+    "places_other": "இடங்கள்",
+    "spent": "செலவு",
+    "sameTime": "{{place}} உங்கள் நேரத்திலேயே",
+    "ahead": "{{place}} {{duration}} முன்னால்",
+    "behind": "{{place}} {{duration}} பின்னால்",
+    "plugs": "பிளக் வகை {{types}}",
+    "bringAdapter": "அடாப்டர் எடுத்துச் செல்லுங்கள்",
+    "plugsFit": "உங்கள் பிளக்குகள் பொருந்தும்",
+    "beforeTitle": "{{place}} செல்லும் முன்",
+    "duringTitle": "ஏதேனும் தவறு நடந்தால்",
+    "showDriver": "ஓட்டுநரிடம் காட்டு",
+    "sharingWith_one": "{{count}} பேருடன் பகிர்கிறது",
+    "sharingWith_other": "{{count}} பேருடன் பகிர்கிறது",
+    "openMaps": "வரைபடத்தில் திற",
+    "addressUnavailable": "உள்ளூர் முகவரி கிடைக்கவில்லை. முன்பதிவுப் பெயரைக் காட்டுங்கள் அல்லது இணைப்பில் மீண்டும் முயலவும்."
   }
 }

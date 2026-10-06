@@ -1719,5 +1719,32 @@
     "receiveNothing": "జోడించడానికి ఏమీ లేదు.",
     "receiveNoItems": "ఈ ప్రయాణంలో ఇంకా అంశాలు లేవు. ముందు ఒకటి జోడించండి.",
     "receiveFailed": "ఈ ఫైల్‌ను సేవ్ చేయలేకపోయాం."
+  },
+  "passBack": {
+    "police": "పోలీస్",
+    "ambulance": "అంబులెన్స్",
+    "fire": "ఫైర్",
+    "general": "అత్యవసరం",
+    "callNumber": "{{service}} కి కాల్ చేయి, {{number}}",
+    "watchReplay": "రీప్లే చూడండి",
+    "afterTitle": "మీ ప్రయాణం",
+    "days_one": "రోజు",
+    "days_other": "రోజులు",
+    "places_one": "ప్రదేశం",
+    "places_other": "ప్రదేశాలు",
+    "spent": "ఖర్చు",
+    "sameTime": "{{place}} మీ సమయంలోనే ఉంది",
+    "ahead": "{{place}} {{duration}} ముందుంది",
+    "behind": "{{place}} {{duration}} వెనకుంది",
+    "plugs": "ప్లగ్ రకం {{types}}",
+    "bringAdapter": "అడాప్టర్ తీసుకెళ్లండి",
+    "plugsFit": "మీ ప్లగ్‌లు సరిపోతాయి",
+    "beforeTitle": "{{place}} కి వెళ్లే ముందు",
+    "duringTitle": "ఏదైనా తప్పు జరిగితే",
+    "showDriver": "డ్రైవర్‌కి చూపించు",
+    "sharingWith_one": "{{count}} మందితో షేర్",
+    "sharingWith_other": "{{count}} మందితో షేర్",
+    "openMaps": "మ్యాప్స్‌లో తెరువు",
+    "addressUnavailable": "స్థానిక చిరునామా దొరకలేదు. బుకింగ్ పేరు చూపించండి లేదా ఆన్‌లైన్‌లో మళ్లీ ప్రయత్నించండి."
   }
 }

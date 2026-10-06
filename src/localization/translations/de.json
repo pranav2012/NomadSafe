@@ -1719,5 +1719,32 @@
     "receiveNothing": "Nichts hinzuzufügen.",
     "receiveNoItems": "Diese Reise hat noch keine Einträge. Leg zuerst einen an.",
     "receiveFailed": "Diese Datei ließ sich nicht speichern."
+  },
+  "passBack": {
+    "police": "Polizei",
+    "ambulance": "Rettung",
+    "fire": "Feuerwehr",
+    "general": "Notruf",
+    "callNumber": "{{service}} anrufen, {{number}}",
+    "watchReplay": "Rückblick ansehen",
+    "afterTitle": "Deine Reise",
+    "days_one": "Tag",
+    "days_other": "Tage",
+    "places_one": "Ort",
+    "places_other": "Orte",
+    "spent": "ausgegeben",
+    "sameTime": "{{place}} hat deine Uhrzeit",
+    "ahead": "{{place}} ist {{duration}} voraus",
+    "behind": "{{place}} ist {{duration}} zurück",
+    "plugs": "Steckertyp {{types}}",
+    "bringAdapter": "Adapter mitnehmen",
+    "plugsFit": "Deine Stecker passen",
+    "beforeTitle": "Bevor du nach {{place}} reist",
+    "duringTitle": "Falls etwas passiert",
+    "showDriver": "Dem Fahrer zeigen",
+    "sharingWith_one": "Teilt mit {{count}}",
+    "sharingWith_other": "Teilt mit {{count}}",
+    "openMaps": "In Karten öffnen",
+    "addressUnavailable": "Lokale Adresse nicht gefunden. Zeig den Buchungsnamen oder versuch es online erneut."
   }
 }

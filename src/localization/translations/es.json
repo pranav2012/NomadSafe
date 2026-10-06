@@ -1719,5 +1719,32 @@
     "receiveNothing": "Nada que añadir.",
     "receiveNoItems": "Este viaje aún no tiene elementos. Añade uno primero.",
     "receiveFailed": "No se pudo guardar este archivo."
+  },
+  "passBack": {
+    "police": "Policía",
+    "ambulance": "Ambulancia",
+    "fire": "Bomberos",
+    "general": "Emergencias",
+    "callNumber": "Llamar a {{service}}, {{number}}",
+    "watchReplay": "Ver el resumen",
+    "afterTitle": "Tu viaje",
+    "days_one": "día",
+    "days_other": "días",
+    "places_one": "lugar",
+    "places_other": "lugares",
+    "spent": "gastado",
+    "sameTime": "{{place}} tiene tu misma hora",
+    "ahead": "{{place}} va {{duration}} por delante",
+    "behind": "{{place}} va {{duration}} por detrás",
+    "plugs": "Enchufe tipo {{types}}",
+    "bringAdapter": "Lleva un adaptador",
+    "plugsFit": "Tus enchufes sirven",
+    "beforeTitle": "Antes de ir a {{place}}",
+    "duringTitle": "Si algo sale mal",
+    "showDriver": "Mostrar al conductor",
+    "sharingWith_one": "Compartiendo con {{count}}",
+    "sharingWith_other": "Compartiendo con {{count}}",
+    "openMaps": "Abrir en Mapas",
+    "addressUnavailable": "No se encontró la dirección local. Muestra el nombre de la reserva o inténtalo con conexión."
   }
 }

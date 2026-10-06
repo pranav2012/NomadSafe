@@ -9,6 +9,7 @@ import { clearGlobeImagery } from "@/features/home/services/globeImagery";
 import { clearLegacyGmailCheckpoints } from "@/features/expenses/services/legacyGmailCheckpoints";
 import { useEventsStore } from "@/features/itinerary/store/eventsStore";
 import { useMustDoStore } from "@/features/itinerary/store/mustDoStore";
+import { useTravelInfoStore } from "@/features/trips/store/travelInfoStore";
 import { useRecapStore } from "@/features/recap/store/recapStore";
 import { usePassportStore } from "@/features/passport/store/passportStore";
 import { syncRecapNotifications } from "@/features/recap/services/recapNotifications";
@@ -51,6 +52,7 @@ export async function wipeAllDeviceData({ keepModels = false }: { keepModels?: b
   useExpensesStore.getState().reset();
   useEventsStore.getState().reset();
   useMustDoStore.getState().reset();
+  useTravelInfoStore.getState().reset();
   useSafetyStore.getState().reset();
   useSharingStore.getState().reset();
   useChatStore.getState().reset();
