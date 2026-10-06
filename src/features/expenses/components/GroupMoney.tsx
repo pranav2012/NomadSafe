@@ -43,34 +43,37 @@ export function GroupMoney({
   const unconvertedLabel = conversion.unconvertedTotals.map((entry) => formatMoney(formatCurrency, entry.amount, entry.currency)).join(" + ");
 
   const hasPeople = group.companions.length > 0 || expenses.some(isSplitExpense) || settlements.length > 0;
+  const hasActivity = expenses.length > 0 || settlements.length > 0;
   const trip = isTrip(group) ? group : null;
 
   return (
     <View>
-      {hasPeople ? (
+      {hasPeople && hasActivity ? (
         <View style={styles.block}>
           <GroupBalances group={group} />
         </View>
       ) : null}
 
-      <View style={hasPeople ? styles.spendAfterBalances : undefined}>
-        <SpendHero
-          label={hasPeople ? t("money.yourSpend") : trip ? null : group.name}
-          currency={group.currency}
-          total={yourSpend}
-          daysLeft={trip ? daysLeftInTrip(trip) : 0}
-          breakdown={categoryBreakdown(mine)}
-          caption={hasPeople ? t("money.yourShareCaption") : undefined}
-          detail={hasPeople && groupTotal > 0 ? t("money.groupTotal", { amount: formatMoney(formatCurrency, groupTotal, group.currency) }) : null}
-          note={
-            unconvertedLabel
-              ? conversion.isConverting
-                ? t("expenses.convertingAmounts", { amount: unconvertedLabel })
-                : t("expenses.notConverted", { amount: unconvertedLabel })
-              : null
-          }
-        />
-      </View>
+      {hasActivity ? (
+        <View style={hasPeople ? styles.spendAfterBalances : undefined}>
+          <SpendHero
+            label={hasPeople ? t("money.yourSpend") : trip ? null : group.name}
+            currency={group.currency}
+            total={yourSpend}
+            daysLeft={trip ? daysLeftInTrip(trip) : 0}
+            breakdown={categoryBreakdown(mine)}
+            caption={hasPeople ? t("money.yourShareCaption") : undefined}
+            detail={hasPeople && groupTotal > 0 ? t("money.groupTotal", { amount: formatMoney(formatCurrency, groupTotal, group.currency) }) : null}
+            note={
+              unconvertedLabel
+                ? conversion.isConverting
+                  ? t("expenses.convertingAmounts", { amount: unconvertedLabel })
+                  : t("expenses.notConverted", { amount: unconvertedLabel })
+                : null
+            }
+          />
+        </View>
+      ) : null}
 
       {!hasPeople ? (
         <AuraCard style={styles.addPeople}>

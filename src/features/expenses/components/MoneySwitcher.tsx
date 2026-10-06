@@ -28,7 +28,8 @@ export function MoneySwitcher({ selected, onSelect }: { selected: string; onSele
     ...current.map((group) => ({ value: group.id, label: group.name, detail: t("money.tripBadge") })),
     ...ended.map((group) => ({ value: group.id, label: group.name, detail: t("money.endedTrip") })),
   ];
-  const label = selected === OVERVIEW ? t("money.overview") : groups.find((group) => group.id === selected)?.name ?? t("money.overview");
+  const shown = selected === OVERVIEW ? null : groups.find((group) => group.id === selected);
+  const label = !shown ? t("money.overview") : isTrip(shown) ? shown.name : `${shown.emoji ?? "👥"} ${shown.name}`;
 
   return (
     <>

@@ -40,6 +40,7 @@ export function ExpenseRow({
   displayCurrency,
   onPress,
   showYourPart = false,
+  hideDate = false,
 }: {
   expense: Expense;
   convertedAmount?: number;
@@ -47,6 +48,8 @@ export function ExpenseRow({
   onPress: () => void;
   /** In a trip or group with people: who paid, what you lent or borrowed, and "Only you" for unsplit spends. */
   showYourPart?: boolean;
+  /** Under a day heading the date is already shown. */
+  hideDate?: boolean;
 }) {
   const { c, f } = useAura();
   const { t, locale, formatCurrency } = useLocalization();
@@ -56,7 +59,7 @@ export function ExpenseRow({
   const payers = payersOf(expense);
   const lent = showYourPart ? myLentOf(expense) : null;
   const details = [
-    dayFormatter(locale).format(new Date(expense.date)),
+    hideDate ? null : dayFormatter(locale).format(new Date(expense.date)),
     showYourPart && expense.shares?.length
       ? payers.length > 1
         ? t("money.severalPaid", { count: payers.length })

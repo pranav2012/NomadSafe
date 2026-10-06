@@ -347,6 +347,22 @@ function ExpenseFormBody({
 
         <AuraField label={t("expenses.merchant")} value={merchant} onChangeText={handleMerchantChange} placeholder={t("expenses.merchantPlaceholder")} autoCapitalize="words" />
 
+        {canSplit && !splitOpen ? (
+          <SplitSummary split={split} everyone={everyone} onOpen={() => setSplitOpen(true)} />
+        ) : null}
+        {canSplit && splitOpen ? (
+          <View style={[styles.splitCard, { backgroundColor: c.surface, borderColor: c.hairline }]}>
+            <SplitEditor
+              everyone={everyone}
+              value={split}
+              onChange={setSplit}
+              amount={parseAmountInput(amount, decimalSeparator)}
+              currency={currency}
+              decimalSeparator={decimalSeparator}
+            />
+          </View>
+        ) : null}
+
         <View style={styles.group}>
           <Text style={[styles.label, { color: c.textSoft, fontFamily: f.medium }]}>{t("expenses.categoryLabel")}</Text>
           <View style={styles.wrap}>
@@ -389,21 +405,6 @@ function ExpenseFormBody({
           )}
         </PressableScale>
 
-        {canSplit && !splitOpen ? (
-          <SplitSummary split={split} everyone={everyone} onOpen={() => setSplitOpen(true)} />
-        ) : null}
-        {canSplit && splitOpen ? (
-          <View style={[styles.splitCard, { backgroundColor: c.surface, borderColor: c.hairline }]}>
-            <SplitEditor
-              everyone={everyone}
-              value={split}
-              onChange={setSplit}
-              amount={parseAmountInput(amount, decimalSeparator)}
-              currency={currency}
-              decimalSeparator={decimalSeparator}
-            />
-          </View>
-        ) : null}
       </ScrollView>
 
       <AuraOptionSheet

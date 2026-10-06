@@ -80,6 +80,7 @@ export function GroupActivity({
                 convertedAmount={convertedById?.get(item.expense.id)}
                 displayCurrency={displayCurrency}
                 showYourPart={showYourPart}
+                hideDate
                 onPress={() => onOpen(item.expense)}
               />
             ) : (

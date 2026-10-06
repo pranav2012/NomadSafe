@@ -5,6 +5,7 @@ import { useLocalization } from "@/localization";
 import { isTrip, selectMoneyGroups, useTripsStore, type MoneyGroup } from "@/features/trips/store/tripsStore";
 import { useExpensesStore, type Expense } from "@/features/expenses/store/expensesStore";
 import { useConvertedExpenses } from "@/features/expenses/hooks/useTripExpenseSummary";
+import { useGroupBalances } from "@/features/expenses/hooks/useGroupBalances";
 import { categoryBreakdown, sumAmount } from "@/features/expenses/utils/aggregate";
 import { toLocalDayKey } from "@/features/expenses/utils/dateKey";
 import { formatMoney } from "@/features/expenses/utils/money";
@@ -20,6 +21,7 @@ const rateKey = (currency: string, date: string) => `${currency}|${toLocalDayKey
 interface GroupRow {
   group: MoneyGroup;
   net: number;
+  unconverted: number;
   lastActivity: number;
 }
 
@@ -77,12 +79,12 @@ export function MoneyOverview({
     .map((group) => {
       const groupExpenses = expenses.filter((expense) => expense.groupId === group.id);
       const groupSettlements = settlements.filter((settlement) => settlement.groupId === group.id);
-      const { net } = computeNetBalances(groupExpenses.filter(isSplitExpense), groupSettlements, convert);
+      const { net, unconverted } = computeNetBalances(groupExpenses.filter(isSplitExpense), groupSettlements, convert);
       const dates = [...groupExpenses.map((expense) => expense.date), ...groupSettlements.map((settlement) => settlement.date), group.createdAt];
-      return { group, net: roundMoney(net.get(SELF_ID) ?? 0, homeCurrency), lastActivity: Math.max(...dates.map((date) => new Date(date).getTime())) };
+      return { group, net: roundMoney(net.get(SELF_ID) ?? 0, homeCurrency), unconverted, lastActivity: Math.max(...dates.map((date) => new Date(date).getTime())) };
     })
     .sort((a, b) => b.lastActivity - a.lastActivity);
-  const isSettled = (row: GroupRow) => Math.abs(row.net) < 0.005 && now - row.lastActivity > SETTLED_AFTER_MS;
+  const isSettled = (row: GroupRow) => row.unconverted === 0 && Math.abs(row.net) < 0.005 && now - row.lastActivity > SETTLED_AFTER_MS;
   const active = rows.filter((row) => !isSettled(row));
   const settled = rows.filter(isSettled);
   const overall = roundMoney(rows.reduce((sum, row) => sum + row.net, 0), homeCurrency);
@@ -96,24 +98,8 @@ export function MoneyOverview({
         : `${new Intl.DateTimeFormat(locale, { month: "short", day: "numeric" }).format(range.start)} – ${new Intl.DateTimeFormat(locale, { month: "short", day: "numeric" }).format(new Date(range.end.getTime() - 1))}`;
   const unconvertedLabel = spendConversion.unconvertedTotals.map((entry) => formatMoney(formatCurrency, entry.amount, entry.currency)).join(" + ");
 
-  const row = ({ group, net }: GroupRow) => (
-    <PressableScale key={group.id} haptic={false} pressedScale={0.98} onPress={() => onOpenGroup(group.id)} accessibilityRole="button" style={styles.groupRow}>
-      <View style={[styles.groupIcon, { backgroundColor: c.surfaceStrong }]}>
-        {isTrip(group) ? <Icon name="compass" size={18} color={c.textSoft} /> : <Text style={styles.emoji}>{group.emoji || "👥"}</Text>}
-      </View>
-      <View style={styles.flex}>
-        <Text style={[styles.groupName, { color: c.text, fontFamily: f.medium }]} numberOfLines={1}>
-          {group.name}
-        </Text>
-        <Text style={[styles.groupMeta, { color: c.textMuted, fontFamily: f.regular }]} numberOfLines={1}>
-          {[isTrip(group) ? t("money.tripBadge") : null, t("money.people", { count: group.companions.length + 1 })].filter(Boolean).join(" · ")}
-        </Text>
-      </View>
-      <Text style={[styles.groupNet, { color: net > 0 ? OWED : net < 0 ? OWES : c.textMuted, fontFamily: f.medium }]}>
-        {net > 0 ? t("money.owedShort", { amount: money(net) }) : net < 0 ? t("money.oweShort", { amount: money(-net) }) : t("split.settledWith")}
-      </Text>
-    </PressableScale>
-  );
+  const row = ({ group }: GroupRow) => <GroupListRow key={group.id} group={group} onPress={() => onOpenGroup(group.id)} />;
+  const overallReady = !balanceConversion.isConverting && balanceConversion.unconvertedTotals.length === 0;
 
   return (
     <View>
@@ -191,11 +177,11 @@ export function MoneyOverview({
         }
         style={styles.section}
       />
-      {rows.length > 0 ? (
+      {rows.length > 0 && overallReady ? (
         <Text style={[styles.overall, { color: overall > 0 ? OWED : overall < 0 ? OWES : c.textSoft, fontFamily: f.semibold }]}>
           {overall > 0 ? t("money.overallOwed", { amount: money(overall) }) : overall < 0 ? t("money.overallOwe", { amount: money(-overall) }) : t("split.settled")}
         </Text>
-      ) : (
+      ) : rows.length > 0 ? null : (
         <AuraCard style={styles.emptyGroups}>
           <Text style={[styles.emptyBody, { color: c.textSoft, fontFamily: f.regular }]}>{t("money.noGroupsBody")}</Text>
           <AuraButton label={t("money.newGroup")} icon="plus" variant="secondary" size="md" onPress={onNewGroup} style={styles.emptyButton} />
@@ -219,6 +205,35 @@ export function MoneyOverview({
         </>
       ) : null}
     </View>
+  );
+}
+
+/** One trip or group with your balance in its own currency (exact, no conversion needed). */
+function GroupListRow({ group, onPress }: { group: MoneyGroup; onPress: () => void }) {
+  const { c, f } = useAura();
+  const { t, formatCurrency } = useLocalization();
+  const { myNet, splitExpenses, settlements } = useGroupBalances(group);
+  const money = (amount: number) => formatMoney(formatCurrency, amount, group.currency);
+  const splits = splitExpenses.length > 0 || settlements.length > 0;
+  return (
+    <PressableScale haptic={false} pressedScale={0.98} onPress={onPress} accessibilityRole="button" style={styles.groupRow}>
+      <View style={[styles.groupIcon, { backgroundColor: c.surfaceStrong }]}>
+        {isTrip(group) ? <Icon name="compass" size={18} color={c.textSoft} /> : <Text style={styles.emoji}>{group.emoji || "👥"}</Text>}
+      </View>
+      <View style={styles.flex}>
+        <Text style={[styles.groupName, { color: c.text, fontFamily: f.medium }]} numberOfLines={1}>
+          {group.name}
+        </Text>
+        <Text style={[styles.groupMeta, { color: c.textMuted, fontFamily: f.regular }]} numberOfLines={1}>
+          {[isTrip(group) ? t("money.tripBadge") : null, t("money.people", { count: group.companions.length + 1 })].filter(Boolean).join(" · ")}
+        </Text>
+      </View>
+      {splits || group.companions.length > 0 ? (
+        <Text style={[styles.groupNet, { color: myNet > 0 ? OWED : myNet < 0 ? OWES : c.textMuted, fontFamily: f.medium }]}>
+          {myNet > 0 ? t("money.owedShort", { amount: money(myNet) }) : myNet < 0 ? t("money.oweShort", { amount: money(-myNet) }) : t("split.settledWith")}
+        </Text>
+      ) : null}
+    </PressableScale>
   );
 }
 
