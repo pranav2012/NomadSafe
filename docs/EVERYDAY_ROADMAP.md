@@ -1,6 +1,6 @@
 # Everyday NomadSafe: groups, everyday safety, year-round use
 
-Status: Phase 1 implemented on `feature/everyday-groups` (2026-10-07). Phase 1b (import) and phases 2–3 are next.
+Status: Phase 1, its Plus/Pro extras and Phase 1b (import) implemented on `feature/everyday-groups` (2026-10-07). Phases 2–3 are next.
 
 ## Why
 
