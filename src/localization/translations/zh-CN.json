@@ -1121,7 +1121,22 @@
     "daysLeft_one": "还剩 {{count}} 天",
     "daysLeft_other": "还剩 {{count}} 天",
     "tabSpending": "支出",
-    "tabSplits": "分账"
+    "tabSplits": "分账",
+    "repeat": "重复",
+    "repeatOption": {
+      "none": "一次",
+      "weekly": "每周",
+      "monthly": "每月",
+      "yearly": "每年"
+    },
+    "repeating": "定期",
+    "repeatPaused": "免费方案下已暂停。升级到 Plus 以继续自动添加。",
+    "nextOn": "下次 {{date}}",
+    "stopRepeat": "停止重复",
+    "stopRepeatTitle": "停止重复 {{merchant}}？",
+    "stopRepeatBody": "已添加的花费会保留，不再添加新的。",
+    "sourceRecurring": "定期",
+    "sourceImport": "已导入"
   },
   "itinerary": {
     "title": "行程活动",

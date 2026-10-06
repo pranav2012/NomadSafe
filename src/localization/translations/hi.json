@@ -1121,7 +1121,22 @@
     "daysLeft_one": "{{count}} दिन बाकी",
     "daysLeft_other": "{{count}} दिन बाकी",
     "tabSpending": "खर्च",
-    "tabSplits": "बँटवारा"
+    "tabSplits": "बँटवारा",
+    "repeat": "दोहराएँ",
+    "repeatOption": {
+      "none": "एक बार",
+      "weekly": "हर हफ़्ते",
+      "monthly": "हर महीने",
+      "yearly": "हर साल"
+    },
+    "repeating": "दोहराने वाले",
+    "repeatPaused": "मुफ़्त प्लान पर रुके हुए हैं। इन्हें जोड़ते रहने के लिए Plus लें।",
+    "nextOn": "अगला {{date}}",
+    "stopRepeat": "दोहराना बंद करें",
+    "stopRepeatTitle": "{{merchant}} दोहराना बंद करें?",
+    "stopRepeatBody": "पहले से जोड़े गए खर्च बने रहेंगे। नए नहीं जुड़ेंगे।",
+    "sourceRecurring": "दोहराता है",
+    "sourceImport": "इम्पोर्ट किया"
   },
   "itinerary": {
     "title": "ट्रिप इवेंट्स",

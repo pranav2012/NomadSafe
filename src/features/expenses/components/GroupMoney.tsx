@@ -12,6 +12,7 @@ import { formatMoney } from "@/features/expenses/utils/money";
 import { myShareOf } from "@/features/expenses/utils/myMoney";
 import { isSplitExpense } from "@/features/expenses/utils/split";
 import { GroupActivity } from "@/features/expenses/components/GroupActivity";
+import { RecurringList } from "@/features/expenses/components/RecurringList";
 import { GroupBalances } from "@/features/expenses/components/GroupBalances";
 import { SpendHero } from "@/features/expenses/components/SpendHero";
 
@@ -104,6 +105,8 @@ export function GroupMoney({
           <AuraButton label={t("money.addPeople")} icon="plus" variant="secondary" size="md" onPress={onAddPeople} style={styles.addPeopleButton} />
         </AuraCard>
       ) : null}
+
+      <RecurringList groupId={group.id} />
 
       {expenses.length === 0 && settlements.length === 0 ? (
         <AuraCard style={styles.empty}>

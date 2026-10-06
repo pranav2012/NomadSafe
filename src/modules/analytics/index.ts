@@ -25,6 +25,8 @@ export interface AnalyticsEvents {
   ai_context_picked: { kind: "trip" | "group" | "overview" | "general" };
   home_card_opened: { card: "balance" | "get_home_safe" };
   app_landing: { tab: "home" | "money" | "other"; reason: "trip" | "habit" | "link" };
+  recurring_added: { count: number };
+  recurring_created: { frequency: "weekly" | "monthly" | "yearly" };
   plus_feature_blocked: { feature: "shares" | "presets" | "recurring" | "charts" | "export" | "receiptScan" };
   trip_joined: { deferred: boolean; claimed_member: boolean };
   invite_deferred_found: { source: "install_referrer" | "clipboard" };

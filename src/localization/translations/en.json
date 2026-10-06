@@ -1230,7 +1230,22 @@
     "daysLeft_one": "{{count}} day left",
     "daysLeft_other": "{{count}} days left",
     "tabSpending": "Spending",
-    "tabSplits": "Splits"
+    "tabSplits": "Splits",
+    "repeat": "Repeat",
+    "repeatOption": {
+      "none": "Once",
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "yearly": "Yearly"
+    },
+    "repeating": "Repeating",
+    "repeatPaused": "Paused on the free plan. Upgrade to Plus to keep adding them.",
+    "nextOn": "next {{date}}",
+    "stopRepeat": "Stop repeating",
+    "stopRepeatTitle": "Stop repeating {{merchant}}?",
+    "stopRepeatBody": "Spends already added stay. No new ones will be added.",
+    "sourceRecurring": "Repeats",
+    "sourceImport": "Imported"
   },
   "emergencyContacts": {
     "confirmRemoveTitle": "Remove {{name}}?",

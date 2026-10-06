@@ -1121,7 +1121,22 @@
     "daysLeft_one": "{{count}} ದಿನ ಉಳಿದಿದೆ",
     "daysLeft_other": "{{count}} ದಿನಗಳು ಉಳಿದಿವೆ",
     "tabSpending": "ಖರ್ಚು",
-    "tabSplits": "ಹಂಚಿಕೆ"
+    "tabSplits": "ಹಂಚಿಕೆ",
+    "repeat": "ಪುನರಾವರ್ತಿಸಿ",
+    "repeatOption": {
+      "none": "ಒಮ್ಮೆ",
+      "weekly": "ಪ್ರತಿ ವಾರ",
+      "monthly": "ಪ್ರತಿ ತಿಂಗಳು",
+      "yearly": "ಪ್ರತಿ ವರ್ಷ"
+    },
+    "repeating": "ಪುನರಾವರ್ತಿತ",
+    "repeatPaused": "ಉಚಿತ ಯೋಜನೆಯಲ್ಲಿ ವಿರಾಮದಲ್ಲಿವೆ. ಸೇರಿಸುತ್ತಲೇ ಇರಲು Plus ಗೆ ಅಪ್‌ಗ್ರೇಡ್ ಮಾಡಿ.",
+    "nextOn": "ಮುಂದಿನದು {{date}}",
+    "stopRepeat": "ಪುನರಾವರ್ತನೆ ನಿಲ್ಲಿಸಿ",
+    "stopRepeatTitle": "{{merchant}} ಪುನರಾವರ್ತನೆ ನಿಲ್ಲಿಸಬೇಕೆ?",
+    "stopRepeatBody": "ಈಗಾಗಲೇ ಸೇರಿಸಿದ ಖರ್ಚುಗಳು ಉಳಿಯುತ್ತವೆ. ಹೊಸದನ್ನು ಸೇರಿಸಲಾಗುವುದಿಲ್ಲ.",
+    "sourceRecurring": "ಪುನರಾವರ್ತಿತ",
+    "sourceImport": "ಆಮದು"
   },
   "itinerary": {
     "title": "ಪ್ರವಾಸದ ಕಾರ್ಯಕ್ರಮಗಳು",

@@ -1121,7 +1121,22 @@
     "daysLeft_one": "{{count}} ദിവസം ബാക്കി",
     "daysLeft_other": "{{count}} ദിവസം ബാക്കി",
     "tabSpending": "ചെലവ്",
-    "tabSplits": "പങ്കിടൽ"
+    "tabSplits": "പങ്കിടൽ",
+    "repeat": "ആവർത്തിക്കുക",
+    "repeatOption": {
+      "none": "ഒരിക്കൽ",
+      "weekly": "ആഴ്ചതോറും",
+      "monthly": "മാസംതോറും",
+      "yearly": "വർഷംതോറും"
+    },
+    "repeating": "ആവർത്തിക്കുന്നവ",
+    "repeatPaused": "സൗജന്യ പ്ലാനിൽ താൽക്കാലികമായി നിർത്തി. തുടർന്നും ചേർക്കാൻ Plus ലേക്ക് അപ്‌ഗ്രേഡ് ചെയ്യുക.",
+    "nextOn": "അടുത്തത് {{date}}",
+    "stopRepeat": "ആവർത്തനം നിർത്തുക",
+    "stopRepeatTitle": "{{merchant}} ആവർത്തനം നിർത്തണോ?",
+    "stopRepeatBody": "ഇതിനകം ചേർത്ത ചെലവുകൾ നിലനിൽക്കും. പുതിയവ ചേർക്കില്ല.",
+    "sourceRecurring": "ആവർത്തിക്കുന്നത്",
+    "sourceImport": "ഇമ്പോർട്ട് ചെയ്തത്"
   },
   "itinerary": {
     "title": "യാത്രാ ഇവന്റുകൾ",

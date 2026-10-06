@@ -17,6 +17,10 @@ import { auraCategoryColors } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { CURRENCY_OPTIONS } from "@/utils/currency";
 import { findMoneyGroup, isTrip, selectMoneyGroups, useTripsStore } from "@/features/trips/store/tripsStore";
+import { useRecurringStore } from "@/features/expenses/store/recurringStore";
+import { toLocalDayKey } from "@/features/expenses/utils/dateKey";
+import type { RepeatFrequency } from "@/features/expenses/utils/recurring";
+import { usePlusGate } from "@/modules/billing";
 import { EXPENSE_CATEGORIES, type ExpenseCategory } from "@/features/expenses/constants/categories";
 import { type Expense, type ExpenseLocation, type ExpenseSource, useExpensesStore } from "@/features/expenses/store/expensesStore";
 import { roundMoney, SELF_ID, type ExpenseShare, type ExpensePayer, type ExpenseSplit } from "@/features/expenses/utils/split";
@@ -162,6 +166,9 @@ function ExpenseFormBody({
   const allGroups = useTripsStore(selectMoneyGroups);
   const companions = useMemo(() => companionsOverride ?? target?.companions ?? [], [companionsOverride, target?.companions]);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [repeat, setRepeat] = useState<RepeatFrequency | null>(null);
+  const plus = usePlusGate();
+  const canRepeat = !editingExpense && source === "manual";
   const [currencyTouched, setCurrencyTouched] = useState(Boolean(editingExpense ?? initialDraft));
   const addExpense = useExpensesStore((state) => state.addExpense);
   const updateExpense = useExpensesStore((state) => state.updateExpense);
@@ -285,6 +292,27 @@ function ExpenseFormBody({
       updateExpense(editingExpense.id, payload);
     } else {
       addExpense({ ...payload, source, rawText: initialDraft?.rawText, autoCategorized: false });
+      if (repeat && canRepeat) {
+        const day = toLocalDayKey(payload.date);
+        useRecurringStore.getState().add({
+          groupId: targetId,
+          frequency: repeat,
+          startDate: day,
+          lastAddedDate: day,
+          template: {
+            merchant: payload.merchant,
+            amount: payload.amount,
+            currency: payload.currency,
+            category: payload.category,
+            note: payload.note,
+            paidBy: payload.paidBy,
+            payers: payload.payers,
+            shares: payload.shares,
+            split: payload.split,
+          },
+        });
+        track("recurring_created", { frequency: repeat });
+      }
       track("expense_added", { source: source === "voice" ? "voice" : "manual", count: 1 });
     }
     onSave();
@@ -384,6 +412,22 @@ function ExpenseFormBody({
         </View>
 
         <AuraDateField label={t("expenses.dateLabel")} value={date} onChange={setDate} maximumDate={new Date()} />
+        {canRepeat ? (
+          <View style={styles.group}>
+            <Text style={[styles.label, { color: c.textSoft, fontFamily: f.medium }]}>{t("expenses.repeat")}</Text>
+            <View style={styles.wrap}>
+              {([null, "weekly", "monthly", "yearly"] as const).map((option) => (
+                <AuraChip
+                  key={option ?? "none"}
+                  label={t(`expenses.repeatOption.${option ?? "none"}`)}
+                  icon={option && !plus.isPlus ? "lock" : undefined}
+                  selected={repeat === option}
+                  onPress={() => (option ? plus.run("recurring", () => setRepeat(option)) : setRepeat(null))}
+                />
+              ))}
+            </View>
+          </View>
+        ) : null}
         <AuraField label={t("expenses.noteLabel")} value={note} onChangeText={setNote} placeholder={t("expenses.notePlaceholder")} />
 
         <PressableScale

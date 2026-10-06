@@ -7,7 +7,7 @@ import type { ExpensePayer, ExpenseShare, ExpenseSplit } from "@/features/expens
 import type { SplitHint } from "@/features/expenses/utils/party";
 
 /** "sms" is legacy (device SMS import, removed); kept so stored expenses stay valid. */
-export type ExpenseSource = "manual" | "paste" | "sms" | "email" | "voice";
+export type ExpenseSource = "manual" | "paste" | "sms" | "email" | "voice" | "recurring" | "import";
 
 export interface ExpenseLocation {
   latitude: number;

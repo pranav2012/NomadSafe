@@ -1121,7 +1121,22 @@
     "daysLeft_one": "{{count}} jour restant",
     "daysLeft_other": "{{count}} jours restants",
     "tabSpending": "Dépenses",
-    "tabSplits": "Partages"
+    "tabSplits": "Partages",
+    "repeat": "Répéter",
+    "repeatOption": {
+      "none": "Une fois",
+      "weekly": "Chaque semaine",
+      "monthly": "Chaque mois",
+      "yearly": "Chaque année"
+    },
+    "repeating": "Récurrentes",
+    "repeatPaused": "En pause avec l'offre gratuite. Passe à Plus pour continuer à les ajouter.",
+    "nextOn": "prochaine le {{date}}",
+    "stopRepeat": "Arrêter de répéter",
+    "stopRepeatTitle": "Arrêter de répéter {{merchant}} ?",
+    "stopRepeatBody": "Les dépenses déjà ajoutées restent. Aucune nouvelle ne sera ajoutée.",
+    "sourceRecurring": "Récurrente",
+    "sourceImport": "Importée"
   },
   "itinerary": {
     "title": "Événements du voyage",

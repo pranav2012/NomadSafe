@@ -1121,7 +1121,22 @@
     "daysLeft_one": "{{count}}일 남음",
     "daysLeft_other": "{{count}}일 남음",
     "tabSpending": "지출",
-    "tabSplits": "나눠 내기"
+    "tabSplits": "나눠 내기",
+    "repeat": "반복",
+    "repeatOption": {
+      "none": "한 번",
+      "weekly": "매주",
+      "monthly": "매월",
+      "yearly": "매년"
+    },
+    "repeating": "반복",
+    "repeatPaused": "무료 플랜에서는 일시 중지돼요. 계속 추가하려면 Plus로 업그레이드하세요.",
+    "nextOn": "다음 {{date}}",
+    "stopRepeat": "반복 중지",
+    "stopRepeatTitle": "{{merchant}} 반복을 중지할까요?",
+    "stopRepeatBody": "이미 추가된 지출은 남아요. 새 지출은 추가되지 않아요.",
+    "sourceRecurring": "반복",
+    "sourceImport": "가져옴"
   },
   "itinerary": {
     "title": "여행 일정",

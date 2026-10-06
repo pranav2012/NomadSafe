@@ -16,6 +16,8 @@ const SOURCE_KEYS: Partial<Record<Expense["source"], string>> = {
   paste: "expenses.sourcePasted",
   email: "expenses.sourceEmail",
   voice: "expenses.sourceVoice",
+  recurring: "expenses.sourceRecurring",
+  import: "expenses.sourceImport",
 };
 
 const dayFormatters = new Map<string, Intl.DateTimeFormat>();

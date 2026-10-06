@@ -1121,7 +1121,22 @@
     "daysLeft_one": "falta {{count}} dia",
     "daysLeft_other": "faltam {{count}} dias",
     "tabSpending": "Gastos",
-    "tabSplits": "Divisões"
+    "tabSplits": "Divisões",
+    "repeat": "Repetir",
+    "repeatOption": {
+      "none": "Uma vez",
+      "weekly": "Semanal",
+      "monthly": "Mensal",
+      "yearly": "Anual"
+    },
+    "repeating": "Recorrentes",
+    "repeatPaused": "Pausados no plano grátis. Faça upgrade para o Plus para continuar adicionando.",
+    "nextOn": "próximo {{date}}",
+    "stopRepeat": "Parar de repetir",
+    "stopRepeatTitle": "Parar de repetir {{merchant}}?",
+    "stopRepeatBody": "Os gastos já adicionados continuam. Nenhum novo será adicionado.",
+    "sourceRecurring": "Recorrente",
+    "sourceImport": "Importado"
   },
   "itinerary": {
     "title": "Eventos da viagem",

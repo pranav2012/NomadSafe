@@ -1121,7 +1121,22 @@
     "daysLeft_one": "noch {{count}} Tag",
     "daysLeft_other": "noch {{count}} Tage",
     "tabSpending": "Ausgaben",
-    "tabSplits": "Aufteilen"
+    "tabSplits": "Aufteilen",
+    "repeat": "Wiederholen",
+    "repeatOption": {
+      "none": "Einmal",
+      "weekly": "Wöchentlich",
+      "monthly": "Monatlich",
+      "yearly": "Jährlich"
+    },
+    "repeating": "Wiederkehrend",
+    "repeatPaused": "Im kostenlosen Plan pausiert. Mit Plus werden sie weiter eingetragen.",
+    "nextOn": "nächste am {{date}}",
+    "stopRepeat": "Nicht mehr wiederholen",
+    "stopRepeatTitle": "{{merchant}} nicht mehr wiederholen?",
+    "stopRepeatBody": "Bereits eingetragene Ausgaben bleiben. Es kommen keine neuen dazu.",
+    "sourceRecurring": "Wiederkehrend",
+    "sourceImport": "Importiert"
   },
   "itinerary": {
     "title": "Reise-Ereignisse",

@@ -4,6 +4,7 @@ import { useAuthStore } from "@/features/auth/store/authStore";
 import { aiRuntime, aiService, clearAiUsageLog, clearByokConfig, clearCloudExhaustion, resetAiPreference } from "@/modules/ai";
 import { usePlanStore } from "@/modules/billing";
 import { useChatStore } from "@/features/ai/store/chatStore";
+import { useRecurringStore } from "@/features/expenses/store/recurringStore";
 import { useSplitPresetsStore } from "@/features/expenses/store/splitPresetsStore";
 import { useKeepGroupStore } from "@/features/expenses/store/keepGroupStore";
 import { useExpensesStore } from "@/features/expenses/store/expensesStore";
@@ -54,6 +55,7 @@ export async function wipeAllDeviceData({ keepModels = false }: { keepModels?: b
   useExpensesStore.getState().reset();
   useKeepGroupStore.getState().reset();
   useSplitPresetsStore.getState().reset();
+  useRecurringStore.getState().reset();
   useEventsStore.getState().reset();
   useMustDoStore.getState().reset();
   useTravelInfoStore.getState().reset();

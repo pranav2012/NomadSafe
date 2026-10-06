@@ -1121,7 +1121,22 @@
     "daysLeft_one": "بقي يوم واحد",
     "daysLeft_other": "بقي {{count}} أيام",
     "tabSpending": "الإنفاق",
-    "tabSplits": "التقسيم"
+    "tabSplits": "التقسيم",
+    "repeat": "تكرار",
+    "repeatOption": {
+      "none": "مرة واحدة",
+      "weekly": "أسبوعيًا",
+      "monthly": "شهريًا",
+      "yearly": "سنويًا"
+    },
+    "repeating": "المتكررة",
+    "repeatPaused": "متوقفة في الخطة المجانية. رقِّ إلى Plus لمواصلة إضافتها.",
+    "nextOn": "التالي {{date}}",
+    "stopRepeat": "إيقاف التكرار",
+    "stopRepeatTitle": "إيقاف تكرار {{merchant}}؟",
+    "stopRepeatBody": "تبقى المصاريف المضافة سابقًا. لن تُضاف مصاريف جديدة.",
+    "sourceRecurring": "متكرر",
+    "sourceImport": "مستورد"
   },
   "itinerary": {
     "title": "أحداث الرحلة",

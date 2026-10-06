@@ -1121,7 +1121,22 @@
     "daysLeft_one": "{{count}} நாள் மீதம்",
     "daysLeft_other": "{{count}} நாட்கள் மீதம்",
     "tabSpending": "செலவு",
-    "tabSplits": "பகிர்வு"
+    "tabSplits": "பகிர்வு",
+    "repeat": "மீண்டும்",
+    "repeatOption": {
+      "none": "ஒருமுறை",
+      "weekly": "வாராந்திரம்",
+      "monthly": "மாதாந்திரம்",
+      "yearly": "ஆண்டுதோறும்"
+    },
+    "repeating": "தொடர்பவை",
+    "repeatPaused": "இலவசத் திட்டத்தில் நிறுத்தப்பட்டுள்ளன. தொடர்ந்து சேர்க்க Plus க்கு மேம்படுத்துங்கள்.",
+    "nextOn": "அடுத்து {{date}}",
+    "stopRepeat": "மீண்டும் செய்வதை நிறுத்து",
+    "stopRepeatTitle": "{{merchant}} மீண்டும் செய்வதை நிறுத்தவா?",
+    "stopRepeatBody": "ஏற்கனவே சேர்த்த செலவுகள் இருக்கும். புதியவை சேர்க்கப்படாது.",
+    "sourceRecurring": "தொடர்",
+    "sourceImport": "இறக்குமதி"
   },
   "itinerary": {
     "title": "பயண நிகழ்வுகள்",

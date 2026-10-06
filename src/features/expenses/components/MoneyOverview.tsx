@@ -11,6 +11,7 @@ import { categoryBreakdown, sumAmount } from "@/features/expenses/utils/aggregat
 import { formatMoney } from "@/features/expenses/utils/money";
 import { inRange, myShareOf, periodRange, type SpendPeriod } from "@/features/expenses/utils/myMoney";
 import { GroupActivity } from "@/features/expenses/components/GroupActivity";
+import { RecurringList } from "@/features/expenses/components/RecurringList";
 import { OWED, OWES } from "@/features/expenses/components/GroupBalances";
 import { SpendHero } from "@/features/expenses/components/SpendHero";
 
@@ -168,6 +169,8 @@ export function MoneyOverview({
           {showSettled ? settled.map(row) : null}
         </>
       ) : null}
+
+      <RecurringList groupId={null} />
 
       {loose.length > 0 ? (
         <>

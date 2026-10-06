@@ -249,3 +249,14 @@ test("shares split divides by any positive numbers and keeps the total", () => {
   assert.equal(Math.round(odd.shares.reduce((sum, share) => sum + share.amount, 0) * 100), 10000);
   assert.deepEqual(split.splitByUnits(100, "USD", { a: 0 }), { ok: false, reason: "no-people" });
 });
+
+const recurring = loadModule("src/features/expenses/utils/recurring.ts");
+
+test("recurring spends: due days after the last one, month ends clamp, catch-up is capped", () => {
+  assert.deepEqual(recurring.dueDays("2026-08-01", "monthly", "2026-08-01", "2026-10-07"), ["2026-09-01", "2026-10-01"]);
+  assert.deepEqual(recurring.dueDays("2026-01-31", "monthly", "2026-01-31", "2026-04-30"), ["2026-02-28", "2026-03-31", "2026-04-30"]);
+  assert.deepEqual(recurring.dueDays("2026-09-30", "weekly", "2026-09-30", "2026-10-14"), ["2026-10-07", "2026-10-14"]);
+  assert.deepEqual(recurring.dueDays("2024-02-29", "yearly", "2024-02-29", "2026-03-01"), ["2025-02-28", "2026-02-28"]);
+  assert.equal(recurring.dueDays("2020-01-01", "weekly", null, "2026-10-07").length, 24);
+  assert.equal(recurring.nextDueDay("2026-08-15", "monthly", "2026-10-07"), "2026-10-15");
+});

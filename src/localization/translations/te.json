@@ -1121,7 +1121,22 @@
     "daysLeft_one": "{{count}} రోజు మిగిలింది",
     "daysLeft_other": "{{count}} రోజులు మిగిలాయి",
     "tabSpending": "ఖర్చు",
-    "tabSplits": "పంపకం"
+    "tabSplits": "పంపకం",
+    "repeat": "పునరావృతం",
+    "repeatOption": {
+      "none": "ఒకసారి",
+      "weekly": "ప్రతి వారం",
+      "monthly": "ప్రతి నెల",
+      "yearly": "ప్రతి సంవత్సరం"
+    },
+    "repeating": "పునరావృతమయ్యేవి",
+    "repeatPaused": "ఉచిత ప్లాన్‌లో ఆగిపోయాయి. జోడిస్తూ ఉండటానికి Plus కు అప్‌గ్రేడ్ చేయండి.",
+    "nextOn": "తదుపరి {{date}}",
+    "stopRepeat": "పునరావృతం ఆపండి",
+    "stopRepeatTitle": "{{merchant}} పునరావృతం ఆపాలా?",
+    "stopRepeatBody": "ఇప్పటికే జోడించిన ఖర్చులు ఉంటాయి. కొత్తవి జోడించబడవు.",
+    "sourceRecurring": "పునరావృతం",
+    "sourceImport": "దిగుమతి"
   },
   "itinerary": {
     "title": "యాత్ర ఈవెంట్‌లు",

@@ -1121,7 +1121,22 @@
     "daysLeft_one": "残り{{count}}日",
     "daysLeft_other": "残り{{count}}日",
     "tabSpending": "支出",
-    "tabSplits": "割り勘"
+    "tabSplits": "割り勘",
+    "repeat": "繰り返し",
+    "repeatOption": {
+      "none": "1回のみ",
+      "weekly": "毎週",
+      "monthly": "毎月",
+      "yearly": "毎年"
+    },
+    "repeating": "定期",
+    "repeatPaused": "無料プランでは一時停止中です。追加を続けるにはPlusにアップグレードしてください。",
+    "nextOn": "次回 {{date}}",
+    "stopRepeat": "繰り返しを停止",
+    "stopRepeatTitle": "{{merchant}}の繰り返しを停止しますか？",
+    "stopRepeatBody": "追加済みの支出は残ります。新しい支出は追加されません。",
+    "sourceRecurring": "定期",
+    "sourceImport": "取り込み"
   },
   "itinerary": {
     "title": "旅程",

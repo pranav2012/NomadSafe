@@ -11,6 +11,7 @@ import { AURA_FONT_FILES, auraDark, auraLight } from "@/constants/aura";
 import { usePendingJoinStore } from "@/features/trips/store/pendingJoinStore";
 import { useTripGmailSync } from "@/features/expenses/hooks/useTripGmailSync";
 import { useLandingTab } from "@/features/home/hooks/useLandingTab";
+import { useRecurringRunner } from "@/features/expenses/hooks/useRecurringRunner";
 import { useTheme } from "@/hooks/useTheme";
 import { useLocalization } from "@/localization";
 
@@ -25,6 +26,7 @@ export default function TabsLayout() {
   usePendingInvite();
   useTripGmailSync();
   useLandingTab();
+  useRecurringRunner();
   return Platform.OS === "ios" ? <NativeTabsLayout /> : <GlassTabsLayout />;
 }
 
