@@ -728,6 +728,16 @@
       "bodyTrip": "{{trip}} 聊天中的所有消息都将被删除，Nomad 会忘记这段对话。",
       "bodyGeneral": "此聊天中的所有消息都将被删除，Nomad 会忘记这段对话。",
       "bodyTemporary": "此临时聊天中的所有消息都将被删除。"
+    },
+    "context": {
+      "about": "关于",
+      "general": "通用",
+      "generalDetail": "不含资金数据，只聊天",
+      "hint": "选择 AI 要谈论的旅行、群组或资金",
+      "label": "关于 {{name}}",
+      "overviewDetail": "你在各处的花费和余额",
+      "subtitle": "每个都有独立的对话。不会更改你进行中的旅行。",
+      "title": "询问内容"
     }
   },
   "safety": {

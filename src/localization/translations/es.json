@@ -728,6 +728,16 @@
       "bodyTrip": "Se eliminarán todos los mensajes del chat de {{trip}} y Nomad olvidará esta conversación.",
       "bodyGeneral": "Se eliminarán todos los mensajes de este chat y Nomad olvidará esta conversación.",
       "bodyTemporary": "Se eliminarán todos los mensajes de este chat temporal."
+    },
+    "context": {
+      "about": "Sobre",
+      "general": "General",
+      "generalDetail": "Sin datos de dinero, solo charlar",
+      "hint": "Elige de qué viaje, grupo o dinero habla la IA",
+      "label": "Sobre {{name}}",
+      "overviewDetail": "Tus gastos y saldos en todas partes",
+      "subtitle": "Cada uno tiene su propio chat. Esto no cambia tu viaje activo.",
+      "title": "Preguntar sobre"
     }
   },
   "safety": {

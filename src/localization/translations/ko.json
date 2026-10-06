@@ -728,6 +728,16 @@
       "bodyTrip": "{{trip}} 채팅의 모든 메시지가 삭제되고 Nomad가 이 대화를 잊습니다.",
       "bodyGeneral": "이 채팅의 모든 메시지가 삭제되고 Nomad가 이 대화를 잊습니다.",
       "bodyTemporary": "이 임시 채팅의 모든 메시지가 삭제됩니다."
+    },
+    "context": {
+      "about": "대상",
+      "general": "일반",
+      "generalDetail": "돈 정보 없이 대화만",
+      "hint": "AI가 이야기할 여행, 그룹 또는 돈을 고르세요",
+      "label": "{{name}} 관련",
+      "overviewDetail": "모든 곳의 내 지출과 잔액",
+      "subtitle": "각각 따로 채팅이 있어요. 진행 중인 여행은 바뀌지 않아요.",
+      "title": "질문 대상"
     }
   },
   "safety": {

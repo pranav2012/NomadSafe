@@ -3,7 +3,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { mmkvStateStorage } from "@/modules/storage";
 import { aiRuntime, aiService, modelNotifications, type ChatTurn } from "@/modules/ai";
-import { loadTripMoneySnapshot } from "../services/chatContext";
+import { GENERAL_CONTEXT, loadChatSnapshot, resolveChatContext } from "../services/chatContext";
 import { logger } from "@/modules/logger";
 
 export interface ChatMessage {
@@ -20,7 +20,7 @@ export interface ChatErrorLabels {
   error: string;
 }
 
-export const GENERAL_CHAT_KEY = "general";
+export const GENERAL_CHAT_KEY = GENERAL_CONTEXT;
 /** In-memory only conversation for temporary chats; never persisted. */
 export const TEMP_CHAT_KEY = "temp";
 
@@ -163,9 +163,9 @@ export const useChatStore = create<ChatState>()(
             useChatStreamStore.setState({ conversationKey: null, text: "" });
           };
 
-          // Every question goes to the model, with the trip's computed money facts in its prompt.
-          // Gmail merchants are always hidden: saved chat history and summaries can later go online.
-          loadTripMoneySnapshot(new Date(), { hideEmailMerchants: true })
+          // Every question goes to the model with the computed money facts of the chat's context (trip,
+          // group or overview). Gmail merchants are always hidden: chat history can later go online.
+          loadChatSnapshot(resolveChatContext(), new Date(), { hideEmailMerchants: true })
             .catch((error: unknown) => {
               logger.warn("chatStore", "money facts unavailable", error);
               return null;

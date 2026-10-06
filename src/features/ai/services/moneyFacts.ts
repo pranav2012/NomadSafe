@@ -168,7 +168,7 @@ export function formatMoney(amount: number, currency: string, locale: string): s
   return formatSharedMoney(intlFormat, amount, currency);
 }
 
-function formatDay(value: string | Date, locale: string): string {
+export function formatDay(value: string | Date, locale: string): string {
   const date = typeof value === "string" ? parseDayKey(toLocalDayKey(value)) : value;
   try {
     return new Intl.DateTimeFormat(locale, {

@@ -728,6 +728,16 @@
       "bodyTrip": "Alle Nachrichten im Chat zu {{trip}} werden gelöscht und Nomad vergisst dieses Gespräch.",
       "bodyGeneral": "Alle Nachrichten in diesem Chat werden gelöscht und Nomad vergisst dieses Gespräch.",
       "bodyTemporary": "Alle Nachrichten in diesem temporären Chat werden gelöscht."
+    },
+    "context": {
+      "about": "Über",
+      "general": "Allgemein",
+      "generalDetail": "Ohne Geldfakten, einfach chatten",
+      "hint": "Wähle, über welche Reise, Gruppe oder welches Geld die KI spricht",
+      "label": "Über {{name}}",
+      "overviewDetail": "Deine Ausgaben und Salden überall",
+      "subtitle": "Jede hat ihren eigenen Chat. Deine aktive Reise ändert sich nicht.",
+      "title": "Fragen zu"
     }
   },
   "safety": {

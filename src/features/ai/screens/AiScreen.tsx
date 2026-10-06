@@ -5,15 +5,18 @@ import { useIsFocused, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { ZoomIn, ZoomOut, useAnimatedReaction, useSharedValue } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
-import { AuraButton, Icon, LiveDot, PressableScale, showAlert, useAura, type IconName } from "@/atoms";
+import { AuraButton, AuraOptionSheet, Icon, LiveDot, PressableScale, showAlert, useAura, type AuraOption, type IconName } from "@/atoms";
 import { auraStatusAccent } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { useSettingsStore } from "@/features/settings";
-import { useTripsStore } from "@/features/trips/store/tripsStore";
+import { findMoneyGroup, isTrip, selectMoneyGroups, useTripsStore } from "@/features/trips/store/tripsStore";
+import { getTripStatus } from "@/features/trips/utils/dates";
+import { useAiContextStore } from "../store/aiContextStore";
+import { GENERAL_CONTEXT, OVERVIEW_CONTEXT } from "../services/chatContext";
 import { track } from "@/modules/analytics";
 import { showInterstitial } from "@/modules/ads";
 import { TEMP_CHAT_KEY, useChatStore } from "../store/chatStore";
-import { useChatConversationKey } from "../hooks/useChatConversationKey";
+import { useChatContext, useChatConversationKey } from "../hooks/useChatConversationKey";
 import { AiChat, HERO_DOCK_DISTANCE } from "../components/AiChat";
 import { AiPlasmaOrb } from "../components/AiPlasmaOrb";
 import { AiKeySheet } from "../components/AiKeySheet";
@@ -96,12 +99,40 @@ export default function AiScreen() {
       if (docked !== previous) scheduleOnRN(setHeroDocked, docked);
     },
   );
-  const tripName = useTripsStore((s) => s.trips.find((trip) => trip.id === conversationKey)?.name ?? null);
+  const tripName = useTripsStore((s) => findMoneyGroup(s, conversationKey)?.name ?? null);
+  const context = useChatContext();
+  const pickContext = useAiContextStore((s) => s.pick);
+  const moneyGroups = useTripsStore(selectMoneyGroups);
+  const activeTripId = useTripsStore((s) => s.activeTripId);
+  const [contextOpen, setContextOpen] = useState(false);
+  const contextGroup = moneyGroups.find((group) => group.id === context) ?? null;
+  const contextLabel =
+    context === GENERAL_CONTEXT
+      ? t("aiTab.context.general")
+      : context === OVERVIEW_CONTEXT
+        ? t("money.overview")
+        : contextGroup
+          ? isTrip(contextGroup)
+            ? contextGroup.name
+            : `${contextGroup.emoji ?? "👥"} ${contextGroup.name}`
+          : t("aiTab.context.general");
+  const visibleGroups = moneyGroups.filter((group) => !group.shared?.archived);
+  const contextOptions: AuraOption<string>[] = [
+    ...visibleGroups.filter((group) => group.id === activeTripId).map((group) => ({ value: group.id, label: group.name, detail: t("money.activeTrip") })),
+    ...visibleGroups.filter((group) => !isTrip(group)).map((group) => ({ value: group.id, label: `${isTrip(group) ? "" : `${group.emoji ?? "👥"} `}${group.name}`, detail: t("money.people", { count: group.companions.length + 1 }) })),
+    ...visibleGroups
+      .filter((group) => isTrip(group) && group.id !== activeTripId)
+      .map((group) => ({ value: group.id, label: group.name, detail: isTrip(group) && getTripStatus(group) === "complete" ? t("money.endedTrip") : t("money.tripBadge") })),
+    { value: OVERVIEW_CONTEXT, label: t("money.overview"), detail: t("aiTab.context.overviewDetail") },
+    { value: GENERAL_CONTEXT, label: t("aiTab.context.general"), detail: t("aiTab.context.generalDetail") },
+  ];
 
-  // Temporary chats only last while the AI tab is open.
+  // Temporary chats only last while the AI tab is open; leaving the tab also returns to the default context.
   useEffect(() => {
-    if (!focused) setTemporary(false);
-  }, [focused, setTemporary]);
+    if (focused) return;
+    setTemporary(false);
+    pickContext(null);
+  }, [focused, setTemporary, pickContext]);
 
   // Leaving the tab after a real conversation is a natural break for an ad.
   const generating = useChatStore((s) => s.generatingConversationKey !== null);
@@ -203,6 +234,33 @@ export default function AiScreen() {
 
       {chatEnabled ? (
         <>
+          <View style={styles.contextRow}>
+            <PressableScale
+              onPress={() => setContextOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel={t("aiTab.context.label", { name: contextLabel })}
+              accessibilityHint={t("aiTab.context.hint")}
+              style={[styles.contextChip, { backgroundColor: c.surfaceStrong, borderColor: c.hairline }]}
+            >
+              <Text style={[styles.contextPrefix, { color: c.textSoft, fontFamily: f.regular }]}>{t("aiTab.context.about")}</Text>
+              <Text numberOfLines={1} style={[styles.contextName, { color: c.text, fontFamily: f.semibold }]}>
+                {contextLabel}
+              </Text>
+              <Icon name="chevronDown" size={13} color={c.textMuted} strokeWidth={2} />
+            </PressableScale>
+          </View>
+          <AuraOptionSheet
+            visible={contextOpen}
+            onClose={() => setContextOpen(false)}
+            title={t("aiTab.context.title")}
+            subtitle={t("aiTab.context.subtitle")}
+            options={contextOptions}
+            selected={context}
+            onSelect={(value) => {
+              pickContext(value);
+              track("ai_context_picked", { kind: value === GENERAL_CONTEXT ? "general" : value === OVERVIEW_CONTEXT ? "overview" : moneyGroups.find((group) => group.id === value && isTrip(group)) ? "trip" : "group" });
+            }}
+          />
           <AiChat
             activeModelName={localAiEnabled ? (activeModel?.name ?? null) : null}
             scrollY={scrollY}
@@ -230,6 +288,10 @@ const styles = StyleSheet.create({
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, paddingHorizontal: 20, paddingBottom: 12 },
   title: { fontSize: 34, letterSpacing: -1.2 },
   titleRow: { flexDirection: "row", alignItems: "center", gap: 14 },
+  contextRow: { paddingHorizontal: 20, paddingBottom: 8 },
+  contextChip: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", maxWidth: "100%", height: 32, paddingHorizontal: 12, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth },
+  contextPrefix: { fontSize: 13 },
+  contextName: { fontSize: 13, flexShrink: 1 },
   actions: { flexDirection: "row", alignItems: "center", gap: 8, flexShrink: 1 },
   iconButton: {
     width: 34,

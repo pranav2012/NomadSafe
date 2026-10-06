@@ -22,6 +22,7 @@ export interface AnalyticsEvents {
   sign_in_failed: undefined;
   trip_created: { mode: "solo" | "group"; destinations: number; has_budget: boolean };
   group_created: { people: number };
+  ai_context_picked: { kind: "trip" | "group" | "overview" | "general" };
   trip_joined: { deferred: boolean; claimed_member: boolean };
   invite_deferred_found: { source: "install_referrer" | "clipboard" };
   expense_added: { source: ExpenseSourceKind; count: number };

@@ -782,6 +782,16 @@
       "bodyTrip": "All messages in the {{trip}} chat will be deleted, and Nomad will forget this conversation.",
       "bodyGeneral": "All messages in this chat will be deleted, and Nomad will forget this conversation.",
       "bodyTemporary": "All messages in this temporary chat will be deleted."
+    },
+    "context": {
+      "about": "About",
+      "general": "General",
+      "generalDetail": "No money facts, just chat",
+      "hint": "Choose which trip, group or money the AI talks about",
+      "label": "About {{name}}",
+      "overviewDetail": "Your spending and balances everywhere",
+      "subtitle": "Each has its own chat. This doesn't change your active trip.",
+      "title": "Ask about"
     }
   },
   "milestones": {

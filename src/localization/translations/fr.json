@@ -728,6 +728,16 @@
       "bodyTrip": "Tous les messages de la discussion {{trip}} seront supprimés et Nomad oubliera cette conversation.",
       "bodyGeneral": "Tous les messages de cette discussion seront supprimés et Nomad oubliera cette conversation.",
       "bodyTemporary": "Tous les messages de cette discussion temporaire seront supprimés."
+    },
+    "context": {
+      "about": "À propos de",
+      "general": "Général",
+      "generalDetail": "Sans chiffres, juste discuter",
+      "hint": "Choisis le voyage, le groupe ou l'argent dont parle l'IA",
+      "label": "À propos de {{name}}",
+      "overviewDetail": "Tes dépenses et soldes partout",
+      "subtitle": "Chacun a sa propre discussion. Ton voyage en cours ne change pas.",
+      "title": "Poser des questions sur"
     }
   },
   "safety": {

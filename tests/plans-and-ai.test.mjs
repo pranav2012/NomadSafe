@@ -307,3 +307,19 @@ test("ads: every-Nth placements and remote config overrides", () => {
   assert.equal(remote.every.trip_created, 1);
   assert.equal("bogus" in remote.every, false);
 });
+
+const contextChoice = loadModule("src/features/ai/utils/chatContextChoice.ts");
+
+test("AI chat context: pick, else active trip, else the most recent group, else general", () => {
+  const group = (id, createdAt) => ({ id, kind: "group", name: id, budget: 0, currency: "INR", companions: [], createdAt });
+  const trip = { id: "goa", name: "Goa", destinations: [], startDate: "2026-10-01", endDate: "2026-10-09", mode: "solo", budget: 0, currency: "INR", companions: [], createdAt: "2026-09-01" };
+  const base = { picked: null, activeTripId: null, trips: [trip], groups: [group("flat", "2026-01-01"), group("office", "2026-02-01")], expenses: [], settlements: [] };
+  assert.equal(contextChoice.chooseChatContext(base), "office");
+  assert.equal(contextChoice.chooseChatContext({ ...base, expenses: [{ groupId: "flat", date: "2026-10-05" }] }), "flat");
+  assert.equal(contextChoice.chooseChatContext({ ...base, settlements: [{ groupId: "flat", date: "2026-10-06" }] }), "flat");
+  assert.equal(contextChoice.chooseChatContext({ ...base, activeTripId: "goa" }), "goa");
+  assert.equal(contextChoice.chooseChatContext({ ...base, activeTripId: "goa", picked: "flat" }), "flat");
+  assert.equal(contextChoice.chooseChatContext({ ...base, picked: "gone" }), "office");
+  assert.equal(contextChoice.chooseChatContext({ ...base, picked: "overview" }), "overview");
+  assert.equal(contextChoice.chooseChatContext({ ...base, groups: [] }), "general");
+});

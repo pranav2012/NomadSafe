@@ -728,6 +728,16 @@
       "bodyTrip": "{{trip}} のチャットのメッセージがすべて削除され、Nomad はこの会話を忘れます。",
       "bodyGeneral": "このチャットのメッセージがすべて削除され、Nomad はこの会話を忘れます。",
       "bodyTemporary": "この一時チャットのメッセージがすべて削除されます。"
+    },
+    "context": {
+      "about": "対象",
+      "general": "一般",
+      "generalDetail": "お金の情報なしで会話",
+      "hint": "AIが話題にする旅行、グループ、お金を選ぶ",
+      "label": "{{name}}について",
+      "overviewDetail": "すべての支出と残高",
+      "subtitle": "それぞれ別のチャットです。進行中の旅行は変わりません。",
+      "title": "質問の対象"
     }
   },
   "safety": {
