@@ -130,6 +130,12 @@ export function selectMoneyGroups(state: Pick<TripsState, "trips" | "groups">): 
   return all;
 }
 
+/** Where a new spend goes when nothing more specific is open: the active trip, else the first trip or group not archived. */
+export function defaultSpendGroupId(state: Pick<TripsState, "trips" | "groups" | "activeTripId">): string | null {
+  const open = selectMoneyGroups(state).filter((group) => !isArchivedGroup(group));
+  return open.find((group) => group.id === state.activeTripId)?.id ?? open[0]?.id ?? null;
+}
+
 export function findMoneyGroup(state: Pick<TripsState, "trips" | "groups">, id: string | null | undefined): MoneyGroup | null {
   if (!id) return null;
   return state.trips.find((trip) => trip.id === id) ?? state.groups.find((group) => group.id === id) ?? null;

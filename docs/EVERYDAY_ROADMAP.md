@@ -50,7 +50,7 @@ The basic thing is a **group**: people, a currency, expenses, payments, and opti
 ### Moving between trips and groups
 
 - **Money switcher:** the Money header ("Goa trip ▾") lists Overview, then the active trip and your groups (most recent activity first), then ended trips. Switching doesn't change the active trip.
-- **Where an expense goes:** the add-expense sheet has an "in: Goa trip ▾" chip. It defaults to the screen you're on (the active trip on the trip screen; "Not in a group" on the Overview), so the flat's rent can go in mid-trip without leaving.
+- **Where an expense goes:** the add-expense sheet has an "in: Goa trip ▾" chip. It defaults to the screen you're on (the trip or group on screen; on the Overview, the same default as voice: the active trip, else the first trip or group), so the flat's rent can go in mid-trip without leaving.
 - **Move to…:** an option on an expense, for when it went into the wrong group or trip. Moving an expense out of a shared group deletes it there and adds it to the new one, through the existing sync.
 - **Voice and the widget** can pick any group or trip.
 - **Plan a trip with this group:** a button on the group screen that starts a trip with the same people.
@@ -86,7 +86,7 @@ The Money tab has an **Overview** (Money home), plus one money screen per trip o
   1. **Your spending:** a Week / Month switch with arrows for earlier periods, and the total of everything you spent, in the home currency (see Personal spending). Under it, "where it went": one row per trip, group and "Not in a group", each opening that trip or group. Then the category bar.
   2. **Balance:** "You're owed ₹3,450 overall" (or "You owe…"), hidden when everything is settled.
   3. **Trips and groups:** mixed together, sorted by most recent activity, with a badge on trips and your balance in each. Anything settled for 30+ days folds into a collapsed "Settled" section.
-  4. **Your spends:** activity for spends that aren't in any trip or group (`groupId: null`). Adding from the Overview puts the spend here by default.
+  4. **Your spends:** activity for spends that aren't in any trip or group (`groupId: null`). Spends land here when "Not in a group" is picked in the add sheet.
 - The **Trip mode** switch in Settings is removed (`tripModeEnabled`, `defaultTripMode`). Trip focus turns on by itself while a trip is active.
 
 ### Where the app opens

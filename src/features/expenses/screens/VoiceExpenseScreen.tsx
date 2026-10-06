@@ -21,7 +21,7 @@ import { logger } from "@/modules/logger";
 import { useAuthStore } from "@/features/auth";
 import { useSettingsStore } from "@/features/settings";
 import { aiRuntime, aiService, remoteLabel, useAiAvailability } from "@/modules/ai";
-import { useTripsStore, isTrip, selectMoneyGroups } from "@/features/trips/store/tripsStore";
+import { defaultSpendGroupId, useTripsStore, isTrip, selectMoneyGroups } from "@/features/trips/store/tripsStore";
 import { useExpensesStore } from "@/features/expenses/store/expensesStore";
 import { useSpeechCapture } from "@/features/expenses/hooks/useSpeechCapture";
 import { ExpenseForm } from "@/features/expenses/components/ExpenseForm";
@@ -67,9 +67,8 @@ export default function VoiceExpenseScreen() {
 
   const [tripId, setTripId] = useState<string | null>(
     () => (params.tripId && trips.some((trip) => trip.id === params.tripId) ? params.tripId : null) ??
-      (fromWidget ? resolveWidgetTrip()?.id : activeTripId) ??
-      trips[0]?.id ??
-      null,
+      (fromWidget ? resolveWidgetTrip()?.id : null) ??
+      defaultSpendGroupId(useTripsStore.getState()),
   );
   const trip = trips.find((entry) => entry.id === tripId) ?? null;
   const companions = useMemo(() => trip?.companions ?? [], [trip]);

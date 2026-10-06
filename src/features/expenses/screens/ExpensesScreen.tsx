@@ -23,7 +23,7 @@ import { useStartNewGroup, useStartNewTrip } from "@/modules/billing";
 import { useAuthStore } from "@/features/auth/store/authStore";
 import { shareGroup } from "@/features/sync";
 import { useKeepGroupStore } from "@/features/expenses/store/keepGroupStore";
-import { findMoneyGroup, isTrip, selectActiveTrip, useTripsStore } from "@/features/trips/store/tripsStore";
+import { defaultSpendGroupId, findMoneyGroup, isTrip, selectActiveTrip, useTripsStore } from "@/features/trips/store/tripsStore";
 import { GroupPeopleSheet } from "@/features/trips/components/GroupPeopleSheet";
 import { useExpensesStore, type Expense } from "@/features/expenses/store/expensesStore";
 import { OVERVIEW, useMoneySelection, useMoneyViewStore } from "@/features/expenses/store/moneyViewStore";
@@ -51,6 +51,7 @@ export default function ExpensesScreen() {
   const blurTarget = useRef<View>(null);
   const activeTrip = useTripsStore(selectActiveTrip);
   const selected = useMoneySelection();
+  const fallbackGroupId = useTripsStore(defaultSpendGroupId);
   const select = useMoneyViewStore((state) => state.select);
   const chosen = useTripsStore((state) => (selected && selected !== OVERVIEW ? findMoneyGroup(state, selected) : null));
   const group = selected === OVERVIEW ? null : (chosen ?? activeTrip);
@@ -203,7 +204,7 @@ export default function ExpensesScreen() {
       <ExpenseForm
         visible={formOpen}
         editingExpense={editing}
-        groupId={group?.id ?? null}
+        groupId={group?.id ?? fallbackGroupId}
         onSave={() => setFormOpen(false)}
         onCancel={() => setFormOpen(false)}
         onSpeak={openVoice}
