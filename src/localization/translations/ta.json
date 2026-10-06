@@ -1347,7 +1347,6 @@
   },
   "voiceExpense": {
     "speakToAdd": "பேசி செலவைச் சேர்",
-    "noTrip": "பயணம் இல்லை",
     "chooseTrip": "இதில் சேர்",
     "activeTrip": "செயலில்",
     "tapToSpeak": "மைக்கைத் தட்டி, நீங்கள் செலுத்தியதைச் சொல்லுங்கள்",
@@ -1830,7 +1829,7 @@
     "onlyYou": "நீங்கள் மட்டும்",
     "youLent": "நீங்கள் {{amount}} கடன் கொடுத்தீர்கள்",
     "youBorrowed": "நீங்கள் {{amount}} கடன் வாங்கினீர்கள்",
-    "notInGroup": "எந்தக் குழுவிலும் இல்லை",
+    "notInGroup": "தனிப்பட்டது",
     "thisWeek": "இந்த வாரம்",
     "tripBadge": "பயணம்",
     "people_one": "{{count}} நபர்",
@@ -1850,7 +1849,7 @@
     "noGroupsBody": "அறைத்தோழர்கள், துணை அல்லது நண்பர்களுடன் செலவுகளைப் பகிருங்கள். ஒரு குழுவை உருவாக்கி நபர்களைச் சேருங்கள்.",
     "settledSection_one": "சரி செய்யப்பட்டவை · {{count}}",
     "settledSection_other": "சரி செய்யப்பட்டவை · {{count}}",
-    "yourSpends": "உங்கள் செலவுகள்",
+    "yourSpends": "தனிப்பட்டது",
     "groupNameRequired": "குழுவுக்கு ஒரு பெயர் கொடுங்கள்.",
     "newGroupTitle": "புதிய குழு",
     "groupName": "பெயர்",
@@ -1880,7 +1879,6 @@
     "notNow": "இப்போது வேண்டாம்",
     "planTrip": "இந்தக் குழுவுடன் பயணம் திட்டமிடு",
     "planTripBody": "ஒன்றாக எங்காவது செல்கிறீர்களா? இவர்கள் ஏற்கனவே உள்ள பயணத்தைத் தொடங்குங்கள்.",
-    "trendTitle": "கடந்த 6 மாதங்கள்",
     "trendAverage": "சராசரி {{amount}}/மாதம்",
     "moreActions": "மேலும்",
     "peopleAction": "நபர்கள் & அழைப்பு",
@@ -1897,8 +1895,7 @@
     "monthByMonth": "மாதவாரியாக",
     "tripChartLocked": "Plus மூலம் உங்கள் பயணத்தை நாள்வாரியாகப் பாருங்கள்",
     "groupChartLocked": "Plus மூலம் இந்தக் குழுவை மாதவாரியாகப் பாருங்கள்",
-    "insightsLocked": "Plus மூலம் போக்குகள், ஒப்பீடு மற்றும் பணம் எங்கே போனது பாருங்கள்",
-    "trendHint": "பார்க்க ஒரு மாதத்தைத் தட்டவும்",
+    "insightsLocked": "Plus மூலம் போக்குகள் மற்றும் ஒப்பீடுகள்",
     "topPlaces": "பணம் எங்கே போனது",
     "placeCount_one": "{{count}} செலவு",
     "placeCount_other": "{{count}} செலவுகள்",
@@ -1910,10 +1907,10 @@
       "down_week": "கடந்த வாரத்தை விட {{pct}}% குறைவு",
       "same_week": "கடந்த வாரம் போலவே",
       "categoryUp": "{{category}} {{pct}}% உயர்வு",
-      "categoryDown": "{{category}} {{pct}}% குறைவு",
-      "pace_month": "இந்த மாதம் {{amount}} நோக்கி",
-      "pace_week": "இந்த வாரம் {{amount}} நோக்கி"
-    }
+      "categoryDown": "{{category}} {{pct}}% குறைவு"
+    },
+    "allSettledWith_one": "{{count}} நபருடன் அனைத்தும் தீர்க்கப்பட்டது",
+    "allSettledWith_other": "{{count}} பேருடன் அனைத்தும் தீர்க்கப்பட்டது"
   },
   "groupShare": {
     "deleteBlocked": "இந்தக் குழுவை நீக்கும் முன் சேர்ந்த அனைவரையும் நீக்கவும். அதற்குப் பதிலாக காப்பகப்படுத்தி பட்டியலில் இருந்து மறைக்கலாம்.",

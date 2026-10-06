@@ -1347,7 +1347,6 @@
   },
   "voiceExpense": {
     "speakToAdd": "أضف نفقة بالصوت",
-    "noTrip": "بدون رحلة",
     "chooseTrip": "أضف إلى",
     "activeTrip": "نشطة",
     "tapToSpeak": "اضغط على الميكروفون وقل ما دفعته",
@@ -1830,7 +1829,7 @@
     "onlyYou": "أنت فقط",
     "youLent": "أقرضت {{amount}}",
     "youBorrowed": "اقترضت {{amount}}",
-    "notInGroup": "خارج المجموعات",
+    "notInGroup": "شخصي",
     "thisWeek": "هذا الأسبوع",
     "tripBadge": "رحلة",
     "people_one": "شخص واحد",
@@ -1850,7 +1849,7 @@
     "noGroupsBody": "قسّم المصاريف مع زملاء السكن أو شريكك أو أصدقائك. أنشئ مجموعة وأضف الأشخاص إليها.",
     "settledSection_one": "تمت التسوية · {{count}}",
     "settledSection_other": "تمت التسوية · {{count}}",
-    "yourSpends": "مصاريفك",
+    "yourSpends": "شخصي",
     "groupNameRequired": "أدخل اسمًا للمجموعة.",
     "newGroupTitle": "مجموعة جديدة",
     "groupName": "الاسم",
@@ -1880,7 +1879,6 @@
     "notNow": "ليس الآن",
     "planTrip": "خطط لرحلة مع هذه المجموعة",
     "planTripBody": "ستسافرون معًا؟ ابدأ رحلة يكون فيها هؤلاء الأشخاص من البداية.",
-    "trendTitle": "آخر 6 أشهر",
     "trendAverage": "المتوسط {{amount}}/شهر",
     "moreActions": "المزيد",
     "peopleAction": "الأشخاص والدعوة",
@@ -1897,8 +1895,7 @@
     "monthByMonth": "شهرًا بشهر",
     "tripChartLocked": "شاهد رحلتك يومًا بيوم مع Plus",
     "groupChartLocked": "شاهد هذه المجموعة شهرًا بشهر مع Plus",
-    "insightsLocked": "شاهد الاتجاهات والمقارنة وأين ذهب مالك مع Plus",
-    "trendHint": "اضغط على شهر لعرضه",
+    "insightsLocked": "الاتجاهات والمقارنات مع Plus",
     "topPlaces": "أين ذهب المال",
     "placeCount_one": "{{count}} مصروف",
     "placeCount_other": "{{count}} مصروفات",
@@ -1910,10 +1907,10 @@
       "down_week": "أقل بنسبة {{pct}}% من الأسبوع الماضي",
       "same_week": "تقريبًا مثل الأسبوع الماضي",
       "categoryUp": "{{category}} ارتفع {{pct}}%",
-      "categoryDown": "{{category}} انخفض {{pct}}%",
-      "pace_month": "في طريقك إلى {{amount}} هذا الشهر",
-      "pace_week": "في طريقك إلى {{amount}} هذا الأسبوع"
-    }
+      "categoryDown": "{{category}} انخفض {{pct}}%"
+    },
+    "allSettledWith_one": "تمت التسوية مع شخص واحد",
+    "allSettledWith_other": "تمت التسوية مع {{count}} أشخاص"
   },
   "groupShare": {
     "deleteBlocked": "أزل كل من انضم قبل حذف هذه المجموعة. يمكنك أرشفتها بدلًا من ذلك لإخفائها من قائمتك.",

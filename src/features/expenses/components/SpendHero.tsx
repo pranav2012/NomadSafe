@@ -19,6 +19,7 @@ export interface SpendHeroProps {
   caption?: string;
   /** A second line under the caption, e.g. the group's total. */
   detail?: string | null;
+  children?: React.ReactNode;
 }
 
 const BAR_H = 10;
@@ -26,7 +27,7 @@ const NUMBER_SIZE = 50;
 const NUMBER_LINE = 58;
 
 /** Total spent so far, with a category breakdown bar and legend. */
-export function SpendHero({ label, currency, total, daysLeft, breakdown, note, caption, detail }: SpendHeroProps) {
+export function SpendHero({ label, currency, total, daysLeft, breakdown, note, caption, detail, children }: SpendHeroProps) {
   const { c, f } = useAura();
   const { t, formatCurrency } = useLocalization();
   const money = (amount: number) => formatMoney(formatCurrency, amount, currency);
@@ -47,6 +48,7 @@ export function SpendHero({ label, currency, total, daysLeft, breakdown, note, c
       />
       <Text style={[styles.caption, { color: c.textSoft, fontFamily: f.regular }]}>{caption ?? t("expenses.spentSoFar")}</Text>
       {detail ? <Text style={[styles.note, { color: c.textMuted, fontFamily: f.regular }]}>{detail}</Text> : null}
+      {children}
 
       {breakdown.length > 0 ? (
         <>

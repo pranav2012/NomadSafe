@@ -1347,7 +1347,6 @@
   },
   "voiceExpense": {
     "speakToAdd": "बोलकर खर्च जोड़ें",
-    "noTrip": "कोई यात्रा नहीं",
     "chooseTrip": "यहाँ जोड़ें",
     "activeTrip": "सक्रिय",
     "tapToSpeak": "माइक दबाएँ और बताएँ कि आपने क्या भुगतान किया",
@@ -1830,7 +1829,7 @@
     "onlyYou": "सिर्फ़ आप",
     "youLent": "आपने {{amount}} उधार दिए",
     "youBorrowed": "आपने {{amount}} उधार लिए",
-    "notInGroup": "किसी ग्रुप में नहीं",
+    "notInGroup": "निजी",
     "thisWeek": "इस हफ़्ते",
     "tripBadge": "ट्रिप",
     "people_one": "{{count}} व्यक्ति",
@@ -1850,7 +1849,7 @@
     "noGroupsBody": "रूममेट, पार्टनर या दोस्तों के साथ खर्च बाँटें। एक ग्रुप बनाएँ और उसमें लोगों को जोड़ें।",
     "settledSection_one": "हिसाब बराबर · {{count}}",
     "settledSection_other": "हिसाब बराबर · {{count}}",
-    "yourSpends": "आपके खर्च",
+    "yourSpends": "निजी",
     "groupNameRequired": "ग्रुप का नाम लिखें।",
     "newGroupTitle": "नया ग्रुप",
     "groupName": "नाम",
@@ -1880,7 +1879,6 @@
     "notNow": "अभी नहीं",
     "planTrip": "इस ग्रुप के साथ ट्रिप प्लान करें",
     "planTripBody": "साथ में कहीं जा रहे हैं? इन लोगों के साथ एक ट्रिप शुरू करें।",
-    "trendTitle": "पिछले 6 महीने",
     "trendAverage": "औसत {{amount}}/महीना",
     "moreActions": "और",
     "peopleAction": "लोग और आमंत्रण",
@@ -1897,8 +1895,7 @@
     "monthByMonth": "महीने-दर-महीने",
     "tripChartLocked": "Plus के साथ अपनी यात्रा दिन-ब-दिन देखें",
     "groupChartLocked": "Plus के साथ यह ग्रुप महीने-दर-महीने देखें",
-    "insightsLocked": "Plus के साथ ट्रेंड, तुलना और पैसा कहाँ गया देखें",
-    "trendHint": "देखने के लिए किसी महीने पर टैप करें",
+    "insightsLocked": "Plus के साथ ट्रेंड और तुलना",
     "topPlaces": "पैसा कहाँ गया",
     "placeCount_one": "{{count}} खर्च",
     "placeCount_other": "{{count}} खर्च",
@@ -1910,10 +1907,10 @@
       "down_week": "पिछले हफ़्ते से {{pct}}% कम",
       "same_week": "पिछले हफ़्ते जितना ही",
       "categoryUp": "{{category}} {{pct}}% बढ़ा",
-      "categoryDown": "{{category}} {{pct}}% घटा",
-      "pace_month": "इस महीने {{amount}} की ओर",
-      "pace_week": "इस हफ़्ते {{amount}} की ओर"
-    }
+      "categoryDown": "{{category}} {{pct}}% घटा"
+    },
+    "allSettledWith_one": "{{count}} व्यक्ति के साथ सब चुकता",
+    "allSettledWith_other": "{{count}} लोगों के साथ सब चुकता"
   },
   "groupShare": {
     "deleteBlocked": "इस ग्रुप को हटाने से पहले जुड़े हुए सभी लोगों को हटाएँ। चाहें तो इसे आर्काइव करके अपनी सूची से छिपा सकते हैं।",

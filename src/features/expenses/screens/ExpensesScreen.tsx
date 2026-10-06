@@ -35,7 +35,7 @@ import { ExpenseForm } from "@/features/expenses/components/ExpenseForm";
 import { GroupMoney } from "@/features/expenses/components/GroupMoney";
 import { ImportSheet } from "@/features/expenses/components/ImportSheet";
 import { MoneyOverview } from "@/features/expenses/components/MoneyOverview";
-import { MoneySwitcher } from "@/features/expenses/components/MoneySwitcher";
+import { MoneyGroupChips, MoneySwitcher } from "@/features/expenses/components/MoneySwitcher";
 import { NewGroupSheet } from "@/features/expenses/components/NewGroupSheet";
 import { ImportFromAppSheet } from "@/features/expenses/components/ImportFromAppSheet";
 import { GroupSettingsSheet } from "@/features/expenses/components/GroupSettingsSheet";
@@ -71,6 +71,7 @@ export default function ExpensesScreen() {
   const [reviewDismissed, setReviewDismissed] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [recording, setRecording] = useState(false);
   const plus = usePlusGate();
   const viewingActiveTrip = !!activeTrip && group?.id === activeTrip.id;
   const gmailAdded = useTripGmailSyncStatus(viewingActiveTrip ? activeTrip.id : undefined).unseenExpenses;
@@ -123,8 +124,10 @@ export default function ExpensesScreen() {
     onPress: () => plus.run("export", () => setExportOpen(true)),
   };
   const importAction: MoneyAction = { icon: "download", label: t("expenses.importTitle"), onPress: () => setImportTab("paste") };
+  const canRecord = !!group && group.companions.length > 0 && expenses.some((expense) => expense.groupId === group.id);
   const menuActions: MoneyAction[] = group
     ? [
+        ...(canRecord ? [{ icon: "swap" as const, label: t("split.recordPayment"), onPress: () => setRecording(true) }] : []),
         { icon: "users", label: t("money.peopleAction"), onPress: () => setPeopleOpen(true) },
         { icon: "settings", label: t("groupSettings.title"), onPress: () => setSettingsOpen(true) },
         importAction,
@@ -164,6 +167,7 @@ export default function ExpensesScreen() {
               <Icon name="more" size={18} color={c.text} />
             </PressableScale>
           </View>
+          {!group ? <MoneyGroupChips onSelect={select} onNewGroup={() => startNewGroup(() => setNewGroupOpen(true))} /> : null}
 
           {gmailAdded > 0 && activeTrip ? (
             <Banner icon="mail" text={t("expenses.autoSynced", { count: gmailAdded })} onDismiss={() => dismissGmailSyncBanner(activeTrip.id)} />
@@ -199,6 +203,8 @@ export default function ExpensesScreen() {
                   onKeepAsGroup={keepAsGroup}
                   exportOpen={exportOpen}
                   onCloseExport={() => setExportOpen(false)}
+                  recording={recording}
+                  onRecordingDone={() => setRecording(false)}
                 />
               ) : (
                 <MoneyOverview

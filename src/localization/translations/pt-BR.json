@@ -1347,7 +1347,6 @@
   },
   "voiceExpense": {
     "speakToAdd": "Adicionar gasto por voz",
-    "noTrip": "Nenhuma viagem",
     "chooseTrip": "Adicionar a",
     "activeTrip": "Ativa",
     "tapToSpeak": "Toque no microfone e diga o que você pagou",
@@ -1830,7 +1829,7 @@
     "onlyYou": "Só você",
     "youLent": "você emprestou {{amount}}",
     "youBorrowed": "você pegou {{amount}} emprestado",
-    "notInGroup": "Fora de grupos",
+    "notInGroup": "Pessoal",
     "thisWeek": "Esta semana",
     "tripBadge": "Viagem",
     "people_one": "{{count}} pessoa",
@@ -1850,7 +1849,7 @@
     "noGroupsBody": "Divida gastos com quem mora com você, seu par ou amigos. Crie um grupo e adicione as pessoas.",
     "settledSection_one": "Quitados · {{count}}",
     "settledSection_other": "Quitados · {{count}}",
-    "yourSpends": "Seus gastos",
+    "yourSpends": "Pessoal",
     "groupNameRequired": "Dê um nome ao grupo.",
     "newGroupTitle": "Novo grupo",
     "groupName": "Nome",
@@ -1880,7 +1879,6 @@
     "notNow": "Agora não",
     "planTrip": "Planejar uma viagem com este grupo",
     "planTripBody": "Vão viajar juntos? Comece uma viagem com essas pessoas já incluídas.",
-    "trendTitle": "Últimos 6 meses",
     "trendAverage": "média {{amount}}/mês",
     "moreActions": "Mais",
     "peopleAction": "Pessoas e convite",
@@ -1897,8 +1895,7 @@
     "monthByMonth": "Mês a mês",
     "tripChartLocked": "Veja sua viagem dia a dia com o Plus",
     "groupChartLocked": "Veja este grupo mês a mês com o Plus",
-    "insightsLocked": "Tendências, comparações e para onde foi o dinheiro com o Plus",
-    "trendHint": "Toque em um mês para ver",
+    "insightsLocked": "Tendências e comparações com o Plus",
     "topPlaces": "Para onde foi",
     "placeCount_one": "{{count}} gasto",
     "placeCount_other": "{{count}} gastos",
@@ -1910,10 +1907,10 @@
       "down_week": "{{pct}}% a menos que na semana passada",
       "same_week": "Quase igual à semana passada",
       "categoryUp": "{{category}} subiu {{pct}}%",
-      "categoryDown": "{{category}} caiu {{pct}}%",
-      "pace_month": "No ritmo de {{amount}} este mês",
-      "pace_week": "No ritmo de {{amount}} esta semana"
-    }
+      "categoryDown": "{{category}} caiu {{pct}}%"
+    },
+    "allSettledWith_one": "Tudo acertado com {{count}} pessoa",
+    "allSettledWith_other": "Tudo acertado com {{count}} pessoas"
   },
   "groupShare": {
     "deleteBlocked": "Remova todos que entraram antes de excluir este grupo. Você também pode arquivá-lo para escondê-lo da lista.",

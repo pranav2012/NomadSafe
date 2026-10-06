@@ -1347,7 +1347,6 @@
   },
   "voiceExpense": {
     "speakToAdd": "പറഞ്ഞ് ചെലവ് ചേർക്കുക",
-    "noTrip": "യാത്രയില്ല",
     "chooseTrip": "ഇതിലേക്ക് ചേർക്കുക",
     "activeTrip": "സജീവം",
     "tapToSpeak": "മൈക്ക് ടാപ്പ് ചെയ്ത് നിങ്ങൾ എന്തിന് പണമടച്ചു എന്ന് പറയൂ",
@@ -1830,7 +1829,7 @@
     "onlyYou": "നിങ്ങൾ മാത്രം",
     "youLent": "നിങ്ങൾ {{amount}} കടം കൊടുത്തു",
     "youBorrowed": "നിങ്ങൾ {{amount}} കടം വാങ്ങി",
-    "notInGroup": "ഒരു ഗ്രൂപ്പിലുമില്ല",
+    "notInGroup": "വ്യക്തിപരം",
     "thisWeek": "ഈ ആഴ്ച",
     "tripBadge": "യാത്ര",
     "people_one": "{{count}} ആൾ",
@@ -1850,7 +1849,7 @@
     "noGroupsBody": "റൂംമേറ്റുകൾ, പങ്കാളി അല്ലെങ്കിൽ സുഹൃത്തുക്കളുമായി ചെലവ് പങ്കിടുക. ഒരു ഗ്രൂപ്പ് ഉണ്ടാക്കി ആളുകളെ ചേർക്കുക.",
     "settledSection_one": "കണക്ക് തീർന്നവ · {{count}}",
     "settledSection_other": "കണക്ക് തീർന്നവ · {{count}}",
-    "yourSpends": "നിങ്ങളുടെ ചെലവുകൾ",
+    "yourSpends": "വ്യക്തിപരം",
     "groupNameRequired": "ഗ്രൂപ്പിന് ഒരു പേര് നൽകുക.",
     "newGroupTitle": "പുതിയ ഗ്രൂപ്പ്",
     "groupName": "പേര്",
@@ -1880,7 +1879,6 @@
     "notNow": "ഇപ്പോൾ വേണ്ട",
     "planTrip": "ഈ ഗ്രൂപ്പിനൊപ്പം യാത്ര പ്ലാൻ ചെയ്യുക",
     "planTripBody": "ഒരുമിച്ച് എവിടെയെങ്കിലും പോകുന്നുണ്ടോ? ഈ ആളുകൾ ഉള്ള ഒരു യാത്ര തുടങ്ങൂ.",
-    "trendTitle": "കഴിഞ്ഞ 6 മാസം",
     "trendAverage": "ശരാശരി {{amount}}/മാസം",
     "moreActions": "കൂടുതൽ",
     "peopleAction": "ആളുകളും ക്ഷണവും",
@@ -1897,8 +1895,7 @@
     "monthByMonth": "മാസം തോറും",
     "tripChartLocked": "Plus ഉപയോഗിച്ച് യാത്ര ദിവസം തോറും കാണുക",
     "groupChartLocked": "Plus ഉപയോഗിച്ച് ഈ ഗ്രൂപ്പ് മാസം തോറും കാണുക",
-    "insightsLocked": "Plus ഉപയോഗിച്ച് ട്രെൻഡുകളും താരതമ്യവും പണം എവിടെ പോയെന്നും കാണുക",
-    "trendHint": "കാണാൻ ഒരു മാസത്തിൽ ടാപ്പ് ചെയ്യുക",
+    "insightsLocked": "Plus ഉപയോഗിച്ച് ട്രെൻഡുകളും താരതമ്യവും",
     "topPlaces": "പണം പോയ വഴി",
     "placeCount_one": "{{count}} ചെലവ്",
     "placeCount_other": "{{count}} ചെലവുകൾ",
@@ -1910,10 +1907,10 @@
       "down_week": "കഴിഞ്ഞ ആഴ്ചയേക്കാൾ {{pct}}% കുറവ്",
       "same_week": "കഴിഞ്ഞ ആഴ്ചയോളം തന്നെ",
       "categoryUp": "{{category}} {{pct}}% കൂടി",
-      "categoryDown": "{{category}} {{pct}}% കുറഞ്ഞു",
-      "pace_month": "ഈ മാസം {{amount}} ലേക്ക്",
-      "pace_week": "ഈ ആഴ്ച {{amount}} ലേക്ക്"
-    }
+      "categoryDown": "{{category}} {{pct}}% കുറഞ്ഞു"
+    },
+    "allSettledWith_one": "{{count}} ആളുമായി എല്ലാം തീർത്തു",
+    "allSettledWith_other": "{{count}} പേരുമായി എല്ലാം തീർത്തു"
   },
   "groupShare": {
     "deleteBlocked": "ഈ ഗ്രൂപ്പ് ഇല്ലാതാക്കുന്നതിന് മുമ്പ് ചേർന്ന എല്ലാവരെയും നീക്കം ചെയ്യുക. പകരം ആർക്കൈവ് ചെയ്ത് ലിസ്റ്റിൽ നിന്ന് മറയ്ക്കാം.",

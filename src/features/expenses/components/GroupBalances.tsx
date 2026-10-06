@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { AuraButton, AuraCard, AuraChip, AuraField, AuraSheet, showAlert, useAura } from "@/atoms";
+import { AuraButton, AuraCard, AuraChip, AuraField, AuraSheet, Icon, showAlert, useAura } from "@/atoms";
 import { auraStatusAccent } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { track } from "@/modules/analytics";
@@ -16,8 +16,8 @@ import { SELF_ID, type Transfer } from "@/features/expenses/utils/split";
 export const OWED = "#3DDC97";
 export const OWES = auraStatusAccent.alert;
 
-/** Who owes whom in a trip or group: your balance, one row per person with Settle, and a way to record a payment. */
-export function GroupBalances({ group }: { group: GroupBase }) {
+/** Who owes whom in a trip or group: your balance, one row per person with Settle, and a way to record a payment; one line once everyone is settled. */
+export function GroupBalances({ group, recording = false, onRecordingDone }: { group: GroupBase; recording?: boolean; onRecordingDone?: () => void }) {
   const { c, f } = useAura();
   const { t, formatCurrency } = useLocalization();
   const [settling, setSettling] = useState<Transfer | null>(null);
@@ -32,6 +32,30 @@ export function GroupBalances({ group }: { group: GroupBase }) {
   const others = everyone.filter((person) => person !== SELF_ID);
   const between = transfers.filter((transfer) => transfer.from !== SELF_ID && transfer.to !== SELF_ID);
   const empty = splitExpenses.length === 0 && settlements.length === 0;
+  const allSettled = !empty && transfers.length === 0 && unconverted === 0;
+  // A Record payment request from the ⋯ menu opens the sheet once.
+  const [seenRecording, setSeenRecording] = useState(recording);
+  if (recording !== seenRecording) {
+    setSeenRecording(recording);
+    if (recording) setSettling({ from: others[0] ?? SELF_ID, to: SELF_ID, amount: 0 });
+  }
+  const closeSheet = () => {
+    setSettling(null);
+    onRecordingDone?.();
+  };
+
+  if (allSettled) {
+    return (
+      <View>
+        <Text style={[styles.caption, { color: c.textMuted, fontFamily: f.medium }]}>{t("money.yourBalance")}</Text>
+        <View style={styles.settledRow}>
+          <Icon name="check" size={18} color={OWED} strokeWidth={2.4} />
+          <Text style={[styles.settledText, { color: c.text, fontFamily: f.semibold }]}>{t("money.allSettledWith", { count: others.length })}</Text>
+        </View>
+        <SettleUpSheet group={group} everyone={everyone} initial={settling} onClose={closeSheet} />
+      </View>
+    );
+  }
 
   return (
     <View>
@@ -100,7 +124,7 @@ export function GroupBalances({ group }: { group: GroupBase }) {
         />
       ) : null}
 
-      <SettleUpSheet group={group} everyone={everyone} initial={settling} onClose={() => setSettling(null)} />
+      <SettleUpSheet group={group} everyone={everyone} initial={settling} onClose={closeSheet} />
     </View>
   );
 }
@@ -188,6 +212,8 @@ function SettleUpSheet({
 }
 
 const styles = StyleSheet.create({
+  settledRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 6 },
+  settledText: { fontSize: 19, letterSpacing: -0.3 },
   flex: { flex: 1 },
   caption: { fontSize: 13 },
   position: { fontSize: 28, letterSpacing: -0.8, marginTop: 4 },

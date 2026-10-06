@@ -399,23 +399,16 @@ test("comparing periods: total change and the category that moved most", () => {
   assert.equal(insights.comparePeriods(current, []).change, null);
 });
 
-test("pace only for the current period once a few days are in", () => {
-  const now = new Date(2026, 9, 10, 12);
-  assert.equal(Math.round(insights.paceFor("month", 0, 1000, now)), 3100);
-  assert.equal(insights.paceFor("month", 1, 1000, now), null);
-  assert.equal(insights.paceFor("month", 0, 1000, new Date(2026, 9, 2)), null);
-});
-
-test("months by category and top places", () => {
+test("period totals and top places", () => {
   const items = [
     { amount: 200, date: at(2026, 9, 2), category: "food", merchant: "Cafe" },
     { amount: 100, date: at(2026, 9, 3), category: "food", merchant: " cafe " },
     { amount: 400, date: at(2026, 9, 4), category: "travel", merchant: "Uber" },
     { amount: 50, date: at(2026, 8, 4), category: "food", merchant: "" },
   ];
-  const months = insights.monthlyByCategory(items, 2, new Date(2026, 9, 20));
-  assert.deepEqual(months.map((month) => [month.offset, month.total]), [[1, 50], [0, 700]]);
-  assert.deepEqual(months[1].categories, [{ category: "travel", amount: 400 }, { category: "food", amount: 300 }]);
+  const now = new Date(2026, 9, 20);
+  assert.deepEqual(insights.periodTotals(items, "month", 2, 0, now).map((month) => [month.offset, month.total]), [[1, 50], [0, 700]]);
+  assert.deepEqual(insights.periodTotals(items, "month", 2, 1, now).map((month) => [month.offset, month.total]), [[2, 0], [1, 50]]);
   assert.deepEqual(insights.topPlaces(items, 5).map((place) => [place.name, place.amount, place.count]), [["Uber", 400, 1], ["Cafe", 300, 2]]);
   assert.equal(insights.monthsOfHistory(items, new Date(2026, 9, 20)), 2);
 });

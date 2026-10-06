@@ -1347,7 +1347,6 @@
   },
   "voiceExpense": {
     "speakToAdd": "Ajouter une dépense à la voix",
-    "noTrip": "Aucun voyage",
     "chooseTrip": "Ajouter à",
     "activeTrip": "Actif",
     "tapToSpeak": "Touchez le micro et dites ce que vous avez payé",
@@ -1830,7 +1829,7 @@
     "onlyYou": "Toi seul",
     "youLent": "tu as avancé {{amount}}",
     "youBorrowed": "tu as emprunté {{amount}}",
-    "notInGroup": "Hors groupe",
+    "notInGroup": "Personnel",
     "thisWeek": "Cette semaine",
     "tripBadge": "Voyage",
     "people_one": "{{count}} personne",
@@ -1850,7 +1849,7 @@
     "noGroupsBody": "Partage les dépenses avec tes colocs, ton ou ta partenaire ou tes amis. Crée un groupe et ajoute les personnes.",
     "settledSection_one": "À jour · {{count}}",
     "settledSection_other": "À jour · {{count}}",
-    "yourSpends": "Tes dépenses",
+    "yourSpends": "Personnel",
     "groupNameRequired": "Donne un nom au groupe.",
     "newGroupTitle": "Nouveau groupe",
     "groupName": "Nom",
@@ -1880,7 +1879,6 @@
     "notNow": "Pas maintenant",
     "planTrip": "Planifier un voyage avec ce groupe",
     "planTripBody": "Vous partez ensemble ? Lance un voyage avec ces personnes déjà dedans.",
-    "trendTitle": "6 derniers mois",
     "trendAverage": "moy. {{amount}}/mois",
     "moreActions": "Plus",
     "peopleAction": "Personnes et invitation",
@@ -1897,8 +1895,7 @@
     "monthByMonth": "Mois par mois",
     "tripChartLocked": "Voyez votre voyage jour par jour avec Plus",
     "groupChartLocked": "Voyez ce groupe mois par mois avec Plus",
-    "insightsLocked": "Tendances, comparaisons et où part votre argent avec Plus",
-    "trendHint": "Touchez un mois pour l'afficher",
+    "insightsLocked": "Tendances et comparaisons avec Plus",
     "topPlaces": "Où c'est parti",
     "placeCount_one": "{{count}} dépense",
     "placeCount_other": "{{count}} dépenses",
@@ -1910,10 +1907,10 @@
       "down_week": "{{pct}} % de moins que la semaine dernière",
       "same_week": "À peu près comme la semaine dernière",
       "categoryUp": "{{category}} en hausse de {{pct}} %",
-      "categoryDown": "{{category}} en baisse de {{pct}} %",
-      "pace_month": "En route pour {{amount}} ce mois-ci",
-      "pace_week": "En route pour {{amount}} cette semaine"
-    }
+      "categoryDown": "{{category}} en baisse de {{pct}} %"
+    },
+    "allSettledWith_one": "Tout est réglé avec {{count}} personne",
+    "allSettledWith_other": "Tout est réglé avec {{count}} personnes"
   },
   "groupShare": {
     "deleteBlocked": "Retire toutes les personnes qui ont rejoint avant de supprimer ce groupe. Tu peux aussi l'archiver pour le masquer de ta liste.",

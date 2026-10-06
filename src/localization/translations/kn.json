@@ -1347,7 +1347,6 @@
   },
   "voiceExpense": {
     "speakToAdd": "ಮಾತನಾಡಿ ವೆಚ್ಚ ಸೇರಿಸಿ",
-    "noTrip": "ಪ್ರವಾಸವಿಲ್ಲ",
     "chooseTrip": "ಇಲ್ಲಿಗೆ ಸೇರಿಸಿ",
     "activeTrip": "ಸಕ್ರಿಯ",
     "tapToSpeak": "ಮೈಕ್ ಟ್ಯಾಪ್ ಮಾಡಿ ಮತ್ತು ನೀವು ಏನು ಪಾವತಿಸಿದಿರಿ ಎಂದು ಹೇಳಿ",
@@ -1830,7 +1829,7 @@
     "onlyYou": "ನೀವು ಮಾತ್ರ",
     "youLent": "ನೀವು {{amount}} ಸಾಲ ಕೊಟ್ಟಿದ್ದೀರಿ",
     "youBorrowed": "ನೀವು {{amount}} ಸಾಲ ಪಡೆದಿದ್ದೀರಿ",
-    "notInGroup": "ಯಾವುದೇ ಗುಂಪಿನಲ್ಲಿಲ್ಲ",
+    "notInGroup": "ವೈಯಕ್ತಿಕ",
     "thisWeek": "ಈ ವಾರ",
     "tripBadge": "ಪ್ರವಾಸ",
     "people_one": "{{count}} ವ್ಯಕ್ತಿ",
@@ -1850,7 +1849,7 @@
     "noGroupsBody": "ರೂಮ್‌ಮೇಟ್‌ಗಳು, ಸಂಗಾತಿ ಅಥವಾ ಸ್ನೇಹಿತರೊಂದಿಗೆ ಖರ್ಚು ಹಂಚಿಕೊಳ್ಳಿ. ಗುಂಪು ರಚಿಸಿ ಜನರನ್ನು ಸೇರಿಸಿ.",
     "settledSection_one": "ಚುಕ್ತಾ · {{count}}",
     "settledSection_other": "ಚುಕ್ತಾ · {{count}}",
-    "yourSpends": "ನಿಮ್ಮ ಖರ್ಚುಗಳು",
+    "yourSpends": "ವೈಯಕ್ತಿಕ",
     "groupNameRequired": "ಗುಂಪಿಗೆ ಹೆಸರು ನೀಡಿ.",
     "newGroupTitle": "ಹೊಸ ಗುಂಪು",
     "groupName": "ಹೆಸರು",
@@ -1880,7 +1879,6 @@
     "notNow": "ಈಗ ಬೇಡ",
     "planTrip": "ಈ ಗುಂಪಿನೊಂದಿಗೆ ಪ್ರವಾಸ ಯೋಜಿಸಿ",
     "planTripBody": "ಒಟ್ಟಿಗೆ ಎಲ್ಲಾದರೂ ಹೋಗುತ್ತಿದ್ದೀರಾ? ಈ ಜನರು ಈಗಾಗಲೇ ಇರುವ ಪ್ರವಾಸ ಆರಂಭಿಸಿ.",
-    "trendTitle": "ಕಳೆದ 6 ತಿಂಗಳು",
     "trendAverage": "ಸರಾಸರಿ {{amount}}/ತಿಂಗಳು",
     "moreActions": "ಇನ್ನಷ್ಟು",
     "peopleAction": "ಜನರು ಮತ್ತು ಆಹ್ವಾನ",
@@ -1897,8 +1895,7 @@
     "monthByMonth": "ತಿಂಗಳಿಂದ ತಿಂಗಳಿಗೆ",
     "tripChartLocked": "Plus ಜೊತೆಗೆ ನಿಮ್ಮ ಪ್ರವಾಸವನ್ನು ದಿನದಿಂದ ದಿನಕ್ಕೆ ನೋಡಿ",
     "groupChartLocked": "Plus ಜೊತೆಗೆ ಈ ಗುಂಪನ್ನು ತಿಂಗಳಿಂದ ತಿಂಗಳಿಗೆ ನೋಡಿ",
-    "insightsLocked": "Plus ಜೊತೆಗೆ ಪ್ರವೃತ್ತಿಗಳು, ಹೋಲಿಕೆ ಮತ್ತು ಹಣ ಎಲ್ಲಿ ಹೋಯಿತು ನೋಡಿ",
-    "trendHint": "ನೋಡಲು ತಿಂಗಳನ್ನು ಟ್ಯಾಪ್ ಮಾಡಿ",
+    "insightsLocked": "Plus ಜೊತೆಗೆ ಪ್ರವೃತ್ತಿಗಳು ಮತ್ತು ಹೋಲಿಕೆ",
     "topPlaces": "ಹಣ ಎಲ್ಲಿ ಹೋಯಿತು",
     "placeCount_one": "{{count}} ಖರ್ಚು",
     "placeCount_other": "{{count}} ಖರ್ಚುಗಳು",
@@ -1910,10 +1907,10 @@
       "down_week": "ಕಳೆದ ವಾರಕ್ಕಿಂತ {{pct}}% ಕಡಿಮೆ",
       "same_week": "ಕಳೆದ ವಾರದಷ್ಟೇ",
       "categoryUp": "{{category}} {{pct}}% ಏರಿಕೆ",
-      "categoryDown": "{{category}} {{pct}}% ಇಳಿಕೆ",
-      "pace_month": "ಈ ತಿಂಗಳು {{amount}} ಕಡೆಗೆ ಸಾಗುತ್ತಿದೆ",
-      "pace_week": "ಈ ವಾರ {{amount}} ಕಡೆಗೆ ಸಾಗುತ್ತಿದೆ"
-    }
+      "categoryDown": "{{category}} {{pct}}% ಇಳಿಕೆ"
+    },
+    "allSettledWith_one": "{{count}} ವ್ಯಕ್ತಿಯೊಂದಿಗೆ ಎಲ್ಲಾ ಚುಕ್ತಾ",
+    "allSettledWith_other": "{{count}} ಜನರೊಂದಿಗೆ ಎಲ್ಲಾ ಚುಕ್ತಾ"
   },
   "groupShare": {
     "deleteBlocked": "ಈ ಗುಂಪನ್ನು ಅಳಿಸುವ ಮೊದಲು ಸೇರಿದ ಎಲ್ಲರನ್ನೂ ತೆಗೆದುಹಾಕಿ. ಬದಲಿಗೆ ಆರ್ಕೈವ್ ಮಾಡಿ ಪಟ್ಟಿಯಿಂದ ಮರೆಮಾಡಬಹುದು.",

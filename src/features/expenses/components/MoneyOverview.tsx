@@ -14,7 +14,7 @@ import { GroupActivity } from "@/features/expenses/components/GroupActivity";
 import { RecurringList } from "@/features/expenses/components/RecurringList";
 import { OWED, OWES } from "@/features/expenses/components/GroupBalances";
 import { SpendHero } from "@/features/expenses/components/SpendHero";
-import { SpendInsights } from "@/features/expenses/components/SpendInsights";
+import { OverviewTrend, TopPlaces } from "@/features/expenses/components/SpendInsights";
 import { ExportSheet } from "@/features/expenses/components/ExportSheet";
 
 const SETTLED_AFTER_MS = 30 * 86_400_000;
@@ -133,18 +133,11 @@ export function MoneyOverview({
               : t("expenses.notConverted", { amount: unconvertedLabel })
             : null
         }
-      />
+      >
+        <OverviewTrend items={insightItems} currency={homeCurrency} period={period} offset={offset} />
+      </SpendHero>
 
-      <SpendInsights
-        items={insightItems}
-        currency={homeCurrency}
-        period={period}
-        offset={offset}
-        onPickMonth={(next) => {
-          setPeriod("month");
-          setOffset(next);
-        }}
-      />
+      <TopPlaces items={insightItems} currency={homeCurrency} period={period} offset={offset} />
 
       {sources.length > 0 ? (
         <AuraCard style={styles.sources}>

@@ -28,6 +28,8 @@ export function GroupMoney({
   onKeepAsGroup,
   exportOpen,
   onCloseExport,
+  recording,
+  onRecordingDone,
 }: {
   group: MoneyGroup;
   onOpenExpense: (expense: Expense) => void;
@@ -37,6 +39,8 @@ export function GroupMoney({
   onKeepAsGroup: () => void;
   exportOpen: boolean;
   onCloseExport: () => void;
+  recording: boolean;
+  onRecordingDone: () => void;
 }) {
   const { c, f } = useAura();
   const { t, formatCurrency } = useLocalization();
@@ -75,7 +79,7 @@ export function GroupMoney({
 
       {hasPeople && hasActivity ? (
         <View style={styles.block}>
-          <GroupBalances group={group} />
+          <GroupBalances group={group} recording={recording} onRecordingDone={onRecordingDone} />
         </View>
       ) : null}
 

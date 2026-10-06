@@ -1,33 +1,45 @@
 import React, { useState } from "react";
-import { StyleSheet, Text } from "react-native";
-import { AuraOptionSheet, Icon, PressableScale, useAura, type AuraOption } from "@/atoms";
+import { ScrollView, StyleSheet, Text } from "react-native";
+import { AuraChip, AuraOptionSheet, Icon, PressableScale, useAura, type AuraOption } from "@/atoms";
 import { useLocalization } from "@/localization";
-import { isArchivedGroup, isTrip, selectMoneyGroups, useTripsStore } from "@/features/trips/store/tripsStore";
+import { isArchivedGroup, isTrip, selectMoneyGroups, useTripsStore, type MoneyGroup } from "@/features/trips/store/tripsStore";
 import { getTripStatus } from "@/features/trips/utils/dates";
+
+/** Open trips and groups in switcher order: the active trip, groups, other current trips, then ended ones. */
+export function useOrderedMoneyGroups() {
+  const groups = useTripsStore(selectMoneyGroups);
+  const activeTripId = useTripsStore((state) => state.activeTripId);
+  const visible = groups.filter((group) => !isArchivedGroup(group));
+  const otherTrips = visible.filter((group) => isTrip(group) && group.id !== activeTripId);
+  return {
+    activeTripId,
+    active: visible.filter((group) => group.id === activeTripId),
+    plain: visible.filter((group) => !isTrip(group)),
+    current: otherTrips.filter((trip) => isTrip(trip) && getTripStatus(trip) !== "complete"),
+    ended: otherTrips.filter((trip) => isTrip(trip) && getTripStatus(trip) === "complete"),
+  };
+}
+
+export function moneyGroupLabel(group: MoneyGroup) {
+  return isTrip(group) ? group.name : `${group.emoji ?? "👥"} ${group.name}`;
+}
 
 /** A trip or group name as the Money title, opening a picker of trips and groups; picking never changes the active trip. */
 export function MoneySwitcher({ selected, onSelect }: { selected: string; onSelect: (id: string) => void }) {
   const { c, f } = useAura();
   const { t } = useLocalization();
   const groups = useTripsStore(selectMoneyGroups);
-  const activeTripId = useTripsStore((state) => state.activeTripId);
   const [open, setOpen] = useState(false);
-
-  const visible = groups.filter((group) => !isArchivedGroup(group));
-  const active = visible.filter((group) => group.id === activeTripId);
-  const plain = visible.filter((group) => !isTrip(group));
-  const otherTrips = visible.filter((group) => isTrip(group) && group.id !== activeTripId);
-  const current = otherTrips.filter((trip) => isTrip(trip) && getTripStatus(trip) !== "complete");
-  const ended = otherTrips.filter((trip) => isTrip(trip) && getTripStatus(trip) === "complete");
+  const { active, plain, current, ended } = useOrderedMoneyGroups();
 
   const options: AuraOption<string>[] = [
     ...active.map((group) => ({ value: group.id, label: group.name, detail: t("money.activeTrip") })),
-    ...plain.map((group) => ({ value: group.id, label: `${group.emoji ?? "👥"} ${group.name}`, detail: t("money.people", { count: group.companions.length + 1 }) })),
+    ...plain.map((group) => ({ value: group.id, label: moneyGroupLabel(group), detail: t("money.people", { count: group.companions.length + 1 }) })),
     ...current.map((group) => ({ value: group.id, label: group.name, detail: t("money.tripBadge") })),
     ...ended.map((group) => ({ value: group.id, label: group.name, detail: t("money.endedTrip") })),
   ];
   const shown = groups.find((group) => group.id === selected);
-  const label = !shown ? "" : isTrip(shown) ? shown.name : `${shown.emoji ?? "👥"} ${shown.name}`;
+  const label = shown ? moneyGroupLabel(shown) : "";
 
   return (
     <>
@@ -52,4 +64,24 @@ export function MoneySwitcher({ selected, onSelect }: { selected: string; onSele
 const styles = StyleSheet.create({
   title: { flexDirection: "row", alignItems: "center", gap: 6, flexShrink: 1 },
   text: { fontSize: 30, letterSpacing: -1, flexShrink: 1 },
+});
+
+/** The Overview's quick way into a trip or group: one chip each, then New group. */
+export function MoneyGroupChips({ onSelect, onNewGroup }: { onSelect: (id: string) => void; onNewGroup: () => void }) {
+  const { t } = useLocalization();
+  const { active, plain, current, ended } = useOrderedMoneyGroups();
+  const groups = [...active, ...plain, ...current, ...ended];
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={chipStyles.scroll} contentContainerStyle={chipStyles.row}>
+      {groups.map((group) => (
+        <AuraChip key={group.id} label={moneyGroupLabel(group)} icon={isTrip(group) ? "compass" : undefined} onPress={() => onSelect(group.id)} />
+      ))}
+      <AuraChip label={t("money.newGroup")} icon="plus" onPress={onNewGroup} />
+    </ScrollView>
+  );
+}
+
+const chipStyles = StyleSheet.create({
+  scroll: { marginHorizontal: -20, marginBottom: 18 },
+  row: { paddingHorizontal: 20, gap: 8 },
 });

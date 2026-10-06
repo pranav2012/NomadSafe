@@ -1347,7 +1347,6 @@
   },
   "voiceExpense": {
     "speakToAdd": "Ausgabe per Sprache hinzufügen",
-    "noTrip": "Keine Reise",
     "chooseTrip": "Hinzufügen zu",
     "activeTrip": "Aktiv",
     "tapToSpeak": "Tippen Sie aufs Mikrofon und sagen Sie, was Sie bezahlt haben",
@@ -1830,7 +1829,7 @@
     "onlyYou": "Nur du",
     "youLent": "du hast {{amount}} vorgestreckt",
     "youBorrowed": "du hast {{amount}} geliehen",
-    "notInGroup": "In keiner Gruppe",
+    "notInGroup": "Persönlich",
     "thisWeek": "Diese Woche",
     "tripBadge": "Reise",
     "people_one": "{{count}} Person",
@@ -1850,7 +1849,7 @@
     "noGroupsBody": "Teile Ausgaben mit Mitbewohnern, deinem Partner oder Freunden. Erstelle eine Gruppe und füge die Leute hinzu.",
     "settledSection_one": "Ausgeglichen · {{count}}",
     "settledSection_other": "Ausgeglichen · {{count}}",
-    "yourSpends": "Deine Ausgaben",
+    "yourSpends": "Persönlich",
     "groupNameRequired": "Gib der Gruppe einen Namen.",
     "newGroupTitle": "Neue Gruppe",
     "groupName": "Name",
@@ -1880,7 +1879,6 @@
     "notNow": "Nicht jetzt",
     "planTrip": "Reise mit dieser Gruppe planen",
     "planTripBody": "Ihr fahrt zusammen weg? Starte eine Reise, in der diese Leute schon dabei sind.",
-    "trendTitle": "Letzte 6 Monate",
     "trendAverage": "Ø {{amount}}/Monat",
     "moreActions": "Mehr",
     "peopleAction": "Personen & einladen",
@@ -1897,8 +1895,7 @@
     "monthByMonth": "Monat für Monat",
     "tripChartLocked": "Sieh deine Reise Tag für Tag mit Plus",
     "groupChartLocked": "Sieh diese Gruppe Monat für Monat mit Plus",
-    "insightsLocked": "Trends, Vergleiche und wohin dein Geld ging – mit Plus",
-    "trendHint": "Tippe auf einen Monat, um ihn zu sehen",
+    "insightsLocked": "Trends und Vergleiche mit Plus",
     "topPlaces": "Wohin es ging",
     "placeCount_one": "{{count}} Ausgabe",
     "placeCount_other": "{{count}} Ausgaben",
@@ -1910,10 +1907,10 @@
       "down_week": "{{pct}} % weniger als letzte Woche",
       "same_week": "Etwa wie letzte Woche",
       "categoryUp": "{{category}} +{{pct}} %",
-      "categoryDown": "{{category}} −{{pct}} %",
-      "pace_month": "Auf Kurs für {{amount}} diesen Monat",
-      "pace_week": "Auf Kurs für {{amount}} diese Woche"
-    }
+      "categoryDown": "{{category}} −{{pct}} %"
+    },
+    "allSettledWith_one": "Mit {{count}} Person alles beglichen",
+    "allSettledWith_other": "Mit {{count}} Personen alles beglichen"
   },
   "groupShare": {
     "deleteBlocked": "Entferne alle, die beigetreten sind, bevor du diese Gruppe löschst. Du kannst sie stattdessen archivieren, um sie auszublenden.",

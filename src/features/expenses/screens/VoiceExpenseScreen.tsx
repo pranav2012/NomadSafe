@@ -21,7 +21,7 @@ import { logger } from "@/modules/logger";
 import { useAuthStore } from "@/features/auth";
 import { useSettingsStore } from "@/features/settings";
 import { aiRuntime, aiService, remoteLabel, useAiAvailability } from "@/modules/ai";
-import { defaultSpendGroupId, useTripsStore, isTrip, selectMoneyGroups } from "@/features/trips/store/tripsStore";
+import { defaultSpendGroupId, useTripsStore, isArchivedGroup, isTrip, selectMoneyGroups } from "@/features/trips/store/tripsStore";
 import { useExpensesStore } from "@/features/expenses/store/expensesStore";
 import { useSpeechCapture } from "@/features/expenses/hooks/useSpeechCapture";
 import { ExpenseForm } from "@/features/expenses/components/ExpenseForm";
@@ -73,7 +73,7 @@ export default function VoiceExpenseScreen() {
   const trip = trips.find((entry) => entry.id === tripId) ?? null;
   const companions = useMemo(() => trip?.companions ?? [], [trip]);
   const tripCurrency = trip?.currency ?? deviceCurrency;
-  const [pickerOpen, setPickerOpen] = useState(params.pickTrip === "1" && trips.length > 1);
+  const [pickerOpen, setPickerOpen] = useState(params.pickTrip === "1" && trips.length > 0);
   const [phase, setPhase] = useState<Phase>({ name: "idle" });
   const [editing, setEditing] = useState(false);
   const runId = useRef(0);
@@ -142,11 +142,11 @@ export default function VoiceExpenseScreen() {
     void speech.start();
   };
 
-  const selectTrip = (id: string) => {
+  const selectTrip = (id: string | null) => {
     setTripId(id);
     setPickerOpen(false);
     setPhase({ name: "idle" });
-    if (fromWidget) {
+    if (fromWidget && id) {
       setWidgetTripId(id);
       void syncWidgets();
     }
@@ -221,6 +221,7 @@ export default function VoiceExpenseScreen() {
     [phase, trip, addExpense, addSettlement, formatCurrency, t],
   );
 
+  const pickable = trips.filter((entry) => !isArchivedGroup(entry) || entry.id === tripId);
   const listening = speech.state.status === "listening";
   const partial = speech.state.status === "listening" ? speech.state.partial : "";
 
@@ -255,9 +256,9 @@ export default function VoiceExpenseScreen() {
             <Icon name="x" size={16} color={c.text} />
           </PressableScale>
           <AuraChip
-            label={trip ? t("voiceExpense.addingToName", { name: trip.name }) : t("voiceExpense.noTrip")}
-            icon="compass"
-            onPress={trips.length > 1 ? () => setPickerOpen(true) : undefined}
+            label={t("voiceExpense.addingToName", { name: trip?.name ?? t("money.notInGroup") })}
+            icon={trip ? "compass" : "wallet"}
+            onPress={pickable.length > 0 ? () => setPickerOpen(true) : undefined}
           />
         </View>
 
@@ -356,22 +357,23 @@ export default function VoiceExpenseScreen() {
 
       <AuraSheet visible={pickerOpen} onClose={() => setPickerOpen(false)} title={t("voiceExpense.chooseTrip")}>
         <ScrollView contentContainerStyle={styles.pickerList}>
-          {trips.map((entry) => {
-            const active = entry.id === tripId;
+          {[null, ...pickable].map((entry) => {
+            const id = entry?.id ?? null;
+            const active = id === tripId;
             return (
               <PressableScale
-                key={entry.id}
+                key={id ?? "personal"}
                 haptic={false}
                 pressedScale={0.98}
-                onPress={() => selectTrip(entry.id)}
+                onPress={() => selectTrip(id)}
                 accessibilityRole="button"
                 accessibilityState={{ selected: active }}
                 style={[styles.pickerRow, { backgroundColor: active ? c.surfaceStrong : "transparent" }]}
               >
                 <Text style={[styles.pickerName, { color: c.text, fontFamily: f.medium }]} numberOfLines={1}>
-                  {entry.name}
+                  {!entry ? t("money.notInGroup") : isTrip(entry) ? entry.name : `${entry.emoji ?? "👥"} ${entry.name}`}
                 </Text>
-                {entry.id === activeTripId ? (
+                {id && id === activeTripId ? (
                   <Text style={[styles.pickerBadge, { color: c.textMuted, fontFamily: f.medium }]}>{t("voiceExpense.activeTrip")}</Text>
                 ) : null}
                 {active ? <Icon name="check" size={16} color={c.text} strokeWidth={2.4} /> : null}

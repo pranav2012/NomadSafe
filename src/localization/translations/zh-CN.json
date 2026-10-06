@@ -1347,7 +1347,6 @@
   },
   "voiceExpense": {
     "speakToAdd": "语音添加支出",
-    "noTrip": "无行程",
     "chooseTrip": "添加到",
     "activeTrip": "进行中",
     "tapToSpeak": "点击麦克风，说出你付了什么",
@@ -1830,7 +1829,7 @@
     "onlyYou": "只有你",
     "youLent": "你借出 {{amount}}",
     "youBorrowed": "你借入 {{amount}}",
-    "notInGroup": "不在任何群组",
+    "notInGroup": "个人",
     "thisWeek": "本周",
     "tripBadge": "旅行",
     "people_one": "{{count}} 人",
@@ -1850,7 +1849,7 @@
     "noGroupsBody": "和室友、伴侣或朋友分摊花费。新建一个群组并添加成员。",
     "settledSection_one": "已结清 · {{count}}",
     "settledSection_other": "已结清 · {{count}}",
-    "yourSpends": "你的花费",
+    "yourSpends": "个人",
     "groupNameRequired": "请给群组起个名字。",
     "newGroupTitle": "新建群组",
     "groupName": "名称",
@@ -1880,7 +1879,6 @@
     "notNow": "暂不",
     "planTrip": "和这个群组计划旅行",
     "planTripBody": "要一起出行吗？开始一次已包含这些人的旅行。",
-    "trendTitle": "最近 6 个月",
     "trendAverage": "平均 {{amount}}/月",
     "moreActions": "更多",
     "peopleAction": "成员和邀请",
@@ -1897,8 +1895,7 @@
     "monthByMonth": "按月",
     "tripChartLocked": "升级 Plus，按天查看旅行花费",
     "groupChartLocked": "升级 Plus，按月查看此群组",
-    "insightsLocked": "升级 Plus，查看趋势、对比和钱花在哪",
-    "trendHint": "点按月份查看",
+    "insightsLocked": "升级 Plus 查看趋势和对比",
     "topPlaces": "花在哪里",
     "placeCount_one": "{{count}} 笔",
     "placeCount_other": "{{count}} 笔",
@@ -1910,10 +1907,10 @@
       "down_week": "比上周少 {{pct}}%",
       "same_week": "与上周差不多",
       "categoryUp": "{{category}}增加 {{pct}}%",
-      "categoryDown": "{{category}}减少 {{pct}}%",
-      "pace_month": "按当前速度本月约 {{amount}}",
-      "pace_week": "按当前速度本周约 {{amount}}"
-    }
+      "categoryDown": "{{category}}减少 {{pct}}%"
+    },
+    "allSettledWith_one": "已与 {{count}} 人结清",
+    "allSettledWith_other": "已与 {{count}} 人结清"
   },
   "groupShare": {
     "deleteBlocked": "删除此群组前，请先移除所有已加入的人。你也可以归档它，从列表中隐藏。",

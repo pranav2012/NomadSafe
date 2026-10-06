@@ -1347,7 +1347,6 @@
   },
   "voiceExpense": {
     "speakToAdd": "말로 지출 추가",
-    "noTrip": "여행 없음",
     "chooseTrip": "추가할 곳",
     "activeTrip": "진행 중",
     "tapToSpeak": "마이크를 누르고 결제한 내용을 말해 보세요",
@@ -1830,7 +1829,7 @@
     "onlyYou": "나만",
     "youLent": "{{amount}} 빌려줌",
     "youBorrowed": "{{amount}} 빌림",
-    "notInGroup": "그룹 밖",
+    "notInGroup": "개인",
     "thisWeek": "이번 주",
     "tripBadge": "여행",
     "people_one": "{{count}}명",
@@ -1850,7 +1849,7 @@
     "noGroupsBody": "룸메이트, 연인, 친구와 지출을 나눠요. 그룹을 만들고 사람을 추가하세요.",
     "settledSection_one": "정산 완료 · {{count}}",
     "settledSection_other": "정산 완료 · {{count}}",
-    "yourSpends": "내 지출",
+    "yourSpends": "개인",
     "groupNameRequired": "그룹 이름을 입력하세요.",
     "newGroupTitle": "새 그룹",
     "groupName": "이름",
@@ -1880,7 +1879,6 @@
     "notNow": "나중에",
     "planTrip": "이 그룹과 여행 계획하기",
     "planTripBody": "함께 어디 가나요? 이 사람들이 들어간 여행을 시작하세요.",
-    "trendTitle": "최근 6개월",
     "trendAverage": "평균 {{amount}}/월",
     "moreActions": "더보기",
     "peopleAction": "멤버 및 초대",
@@ -1897,8 +1895,7 @@
     "monthByMonth": "월별",
     "tripChartLocked": "Plus로 여행을 일별로 보기",
     "groupChartLocked": "Plus로 이 그룹을 월별로 보기",
-    "insightsLocked": "Plus로 추이, 비교, 지출처 보기",
-    "trendHint": "월을 탭해 보기",
+    "insightsLocked": "Plus로 추이와 비교 보기",
     "topPlaces": "지출처",
     "placeCount_one": "{{count}}건",
     "placeCount_other": "{{count}}건",
@@ -1910,10 +1907,10 @@
       "down_week": "지난주보다 {{pct}}% 적음",
       "same_week": "지난주와 비슷함",
       "categoryUp": "{{category}} {{pct}}% 증가",
-      "categoryDown": "{{category}} {{pct}}% 감소",
-      "pace_month": "이번 달 {{amount}} 예상",
-      "pace_week": "이번 주 {{amount}} 예상"
-    }
+      "categoryDown": "{{category}} {{pct}}% 감소"
+    },
+    "allSettledWith_one": "{{count}}명과 모두 정산됨",
+    "allSettledWith_other": "{{count}}명과 모두 정산됨"
   },
   "groupShare": {
     "deleteBlocked": "이 그룹을 삭제하기 전에 참여한 사람을 모두 내보내세요. 대신 보관하면 목록에서 숨길 수 있어요.",

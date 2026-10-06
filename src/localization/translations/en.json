@@ -1347,7 +1347,6 @@
   },
   "voiceExpense": {
     "speakToAdd": "Speak to add expense",
-    "noTrip": "No trip",
     "chooseTrip": "Add to",
     "activeTrip": "Active",
     "tapToSpeak": "Tap the mic and say what you paid",
@@ -1830,7 +1829,7 @@
     "onlyYou": "Only you",
     "youLent": "you lent {{amount}}",
     "youBorrowed": "you borrowed {{amount}}",
-    "notInGroup": "Not in a group",
+    "notInGroup": "Personal",
     "thisWeek": "This week",
     "tripBadge": "Trip",
     "people_one": "{{count}} person",
@@ -1850,7 +1849,7 @@
     "noGroupsBody": "Split spends with flatmates, a partner or friends. Create a group and add the people in it.",
     "settledSection_one": "Settled · {{count}}",
     "settledSection_other": "Settled · {{count}}",
-    "yourSpends": "Your spends",
+    "yourSpends": "Personal",
     "groupNameRequired": "Give the group a name.",
     "newGroupTitle": "New group",
     "groupName": "Name",
@@ -1880,7 +1879,6 @@
     "notNow": "Not now",
     "planTrip": "Plan a trip with this group",
     "planTripBody": "Going somewhere together? Start a trip with these people already in it.",
-    "trendTitle": "Last 6 months",
     "trendAverage": "avg {{amount}}/month",
     "moreActions": "More",
     "peopleAction": "People & invite",
@@ -1897,8 +1895,7 @@
     "monthByMonth": "Month by month",
     "tripChartLocked": "See your trip day by day with Plus",
     "groupChartLocked": "See this group month by month with Plus",
-    "insightsLocked": "See trends, how you compare and where it went with Plus",
-    "trendHint": "Tap a month to see it",
+    "insightsLocked": "Trends and comparisons with Plus",
     "topPlaces": "Where it went",
     "placeCount_one": "{{count}} spend",
     "placeCount_other": "{{count}} spends",
@@ -1910,10 +1907,10 @@
       "down_week": "{{pct}}% less than last week",
       "same_week": "About the same as last week",
       "categoryUp": "{{category}} up {{pct}}%",
-      "categoryDown": "{{category}} down {{pct}}%",
-      "pace_month": "On pace for {{amount}} this month",
-      "pace_week": "On pace for {{amount}} this week"
-    }
+      "categoryDown": "{{category}} down {{pct}}%"
+    },
+    "allSettledWith_one": "All settled up with {{count}} person",
+    "allSettledWith_other": "All settled up with {{count}} people"
   },
   "groupShare": {
     "deleteBlocked": "Remove everyone who joined before deleting this group. You can archive it to hide it from your list instead.",

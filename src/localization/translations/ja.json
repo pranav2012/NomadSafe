@@ -1347,7 +1347,6 @@
   },
   "voiceExpense": {
     "speakToAdd": "話して支出を追加",
-    "noTrip": "旅行なし",
     "chooseTrip": "追加先",
     "activeTrip": "進行中",
     "tapToSpeak": "マイクをタップして、支払った内容を話してください",
@@ -1830,7 +1829,7 @@
     "onlyYou": "自分だけ",
     "youLent": "{{amount}}立て替え",
     "youBorrowed": "{{amount}}借り",
-    "notInGroup": "グループ外",
+    "notInGroup": "個人",
     "thisWeek": "今週",
     "tripBadge": "旅行",
     "people_one": "{{count}}人",
@@ -1850,7 +1849,7 @@
     "noGroupsBody": "ルームメイトやパートナー、友達と支出を割り勘。グループを作って人を追加しましょう。",
     "settledSection_one": "精算済み · {{count}}",
     "settledSection_other": "精算済み · {{count}}",
-    "yourSpends": "あなたの支出",
+    "yourSpends": "個人",
     "groupNameRequired": "グループ名を入力してください。",
     "newGroupTitle": "新しいグループ",
     "groupName": "名前",
@@ -1880,7 +1879,6 @@
     "notNow": "今はしない",
     "planTrip": "このグループで旅行を計画",
     "planTripBody": "一緒に出かけますか？このメンバー入りで旅行を始めましょう。",
-    "trendTitle": "過去6か月",
     "trendAverage": "平均 {{amount}}/月",
     "moreActions": "その他",
     "peopleAction": "メンバーと招待",
@@ -1897,8 +1895,7 @@
     "monthByMonth": "月ごと",
     "tripChartLocked": "Plusで旅行を日ごとに見る",
     "groupChartLocked": "Plusでこのグループを月ごとに見る",
-    "insightsLocked": "Plusで推移・比較・使い道を見る",
-    "trendHint": "月をタップして表示",
+    "insightsLocked": "Plusで推移と比較",
     "topPlaces": "使い道",
     "placeCount_one": "{{count}}件",
     "placeCount_other": "{{count}}件",
@@ -1910,10 +1907,10 @@
       "down_week": "先週より{{pct}}%少ない",
       "same_week": "先週とほぼ同じ",
       "categoryUp": "{{category}}が{{pct}}%増",
-      "categoryDown": "{{category}}が{{pct}}%減",
-      "pace_month": "今月は{{amount}}のペース",
-      "pace_week": "今週は{{amount}}のペース"
-    }
+      "categoryDown": "{{category}}が{{pct}}%減"
+    },
+    "allSettledWith_one": "{{count}}人と精算済み",
+    "allSettledWith_other": "{{count}}人と精算済み"
   },
   "groupShare": {
     "deleteBlocked": "このグループを削除する前に、参加した人をすべて外してください。代わりにアーカイブして一覧から隠すこともできます。",

@@ -24,13 +24,12 @@ function byCategory(items: InsightItem[]): CategoryAmount[] {
 
 const sum = (items: { amount: number }[]) => items.reduce((total, item) => total + item.amount, 0);
 
-/** Your spend per calendar month for the last `months` months (oldest first), split by category. */
-export function monthlyByCategory(items: InsightItem[], months: number, now: Date = new Date()) {
-  return Array.from({ length: months }, (_, index) => {
-    const offset = months - 1 - index;
-    const range = periodRange("month", offset, now);
-    const inMonth = items.filter((item) => inRange(item.date, range));
-    return { start: range.start, offset, total: sum(inMonth), categories: byCategory(inMonth) };
+/** Totals for `count` weeks or months ending `endOffset` periods back (oldest first). */
+export function periodTotals(items: { amount: number; date: string }[], period: SpendPeriod, count: number, endOffset = 0, now: Date = new Date()) {
+  return Array.from({ length: count }, (_, index) => {
+    const offset = endOffset + count - 1 - index;
+    const range = periodRange(period, offset, now);
+    return { start: range.start, offset, total: sum(items.filter((item) => inRange(item.date, range))) };
   });
 }
 
@@ -92,16 +91,6 @@ export function comparePeriods(current: InsightItem[], previous: InsightItem[]):
     }
   }
   return { change, mover };
-}
-
-/** Where this period's spend is heading at today's rate; null for past periods or too early to tell. */
-export function paceFor(period: SpendPeriod, offset: number, spent: number, now: Date = new Date()): number | null {
-  if (offset !== 0 || spent <= 0) return null;
-  const range = periodRange(period, 0, now);
-  const totalDays = Math.round((range.end.getTime() - range.start.getTime()) / DAY_MS);
-  const elapsed = Math.round((startOfLocalDay(now).getTime() - range.start.getTime()) / DAY_MS) + 1;
-  if (elapsed < (period === "month" ? 5 : 3) || elapsed >= totalDays) return null;
-  return (spent / elapsed) * totalDays;
 }
 
 /** The places you spent most at, by merchant name; blank names are left out. */

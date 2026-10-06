@@ -49,7 +49,7 @@ The basic thing is a **group**: people, a currency, expenses, payments, and opti
 
 ### Moving between trips and groups
 
-- **Money switcher:** the Overview is the Money home (titled "Money"), not an entry in the list. A trip or group has a "‹ Overview" back link, and its name ("Goa trip ▾") lists the active trip and your groups (most recent activity first), then ended trips. Switching doesn't change the active trip. The header's only button is ⋯ (people, settings, import, export).
+- **Money switcher:** the Overview is the Money home (titled "Money"), not an entry in the list. The Overview has a chip row of trips and groups under the title. A trip or group has a "‹ Overview" back link, and its name ("Goa trip ▾") lists the active trip and your groups (most recent activity first), then ended trips. Switching doesn't change the active trip. The header's only button is ⋯ (record payment, people, settings, import, export). Spends outside any trip or group are "Personal", in the add sheet and in voice. When everyone is settled up, balances are one line.
 - **Where an expense goes:** the add-expense sheet has an "in: Goa trip ▾" chip. It defaults to the screen you're on (the trip or group on screen; on the Overview, the same default as voice: the active trip, else the first trip or group), so the flat's rent can go in mid-trip without leaving.
 - **Move to…:** an option on an expense, for when it went into the wrong group or trip. Moving an expense out of a shared group deletes it there and adds it to the new one, through the existing sync.
 - **Voice and the widget** can pick any group or trip.
@@ -146,7 +146,7 @@ Personal spending is planned explicitly, in three cases:
 
 It's shown in the home currency (`useHomeCountry()`'s currency, else the phone's), converted with daily rates as elsewhere, with a note for anything that couldn't be converted. It's separate from the balance below it, which is about who owes whom.
 
-**Free vs Plus:** week and month totals with the breakdown are free. Plus adds the charts and insights and export: a trip day by day once it starts, a group month by month once it's a month old, and on the Overview the comparison with the last week or month, the pace, six months stacked by category (tap a month to open it) and the top places.
+**Free vs Plus:** week and month totals with the breakdown are free. Plus adds the charts and insights and export: a trip day by day once it starts, a group month by month once it's a month old, and on the Overview a sparkline in the spending total with the change vs the last week or month, and the top places.
 
 ### Adding an expense
 

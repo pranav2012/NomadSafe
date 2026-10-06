@@ -1347,7 +1347,6 @@
   },
   "voiceExpense": {
     "speakToAdd": "Aggiungi spesa a voce",
-    "noTrip": "Nessun viaggio",
     "chooseTrip": "Aggiungi a",
     "activeTrip": "Attivo",
     "tapToSpeak": "Tocca il microfono e di' cosa hai pagato",
@@ -1830,7 +1829,7 @@
     "onlyYou": "Solo tu",
     "youLent": "hai prestato {{amount}}",
     "youBorrowed": "hai preso in prestito {{amount}}",
-    "notInGroup": "Fuori dai gruppi",
+    "notInGroup": "Personale",
     "thisWeek": "Questa settimana",
     "tripBadge": "Viaggio",
     "people_one": "{{count}} persona",
@@ -1850,7 +1849,7 @@
     "noGroupsBody": "Dividi le spese con coinquilini, partner o amici. Crea un gruppo e aggiungi le persone.",
     "settledSection_one": "In pari · {{count}}",
     "settledSection_other": "In pari · {{count}}",
-    "yourSpends": "Le tue spese",
+    "yourSpends": "Personale",
     "groupNameRequired": "Dai un nome al gruppo.",
     "newGroupTitle": "Nuovo gruppo",
     "groupName": "Nome",
@@ -1880,7 +1879,6 @@
     "notNow": "Non ora",
     "planTrip": "Pianifica un viaggio con questo gruppo",
     "planTripBody": "Partite insieme? Inizia un viaggio con queste persone già dentro.",
-    "trendTitle": "Ultimi 6 mesi",
     "trendAverage": "media {{amount}}/mese",
     "moreActions": "Altro",
     "peopleAction": "Persone e invito",
@@ -1897,8 +1895,7 @@
     "monthByMonth": "Mese per mese",
     "tripChartLocked": "Guarda il tuo viaggio giorno per giorno con Plus",
     "groupChartLocked": "Guarda questo gruppo mese per mese con Plus",
-    "insightsLocked": "Tendenze, confronti e dove sono finiti i soldi con Plus",
-    "trendHint": "Tocca un mese per vederlo",
+    "insightsLocked": "Tendenze e confronti con Plus",
     "topPlaces": "Dove sono andati",
     "placeCount_one": "{{count}} spesa",
     "placeCount_other": "{{count}} spese",
@@ -1910,10 +1907,10 @@
       "down_week": "{{pct}}% in meno della settimana scorsa",
       "same_week": "Più o meno come la settimana scorsa",
       "categoryUp": "{{category}} +{{pct}}%",
-      "categoryDown": "{{category}} −{{pct}}%",
-      "pace_month": "Sulla strada per {{amount}} questo mese",
-      "pace_week": "Sulla strada per {{amount}} questa settimana"
-    }
+      "categoryDown": "{{category}} −{{pct}}%"
+    },
+    "allSettledWith_one": "Tutto saldato con {{count}} persona",
+    "allSettledWith_other": "Tutto saldato con {{count}} persone"
   },
   "groupShare": {
     "deleteBlocked": "Rimuovi chi si è unito prima di eliminare questo gruppo. Puoi anche archiviarlo per nasconderlo dalla lista.",
