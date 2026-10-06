@@ -23,6 +23,8 @@ export interface AnalyticsEvents {
   trip_created: { mode: "solo" | "group"; destinations: number; has_budget: boolean };
   group_created: { people: number };
   ai_context_picked: { kind: "trip" | "group" | "overview" | "general" };
+  home_card_opened: { card: "balance" | "get_home_safe" };
+  app_landing: { tab: "home" | "money" | "other"; reason: "trip" | "habit" | "link" };
   trip_joined: { deferred: boolean; claimed_member: boolean };
   invite_deferred_found: { source: "install_referrer" | "clipboard" };
   expense_added: { source: ExpenseSourceKind; count: number };

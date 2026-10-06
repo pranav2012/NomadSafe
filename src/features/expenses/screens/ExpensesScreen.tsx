@@ -72,11 +72,14 @@ export default function ExpensesScreen() {
     for (const expense of reviewable) updateExpense(expense.id, { paidBy: SELF_ID, shares: expense.splitHint?.shares, splitHint: undefined });
   };
 
+  const markUsed = useMoneyViewStore((state) => state.markUsed);
   const openAdd = () => {
+    markUsed();
     setEditing(null);
     setFormOpen(true);
   };
   const openExpense = (expense: Expense) => {
+    markUsed();
     setEditing(expense);
     setFormOpen(true);
   };
@@ -110,6 +113,7 @@ export default function ExpensesScreen() {
       <BlurTargetView ref={blurTarget} style={styles.root}>
         <ScrollView
           showsVerticalScrollIndicator={false}
+          onScrollBeginDrag={markUsed}
           contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: tabBarInset + CAPTURE_BAR_HEIGHT + 28 }]}
         >
           <View style={styles.header}>

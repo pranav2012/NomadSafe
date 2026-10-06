@@ -91,6 +91,18 @@
       "noStays": "まだ宿泊先が未予約です",
       "gap": "{{range}}の宿泊先がありません",
       "save": "保存"
+    },
+    "everyday": {
+      "owed_one": "{{count}}件のグループで{{amount}}受け取り",
+      "owed_other": "{{count}}件のグループで合計{{amount}}受け取り",
+      "owe_one": "{{count}}件のグループで{{amount}}支払い",
+      "owe_other": "{{count}}件のグループで合計{{amount}}支払い",
+      "settled": "すべてのグループで精算済み",
+      "balanceDetail": "マネーを開いて精算や支出の追加",
+      "getHomeSafe": "無事に帰宅",
+      "getHomeSafeDetail": "到着タイマーを設定。チェックインしないとサークルに通知されます",
+      "timerRunning": "{{time}}までにチェックイン",
+      "timerDetail": "到着タイマー作動中。タップしてチェックインまたは延長"
     }
   },
   "settings": {

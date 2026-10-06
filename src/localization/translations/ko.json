@@ -91,6 +91,18 @@
       "noStays": "아직 숙소를 예약하지 않았어요",
       "gap": "{{range}} 숙소 없음",
       "save": "저장"
+    },
+    "everyday": {
+      "owed_one": "{{count}}개 그룹에서 {{amount}} 받을 돈",
+      "owed_other": "{{count}}개 그룹에서 {{amount}} 받을 돈",
+      "owe_one": "{{count}}개 그룹에서 {{amount}} 줄 돈",
+      "owe_other": "{{count}}개 그룹에서 {{amount}} 줄 돈",
+      "settled": "모든 그룹이 정산 완료",
+      "balanceDetail": "정산하거나 지출을 추가하려면 머니 열기",
+      "getHomeSafe": "안전 귀가",
+      "getHomeSafeDetail": "안전 도착 타이머를 설정하세요. 체크인하지 않으면 서클에 알려요",
+      "timerRunning": "{{time}}까지 체크인",
+      "timerDetail": "안전 도착 타이머가 작동 중이에요. 탭해서 체크인하거나 연장하세요"
     }
   },
   "settings": {

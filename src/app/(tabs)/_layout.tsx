@@ -10,6 +10,7 @@ import { GlassTabBar, type GlassTabItem, TAB_BAR_GAP, TAB_BAR_HEIGHT, useKeyboar
 import { AURA_FONT_FILES, auraDark, auraLight } from "@/constants/aura";
 import { usePendingJoinStore } from "@/features/trips/store/pendingJoinStore";
 import { useTripGmailSync } from "@/features/expenses/hooks/useTripGmailSync";
+import { useLandingTab } from "@/features/home/hooks/useLandingTab";
 import { useTheme } from "@/hooks/useTheme";
 import { useLocalization } from "@/localization";
 
@@ -23,6 +24,7 @@ const TABS = [
 export default function TabsLayout() {
   usePendingInvite();
   useTripGmailSync();
+  useLandingTab();
   return Platform.OS === "ios" ? <NativeTabsLayout /> : <GlassTabsLayout />;
 }
 

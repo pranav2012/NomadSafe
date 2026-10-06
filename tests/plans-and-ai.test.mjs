@@ -323,3 +323,26 @@ test("AI chat context: pick, else active trip, else the most recent group, else 
   assert.equal(contextChoice.chooseChatContext({ ...base, picked: "overview" }), "overview");
   assert.equal(contextChoice.chooseChatContext({ ...base, groups: [] }), "general");
 });
+
+const landing = loadModule("src/utils/landing.ts");
+
+test("app landing: two Money sessions switch to Money, two quick exits switch back, trips reset", () => {
+  const visit = { hadTrip: false, visitedMoney: true, landedOnMoney: false, leftMoneyQuickly: false };
+  const skip = { ...visit, visitedMoney: false };
+  let state = landing.INITIAL_LANDING;
+  state = landing.nextLanding(state, visit);
+  assert.deepEqual(state, { landOnMoney: false, streak: 1 });
+  state = landing.nextLanding(state, skip);
+  assert.deepEqual(state, { landOnMoney: false, streak: 0 });
+  state = landing.nextLanding(landing.nextLanding(state, visit), visit);
+  assert.deepEqual(state, { landOnMoney: true, streak: 0 });
+  const used = { hadTrip: false, visitedMoney: true, landedOnMoney: true, leftMoneyQuickly: false };
+  const bounced = { ...used, leftMoneyQuickly: true };
+  state = landing.nextLanding(landing.nextLanding(state, bounced), used);
+  assert.deepEqual(state, { landOnMoney: true, streak: 0 });
+  state = landing.nextLanding(landing.nextLanding(state, bounced), bounced);
+  assert.deepEqual(state, { landOnMoney: false, streak: 0 });
+  state = landing.nextLanding(landing.nextLanding(state, visit), visit);
+  assert.equal(state.landOnMoney, true);
+  assert.deepEqual(landing.nextLanding(state, { ...visit, hadTrip: true }), landing.INITIAL_LANDING);
+});

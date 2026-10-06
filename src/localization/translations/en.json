@@ -91,6 +91,18 @@
       "noStays": "No stays booked yet",
       "gap": "No stay for {{range}}",
       "save": "Save"
+    },
+    "everyday": {
+      "owed_one": "You're owed {{amount}} in {{count}} group",
+      "owed_other": "You're owed {{amount}} across {{count}} groups",
+      "owe_one": "You owe {{amount}} in {{count}} group",
+      "owe_other": "You owe {{amount}} across {{count}} groups",
+      "settled": "All settled up in your groups",
+      "balanceDetail": "Open Money to settle up or add a spend",
+      "getHomeSafe": "Get home safe",
+      "getHomeSafeDetail": "Set a safe-arrival timer; your circle hears if you don't check in",
+      "timerRunning": "Check in by {{time}}",
+      "timerDetail": "Your safe-arrival timer is running. Tap to check in or extend"
     }
   },
   "trip": {

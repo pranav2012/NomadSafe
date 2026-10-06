@@ -9,6 +9,7 @@ import { useHomeViewed } from "@/features/home/hooks/useHomeViewed";
 import { BackgroundLocationDisclosure } from "@/features/location-sharing/components/BackgroundLocationDisclosure";
 import { useBroadcastToggle } from "@/features/location-sharing/hooks/useBroadcastToggle";
 import { cancelCheckInNotifications, useSafetyStore } from "@/features/safety";
+import { EverydayCards } from "@/features/home/components/EverydayCards";
 import { EmptyHome } from "@/features/home/components/EmptyHome";
 import { finishRecap, isRecapFinished, useRecapStore } from "@/features/recap";
 import { RecapHomeCard } from "@/features/recap/components/RecapHomeCard";
@@ -92,7 +93,7 @@ export default function HomeScreen() {
   }, []);
 
   if (!activeTrip || !data) {
-    return <EmptyHome tripCount={tripCount} onViewTrips={() => router.push("/trips")} onPlanTrip={() => startNewTrip()} />;
+    return <EmptyHome tripCount={tripCount} onViewTrips={() => router.push("/trips")} onPlanTrip={() => startNewTrip()} everyday={<EverydayCards />} />;
   }
 
   const status: AuraStatus = safetyStatus === "emergency" ? "alert" : share.isBroadcasting ? "live" : "calm";

@@ -91,6 +91,18 @@
       "noStays": "Aucun hébergement réservé",
       "gap": "Pas d'hébergement pour {{range}}",
       "save": "Enregistrer"
+    },
+    "everyday": {
+      "owed_one": "On te doit {{amount}} dans {{count}} groupe",
+      "owed_other": "On te doit {{amount}} dans {{count}} groupes",
+      "owe_one": "Tu dois {{amount}} dans {{count}} groupe",
+      "owe_other": "Tu dois {{amount}} dans {{count}} groupes",
+      "settled": "Tout est réglé dans tes groupes",
+      "balanceDetail": "Ouvre Argent pour régler ou ajouter une dépense",
+      "getHomeSafe": "Rentrer en sécurité",
+      "getHomeSafeDetail": "Lance un minuteur d'arrivée ; ton cercle est prévenu si tu ne confirmes pas",
+      "timerRunning": "Confirme avant {{time}}",
+      "timerDetail": "Ton minuteur d'arrivée tourne. Touche pour confirmer ou prolonger"
     }
   },
   "settings": {

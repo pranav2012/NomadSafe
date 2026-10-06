@@ -6,24 +6,15 @@ import { isTrip, selectMoneyGroups, useTripsStore, type MoneyGroup } from "@/fea
 import { useExpensesStore, type Expense } from "@/features/expenses/store/expensesStore";
 import { useConvertedExpenses } from "@/features/expenses/hooks/useTripExpenseSummary";
 import { useGroupBalances } from "@/features/expenses/hooks/useGroupBalances";
+import { useOverallBalance, type GroupBalanceRow } from "@/features/expenses/hooks/useOverallBalance";
 import { categoryBreakdown, sumAmount } from "@/features/expenses/utils/aggregate";
-import { toLocalDayKey } from "@/features/expenses/utils/dateKey";
 import { formatMoney } from "@/features/expenses/utils/money";
 import { inRange, myShareOf, periodRange, type SpendPeriod } from "@/features/expenses/utils/myMoney";
-import { computeNetBalances, isSplitExpense, roundMoney, SELF_ID } from "@/features/expenses/utils/split";
 import { GroupActivity } from "@/features/expenses/components/GroupActivity";
 import { OWED, OWES } from "@/features/expenses/components/GroupBalances";
 import { SpendHero } from "@/features/expenses/components/SpendHero";
 
 const SETTLED_AFTER_MS = 30 * 86_400_000;
-const rateKey = (currency: string, date: string) => `${currency}|${toLocalDayKey(date)}`;
-
-interface GroupRow {
-  group: MoneyGroup;
-  net: number;
-  unconverted: number;
-  lastActivity: number;
-}
 
 /** Money with no trip open: your spending everywhere, your overall balance, trips and groups, and spends in no group. */
 export function MoneyOverview({
@@ -39,7 +30,6 @@ export function MoneyOverview({
   const { t, locale, currency: homeCurrency, formatCurrency } = useLocalization();
   const groups = useTripsStore(selectMoneyGroups);
   const expenses = useExpensesStore((state) => state.expenses);
-  const settlements = useExpensesStore((state) => state.settlements);
   const [period, setPeriod] = useState<SpendPeriod>("month");
   const [offset, setOffset] = useState(0);
   const [showSettled, setShowSettled] = useState(false);
@@ -66,28 +56,10 @@ export function MoneyOverview({
   }
   const sources = [...bySource.values()].filter((entry) => entry.amount > 0.004).sort((a, b) => b.amount - a.amount);
 
-  const splitItems = useMemo(() => [...expenses.filter((expense) => expense.groupId && isSplitExpense(expense)), ...settlements], [expenses, settlements]);
-  const balanceConversion = useConvertedExpenses(splitItems, homeCurrency);
-  const rates = new Map<string, number>();
-  for (const entry of balanceConversion.convertedExpenses) {
-    if (entry.expense.amount > 0) rates.set(rateKey(entry.expense.currency, entry.expense.date), entry.amount / entry.expense.amount);
-  }
-  const convert = (_: number, currency: string, date: string) => (currency === homeCurrency ? 1 : rates.get(rateKey(currency, date)) ?? null);
-
-  const rows: GroupRow[] = groups
-    .filter((group) => !group.shared?.archived)
-    .map((group) => {
-      const groupExpenses = expenses.filter((expense) => expense.groupId === group.id);
-      const groupSettlements = settlements.filter((settlement) => settlement.groupId === group.id);
-      const { net, unconverted } = computeNetBalances(groupExpenses.filter(isSplitExpense), groupSettlements, convert);
-      const dates = [...groupExpenses.map((expense) => expense.date), ...groupSettlements.map((settlement) => settlement.date), group.createdAt];
-      return { group, net: roundMoney(net.get(SELF_ID) ?? 0, homeCurrency), unconverted, lastActivity: Math.max(...dates.map((date) => new Date(date).getTime())) };
-    })
-    .sort((a, b) => b.lastActivity - a.lastActivity);
-  const isSettled = (row: GroupRow) => row.unconverted === 0 && Math.abs(row.net) < 0.005 && now - row.lastActivity > SETTLED_AFTER_MS;
+  const { rows, overall, ready: overallReady } = useOverallBalance();
+  const isSettled = (row: GroupBalanceRow) => row.unconverted === 0 && Math.abs(row.net) < 0.005 && now - row.lastActivity > SETTLED_AFTER_MS;
   const active = rows.filter((row) => !isSettled(row));
   const settled = rows.filter(isSettled);
-  const overall = roundMoney(rows.reduce((sum, row) => sum + row.net, 0), homeCurrency);
   const loose = useMemo(() => expenses.filter((expense) => expense.groupId === null), [expenses]);
 
   const periodLabel =
@@ -98,8 +70,7 @@ export function MoneyOverview({
         : `${new Intl.DateTimeFormat(locale, { month: "short", day: "numeric" }).format(range.start)} – ${new Intl.DateTimeFormat(locale, { month: "short", day: "numeric" }).format(new Date(range.end.getTime() - 1))}`;
   const unconvertedLabel = spendConversion.unconvertedTotals.map((entry) => formatMoney(formatCurrency, entry.amount, entry.currency)).join(" + ");
 
-  const row = ({ group }: GroupRow) => <GroupListRow key={group.id} group={group} onPress={() => onOpenGroup(group.id)} />;
-  const overallReady = !balanceConversion.isConverting && balanceConversion.unconvertedTotals.length === 0;
+  const row = ({ group }: GroupBalanceRow) => <GroupListRow key={group.id} group={group} onPress={() => onOpenGroup(group.id)} />;
 
   return (
     <View>

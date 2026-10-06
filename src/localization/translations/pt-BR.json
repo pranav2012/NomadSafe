@@ -91,6 +91,18 @@
       "noStays": "Nenhuma hospedagem reservada",
       "gap": "Sem hospedagem para {{range}}",
       "save": "Salvar"
+    },
+    "everyday": {
+      "owed_one": "Te devem {{amount}} em {{count}} grupo",
+      "owed_other": "Te devem {{amount}} em {{count}} grupos",
+      "owe_one": "Você deve {{amount}} em {{count}} grupo",
+      "owe_other": "Você deve {{amount}} em {{count}} grupos",
+      "settled": "Tudo quitado nos seus grupos",
+      "balanceDetail": "Abra Dinheiro para acertar ou adicionar um gasto",
+      "getHomeSafe": "Chegar em casa em segurança",
+      "getHomeSafeDetail": "Defina um timer de chegada; seu círculo é avisado se você não confirmar",
+      "timerRunning": "Confirme até {{time}}",
+      "timerDetail": "Seu timer de chegada está ativo. Toque para confirmar ou estender"
     }
   },
   "settings": {

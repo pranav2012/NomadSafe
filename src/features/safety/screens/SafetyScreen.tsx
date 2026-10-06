@@ -53,6 +53,7 @@ import { SafetyMap } from "@/features/safety/components/SafetyMap";
 import { CircleRow, FixBanner, SafetyTile, SharingLiveCard, TimerLiveCard } from "@/features/safety/components/SafetyPanel";
 import { SosHoldButton } from "@/features/safety/components/SosHoldButton";
 import { isCheckInMissed, useSafetyStore, type ContactAlert } from "../store/safetyStore";
+import { useSafetyIntentStore } from "../store/safetyIntentStore";
 import { errorNotification, heavyImpact, lightImpact, successNotification } from "@/utils/haptics";
 import { track } from "@/modules/analytics";
 import { logger } from "@/modules/logger";
@@ -159,6 +160,21 @@ export default function SafetyScreen() {
   const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sosInFlightRef = useRef(false);
   const fromWidgetRef = useRef(false);
+
+  // Home's "Get home safe" card asks for the timer sheet.
+  useEffect(() => {
+    const check = () => {
+      if (!useSafetyIntentStore.getState().openTimer) return;
+      useSafetyIntentStore.getState().consume();
+      if (useSafetyStore.getState().status !== "active") setSheet("timer");
+    };
+    const first = setTimeout(check, 0);
+    const unsubscribe = useSafetyIntentStore.subscribe(check);
+    return () => {
+      clearTimeout(first);
+      unsubscribe();
+    };
+  }, []);
 
   // The OS task may have been stopped while the app was away (expiry, permission revoked).
   useFocusEffect(

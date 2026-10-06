@@ -91,6 +91,18 @@
       "noStays": "还没有预订住宿",
       "gap": "{{range}} 没有住宿",
       "save": "保存"
+    },
+    "everyday": {
+      "owed_one": "在 {{count}} 个群组中应收 {{amount}}",
+      "owed_other": "在 {{count}} 个群组中共应收 {{amount}}",
+      "owe_one": "在 {{count}} 个群组中欠 {{amount}}",
+      "owe_other": "在 {{count}} 个群组中共欠 {{amount}}",
+      "settled": "你的所有群组都已结清",
+      "balanceDetail": "打开资金页面结算或添加花费",
+      "getHomeSafe": "安全到家",
+      "getHomeSafeDetail": "设置安全到达计时器；如果你未签到，你的圈子会收到通知",
+      "timerRunning": "请在 {{time}} 前签到",
+      "timerDetail": "安全到达计时器正在运行。点按以签到或延长"
     }
   },
   "settings": {

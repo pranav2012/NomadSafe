@@ -91,6 +91,18 @@
       "noStays": "Noch keine Unterkunft gebucht",
       "gap": "Keine Unterkunft für {{range}}",
       "save": "Merken"
+    },
+    "everyday": {
+      "owed_one": "Du bekommst {{amount}} aus {{count}} Gruppe",
+      "owed_other": "Du bekommst {{amount}} aus {{count}} Gruppen",
+      "owe_one": "Du schuldest {{amount}} in {{count}} Gruppe",
+      "owe_other": "Du schuldest {{amount}} in {{count}} Gruppen",
+      "settled": "In deinen Gruppen ist alles ausgeglichen",
+      "balanceDetail": "Öffne Geld, um auszugleichen oder eine Ausgabe hinzuzufügen",
+      "getHomeSafe": "Sicher nach Hause",
+      "getHomeSafeDetail": "Stell einen Ankunfts-Timer; dein Kreis erfährt es, wenn du dich nicht meldest",
+      "timerRunning": "Melde dich bis {{time}}",
+      "timerDetail": "Dein Ankunfts-Timer läuft. Tippe, um dich zu melden oder zu verlängern"
     }
   },
   "settings": {

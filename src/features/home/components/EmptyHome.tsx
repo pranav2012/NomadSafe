@@ -12,7 +12,18 @@ import { useLocalization } from "@/localization";
 import { Globe } from "./aura/globe/Globe";
 
 /** Home before any trip: the spinning globe with "Where to first?"; the search opens the trip planner. */
-export function EmptyHome({ tripCount, onViewTrips, onPlanTrip }: { tripCount: number; onViewTrips: () => void; onPlanTrip: () => void }) {
+export function EmptyHome({
+  tripCount,
+  onViewTrips,
+  onPlanTrip,
+  everyday,
+}: {
+  tripCount: number;
+  onViewTrips: () => void;
+  onPlanTrip: () => void;
+  /** Cards for days without a trip (balance, Get home safe). */
+  everyday?: React.ReactNode;
+}) {
   const { c, f, isDark } = useAura();
   const { t } = useLocalization();
   const insets = useSafeAreaInsets();
@@ -78,6 +89,7 @@ export function EmptyHome({ tripCount, onViewTrips, onPlanTrip }: { tripCount: n
               style={styles.existing}
             />
           ) : null}
+          {everyday}
         </Animated.View>
       </Animated.ScrollView>
     </View>

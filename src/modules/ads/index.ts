@@ -2,3 +2,4 @@
 export { AdsEffects } from "./AdsEffects";
 export { showAdPrivacyOptions, showInterstitial, useAdsStore } from "./ads";
 export type { AdPlacement } from "./rules";
+export { SESSION_TIMEOUT_MS } from "./rules";

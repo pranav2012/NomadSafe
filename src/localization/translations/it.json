@@ -91,6 +91,18 @@
       "noStays": "Nessun alloggio prenotato",
       "gap": "Nessun alloggio per {{range}}",
       "save": "Salva"
+    },
+    "everyday": {
+      "owed_one": "Ti devono {{amount}} in {{count}} gruppo",
+      "owed_other": "Ti devono {{amount}} in {{count}} gruppi",
+      "owe_one": "Devi {{amount}} in {{count}} gruppo",
+      "owe_other": "Devi {{amount}} in {{count}} gruppi",
+      "settled": "Tutto in pari nei tuoi gruppi",
+      "balanceDetail": "Apri Soldi per saldare o aggiungere una spesa",
+      "getHomeSafe": "Torna a casa sicuro",
+      "getHomeSafeDetail": "Imposta un timer di arrivo; la tua cerchia viene avvisata se non confermi",
+      "timerRunning": "Conferma entro le {{time}}",
+      "timerDetail": "Il timer di arrivo è attivo. Tocca per confermare o prolungare"
     }
   },
   "settings": {

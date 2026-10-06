@@ -20,6 +20,8 @@ import {
   type MoneyFacts,
 } from "./moneyFacts";
 
+import { chooseChatContext, GENERAL_CONTEXT, OVERVIEW_CONTEXT } from "../utils/chatContextChoice";
+
 const RATE_WAIT_MS = 2500;
 
 export interface TripMoneySnapshot {
@@ -99,7 +101,6 @@ export async function loadTripMoneySnapshot(
   return { facts, context: formatFactsBlock(facts, locale, now), locale };
 }
 
-import { chooseChatContext, GENERAL_CONTEXT, OVERVIEW_CONTEXT } from "../utils/chatContextChoice";
 
 export { chooseChatContext, GENERAL_CONTEXT, OVERVIEW_CONTEXT };
 

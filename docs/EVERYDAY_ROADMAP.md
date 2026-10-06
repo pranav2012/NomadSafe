@@ -1,6 +1,6 @@
 # Everyday NomadSafe: groups, everyday safety, year-round use
 
-Status: agreed direction (2026-10-06, updated 2026-10-07 after the Safety, Today and itinerary work, the group-first model and AI context). Nothing implemented yet. Phase 1 is specified; phases 2–3 are direction only.
+Status: Phase 1 implemented on `feature/everyday-groups` (2026-10-07). Phase 1b (import) and phases 2–3 are next.
 
 ## Why
 
