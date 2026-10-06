@@ -1,5 +1,4 @@
 import * as FileSystem from "expo-file-system/legacy";
-import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import { translate } from "@/localization/translate";
 import { logger } from "@/modules/logger";
@@ -59,6 +58,8 @@ export async function exportSpends(expenses: Expense[], title: string, format: E
       <table><thead><tr>${head.headers.map((cell) => `<th>${escapeHtml(cell)}</th>`).join("")}</tr></thead>
       <tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`).join("")}</tbody></table>
       </body></html>`;
+    // Loaded only when needed: builds made before expo-print was added don't have its native module.
+    const Print = await import("expo-print");
     const printed = await Print.printToFileAsync({ html });
     uri = `${FileSystem.cacheDirectory}${fileName(title, "pdf")}`;
     await FileSystem.moveAsync({ from: printed.uri, to: uri });

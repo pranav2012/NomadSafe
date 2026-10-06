@@ -19,6 +19,8 @@ import { buildImport, type ImportMode } from "@/features/expenses/utils/importBu
 
 type Step = "pick" | "me" | "people" | "preview";
 const NEW = "__new__";
+// Exports round each share, which can leave a few paise/cents per person.
+const ROUNDING = 0.05;
 
 /** Imports a Splitwise or Settle Up export into a group (or a new one), read on the phone. */
 export function ImportFromAppSheet({ visible, groupId, onClose, onDone }: { visible: boolean; groupId: string | null; onClose: () => void; onDone: (groupId: string) => void }) {
@@ -212,9 +214,10 @@ function ImportBody({ groupId, onClose, onDone }: { groupId: string | null; onCl
                   </Text>
                 </View>
               ) : null}
+              {!Object.values(balances).some((byCurrency) => Object.values(byCurrency).some((value) => Math.abs(value) >= ROUNDING)) ? body(t("split.settled")) : null}
               {Object.entries(balances).map(([person, byCurrency]) =>
                 Object.entries(byCurrency)
-                  .filter(([, value]) => Math.abs(value) >= 0.01)
+                  .filter(([, value]) => Math.abs(value) >= ROUNDING)
                   .map(([currency, value]) => (
                     <View key={`${person}-${currency}`} style={styles.balanceRow}>
                       <Text style={[styles.balanceName, { color: c.text, fontFamily: f.regular }]}>{personName(person)}</Text>
