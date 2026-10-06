@@ -69,13 +69,21 @@ export async function clearServerCheckIn() {
   }
 }
 
-/** Alerts linked contacts about an SOS. Resolves the number of linked contacts, or null if unreachable. */
-export async function alertContactsSos(): Promise<number | null> {
+/**
+ * Alerts linked contacts about an SOS. Resolves the number of linked contacts, or null if the server
+ * didn't answer in time. Convex keeps the call queued while offline, so `onLate` gets the count if it
+ * goes through after that.
+ */
+export async function alertContactsSos(onLate?: (recipients: number) => void): Promise<number | null> {
   try {
+    const call = convex.mutation(api.safetyAlerts.triggerSos, {});
     const result = await Promise.race([
-      convex.mutation(api.safetyAlerts.triggerSos, {}),
+      call,
       new Promise<null>((resolve) => setTimeout(() => resolve(null), SOS_ALERT_TIMEOUT_MS)),
     ]);
+    if (result === null) {
+      call.then((late) => onLate?.(late.recipients)).catch((err) => logger.warn("safety-alerts", "late SOS alert failed", err));
+    }
     return result?.recipients ?? null;
   } catch (err) {
     logger.warn("safety-alerts", "SOS alert failed", err);

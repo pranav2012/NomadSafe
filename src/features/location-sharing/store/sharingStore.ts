@@ -1,8 +1,9 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { mmkvStateStorage } from "@/modules/storage";
+import type { BroadcastMode } from "../utils/circle";
 
-export type BroadcastMode = "normal" | "low" | "emergency";
+export type { BroadcastMode };
 
 const HOUR_MS = 60 * 60_000;
 /** How long a new share lasts before it stops itself; null shares until stopped. */
@@ -208,18 +209,6 @@ export const useSharingStore = create<SharingState>()(
     },
   ),
 );
-
-export function getDrainPercentForMode(mode: BroadcastMode): number {
-  switch (mode) {
-    case "low":
-      return 2.1;
-    case "emergency":
-      return 9.4;
-    case "normal":
-    default:
-      return 4.3;
-  }
-}
 
 export function getIntervalForMode(mode: BroadcastMode): number {
   switch (mode) {

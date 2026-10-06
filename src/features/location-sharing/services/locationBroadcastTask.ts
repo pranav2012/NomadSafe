@@ -14,6 +14,7 @@ import { storage } from "@/modules/storage";
 import { translate } from "@/localization/translate";
 import { logger } from "@/modules/logger";
 import { getIntervalForMode, type BroadcastMode } from "../store/sharingStore";
+import { batteryMode } from "../utils/circle";
 
 export const BROADCAST_TASK_NAME = "nomadsafe-location-broadcast";
 
@@ -156,7 +157,8 @@ function locationOptions(mode: BroadcastMode): BackgroundUpdateOptions {
 
 /**
  * Applies the share's time limits: stops it once expired or once it has reached nobody for a while,
- * and steps emergency mode down to normal. Returns false when sharing has stopped.
+ * steps emergency mode down to normal, and switches between normal and low with the battery.
+ * Returns false when sharing has stopped.
  */
 export async function enforceBroadcastLimits(): Promise<boolean> {
   const state = readBroadcastState();
@@ -167,14 +169,21 @@ export async function enforceBroadcastLimits(): Promise<boolean> {
     return false;
   }
   if (state.mode === "emergency" && state.emergencyUntil && now >= state.emergencyUntil) {
-    writeBroadcastState({ mode: "normal", emergencyUntil: null });
-    try {
-      await startLocationUpdates(BROADCAST_TASK_NAME, locationOptions("normal"));
-    } catch {
-      // Publishing still drops to the normal interval; the next foreground start applies the options.
-    }
+    await switchMode("normal", { emergencyUntil: null });
+    return true;
   }
+  const next = batteryMode(state.mode, await readBattery());
+  if (next !== state.mode) await switchMode(next);
   return true;
+}
+
+async function switchMode(mode: BroadcastMode, patch: Partial<BroadcastState> = {}) {
+  writeBroadcastState({ ...patch, mode });
+  try {
+    await startLocationUpdates(BROADCAST_TASK_NAME, locationOptions(mode));
+  } catch {
+    // Publishing still uses the new interval; the next foreground start applies the options.
+  }
 }
 
 defineLocationTask(BROADCAST_TASK_NAME, async (positions) => {
@@ -215,6 +224,7 @@ export async function startLocationBroadcast(
     await stopLocationUpdates(BROADCAST_TASK_NAME);
   }
 
+  mode = batteryMode(mode, await readBattery());
   writeBroadcastState({
     isBroadcasting: true,
     mode,

@@ -18,9 +18,7 @@ import { LEGAL_URLS, openLegalPage } from "@/constants/legal";
 import { aiRuntime, useProvisioningStore } from "@/modules/ai";
 import { useAuthStore, useBiometricPresentation } from "@/features/auth";
 import { useSettingsStore } from "@/features/settings";
-import type { TrustedContactsSummary } from "@/features/settings/components/TrustedContactsEditor";
-import { isValidPhone } from "@/features/safety/utils/phone";
-import { emergencyContactsStorage } from "@/features/onboarding/services/emergencyContactsStorage";
+import { useCircle } from "@/features/location-sharing/hooks/useCircle";
 import { ONBOARDING_LOCK_STEP, ONBOARDING_STEPS, type OnboardingStepId } from "@/features/onboarding/steps";
 import { SafetyStep } from "@/features/onboarding/components/SafetyStep";
 import { OnDeviceStep } from "@/features/onboarding/components/OnDeviceStep";
@@ -38,11 +36,6 @@ function clampStep(value: number) {
   return Math.max(0, value);
 }
 
-function readContactsSummary(): TrustedContactsSummary {
-  const contacts = emergencyContactsStorage.get();
-  return { count: contacts.length, withPhone: contacts.filter((contact) => isValidPhone(contact.phone)).length };
-}
-
 export default function OnboardingWelcomeScreen() {
   const router = useRouter();
   const { t, isRTL } = useLocalization();
@@ -58,7 +51,7 @@ export default function OnboardingWelcomeScreen() {
 
   const [step, setStep] = useState(() => clampStep(persistedStep));
   const [direction, setDirection] = useState<1 | -1>(1);
-  const [contacts, setContacts] = useState<TrustedContactsSummary>(readContactsSummary);
+  const circle = useCircle();
   const scrollRef = useRef<ScrollView>(null);
   // Segments count steps from 1, so the current step's segment is already filled.
   const progress = useSharedValue(step + 1);
@@ -114,13 +107,13 @@ export default function OnboardingWelcomeScreen() {
   };
 
   const confirmSafetyContinue = () => {
-    if (contacts.withPhone > 0) {
+    if (!circle.loaded || circle.people.length > 0) {
       advance();
       return;
     }
     showAlert(
-      t("onboarding.noContactsTitle"),
-      contacts.count === 0 ? t("onboarding.noContactsWarning") : t("emergencyContacts.noneWithPhone"),
+      t("onboarding.noCircleTitle"),
+      t("onboarding.noCircleWarning"),
       [
         { text: t("onboarding.addContactAction"), style: "cancel" },
         { text: t("onboarding.skipForNow"), onPress: advance },
@@ -145,7 +138,7 @@ export default function OnboardingWelcomeScreen() {
   const ctaLabel = (() => {
     switch (stepId) {
       case "safety":
-        return contacts.count > 0 ? t("onboarding.enableSafetyNet", { count: contacts.count }) : t("onboarding.skipForNow");
+        return circle.people.length > 0 ? t("common.continue") : t("onboarding.skipForNow");
       case "onDevice":
         return BACKGROUND_PHASES.has(aiPhase) ? t("onboarding.continueInBackground") : t("common.continue");
       case "lock":
@@ -173,7 +166,7 @@ export default function OnboardingWelcomeScreen() {
       >
         <Animated.View key={step} entering={entering}>
           {stepId === "safety" ? (
-            <SafetyStep onContactsChange={setContacts} />
+            <SafetyStep />
           ) : stepId === "onDevice" ? (
             <OnDeviceStep />
           ) : (

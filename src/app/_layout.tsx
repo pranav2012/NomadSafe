@@ -314,7 +314,7 @@ function AppStack() {
           <Stack.Screen name="plan-trip" options={{ presentation: "fullScreenModal", animation: "fade" }} />
           <Stack.Screen name="join/[code]" options={{ presentation: "modal" }} />
           <Stack.Screen name="paywall" options={{ presentation: "modal" }} />
-          <Stack.Screen name="emergency-contacts" />
+          <Stack.Screen name="circle" />
           <Stack.Screen name="trip-recap/[id]" options={{ presentation: "fullScreenModal", animation: "fade" }} />
           <Stack.Screen
             name="voice-expense"

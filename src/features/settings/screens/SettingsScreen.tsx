@@ -34,11 +34,10 @@ import { useTripsStore } from "@/features/trips/store/tripsStore";
 import { hasGmailGrant, hydrateGmailConnection, useGmailConnectionStore } from "@/features/expenses/store/gmailConnectionStore";
 import { ensureGmailAccountEmail } from "@/features/expenses/services/gmailAuth";
 import { useSettingsStore } from "@/features/settings";
-import { emergencyContactsStorage } from "@/features/onboarding/services/emergencyContactsStorage";
+import { useCircle } from "@/features/location-sharing/hooks/useCircle";
 import { exportEverything } from "@/features/settings/services/exportService";
 import { wipeAllDeviceData } from "@/features/settings/services/wipeService";
 import { SettingsProfileHeader } from "@/features/settings/components/SettingsProfileHeader";
-import { SmsTemplatesSheet } from "@/features/settings/components/SmsTemplatesSheet";
 import { useSheetTopInset } from "@/hooks/useSheetTopInset";
 import { CountryPickerSheet, useHomeCountry } from "@/features/passport";
 import { countryDisplayName } from "@/features/trips/data/destinations";
@@ -50,7 +49,7 @@ const [INDIGO, TEAL, VIOLET] = auraStatusColors.calm;
 const AMBER = auraStatusAccent.live;
 
 type ThemeMode = "light" | "dark" | "system";
-type SheetId = "autoLock" | "checkIn" | "appearance" | "language" | "currency" | "units" | "timeFormat" | "homeCountry" | "sms" | "aiKey" | "aiUsage";
+type SheetId = "autoLock" | "checkIn" | "appearance" | "language" | "currency" | "units" | "timeFormat" | "homeCountry" | "aiKey" | "aiUsage";
 type Translate = ReturnType<typeof useLocalization>["t"];
 
 function formatShortDuration(seconds: number, t: Translate): string {
@@ -131,7 +130,7 @@ export default function SettingsScreen() {
   const gmailConnected = hasGmailGrant(gmailTokens);
   const gmailEmail = gmailTokens?.email;
 
-  const [contacts, setContacts] = useState(() => emergencyContactsStorage.get());
+  const circle = useCircle();
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [wiping, setWiping] = useState(false);
@@ -162,7 +161,6 @@ export default function SettingsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      setContacts(emergencyContactsStorage.get());
       void hydrateGmailConnection().then(ensureGmailAccountEmail);
     }, []),
   );
@@ -179,10 +177,11 @@ export default function SettingsScreen() {
     .filter(Boolean)
     .join(" · ");
 
-  const contactSub =
-    contacts.length > 0
-      ? t("settings.emergencyContactsSub", { count: contacts.length, names: contacts.map((contact) => contact.name).join(", ") })
-      : t("settings.emergencyContactsEmpty");
+  const circleNames = circle.people.filter((person) => person.status === "accepted").map((person) => person.name);
+  const circleSub =
+    circleNames.length > 0
+      ? t("settings.circleSub", { count: circleNames.length, names: circleNames.join(", ") })
+      : t("settings.circleEmpty");
 
   const themeOptions: { value: ThemeMode; label: string }[] = [
     { value: "light", label: t("settings.themeLight") },
@@ -567,7 +566,7 @@ export default function SettingsScreen() {
 
         <AuraListGroup title={t("settings.safetySection")}>
           <PrivateView>
-            <AuraListRow icon="users" tone={DANGER} label={t("settings.emergencyContacts")} detail={contactSub} onPress={() => router.push("/emergency-contacts")} />
+            <AuraListRow icon="users" tone={DANGER} label={t("circle.title")} detail={circleSub} onPress={() => router.push("/circle")} />
           </PrivateView>
           <AuraListRow
             icon="clock"
@@ -576,13 +575,6 @@ export default function SettingsScreen() {
             detail={t("settings.defaultCheckInSub")}
             value={formatShortDuration(defaultCheckInDuration, t)}
             onPress={() => setSheet("checkIn")}
-          />
-          <AuraListRow
-            icon="messageCircle"
-            tone={AMBER}
-            label={t("settings.smsFallback")}
-            detail={t("settings.smsFallbackSub")}
-            onPress={() => setSheet("sms")}
           />
         </AuraListGroup>
 
@@ -820,7 +812,6 @@ export default function SettingsScreen() {
         selected={timeFormat}
         onSelect={setTimeFormat}
       />
-      <SmsTemplatesSheet visible={sheet === "sms"} onClose={closeSheet} />
       <AiKeySheet key={`ai-key-${keySheetSession}`} visible={sheet === "aiKey"} onClose={closeSheet} />
       <AiUsageSheet visible={sheet === "aiUsage"} onClose={closeSheet} />
     </View>

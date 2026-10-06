@@ -6,7 +6,6 @@ import {
   getNotificationPermissionDetails,
   requestNotificationPermission,
 } from "../services/checkInNotifications";
-import { getContactPhones } from "../services/sosService";
 import {
   getBackgroundPermission,
   getForegroundPermission,
@@ -22,7 +21,6 @@ export interface SafetyReadiness {
   foreground: PermissionReadiness;
   background: PermissionReadiness;
   notifications: PermissionReadiness;
-  contactsWithPhone: number;
   batteryOptimized: boolean | null;
 }
 
@@ -52,21 +50,19 @@ async function readReadiness(): Promise<SafetyReadiness> {
     foreground: toReadiness(!!foreground?.granted, foreground?.canAskAgain ?? true),
     background: toReadiness(!!background?.granted, background?.canAskAgain ?? true),
     notifications: toReadiness(notifications.granted, notifications.canAskAgain),
-    contactsWithPhone: getContactPhones().length,
     batteryOptimized,
   };
 }
 
-/** Ready/total over the fixable checklist rows (battery counts on Android only). */
-export function summarizeReadiness(r: SafetyReadiness) {
-  const checks = [
-    r.foreground === "granted",
-    r.background === "granted",
-    r.notifications === "granted",
-    r.contactsWithPhone > 0,
-  ];
-  if (r.batteryOptimized !== null) checks.push(!r.batteryOptimized);
-  return { ready: checks.filter(Boolean).length, total: checks.length };
+/** How many settings still need fixing (battery counts on Android only); 0 until loaded. */
+export function countReadinessIssues(r: SafetyReadiness) {
+  if (!r.loaded) return 0;
+  return [
+    r.foreground !== "granted",
+    r.background !== "granted",
+    r.notifications !== "granted",
+    r.batteryOptimized === true,
+  ].filter(Boolean).length;
 }
 
 /**
@@ -79,7 +75,6 @@ export function useSafetyReadiness(notificationChannelName: string) {
     foreground: "askable",
     background: "askable",
     notifications: "askable",
-    contactsWithPhone: getContactPhones().length,
     batteryOptimized: null,
   }));
   const mountedRef = useRef(true);

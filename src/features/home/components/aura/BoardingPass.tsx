@@ -313,26 +313,25 @@ export function BoardingPass({ data, palette: c, accent, gradient, isDark, emerg
               <Text style={[styles.rowMeta, { color: c.textMuted }]}>{t("home.yourStay")}</Text>
             </View>
           ) : null}
-          <View style={styles.contactsRow}>
-            {emergency.contacts.slice(0, 3).map((contact) => (
-              <PressableScale
-                key={contact.id}
-                disabled={!contact.phone}
-                onPress={() => {
-                  if (contact.phone) void Linking.openURL(`tel:${contact.phone}`);
-                }}
-                style={[styles.contactChip, { backgroundColor: c.surfaceStrong, opacity: contact.phone ? 1 : 0.5 }]}
-              >
-                <Icon name="phone" size={12} color={c.text} />
-                <Text numberOfLines={1} style={[styles.contactName, { color: c.text }]}>
-                  {contact.name.split(" ")[0]}
-                </Text>
-              </PressableScale>
-            ))}
-            {emergency.contacts.length === 0 ? (
-              <Text style={[styles.rowMeta, { color: c.textMuted }]}>{t("home.addTrustedContacts")}</Text>
-            ) : null}
-          </View>
+          {emergency.contacts.length > 0 ? (
+            <View style={styles.contactsRow}>
+              {emergency.contacts.slice(0, 3).map((contact) => (
+                <PressableScale
+                  key={contact.id}
+                  disabled={!contact.phone}
+                  onPress={() => {
+                    if (contact.phone) void Linking.openURL(`tel:${contact.phone}`);
+                  }}
+                  style={[styles.contactChip, { backgroundColor: c.surfaceStrong, opacity: contact.phone ? 1 : 0.5 }]}
+                >
+                  <Icon name="phone" size={12} color={c.text} />
+                  <Text numberOfLines={1} style={[styles.contactName, { color: c.text }]}>
+                    {contact.name.split(" ")[0]}
+                  </Text>
+                </PressableScale>
+              ))}
+            </View>
+          ) : null}
         </Animated.View>
       </Animated.View>
     </GestureDetector>

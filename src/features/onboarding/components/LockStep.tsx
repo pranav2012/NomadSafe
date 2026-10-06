@@ -7,9 +7,8 @@ import { localAuth, useAuthStore, type BiometricPresentation } from "@/features/
 import { BiometricGlyph } from "@/features/auth/components/BiometricGlyph";
 import { provisionPercent } from "@/features/ai";
 import { findModel, useAiProvisioning } from "@/modules/ai";
-import { emergencyContactsStorage } from "@/features/onboarding/services/emergencyContactsStorage";
+import { useCircle } from "@/features/location-sharing/hooks/useCircle";
 import { permissionsService } from "@/features/onboarding/services/permissions";
-import { isValidPhone } from "@/features/safety/utils/phone";
 import { useLocalization } from "@/localization";
 import { successNotification } from "@/utils/haptics";
 import { logger } from "@/modules/logger";
@@ -119,7 +118,7 @@ function SetupRecap({ biometric }: { biometric: BiometricPresentation }) {
   const provisioning = useAiProvisioning();
   const [locationGranted, setLocationGranted] = useState(false);
   const [notificationsGranted, setNotificationsGranted] = useState(false);
-  const [contacts] = useState(() => emergencyContactsStorage.get());
+  const circle = useCircle();
 
   useEffect(() => {
     let mounted = true;
@@ -140,7 +139,7 @@ function SetupRecap({ biometric }: { biometric: BiometricPresentation }) {
   }, []);
 
   const notSet = t("onboarding.notSetYet");
-  const withPhone = contacts.filter((contact) => isValidPhone(contact.phone)).length;
+  const added = circle.people.filter((person) => person.status !== "declined" && person.status !== "none").length;
   const readyModel = findModel(provisioning.activeModelId);
 
   const aiValue = (() => {
@@ -170,14 +169,14 @@ function SetupRecap({ biometric }: { biometric: BiometricPresentation }) {
     { icon: "mapPin", label: t("onboarding.location"), value: locationGranted ? t("onboarding.locationValue") : notSet, done: locationGranted },
     {
       icon: "users",
-      label: t("onboarding.trustedThreeLabel"),
+      label: t("circle.title"),
       value:
-        contacts.length === 0
+        added === 0
           ? notSet
-          : withPhone === 0
-            ? t("onboarding.contactsNoPhoneValue", { count: contacts.length })
-            : t("onboarding.people", { count: contacts.length }),
-      done: withPhone > 0,
+          : circle.alertCount === 0
+            ? t("onboarding.circleWaitingValue", { count: added })
+            : t("onboarding.people", { count: circle.alertCount }),
+      done: added > 0,
     },
     { icon: "bell", label: t("onboarding.checkInReminders"), value: notificationsGranted ? t("onboarding.notificationsValue") : notSet, done: notificationsGranted },
     {

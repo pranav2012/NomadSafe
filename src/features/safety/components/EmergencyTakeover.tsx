@@ -22,11 +22,11 @@ interface EmergencyTakeoverProps {
   location: { latitude: number; longitude: number } | null;
   sharingLive: boolean;
   fixAge: string | null;
-  sosBusy: boolean;
+  alertBusy: boolean;
   /** Label for the button that (re)starts live sharing; null hides it. */
   sharingActionLabel: string | null;
   onCall: () => void;
-  onResend: () => void;
+  onAlertAgain: () => void;
   onSharingAction: () => void;
   onCancel: () => void;
 }
@@ -39,10 +39,10 @@ export function EmergencyTakeover({
   location,
   sharingLive,
   fixAge,
-  sosBusy,
+  alertBusy,
   sharingActionLabel,
   onCall,
-  onResend,
+  onAlertAgain,
   onSharingAction,
   onCancel,
 }: EmergencyTakeoverProps) {
@@ -80,7 +80,7 @@ export function EmergencyTakeover({
           <AuraCard tone={ALERT} style={styles.offline}>
             <View style={styles.offlineRow} accessibilityRole="alert">
               <Icon name="wifi" size={16} color={ALERT} />
-              <Text style={[styles.offlineText, { color: c.text, fontFamily: f.medium }]}>{t("sos.offlineNotice")}</Text>
+              <Text style={[styles.offlineText, { color: c.text, fontFamily: f.medium }]}>{t("sos.offlineCircle")}</Text>
             </View>
           </AuraCard>
         ) : null}
@@ -127,7 +127,7 @@ export function EmergencyTakeover({
 
         <View style={styles.actions}>
           <AuraButton label={t("sos.callEmergency", { number: emergencyNumber })} icon="phone" variant="danger" onPress={onCall} />
-          <AuraButton label={t("sos.resendSms")} icon="messageCircle" variant="secondary" loading={sosBusy} onPress={onResend} />
+          <AuraButton label={t("sos.alertAgain")} icon="bell" variant="secondary" loading={alertBusy} onPress={onAlertAgain} />
           {sharingActionLabel ? <AuraButton label={sharingActionLabel} icon="mapPin" variant="secondary" onPress={onSharingAction} /> : null}
           <AuraButton label={t("sos.cancelSos")} variant="ghost" onPress={onCancel} />
           <Text style={[styles.hint, { color: c.textMuted, fontFamily: f.regular }]}>{t("sos.cancelHint")}</Text>

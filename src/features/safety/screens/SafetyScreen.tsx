@@ -1,42 +1,35 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AppState, Linking, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { AppState, Linking, Platform, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
+import { BlurTargetView } from "expo-blur";
 import { useNetworkState } from "expo-network";
 import { useFocusEffect, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { api, useQuery } from "@/modules/backend";
 import { getCurrentPosition, getLastKnownPosition, requestForegroundPermission } from "@/modules/location";
-import { AuraButton, AuraCard, AuraChip, AuraSection, Icon, showAlert, useAura, useTabBarInset, AuraTopFade } from "@/atoms";
+import { GlassSurface, LiveDot, showAlert, useAura, useTabBarInset } from "@/atoms";
 import { auraStatusAccent, type AuraStatus } from "@/constants/aura";
-import { ActionButton } from "@/features/home/components/aura/ActionButton";
 import { useLocalization } from "@/localization";
-import { emergencyContactsStorage } from "@/features/onboarding/services/emergencyContactsStorage";
 import { useSettingsStore } from "@/features/settings";
-import { isLocationBroadcastRunning } from "@/features/location-sharing";
+import { isLocationBroadcastRunning, readBroadcastState, useSharingStore } from "@/features/location-sharing";
 import {
   BackgroundLocationDisclosure,
   hasAcceptedBackgroundDisclosure,
 } from "@/features/location-sharing/components/BackgroundLocationDisclosure";
-import { LiveSharingCard } from "@/features/location-sharing/components/LiveSharingCard";
-import { SharingPeople, type IncomingShare } from "@/features/location-sharing/components/SharingPeople";
+import { ShareLocationSheet } from "@/features/location-sharing/components/ShareLocationSheet";
 import { useBroadcastToggle } from "@/features/location-sharing/hooks/useBroadcastToggle";
-import { smsFallbackStorage } from "@/features/safety/services/smsFallbackStorage";
+import { useCircle } from "@/features/location-sharing/hooks/useCircle";
 import {
   fetchEmergencyNumbers,
   readLastEmergencyNumbers,
   type EmergencyNumbers,
 } from "@/features/safety/services/emergencyNumberService";
 import {
-  buildMapsUrl,
   canAutoStartEmergencyBroadcast,
-  composeSms,
   getBestPosition,
-  getContactPhones,
   restoreBroadcast,
   snapshotBroadcast,
   startEmergencyBroadcast,
-  type AlertPosition,
   type BroadcastSnapshot,
 } from "@/features/safety/services/sosService";
 import { readLastKnownFix, saveLastKnownFix } from "@/features/safety/services/lastKnownLocation";
@@ -52,19 +45,14 @@ import {
   cancelCheckInNotifications,
   scheduleCheckInNotifications,
 } from "@/features/safety/services/checkInNotifications";
-import { useSafetyReadiness } from "@/features/safety/hooks/useSafetyReadiness";
-import { SafetyReadinessChecklist } from "@/features/safety/components/SafetyReadinessChecklist";
-import { CheckInCard } from "@/features/safety/components/CheckInCard";
+import { countReadinessIssues, useSafetyReadiness } from "@/features/safety/hooks/useSafetyReadiness";
 import { EmergencyTakeover, SosCountdownOverlay } from "@/features/safety/components/EmergencyTakeover";
-import { LocationActionsSheet } from "@/features/safety/components/LocationActionsSheet";
-import { SafetyMapHero } from "@/features/safety/components/SafetyMapHero";
+import { ReadinessSheet } from "@/features/safety/components/ReadinessSheet";
+import { SafeArrivalSheet } from "@/features/safety/components/SafeArrivalSheet";
+import { SafetyMap } from "@/features/safety/components/SafetyMap";
+import { CircleRow, FixBanner, SafetyTile, SharingLiveCard, TimerLiveCard } from "@/features/safety/components/SafetyPanel";
 import { SosHoldButton } from "@/features/safety/components/SosHoldButton";
-import {
-  isCheckInMissed,
-  useSafetyStore,
-  type SafetyTrustedContact,
-  type SmsDelivery,
-} from "../store/safetyStore";
+import { isCheckInMissed, useSafetyStore, type ContactAlert } from "../store/safetyStore";
 import { errorNotification, heavyImpact, lightImpact, successNotification } from "@/utils/haptics";
 import { track } from "@/modules/analytics";
 import { logger } from "@/modules/logger";
@@ -73,14 +61,12 @@ const PRESETS = [15 * 60, 30 * 60, 60 * 60, 2 * 60 * 60, 4 * 60 * 60, 8 * 60 * 6
 
 const SOS_HOLD_SECONDS = 2;
 const SOS_CANCEL_WINDOW_SECONDS = 5;
-const STALE_AFTER_MS = 15 * 60_000;
-const DEFAULT_TEMPLATE_KEYS = {
-  sos: "safety.smsTemplateSos",
-  missedCheckIn: "safety.smsTemplateMissedCheckIn",
-} as const;
+const WARN = "#FFB547";
+const READY = "#3DDC97";
 
-type AlertPurpose = keyof typeof DEFAULT_TEMPLATE_KEYS;
 type Translate = (key: string, params?: Record<string, string | number>) => string;
+type Coords = { latitude: number; longitude: number; accuracy: number | null; timestamp: number | null };
+type Sheet = "share" | "timer" | "readiness";
 
 function formatDurationLabel(seconds: number, t: Translate) {
   const hours = seconds / 3600;
@@ -100,16 +86,18 @@ function formatAge(ms: number, t: Translate) {
   return t("sos.ageDays", { count: Math.floor(hours / 24) });
 }
 
-function formatCoords({ latitude, longitude }: { latitude: number; longitude: number }) {
-  return `${Math.abs(latitude).toFixed(3)}°${latitude >= 0 ? "N" : "S"} · ${Math.abs(longitude).toFixed(3)}°${longitude >= 0 ? "E" : "W"}`;
+/** "Mia", "Mia and Leo", "Mia, Leo +2". */
+function joinNames(names: string[], t: Translate) {
+  if (names.length <= 1) return names[0] ?? "";
+  if (names.length === 2) return t("safety.twoNames", { a: names[0], b: names[1] });
+  return t("safety.manyNames", { a: names[0], b: names[1], count: names.length - 2 });
 }
 
-type Coords = { latitude: number; longitude: number; accuracy: number | null; timestamp: number | null };
-
 /**
- * Safety and live sharing in one tab: a map of you and the people sharing with you, the SOS /
- * check-in / share / call actions, then live location, people, check-in and readiness. While an
- * SOS is active the whole tab becomes the emergency takeover.
+ * Safety tab: a full-screen map of you and the people sharing with you, the floating SOS button,
+ * and a glass panel with what's running, Share location / Safe-arrival timer / Call, your circle,
+ * and a banner when a phone setting needs fixing. While an SOS is active the whole tab becomes
+ * the emergency takeover. Alerts reach the circle as push notifications from the server.
  */
 export default function SafetyScreen() {
   const { c, f, isDark } = useAura();
@@ -117,7 +105,8 @@ export default function SafetyScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const tabBarInset = useTabBarInset();
-  const { width } = useWindowDimensions();
+  const { height: windowHeight } = useWindowDimensions();
+  const blurTarget = useRef<View>(null);
 
   const status = useSafetyStore((s) => s.status);
   const checkInEndsAt = useSafetyStore((s) => s.checkInEndsAt);
@@ -125,25 +114,18 @@ export default function SafetyScreen() {
   const stopTimer = useSafetyStore((s) => s.stopTimer);
   const extendTimer = useSafetyStore((s) => s.extendTimer);
   const markCheckInMissed = useSafetyStore((s) => s.markCheckInMissed);
-  const recordMissedAlert = useSafetyStore((s) => s.recordMissedAlert);
-  const missedAlert = useSafetyStore((s) => s.missedAlert);
   const triggerSos = useSafetyStore((s) => s.triggerSos);
-  const recordSosDelivery = useSafetyStore((s) => s.recordSosDelivery);
   const recordSosBroadcast = useSafetyStore((s) => s.recordSosBroadcast);
-  const sosDelivery = useSafetyStore((s) => s.sosDelivery);
   const sosBroadcast = useSafetyStore((s) => s.sosBroadcast);
   const sosContactAlert = useSafetyStore((s) => s.sosContactAlert);
   const recordSosContactAlert = useSafetyStore((s) => s.recordSosContactAlert);
   const cancelSos = useSafetyStore((s) => s.cancelSos);
-  const addEvent = useSafetyStore((s) => s.addEvent);
-  const setStoreContacts = useSafetyStore((s) => s.setTrustedContacts);
 
   const defaultCheckInDuration = useSettingsStore((s) => s.defaultCheckInDuration);
   const share = useBroadcastToggle();
-  const incomingShares = useQuery(api.sharing.getIncomingShares) as IncomingShare[] | undefined;
-  const contactLinks = useQuery(api.sharing.getContactLinks);
-  // NomadSafe contacts who get an instant push on SOS or a missed check-in; undefined while loading.
-  const linkedCount = contactLinks?.outgoing.filter((link) => link.status === "accepted").length;
+  const setBroadcasting = useSharingStore((s) => s.setBroadcasting);
+  const circle = useCircle();
+  const alertCount = circle.alertCount;
 
   const [now, setNow] = useState(() => Date.now());
   const [location, setLocation] = useState<Coords | null>(() => readLastKnownFix());
@@ -151,16 +133,14 @@ export default function SafetyScreen() {
   const [emergency, setEmergency] = useState<EmergencyNumbers | null>(() => readLastEmergencyNumbers());
   const [scheduleFailed, setScheduleFailed] = useState(false);
   const [sosCountdown, setSosCountdown] = useState<number | null>(null);
-  const [sosBusy, setSosBusy] = useState(false);
+  const [alertBusy, setAlertBusy] = useState(false);
   const [broadcastBusy, setBroadcastBusy] = useState(false);
   const [broadcastRunning, setBroadcastRunning] = useState(false);
-  const [missedBusy, setMissedBusy] = useState(false);
   const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
   const [disclosureFor, setDisclosureFor] = useState<"readiness" | "sos" | null>(null);
-  const [safeFollowUp, setSafeFollowUp] = useState(false);
-  const [safeBusy, setSafeBusy] = useState(false);
-  const [mapTouched, setMapTouched] = useState(false);
-  const [coordsOpen, setCoordsOpen] = useState(false);
+  const [sheet, setSheet] = useState<Sheet | null>(null);
+  const [panelHeight, setPanelHeight] = useState(0);
+  const [broadcastInfo, setBroadcastInfo] = useState(() => readBroadcastState());
 
   const network = useNetworkState();
   const isOffline = network.isConnected === false || network.isInternetReachable === false;
@@ -173,30 +153,39 @@ export default function SafetyScreen() {
     fixNotifications,
     openBatterySettings,
   } = useSafetyReadiness(t("safety.notifChannelName"));
-  const phoneCount = readiness.contactsWithPhone;
+  const issueCount = countReadinessIssues(readiness);
 
   const holdTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sosInFlightRef = useRef(false);
   const fromWidgetRef = useRef(false);
 
-  // Re-sync contacts whenever the tab gains focus (they're edited on another screen).
+  // The OS task may have been stopped while the app was away (expiry, permission revoked).
   useFocusEffect(
     useCallback(() => {
-      const contacts = emergencyContactsStorage.get();
-      const mapped: SafetyTrustedContact[] = contacts.map((contact) => ({
-        id: contact.id,
-        name: contact.name,
-        relation: contact.phone ? undefined : "Trusted",
-      }));
-      if (JSON.stringify(mapped) !== JSON.stringify(useSafetyStore.getState().trustedContacts)) {
-        setStoreContacts(mapped);
-      }
-    }, [setStoreContacts]),
+      let active = true;
+      isLocationBroadcastRunning().then((running) => {
+        if (active && running !== useSharingStore.getState().isBroadcasting) setBroadcasting(running);
+      });
+      setBroadcastInfo(readBroadcastState());
+      return () => {
+        active = false;
+      };
+    }, [setBroadcasting]),
   );
 
-  // Coarse clock while a check-in or SOS runs, plus an exact tick when the timer runs out; the
-  // per-second countdown lives in CheckInCard so the whole screen (and its map) doesn't re-render.
+  useEffect(() => {
+    const refresh = setTimeout(() => setBroadcastInfo(readBroadcastState()), 0);
+    if (!share.isBroadcasting) return () => clearTimeout(refresh);
+    const id = setInterval(() => setBroadcastInfo(readBroadcastState()), 15_000);
+    return () => {
+      clearTimeout(refresh);
+      clearInterval(id);
+    };
+  }, [share.isBroadcasting]);
+
+  // Coarse clock while a timer or SOS runs, plus an exact tick when the timer runs out; the
+  // per-second countdown lives in TimerLiveCard so the screen (and its map) doesn't re-render.
   useEffect(() => {
     if (status === "idle") return;
     const tick = () => setNow(Date.now());
@@ -247,7 +236,7 @@ export default function SafetyScreen() {
     };
   }, [status, checkInEndsAt, notificationCopy, refreshReadiness]);
 
-  // Get a location fix for safety context and persist it for offline SOS.
+  // Get a location fix for the map and persist it for an offline SOS.
   useEffect(() => {
     let mounted = true;
     async function bootstrap() {
@@ -285,7 +274,6 @@ export default function SafetyScreen() {
     return () => { mounted = false; };
   }, [refreshReadiness]);
 
-  // Resolve local emergency numbers from the device's current location.
   const locationLat = location?.latitude;
   const locationLng = location?.longitude;
   useEffect(() => {
@@ -297,7 +285,7 @@ export default function SafetyScreen() {
     return () => { mounted = false; };
   }, [locationLat, locationLng]);
 
-  // "Broadcasting" is shown only while the OS location task is really running.
+  // "Sharing" is shown during an SOS only while the OS location task is really running.
   useEffect(() => {
     if (status !== "emergency") return;
     let mounted = true;
@@ -329,52 +317,31 @@ export default function SafetyScreen() {
     });
   }, [emergencyNumber, t]);
 
-  const showNoContactsAlert = useCallback(() => {
+  const openCircle = useCallback(() => {
+    setSheet(null);
+    router.push("/circle");
+  }, [router]);
+
+  const showEmptyCircleAlert = useCallback(() => {
     errorNotification();
-    showAlert(t("safety.noContactsTitle"), t("safety.noContactsBody"), [
+    showAlert(t("safety.emptyCircleTitle"), t("safety.emptyCircleBody", { number: emergencyNumber }), [
       { text: t("common.cancel"), style: "cancel" },
       { text: t("sos.callEmergency", { number: emergencyNumber }), onPress: callEmergency },
-      { text: t("safety.addContacts"), onPress: () => router.push("/emergency-contacts") },
+      { text: t("circle.addPerson"), onPress: openCircle },
     ]);
-  }, [callEmergency, emergencyNumber, router, t]);
+  }, [callEmergency, emergencyNumber, openCircle, t]);
 
-  const buildMessage = useCallback((purpose: AlertPurpose, position: AlertPosition | null) => {
-    const template = smsFallbackStorage.getCustom(purpose) ?? t(DEFAULT_TEMPLATE_KEYS[purpose]);
-    if (!position) return `${template}\n${t("sos.locationUnavailable")}`;
-    const url = buildMapsUrl(position);
-    const line = position.source !== "fresh" && position.timestamp
-      ? t("sos.locationLineStale", {
-          time: formatTime(position.timestamp),
-          age: formatAge(Date.now() - position.timestamp, t),
-          url,
-        })
-      : t("sos.locationLine", { url });
-    return `${template}\n${line}`;
-  }, [formatTime, t]);
+  // Records the push outcome, including one that lands after reconnecting while the SOS is still on.
+  const sendSosPush = useCallback(async () => {
+    recordSosContactAlert({ state: "sending" });
+    const recipients = await alertContactsSos((late) => {
+      if (useSafetyStore.getState().status === "emergency") recordSosContactAlert({ state: "sent", recipients: late });
+    });
+    const outcome: ContactAlert = recipients === null ? { state: "pending" } : { state: "sent", recipients };
+    if (useSafetyStore.getState().status === "emergency") recordSosContactAlert(outcome);
+  }, [recordSosContactAlert]);
 
-  // Fresh fix -> compose SMS. Never throws; the outcome reflects what really happened.
-  const sendAlertSms = useCallback(async (purpose: AlertPurpose): Promise<SmsDelivery> => {
-    const phones = getContactPhones();
-    try {
-      const position = await getBestPosition(location);
-      if (position) {
-        setLocation({
-          latitude: position.latitude,
-          longitude: position.longitude,
-          accuracy: position.accuracy,
-          timestamp: position.timestamp,
-        });
-        if (purpose === "sos") publishSosPosition(position);
-      }
-      const outcome = await composeSms(phones, buildMessage(purpose, position));
-      return { outcome, recipients: phones.length, hasLocation: !!position, at: Date.now() };
-    } catch (err) {
-      logger.error("sos", "alert SMS failed", err);
-      return { outcome: "failed", recipients: phones.length, hasLocation: false, at: Date.now() };
-    }
-  }, [buildMessage, location]);
-
-  // Starts emergency broadcasting; undoes it if the SOS was cancelled meanwhile.
+  // Starts emergency sharing; undoes it if the SOS was cancelled meanwhile.
   const runEmergencyBroadcast = useCallback(async (previous: BroadcastSnapshot | null) => {
     setBroadcastBusy(true);
     recordSosBroadcast("starting");
@@ -402,46 +369,31 @@ export default function SafetyScreen() {
     return () => sub.remove();
   }, [status, sosBroadcast, runEmergencyBroadcast]);
 
-  const performSos = useCallback(async () => {
+  const performSos = useCallback(() => {
     if (sosInFlightRef.current) return;
     sosInFlightRef.current = true;
-    setSosBusy(true);
     heavyImpact();
     const previous = snapshotBroadcast();
     triggerSos(previous);
-    const phones = getContactPhones();
-    track("sos_triggered", { contacts: phones.length, app_contacts: linkedCount ?? 0, from_widget: fromWidgetRef.current });
+    track("sos_triggered", { contacts: 0, app_contacts: alertCount, from_widget: fromWidgetRef.current });
     fromWidgetRef.current = false;
 
-    recordSosContactAlert({ state: "sending" });
-    void alertContactsSos().then((recipients) => {
-      recordSosContactAlert(recipients === null ? { state: "pending" } : { state: "sent", recipients });
+    void sendSosPush().finally(() => {
+      sosInFlightRef.current = false;
     });
-
-    // The SMS never waits on sharing. Sharing auto-starts only when it needs no
-    // prompt; otherwise the SOS screen offers the disclosure flow instead.
-    if (phones.length === 0) {
-      // No one to text: still grab a fix so app contacts see where the SOS came from.
-      void getBestPosition(location).then((position) => {
-        if (position) publishSosPosition(position);
-      });
-    }
-    const deliveryPromise = phones.length > 0 ? sendAlertSms("sos") : null;
+    // A fresh fix, so the circle sees where the SOS came from even if live sharing can't start.
+    void getBestPosition(location).then((position) => {
+      if (!position) return;
+      setLocation({ latitude: position.latitude, longitude: position.longitude, accuracy: position.accuracy, timestamp: position.timestamp });
+      publishSosPosition(position);
+    });
+    // Sharing auto-starts only when it needs no prompt; otherwise the SOS screen offers the disclosure flow.
     void canAutoStartEmergencyBroadcast().then((canStart) => {
       if (useSafetyStore.getState().status !== "emergency") return;
       if (canStart) void runEmergencyBroadcast(previous);
       else recordSosBroadcast("needsSetup");
     });
-
-    if (deliveryPromise) {
-      const delivery = await deliveryPromise;
-      recordSosDelivery(delivery);
-      track("sos_sms_result", { outcome: delivery.outcome, has_location: delivery.hasLocation });
-      if (delivery.outcome === "failed") errorNotification();
-    }
-    sosInFlightRef.current = false;
-    setSosBusy(false);
-  }, [linkedCount, location, recordSosBroadcast, recordSosContactAlert, recordSosDelivery, runEmergencyBroadcast, sendAlertSms, triggerSos]);
+  }, [alertCount, location, recordSosBroadcast, runEmergencyBroadcast, sendSosPush, triggerSos]);
 
   const clearHold = useCallback(() => {
     if (holdTimerRef.current) {
@@ -462,9 +414,9 @@ export default function SafetyScreen() {
 
   const beginSosCountdown = useCallback(() => {
     if (sosInFlightRef.current || countdownTimerRef.current) return;
-    // Links still loading (e.g. a cold start from the widget) count as reachable; the server decides.
-    if (getContactPhones().length === 0 && linkedCount === 0) {
-      showNoContactsAlert();
+    // While the circle is still loading (e.g. a cold start from the widget) it counts as reachable; the server decides.
+    if (circle.loaded && alertCount === 0) {
+      showEmptyCircleAlert();
       return;
     }
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
@@ -475,13 +427,13 @@ export default function SafetyScreen() {
       const remaining = Math.ceil((endsAt - Date.now()) / 1000);
       if (remaining <= 0) {
         clearCountdown();
-        void performSos();
+        performSos();
         return;
       }
       setSosCountdown(remaining);
       lightImpact();
     }, 1000);
-  }, [clearCountdown, linkedCount, performSos, showNoContactsAlert]);
+  }, [alertCount, circle.loaded, clearCountdown, performSos, showEmptyCircleAlert]);
 
   // A widget tap asks for SOS: start the same cancellable countdown as holding the button.
   useEffect(() => {
@@ -523,21 +475,15 @@ export default function SafetyScreen() {
 
   const handleSendNow = useCallback(() => {
     clearCountdown();
-    void performSos();
+    performSos();
   }, [clearCountdown, performSos]);
 
-  const handleResendSos = useCallback(async () => {
-    if (sosInFlightRef.current) return;
-    if (getContactPhones().length === 0) {
-      showNoContactsAlert();
-      return;
-    }
-    sosInFlightRef.current = true;
-    setSosBusy(true);
-    recordSosDelivery(await sendAlertSms("sos"));
-    sosInFlightRef.current = false;
-    setSosBusy(false);
-  }, [recordSosDelivery, sendAlertSms, showNoContactsAlert]);
+  const handleAlertAgain = useCallback(async () => {
+    if (alertBusy) return;
+    setAlertBusy(true);
+    await sendSosPush();
+    setAlertBusy(false);
+  }, [alertBusy, sendSosPush]);
 
   // Starts sharing directly when already consented, else shows the disclosure first.
   const handleEnableSosSharing = useCallback(async () => {
@@ -550,8 +496,12 @@ export default function SafetyScreen() {
   }, [broadcastBusy, runEmergencyBroadcast]);
 
   const handleFixBackground = useCallback(() => {
-    if (hasAcceptedBackgroundDisclosure()) void requestBackground();
-    else setDisclosureFor("readiness");
+    if (hasAcceptedBackgroundDisclosure()) {
+      void requestBackground();
+      return;
+    }
+    setSheet(null);
+    setDisclosureFor("readiness");
   }, [requestBackground]);
 
   // One disclosure serves the SOS, readiness and live-sharing flows; whichever asked gets the answer.
@@ -574,12 +524,15 @@ export default function SafetyScreen() {
     setDisclosureFor(null);
   }, [share]);
 
-  const handleStart = useCallback((duration: number) => {
+  const plannedDuration = selectedDuration ?? defaultCheckInDuration;
+
+  const handleStartTimer = useCallback(() => {
+    setSheet(null);
     setScheduleFailed(false);
-    startTimer(duration);
-    track("check_in_started", { duration_minutes: Math.round(duration / 60) });
+    startTimer(plannedDuration);
+    track("check_in_started", { duration_minutes: Math.round(plannedDuration / 60) });
     heavyImpact();
-  }, [startTimer]);
+  }, [plannedDuration, startTimer]);
 
   const handleExtend = useCallback(() => {
     extendTimer(60 * 60);
@@ -592,17 +545,15 @@ export default function SafetyScreen() {
     successNotification();
   }, [stopTimer]);
 
-  const handleSendMissedAlert = useCallback(async () => {
-    if (missedBusy) return;
-    if (getContactPhones().length === 0) {
-      showNoContactsAlert();
-      return;
-    }
-    setMissedBusy(true);
-    heavyImpact();
-    recordMissedAlert(await sendAlertSms("missedCheckIn"));
-    setMissedBusy(false);
-  }, [missedBusy, recordMissedAlert, sendAlertSms, showNoContactsAlert]);
+  const handleStartSharing = useCallback((recipients: number) => {
+    setSheet(null);
+    void share.start(recipients);
+  }, [share]);
+
+  const handleStopSharing = useCallback(() => {
+    setSheet(null);
+    void share.stop();
+  }, [share]);
 
   const handleCancelSos = useCallback(() => {
     showAlert(t("safety.cancelTitle"), t("safety.cancelBody"), [
@@ -613,42 +564,17 @@ export default function SafetyScreen() {
         onPress: async () => {
           if (!(await authorizeSosCancel(t("auth.nativeUnlockPrompt"), t("auth.nativeCancelLabel")))) return;
           if (useSafetyStore.getState().status !== "emergency") return;
-          const { previousBroadcast, sosDelivery: delivered } = useSafetyStore.getState();
-          const contactsAlerted = delivered?.outcome === "sent" || delivered?.outcome === "opened";
+          const { previousBroadcast } = useSafetyStore.getState();
           cancelSos();
+          // Tells everyone who got the SOS push that you're safe.
           resolveSosOnServer();
           track("sos_cancelled");
           successNotification();
-          setSafeFollowUp(contactsAlerted && getContactPhones().length > 0);
           void restoreBroadcast(previousBroadcast);
         },
       },
     ]);
   }, [cancelSos, t]);
-
-  const handleSendSafeMessage = useCallback(async () => {
-    if (safeBusy) return;
-    setSafeBusy(true);
-    const phones = getContactPhones();
-    const outcome = await composeSms(phones, t("safety.smsTemplateSafe"));
-    setSafeBusy(false);
-    if (outcome === "sent" || outcome === "opened") {
-      setSafeFollowUp(false);
-      addEvent({
-        messageKey: outcome === "sent" ? "safety.eventSafeMessageSent" : "safety.eventSafeMessageOpened",
-        messageParams: { count: phones.length },
-        icon: "check",
-        color: "teal",
-      });
-    } else if (outcome === "failed") {
-      errorNotification();
-    }
-  }, [addEvent, safeBusy, t]);
-
-  const smsStatusText = (delivery: SmsDelivery | null, keys: Record<SmsDelivery["outcome"], string>) =>
-    delivery
-      ? t(keys[delivery.outcome], { count: delivery.recipients, time: formatTime(delivery.at) })
-      : null;
 
   const disclosure = (
     <BackgroundLocationDisclosure
@@ -659,14 +585,6 @@ export default function SafetyScreen() {
   );
 
   if (status === "emergency") {
-    const sosStatus = sosBusy
-      ? t("sos.statusPreparing")
-      : smsStatusText(sosDelivery, {
-          sent: "sos.statusSent",
-          opened: "sos.statusOpened",
-          cancelled: "sos.statusCancelled",
-          failed: "sos.statusFailed",
-        });
     const sharingLive = sosBroadcast === "started" && broadcastRunning;
     const broadcastText = broadcastBusy || sosBroadcast === "starting"
       ? t("sos.broadcastStarting")
@@ -675,7 +593,7 @@ export default function SafetyScreen() {
         : sosBroadcast === "denied"
           ? t("sos.broadcastDenied")
           : sosBroadcast === "needsSetup"
-            ? t("sos.broadcastNeedsSetup")
+            ? t("sos.sharingNeedsSetup")
             : sosBroadcast === "failed" || sosBroadcast === "started"
               ? t("sos.broadcastOff")
               : null;
@@ -686,16 +604,14 @@ export default function SafetyScreen() {
     const contactAlertText = !sosContactAlert
       ? null
       : sosContactAlert.state === "sending"
-        ? t("sos.appAlertSending")
+        ? t("sos.circleAlertSending")
         : sosContactAlert.state === "pending"
-          ? t("sos.appAlertPending")
+          ? t("sos.circleAlertPending")
           : sosContactAlert.recipients > 0
-            ? t("sos.appAlertSent", { count: sosContactAlert.recipients })
-            : t("sos.appAlertNone");
+            ? t("sos.circleAlertSent", { count: sosContactAlert.recipients })
+            : t("sos.circleAlertNone");
     const statusLines = [
       contactAlertText ? { text: contactAlertText } : null,
-      sosStatus ? { text: sosStatus } : null,
-      sosDelivery && !sosDelivery.hasLocation && !sosBusy ? { text: t("sos.noLocationIncluded"), muted: true } : null,
       broadcastText ? { text: broadcastText, muted: true } : null,
       { text: t("sos.callHint", { number: emergencyNumber }), muted: true },
     ].filter((line): line is { text: string; muted?: boolean } => line !== null);
@@ -709,7 +625,7 @@ export default function SafetyScreen() {
           location={location}
           sharingLive={sharingLive}
           fixAge={location?.timestamp ? formatAge(now - location.timestamp, t) : null}
-          sosBusy={sosBusy}
+          alertBusy={alertBusy}
           sharingActionLabel={
             !broadcastDown
               ? null
@@ -720,7 +636,7 @@ export default function SafetyScreen() {
                   : t("sos.enableSharing")
           }
           onCall={callEmergency}
-          onResend={handleResendSos}
+          onAlertAgain={handleAlertAgain}
           onSharingAction={needsSystemSettings ? () => void Linking.openSettings() : handleEnableSosSharing}
           onCancel={handleCancelSos}
         />
@@ -729,215 +645,199 @@ export default function SafetyScreen() {
     );
   }
 
-  const missedStatus = smsStatusText(missedAlert, {
-    sent: "safety.missedAlertSent",
-    opened: "safety.missedAlertOpened",
-    cancelled: "safety.missedAlertCancelled",
-    failed: "safety.missedAlertFailed",
-  });
-
   const notificationsOff = readiness.loaded && readiness.notifications !== "granted";
-  const showNotificationWarning = status === "active" && (notificationsOff || scheduleFailed);
+  const circleEmpty = circle.loaded && alertCount === 0;
+  const setupNeeded = circleEmpty || issueCount > 0;
 
   const auraStatus: AuraStatus = isMissed ? "alert" : isActive || share.isBroadcasting ? "live" : "calm";
   const accent = auraStatusAccent[auraStatus];
   const statusLabel = isMissed
-    ? t("safety.checkInMissed")
+    ? t("safety.statusMissed")
     : isActive
       ? t("safety.timerRunning")
       : share.isBroadcasting
-        ? t("sharing.liveStatus", { count: share.activeRecipientCount })
-        : t("safety.allClear");
+        ? t("safety.statusSharing")
+        : setupNeeded
+          ? t("safety.statusSetup")
+          : t("safety.allClear");
+  const statusDot = auraStatus !== "calm" ? accent : setupNeeded ? WARN : READY;
 
-  const plannedDuration = selectedDuration ?? defaultCheckInDuration;
-  const appContacts = linkedCount ?? 0;
-
-  const sosCaption = [
-    appContacts > 0 ? t("safety.sosAppBody", { count: appContacts }) : null,
-    phoneCount > 0 ? t("safety.sosBody", { count: phoneCount }) : appContacts > 0 ? null : t("safety.sosBodyNoContacts"),
-  ].filter(Boolean).join(" ");
-  const countdownBody = [
-    appContacts > 0 ? t("sos.countdownApp", { count: appContacts }) : null,
-    phoneCount > 0 ? t("sos.countdownBody", { count: phoneCount }) : null,
-  ].filter(Boolean).join(" ");
+  const countdownBody = alertCount > 0 ? t("sos.countdownCircle", { count: alertCount }) : t("sos.countdownCircleUnknown");
 
   const contactsAlertAt = checkInEndsAt ? checkInEndsAt + CHECK_IN_ALERT_GRACE_MS : null;
-  const missedContactsNote =
-    appContacts > 0 && contactsAlertAt
+  const timerBody = isMissed
+    ? alertCount > 0 && contactsAlertAt
       ? now < contactsAlertAt
-        ? t("safety.missedContactsAt", { count: appContacts, time: formatTime(contactsAlertAt) })
-        : t("safety.missedContactsAlerted", { count: appContacts })
-      : null;
+        ? t("safety.missedCircleAt", { count: alertCount, time: formatTime(contactsAlertAt) })
+        : t("safety.missedCircleAlerted", { count: alertCount })
+      : t("safety.missedNoCircle")
+    : alertCount > 0
+      ? t("safety.timerAlertsCircle", { count: alertCount })
+      : t("safety.timerNoCircleShort");
+  const timerTitle = isMissed
+    ? t("safety.overdueBy")
+    : t("safety.checkInBy", { time: checkInEndsAt ? formatTime(checkInEndsAt) : "" });
+  const timerWarning = (isActive || isMissed) && (notificationsOff || scheduleFailed)
+    ? (scheduleFailed && !notificationsOff ? t("safety.notificationsScheduleFailed") : t("safety.notificationsOffShort"))
+    : null;
 
-  const contacts = (incomingShares ?? [])
-    .filter((s) => !(s.latitude === 0 && s.longitude === 0))
-    .map((s) => ({ name: s.ownerName, latitude: s.latitude, longitude: s.longitude, stale: now - s.updatedAt > STALE_AFTER_MS }));
+  const seesYou = circle.people.filter((p) => p.seesYou).map((p) => p.name);
+  const shareEndsLabel = broadcastInfo.expiresAt ? t("sharing.endsAt", { time: formatTime(broadcastInfo.expiresAt) }) : null;
+
+  const mapPeople = circle.sharingWithYou.flatMap((p) =>
+    p.location ? [{ name: p.name, latitude: p.location.latitude, longitude: p.location.longitude, stale: p.location.stale }] : [],
+  );
+  const headerHeight = insets.top + 56;
+  const panelBottom = tabBarInset;
 
   return (
     <View style={[styles.root, { backgroundColor: c.bg }]}>
       <StatusBar style={isDark ? "light" : "dark"} />
-      <ScrollView
-        scrollEnabled={!mapTouched}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingBottom: tabBarInset + 24 }}
-      >
-        <SafetyMapHero
-          height={insets.top + Math.round(width * 0.85)}
-          topInset={insets.top}
-          title={t("safety.title")}
-          statusLabel={statusLabel}
-          statusLive={auraStatus !== "calm"}
+      <BlurTargetView ref={blurTarget} style={StyleSheet.absoluteFill}>
+        <SafetyMap
+          topInset={headerHeight}
+          bottomInset={panelBottom + panelHeight + 40}
           palette={c}
           accent={accent}
           isDark={isDark}
           me={location ? { latitude: location.latitude, longitude: location.longitude } : null}
-          contacts={contacts}
-          onTouchActive={setMapTouched}
+          people={mapPeople}
         />
+      </BlurTargetView>
 
-        <View style={styles.chips}>
-          {location ? <AuraChip label={formatCoords(location)} icon="mapPin" onPress={() => setCoordsOpen(true)} /> : null}
-          {contacts.length > 0 ? <AuraChip label={t("home.sharingWithYou", { count: contacts.length })} icon="users" /> : null}
+      <View style={[styles.header, { top: insets.top + 8 }]} pointerEvents="box-none">
+        <Text accessibilityRole="header" style={[styles.title, { color: c.text, fontFamily: f.semibold }]}>
+          {t("safety.title")}
+        </Text>
+        <View style={[styles.pill, { backgroundColor: c.card, borderColor: c.hairline }]} accessibilityLiveRegion="polite">
+          <LiveDot color={statusDot} active={auraStatus !== "calm"} size={7} />
+          <Text style={[styles.pillText, { color: c.text, fontFamily: f.medium }]}>{statusLabel}</Text>
         </View>
+      </View>
 
-        <View style={styles.body}>
-          <View style={styles.actions}>
-            <SosHoldButton
-              progress={Math.min(1, sosHoldSeconds / SOS_HOLD_SECONDS)}
-              label={sosHoldSeconds > 0 ? t("safety.keepHolding") : t("safety.holdSos")}
-              palette={c}
-              onPressIn={handleSosPressIn}
-              onPressOut={clearHold}
-              accessibilityLabel={t("safety.sosA11yLabel")}
-              accessibilityHint={t("safety.sosA11yHint")}
-              onAccessibilityActivate={beginSosCountdown}
-            />
-            <ActionButton
-              icon="check"
-              label={isActive || isMissed ? t("safety.imSafeShort") : t("safety.factorCheckIn")}
-              palette={c}
+      <View style={[styles.sos, { bottom: panelBottom + panelHeight + 14 }]} pointerEvents="box-none">
+        <SosHoldButton
+          progress={Math.min(1, sosHoldSeconds / SOS_HOLD_SECONDS)}
+          label={sosHoldSeconds > 0 ? t("safety.keepHolding") : t("safety.holdForSos")}
+          palette={c}
+          onPressIn={handleSosPressIn}
+          onPressOut={clearHold}
+          accessibilityLabel={t("safety.sosA11yLabel")}
+          accessibilityHint={t("safety.sosHoldHint")}
+          onAccessibilityActivate={beginSosCountdown}
+        />
+      </View>
+
+      <View
+        style={[styles.panel, { bottom: panelBottom, maxHeight: windowHeight * 0.62 }]}
+        onLayout={(e) => setPanelHeight(Math.round(e.nativeEvent.layout.height))}
+      >
+        <GlassSurface isDark={isDark} radius={30} blurTarget={blurTarget} />
+        {Platform.OS === "android" ? <View style={[StyleSheet.absoluteFill, styles.panelTint, { backgroundColor: `${c.bg}8C` }]} /> : null}
+        <View style={[StyleSheet.absoluteFill, styles.panelBorder, { borderColor: c.hairline }]} pointerEvents="none" />
+        <ScrollView bounces={false} showsVerticalScrollIndicator={false} style={styles.panelScroll} contentContainerStyle={styles.panelBody}>
+          {(isActive || isMissed) && checkInEndsAt ? (
+            <TimerLiveCard
+              missed={isMissed}
+              endsAt={checkInEndsAt}
               accent={accent}
-              live={isActive}
-              onPress={isActive || isMissed ? handleCheckIn : () => handleStart(plannedDuration)}
+              title={timerTitle}
+              body={timerWarning ? `${timerBody} ${timerWarning}` : timerBody}
+              onSafe={handleCheckIn}
+              onExtend={handleExtend}
             />
-            <ActionButton
-              icon="users"
-              label={t("tabs.share")}
-              palette={c}
-              accent={accent}
+          ) : null}
+          {share.isBroadcasting ? (
+            <SharingLiveCard
+              accent={auraStatusAccent.live}
+              title={seesYou.length > 0 ? t("sharing.liveWith", { names: joinNames(seesYou, t) }) : t("sharing.liveNoOne")}
+              body={shareEndsLabel ?? t("sharing.noEnd")}
+              error={broadcastInfo.lastError ? t("sharing.publishFailed") : null}
+              busy={share.busy}
+              onManage={() => setSheet("share")}
+              onStop={handleStopSharing}
+            />
+          ) : null}
+
+          <View style={styles.tiles}>
+            <SafetyTile
+              icon="mapPin"
+              label={t("safety.tileShare")}
+              sub={share.isBroadcasting ? t("safety.tileLive") : t("safety.tileOff")}
               live={share.isBroadcasting}
-              onPress={() => void share.toggle()}
+              accent={auraStatusAccent.live}
+              onPress={() => setSheet("share")}
             />
-            <ActionButton
-              icon="phone"
-              label={t("safety.callShort", { number: emergencyNumber })}
-              palette={c}
+            <SafetyTile
+              icon="clock"
+              label={t("safety.tileTimer")}
+              sub={
+                isMissed
+                  ? t("safety.tileMissed")
+                  : isActive && checkInEndsAt
+                    ? t("safety.tileUntil", { time: formatTime(checkInEndsAt) })
+                    : t("safety.tileTimerSub")
+              }
+              live={isActive || isMissed}
               accent={accent}
+              onPress={() => setSheet("timer")}
+            />
+            <SafetyTile
+              icon="phone"
+              label={t("safety.tileCall", { number: emergencyNumber })}
+              sub={emergency?.countryName ?? t("safety.tileCallSub")}
+              accent={accent}
+              tone={auraStatusAccent.alert}
               onPress={callEmergency}
             />
           </View>
-          <Text style={[styles.caption, { color: c.textMuted, fontFamily: f.regular }]}>
-            {sosCaption}
-          </Text>
 
-          {safeFollowUp && status === "idle" ? (
-            <AuraCard tone="#3DDC97" style={styles.notice}>
-              <View style={styles.noticeHead}>
-                <Icon name="check" size={17} color="#3DDC97" strokeWidth={2.2} />
-                <Text style={[styles.noticeTitle, { color: c.text, fontFamily: f.semibold }]}>{t("safety.safeFollowUpTitle")}</Text>
-              </View>
-              <Text style={[styles.noticeBody, { color: c.textSoft, fontFamily: f.regular }]}>{t("safety.safeFollowUpBody")}</Text>
-              <View style={styles.noticeButtons}>
-                <AuraButton label={t("safety.safeFollowUpSend")} icon="messageCircle" size="md" loading={safeBusy} onPress={handleSendSafeMessage} />
-                <AuraButton label={t("safety.safeFollowUpDismiss")} variant="ghost" size="md" onPress={() => setSafeFollowUp(false)} />
-              </View>
-            </AuraCard>
-          ) : null}
+          <CircleRow people={circle.people} alertCount={circle.loaded ? alertCount : 1} onPress={openCircle} />
+          {issueCount > 0 ? <FixBanner count={issueCount} onPress={() => setSheet("readiness")} /> : null}
+        </ScrollView>
+      </View>
 
-          {showNotificationWarning ? (
-            <AuraCard tone="#FFB547" style={styles.notice}>
-              <View style={styles.noticeHead}>
-                <Icon name="bell" size={17} color="#FFB547" strokeWidth={2} />
-                <Text style={[styles.noticeTitle, { color: c.text, fontFamily: f.semibold }]}>
-                  {scheduleFailed && !notificationsOff ? t("safety.notificationsScheduleFailed") : t("safety.notificationsOffTitle")}
-                </Text>
-              </View>
-              {notificationsOff ? (
-                <>
-                  <Text style={[styles.noticeBody, { color: c.textSoft, fontFamily: f.regular }]}>{t("safety.notificationsOffBody")}</Text>
-                  <View style={styles.noticeButtons}>
-                    <AuraButton
-                      label={readiness.notifications === "blocked" ? t("safety.openSettings") : t("safety.actionTurnOn")}
-                      variant="secondary"
-                      size="md"
-                      onPress={() => void fixNotifications()}
-                    />
-                  </View>
-                </>
-              ) : null}
-            </AuraCard>
-          ) : null}
-
-          <AuraSection title={t("sharing.eyebrow")} />
-          <LiveSharingCard
-            isBroadcasting={share.isBroadcasting}
-            busy={share.busy}
-            mode={share.mode}
-            activeRecipientCount={share.activeRecipientCount}
-            shareDuration={share.shareDuration}
-            accent={accent}
-            onToggle={() => void share.toggle()}
-            onModeChange={(next) => void share.changeMode(next)}
-            onDurationChange={share.setShareDuration}
-          />
-
-          <SharingPeople
-            isBroadcasting={share.isBroadcasting}
-            location={location ? { latitude: location.latitude, longitude: location.longitude } : null}
-            accent={accent}
-          />
-
-          <AuraSection title={t("safety.factorCheckIn")} />
-          <CheckInCard
-            state={isMissed ? "missed" : isActive ? "active" : "idle"}
-            seconds={plannedDuration}
-            endsAt={checkInEndsAt}
-            presets={PRESETS.map((duration) => ({ duration, label: formatDurationLabel(duration, t) }))}
-            plannedDuration={plannedDuration}
-            plannedLabel={formatDurationLabel(plannedDuration, t)}
-            accent={accent}
-            missedBody={[t("safety.missedBody", { time: checkInEndsAt ? formatTime(checkInEndsAt) : "" }), missedContactsNote].filter(Boolean).join(" ")}
-            activeBody={appContacts > 0 ? t("safety.autoAlertContacts", { count: appContacts }) : t("safety.autoAlert")}
-            missedStatus={missedStatus}
-            missedBusy={missedBusy}
-            onSelectDuration={setSelectedDuration}
-            onStart={() => handleStart(plannedDuration)}
-            onCheckIn={handleCheckIn}
-            onExtend={handleExtend}
-            onSendMissedAlert={handleSendMissedAlert}
-          />
-          <SafetyReadinessChecklist
-            readiness={readiness}
-            emergency={emergency}
-            onFixForeground={() => void fixForeground()}
-            onFixBackground={handleFixBackground}
-            onFixNotifications={() => void fixNotifications()}
-            onFixContacts={() => router.push("/emergency-contacts")}
-            onFixBattery={openBatterySettings}
-            onCallEmergency={callEmergency}
-          />
-        </View>
-      </ScrollView>
-      <AuraTopFade />
-
+      <ShareLocationSheet
+        visible={sheet === "share"}
+        onClose={() => setSheet(null)}
+        people={circle.people}
+        isBroadcasting={share.isBroadcasting}
+        busy={share.busy}
+        accent={auraStatusAccent.live}
+        duration={share.shareDuration}
+        endsAtLabel={shareEndsLabel}
+        onDurationChange={share.setShareDuration}
+        onToggleSeesYou={circle.setSeesYou}
+        onStart={handleStartSharing}
+        onStop={handleStopSharing}
+        onAddPeople={openCircle}
+      />
+      <SafeArrivalSheet
+        visible={sheet === "timer"}
+        onClose={() => setSheet(null)}
+        presets={PRESETS.map((duration) => ({ duration, label: formatDurationLabel(duration, t) }))}
+        selected={plannedDuration}
+        formatTime={formatTime}
+        circleEmpty={circleEmpty}
+        onSelect={setSelectedDuration}
+        onStart={handleStartTimer}
+        onAddPeople={openCircle}
+      />
+      <ReadinessSheet
+        visible={sheet === "readiness"}
+        onClose={() => setSheet(null)}
+        readiness={readiness}
+        onFixForeground={() => void fixForeground()}
+        onFixBackground={handleFixBackground}
+        onFixNotifications={() => void fixNotifications()}
+        onFixBattery={openBatterySettings}
+      />
       <SosCountdownOverlay
         seconds={sosCountdown}
         body={countdownBody}
         onCancel={handleCancelCountdown}
         onSendNow={handleSendNow}
       />
-      <LocationActionsSheet visible={coordsOpen} location={location} onClose={() => setCoordsOpen(false)} />
       {disclosure}
     </View>
   );
@@ -945,13 +845,15 @@ export default function SafetyScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  chips: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 8, paddingHorizontal: 16, marginTop: 4 },
-  body: { paddingHorizontal: 20 },
-  actions: { flexDirection: "row", marginTop: 26, marginHorizontal: -6 },
-  caption: { fontSize: 12.5, lineHeight: 18, textAlign: "center", marginTop: 14, paddingHorizontal: 8 },
-  notice: { marginTop: 18 },
-  noticeHead: { flexDirection: "row", alignItems: "center", gap: 9 },
-  noticeTitle: { flex: 1, fontSize: 15 },
-  noticeBody: { fontSize: 13.5, lineHeight: 19, marginTop: 6 },
-  noticeButtons: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 14 },
+  header: { position: "absolute", left: 20, right: 20, flexDirection: "row", alignItems: "center", gap: 12 },
+  title: { flexShrink: 1, fontSize: 30, letterSpacing: -0.9 },
+  pill: { flexDirection: "row", alignItems: "center", gap: 7, height: 30, paddingHorizontal: 12, borderRadius: 15, borderWidth: StyleSheet.hairlineWidth },
+  pillText: { fontSize: 12.5 },
+  sos: { position: "absolute", right: 18 },
+  panel: { position: "absolute", left: 10, right: 10, borderRadius: 30, overflow: "hidden" },
+  panelTint: { borderRadius: 30 },
+  panelBorder: { borderRadius: 30, borderWidth: StyleSheet.hairlineWidth },
+  panelScroll: { flexGrow: 0 },
+  panelBody: { padding: 12 },
+  tiles: { flexDirection: "row", gap: 8 },
 });

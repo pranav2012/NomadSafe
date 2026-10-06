@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, AppState, Linking, StyleSheet, Text, View } from "react-native";
-import { AuraCard, AuraListGroup, AuraListRow, AuraSection, AuraSwitch, Icon, useAura } from "@/atoms";
+import { AuraListGroup, AuraListRow, AuraSection, AuraSwitch, useAura } from "@/atoms";
 import { auraStatusAccent, auraStatusColors } from "@/constants/aura";
-import { TrustedContactsEditor, type TrustedContactsSummary } from "@/features/settings/components/TrustedContactsEditor";
+import { AddPersonSheet } from "@/features/location-sharing/components/AddPersonSheet";
+import { CircleAvatar } from "@/features/location-sharing/components/CircleAvatar";
+import { useCircle } from "@/features/location-sharing/hooks/useCircle";
+import { PrivateView } from "@/modules/analytics";
 import { permissionsService, type PermissionStatus } from "@/features/onboarding/services/permissions";
 import { useLocalization } from "@/localization";
 import { StepHeader } from "./StepHeader";
@@ -25,12 +28,14 @@ async function requestOrOpenSettings(status: PermissionStatus | null, request: (
   apply(await request());
 }
 
-/** Step 1: foreground location, check-in notifications, the SMS fallback and trusted contacts. */
-export function SafetyStep({ onContactsChange }: { onContactsChange: (summary: TrustedContactsSummary) => void }) {
+/** Step 1: foreground location, timer notifications, and the people to add to your circle. */
+export function SafetyStep() {
   const { c, f } = useAura();
   const { t } = useLocalization();
   const [location, setLocation] = useState<PermissionStatus | null>(null);
   const [notifications, setNotifications] = useState<PermissionStatus | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const circle = useCircle();
 
   // Re-read on return from system Settings so the switches reflect the real grant.
   useEffect(() => {
@@ -99,21 +104,27 @@ export function SafetyStep({ onContactsChange }: { onContactsChange: (summary: T
         />
       </AuraListGroup>
 
-      <AuraCard style={styles.smsCard}>
-        <View style={styles.smsRow}>
-          <View style={[styles.smsIcon, { backgroundColor: `${auraStatusColors.calm[1]}24` }]}>
-            <Icon name="messageCircle" size={18} color={auraStatusColors.calm[1]} />
-          </View>
-          <View style={styles.flex}>
-            <Text style={[styles.smsTitle, { color: c.text, fontFamily: f.semibold }]}>{t("onboarding.smsFallbackTitle")}</Text>
-            <Text style={[styles.smsBody, { color: c.textSoft, fontFamily: f.regular }]}>{t("onboarding.offlineBody")}</Text>
-          </View>
-        </View>
-      </AuraCard>
-
-      <AuraSection title={t("onboarding.trustedContactsTitle")} />
-      <Text style={[styles.contactsLede, { color: c.textSoft, fontFamily: f.regular }]}>{t("onboarding.trustedContactsLede")}</Text>
-      <TrustedContactsEditor onChange={onContactsChange} />
+      <AuraSection title={t("circle.title")} />
+      <Text style={[styles.contactsLede, { color: c.textSoft, fontFamily: f.regular }]}>{t("onboarding.circleLede")}</Text>
+      <PrivateView>
+        <AuraListGroup>
+          {circle.people.map((person) => (
+            <AuraListRow
+              key={person.key}
+              label={person.name}
+              detail={person.status === "accepted" ? t("circle.getsAlerts") : person.status === "invited" ? t("circle.invited") : t("circle.pending")}
+              trailing={<CircleAvatar name={person.name} size={32} />}
+            />
+          ))}
+          <AuraListRow icon="plus" tone={auraStatusColors.calm[1]} label={t("circle.addPerson")} onPress={() => setAddOpen(true)} />
+        </AuraListGroup>
+      </PrivateView>
+      <AddPersonSheet
+        visible={addOpen}
+        onClose={() => setAddOpen(false)}
+        onSubmit={circle.add}
+        existingEmails={new Set(circle.people.map((p) => p.email ?? ""))}
+      />
     </View>
   );
 }
@@ -121,10 +132,5 @@ export function SafetyStep({ onContactsChange }: { onContactsChange: (summary: T
 const styles = StyleSheet.create({
   root: { paddingHorizontal: 20, paddingTop: 8 },
   flex: { flex: 1 },
-  smsCard: { marginTop: 14 },
-  smsRow: { flexDirection: "row", gap: 12, alignItems: "flex-start" },
-  smsIcon: { width: 34, height: 34, borderRadius: 11, alignItems: "center", justifyContent: "center" },
-  smsTitle: { fontSize: 15.5 },
-  smsBody: { fontSize: 13.5, lineHeight: 19, marginTop: 3 },
   contactsLede: { fontSize: 14, lineHeight: 20, marginTop: -6, marginBottom: 4 },
 });

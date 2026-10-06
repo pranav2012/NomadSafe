@@ -10,16 +10,15 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 interface AddPersonSheetProps {
   visible: boolean;
   onClose: () => void;
-  onSubmit: (input: { name: string; email: string; phone?: string }) => Promise<void>;
+  onSubmit: (input: { name: string; email: string }) => Promise<void>;
   existingEmails: Set<string>;
 }
 
-/** Sends a sharing request by email, with emergency contacts offered as one-tap suggestions. */
+/** Adds someone to your circle by email, with saved contacts that have an email offered as one-tap suggestions. */
 export function AddPersonSheet({ visible, onClose, onSubmit, existingEmails }: AddPersonSheetProps) {
   const { t } = useLocalization();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,7 +33,6 @@ export function AddPersonSheet({ visible, onClose, onSubmit, existingEmails }: A
   const close = () => {
     setName("");
     setEmail("");
-    setPhone("");
     setError(null);
     onClose();
   };
@@ -47,7 +45,7 @@ export function AddPersonSheet({ visible, onClose, onSubmit, existingEmails }: A
     setSaving(true);
     setError(null);
     try {
-      await onSubmit({ name: name.trim(), email: cleanEmail, phone: phone.trim() || undefined });
+      await onSubmit({ name: name.trim(), email: cleanEmail });
       close();
     } catch {
       setError(t("sharing.linkErrorBody"));
@@ -60,9 +58,9 @@ export function AddPersonSheet({ visible, onClose, onSubmit, existingEmails }: A
     <AuraSheet
       visible={visible}
       onClose={close}
-      title={t("sharing.addTitle")}
-      subtitle={t("sharing.addBody")}
-      footer={<AuraButton label={t("sharing.sendRequest")} onPress={submit} loading={saving} />}
+      title={t("circle.addTitle")}
+      subtitle={t("circle.addBody")}
+      footer={<AuraButton label={t("circle.addButton")} onPress={submit} loading={saving} />}
     >
       <PrivateView>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.body}>
@@ -76,7 +74,6 @@ export function AddPersonSheet({ visible, onClose, onSubmit, existingEmails }: A
                 onPress={() => {
                   setName(c.name);
                   setEmail(c.email ?? "");
-                  setPhone(c.phone ?? "");
                 }}
               />
             ))}
@@ -92,13 +89,6 @@ export function AddPersonSheet({ visible, onClose, onSubmit, existingEmails }: A
             autoCapitalize="none"
             autoCorrect={false}
             maxLength={254}
-          />
-          <AuraField
-            value={phone}
-            onChangeText={setPhone}
-            placeholder={t("sharing.phonePlaceholder")}
-            keyboardType="phone-pad"
-            maxLength={32}
             error={error}
           />
         </View>
