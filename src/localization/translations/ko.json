@@ -82,6 +82,15 @@
       "todos_one": "오늘 할 일 {{count}}개",
       "todos_other": "오늘 할 일 {{count}}개",
       "meanwhile": "그동안: {{what}}"
+    },
+    "prep": {
+      "title": "여행 준비",
+      "noBookings": "아직 예약이 없어요",
+      "nightsBooked_one": "{{count}}박 중 {{booked}}박 예약됨",
+      "nightsBooked_other": "{{count}}박 중 {{booked}}박 예약됨",
+      "noStays": "아직 숙소를 예약하지 않았어요",
+      "gap": "{{range}} 숙소 없음",
+      "save": "저장"
     }
   },
   "settings": {
@@ -1179,7 +1188,11 @@
       "addToDay": "추가"
     },
     "anytime": "언제든",
-    "wishlistTitle": "위시리스트"
+    "wishlistTitle": "위시리스트",
+    "mustDo": {
+      "title": "{{place}} 필수 코스",
+      "dismiss": "{{name}} 숨기기"
+    }
   },
   "places": {
     "nearYou": "내 주변",

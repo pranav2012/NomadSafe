@@ -82,6 +82,15 @@
       "todos_one": "{{count}} To-do heute",
       "todos_other": "{{count}} To-dos heute",
       "meanwhile": "Währenddessen: {{what}}"
+    },
+    "prep": {
+      "title": "Reisevorbereitung",
+      "noBookings": "Noch keine Buchungen",
+      "nightsBooked_one": "{{booked}} von {{count}} Nacht gebucht",
+      "nightsBooked_other": "{{booked}} von {{count}} Nächten gebucht",
+      "noStays": "Noch keine Unterkunft gebucht",
+      "gap": "Keine Unterkunft für {{range}}",
+      "save": "Merken"
     }
   },
   "settings": {
@@ -1179,7 +1188,11 @@
       "addToDay": "Hinzufügen"
     },
     "anytime": "Jederzeit",
-    "wishlistTitle": "Wunschliste"
+    "wishlistTitle": "Wunschliste",
+    "mustDo": {
+      "title": "Das Beste in {{place}}",
+      "dismiss": "{{name}} ausblenden"
+    }
   },
   "places": {
     "nearYou": "In deiner Nähe",

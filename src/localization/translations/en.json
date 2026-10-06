@@ -82,6 +82,15 @@
       "todos_one": "{{count}} to-do today",
       "todos_other": "{{count}} to-dos today",
       "meanwhile": "Meanwhile: {{what}}"
+    },
+    "prep": {
+      "title": "Trip prep",
+      "noBookings": "No bookings yet",
+      "nightsBooked_one": "{{booked}} of {{count}} night booked",
+      "nightsBooked_other": "{{booked}} of {{count}} nights booked",
+      "noStays": "No stays booked yet",
+      "gap": "No stay for {{range}}",
+      "save": "Save"
     }
   },
   "trip": {
@@ -331,7 +340,11 @@
       "addToDay": "Add"
     },
     "anytime": "Anytime",
-    "wishlistTitle": "Wishlist"
+    "wishlistTitle": "Wishlist",
+    "mustDo": {
+      "title": "Must-dos in {{place}}",
+      "dismiss": "Hide {{name}}"
+    }
   },
   "places": {
     "nearYou": "Near you",

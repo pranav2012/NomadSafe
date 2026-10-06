@@ -23,6 +23,7 @@ import { NearbyPlaces } from "@/features/places/components/NearbyPlaces";
 import { useTripForecast } from "@/features/trips/hooks/useTripForecast";
 import { describeWeather } from "@/features/trips/services/weatherService";
 import { WeatherSheet } from "./WeatherSheet";
+import { TripPrepCard } from "./TripPrepCard";
 import type { Trip } from "@/features/trips/store/tripsStore";
 import { useLocalization } from "@/localization";
 import { ActionButton } from "./aura/ActionButton";
@@ -411,6 +412,12 @@ export function TripHome({
           />
         </PrivateView>
 
+        {stage === "upcoming" ? (
+          <PrivateView style={[styles.body, styles.prep]}>
+            <TripPrepCard trip={trip} events={tripEvents} firstStop={data.stops[0]} />
+          </PrivateView>
+        ) : null}
+
         <View style={styles.body}>
           <DayRail
             totalDays={data.totalDays}
@@ -454,7 +461,7 @@ export function TripHome({
 
           {liveMode ? (
             <View style={styles.dayPlan}>
-              <TripItinerary trip={trip} accent={accent} day={selectedDate} now={now} city={selectedStop?.name} />
+              <TripItinerary trip={trip} accent={accent} day={selectedDate} now={now} place={selectedStop} />
             </View>
           ) : null}
           {liveMode ? quickActions : moneyCard}
@@ -542,6 +549,7 @@ const styles = StyleSheet.create({
   backToday: { height: 26, paddingHorizontal: 11, borderRadius: 13, borderWidth: StyleSheet.hairlineWidth, justifyContent: "center" },
   backTodayText: { fontFamily: f.semibold, fontSize: 12 },
   dayPlan: { marginTop: 8 },
+  prep: { marginBottom: 18 },
   collapse: { position: "absolute", right: 20, bottom: 14, zIndex: 2 },
   moneyCard: {
     marginTop: 22,

@@ -82,6 +82,15 @@
       "todos_one": "ఈ రోజు {{count}} పని",
       "todos_other": "ఈ రోజు {{count}} పనులు",
       "meanwhile": "ఈలోగా: {{what}}"
+    },
+    "prep": {
+      "title": "ప్రయాణ సన్నాహం",
+      "noBookings": "ఇంకా బుకింగ్‌లు లేవు",
+      "nightsBooked_one": "{{count}} లో {{booked}} రాత్రి బుక్ అయింది",
+      "nightsBooked_other": "{{count}} లో {{booked}} రాత్రులు బుక్ అయ్యాయి",
+      "noStays": "ఇంకా బస బుక్ చేయలేదు",
+      "gap": "{{range}} కి బస లేదు",
+      "save": "సేవ్ చేయి"
     }
   },
   "settings": {
@@ -1179,7 +1188,11 @@
       "addToDay": "జోడించు"
     },
     "anytime": "ఎప్పుడైనా",
-    "wishlistTitle": "విష్‌లిస్ట్"
+    "wishlistTitle": "విష్‌లిస్ట్",
+    "mustDo": {
+      "title": "{{place}} లో తప్పక చూడాల్సినవి",
+      "dismiss": "{{name}} దాచు"
+    }
   },
   "places": {
     "nearYou": "మీ సమీపంలో",

@@ -82,6 +82,15 @@
       "todos_one": "今天有 {{count}} 件待办",
       "todos_other": "今天有 {{count}} 件待办",
       "meanwhile": "与此同时：{{what}}"
+    },
+    "prep": {
+      "title": "行前准备",
+      "noBookings": "还没有预订",
+      "nightsBooked_one": "共 {{count}} 晚，已订 {{booked}} 晚",
+      "nightsBooked_other": "共 {{count}} 晚，已订 {{booked}} 晚",
+      "noStays": "还没有预订住宿",
+      "gap": "{{range}} 没有住宿",
+      "save": "保存"
     }
   },
   "settings": {
@@ -1179,7 +1188,11 @@
       "addToDay": "添加"
     },
     "anytime": "随时",
-    "wishlistTitle": "心愿单"
+    "wishlistTitle": "心愿单",
+    "mustDo": {
+      "title": "{{place}}必去",
+      "dismiss": "隐藏 {{name}}"
+    }
   },
   "places": {
     "nearYou": "你附近",

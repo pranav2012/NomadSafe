@@ -82,6 +82,15 @@
       "todos_one": "{{count}} pendiente hoy",
       "todos_other": "{{count}} pendientes hoy",
       "meanwhile": "Mientras tanto: {{what}}"
+    },
+    "prep": {
+      "title": "Preparación del viaje",
+      "noBookings": "Aún no hay reservas",
+      "nightsBooked_one": "{{booked}} de {{count}} noche reservada",
+      "nightsBooked_other": "{{booked}} de {{count}} noches reservadas",
+      "noStays": "Aún no hay alojamiento reservado",
+      "gap": "Sin alojamiento para {{range}}",
+      "save": "Guardar"
     }
   },
   "settings": {
@@ -1179,7 +1188,11 @@
       "addToDay": "Añadir"
     },
     "anytime": "En cualquier momento",
-    "wishlistTitle": "Lista de deseos"
+    "wishlistTitle": "Lista de deseos",
+    "mustDo": {
+      "title": "Imprescindibles en {{place}}",
+      "dismiss": "Ocultar {{name}}"
+    }
   },
   "places": {
     "nearYou": "Cerca de ti",

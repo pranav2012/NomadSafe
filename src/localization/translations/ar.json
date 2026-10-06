@@ -82,6 +82,15 @@
       "todos_one": "مهمة واحدة اليوم",
       "todos_other": "{{count}} مهام اليوم",
       "meanwhile": "في الأثناء: {{what}}"
+    },
+    "prep": {
+      "title": "تحضير الرحلة",
+      "noBookings": "لا حجوزات بعد",
+      "nightsBooked_one": "{{booked}} من {{count}} ليلة محجوزة",
+      "nightsBooked_other": "{{booked}} من {{count}} ليالٍ محجوزة",
+      "noStays": "لا إقامة محجوزة بعد",
+      "gap": "لا إقامة في {{range}}",
+      "save": "حفظ"
     }
   },
   "settings": {
@@ -1179,7 +1188,11 @@
       "addToDay": "إضافة"
     },
     "anytime": "في أي وقت",
-    "wishlistTitle": "قائمة الأمنيات"
+    "wishlistTitle": "قائمة الأمنيات",
+    "mustDo": {
+      "title": "لا تفوّت في {{place}}",
+      "dismiss": "إخفاء {{name}}"
+    }
   },
   "places": {
     "nearYou": "بالقرب منك",

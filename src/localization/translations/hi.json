@@ -82,6 +82,15 @@
       "todos_one": "आज {{count}} काम",
       "todos_other": "आज {{count}} काम",
       "meanwhile": "इस बीच: {{what}}"
+    },
+    "prep": {
+      "title": "यात्रा की तैयारी",
+      "noBookings": "अभी कोई बुकिंग नहीं",
+      "nightsBooked_one": "{{count}} में से {{booked}} रात बुक",
+      "nightsBooked_other": "{{count}} में से {{booked}} रातें बुक",
+      "noStays": "अभी कोई ठहरने की बुकिंग नहीं",
+      "gap": "{{range}} के लिए ठहरने की जगह नहीं",
+      "save": "सहेजें"
     }
   },
   "settings": {
@@ -1179,7 +1188,11 @@
       "addToDay": "जोड़ें"
     },
     "anytime": "कभी भी",
-    "wishlistTitle": "विशलिस्ट"
+    "wishlistTitle": "विशलिस्ट",
+    "mustDo": {
+      "title": "{{place}} में ज़रूर देखें",
+      "dismiss": "{{name}} छिपाएँ"
+    }
   },
   "places": {
     "nearYou": "आपके पास",

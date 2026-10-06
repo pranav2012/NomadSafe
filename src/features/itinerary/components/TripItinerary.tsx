@@ -12,6 +12,8 @@ import { TimelineList, UpNextList } from "@/features/itinerary/components/Itiner
 import { DayPlan } from "@/features/itinerary/components/DayPlan";
 import { formatters } from "@/features/itinerary/utils/entryText";
 import { toWallClock } from "@/features/itinerary/utils/wallClock";
+import { mustDosNear, type MustDo } from "@/features/itinerary/utils/mustDos";
+import { useMustDoStore } from "@/features/itinerary/store/mustDoStore";
 import { upNext } from "@/features/itinerary/utils/timeline";
 import { fromDateKey } from "@/features/trips/utils/dates";
 import { logger } from "@/modules/logger";
@@ -42,15 +44,15 @@ export function TripItinerary({
   trip,
   day,
   now: liveNow,
-  city,
+  place,
 }: {
   trip: Trip;
   accent: string;
   /** Show this day's plan instead of "Up next". */
   day?: Date | null;
   now?: Date;
-  /** Added to Maps searches, e.g. "Nishiki Market, Kyoto". */
-  city?: string;
+  /** Where the day is spent: names Maps searches ("Nishiki Market, Kyoto") and picks must-dos. */
+  place?: { name: string; latitude: number; longitude: number };
 }) {
   const { c, f } = useAura();
   const { t, locale, hour12 } = useLocalization();
@@ -77,6 +79,23 @@ export function TripItinerary({
   // Refine only tidies Gmail imports; what the user added is theirs to keep.
   const imported = ordered.filter((event) => event.source === "email");
   const tripStart = fromDateKey(trip.startDate);
+  const dismissed = useMustDoStore((state) => state.dismissed[trip.id]);
+  const dismissMustDo = useMustDoStore((state) => state.dismiss);
+  const city = place?.name.split(",")[0];
+  const mustDos = place ? (mustDosNear(place, locale, [...ordered.map((event) => event.title), ...(dismissed ?? [])])?.items ?? []) : [];
+
+  const addMustDo = (item: MustDo) => {
+    if (!day) return;
+    track("must_do_suggestion", { action: "added", where: "free_day" });
+    addEvent({
+      tripId: trip.id,
+      type: item.type,
+      title: item.name,
+      startAt: toWallClock(new Date(day.getFullYear(), day.getMonth(), day.getDate())),
+      timing: "anytime",
+      source: "manual",
+    });
+  };
   const isToday = day ? day.toDateString() === new Date(now).toDateString() : false;
   const sectionTitle = day ? (isToday ? t("home.live.todayTitle") : formatters(locale, hour12).dayHeader.format(day)) : t("itinerary.title");
 
@@ -178,6 +197,12 @@ export function TripItinerary({
             day={day}
             now={new Date(now)}
             city={city}
+            mustDos={mustDos}
+            onAddMustDo={addMustDo}
+            onDismissMustDo={(item) => {
+              track("must_do_suggestion", { action: "dismissed", where: "free_day" });
+              dismissMustDo(trip.id, item.key);
+            }}
             onPress={setEditing}
             onToggleDone={toggleDone}
             onSchedule={scheduleOn}

@@ -82,6 +82,15 @@
       "todos_one": "今日のやること {{count}}件",
       "todos_other": "今日のやること {{count}}件",
       "meanwhile": "その間：{{what}}"
+    },
+    "prep": {
+      "title": "旅の準備",
+      "noBookings": "まだ予約がありません",
+      "nightsBooked_one": "{{count}}泊中{{booked}}泊予約済み",
+      "nightsBooked_other": "{{count}}泊中{{booked}}泊予約済み",
+      "noStays": "まだ宿泊先が未予約です",
+      "gap": "{{range}}の宿泊先がありません",
+      "save": "保存"
     }
   },
   "settings": {
@@ -1179,7 +1188,11 @@
       "addToDay": "追加"
     },
     "anytime": "いつでも",
-    "wishlistTitle": "行きたいリスト"
+    "wishlistTitle": "行きたいリスト",
+    "mustDo": {
+      "title": "{{place}}の必見スポット",
+      "dismiss": "{{name}}を非表示"
+    }
   },
   "places": {
     "nearYou": "近くのスポット",

@@ -82,6 +82,15 @@
       "todos_one": "இன்று {{count}} வேலை",
       "todos_other": "இன்று {{count}} வேலைகள்",
       "meanwhile": "இதற்கிடையில்: {{what}}"
+    },
+    "prep": {
+      "title": "பயணத் தயாரிப்பு",
+      "noBookings": "இன்னும் முன்பதிவு இல்லை",
+      "nightsBooked_one": "{{count}} இல் {{booked}} இரவு முன்பதிவு",
+      "nightsBooked_other": "{{count}} இல் {{booked}} இரவுகள் முன்பதிவு",
+      "noStays": "இன்னும் தங்குமிடம் முன்பதிவு இல்லை",
+      "gap": "{{range}} க்கு தங்குமிடம் இல்லை",
+      "save": "சேமி"
     }
   },
   "settings": {
@@ -1179,7 +1188,11 @@
       "addToDay": "சேர்"
     },
     "anytime": "எப்போது வேண்டுமானாலும்",
-    "wishlistTitle": "விருப்பப் பட்டியல்"
+    "wishlistTitle": "விருப்பப் பட்டியல்",
+    "mustDo": {
+      "title": "{{place}} இல் தவறவிடக்கூடாதவை",
+      "dismiss": "{{name}} ஐ மறை"
+    }
   },
   "places": {
     "nearYou": "உங்களுக்கு அருகில்",

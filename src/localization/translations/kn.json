@@ -82,6 +82,15 @@
       "todos_one": "ಇಂದು {{count}} ಕೆಲಸ",
       "todos_other": "ಇಂದು {{count}} ಕೆಲಸಗಳು",
       "meanwhile": "ಅಷ್ಟರಲ್ಲಿ: {{what}}"
+    },
+    "prep": {
+      "title": "ಪ್ರವಾಸದ ತಯಾರಿ",
+      "noBookings": "ಇನ್ನೂ ಯಾವುದೇ ಬುಕಿಂಗ್ ಇಲ್ಲ",
+      "nightsBooked_one": "{{count}} ರಲ್ಲಿ {{booked}} ರಾತ್ರಿ ಬುಕ್ ಆಗಿದೆ",
+      "nightsBooked_other": "{{count}} ರಲ್ಲಿ {{booked}} ರಾತ್ರಿಗಳು ಬುಕ್ ಆಗಿವೆ",
+      "noStays": "ಇನ್ನೂ ವಸತಿ ಬುಕ್ ಆಗಿಲ್ಲ",
+      "gap": "{{range}} ಕ್ಕೆ ವಸತಿ ಇಲ್ಲ",
+      "save": "ಉಳಿಸಿ"
     }
   },
   "settings": {
@@ -1179,7 +1188,11 @@
       "addToDay": "ಸೇರಿಸಿ"
     },
     "anytime": "ಯಾವಾಗ ಬೇಕಾದರೂ",
-    "wishlistTitle": "ವಿಶ್‌ಲಿಸ್ಟ್"
+    "wishlistTitle": "ವಿಶ್‌ಲಿಸ್ಟ್",
+    "mustDo": {
+      "title": "{{place}} ನಲ್ಲಿ ತಪ್ಪದೇ ನೋಡಿ",
+      "dismiss": "{{name}} ಮರೆಮಾಡಿ"
+    }
   },
   "places": {
     "nearYou": "ನಿಮ್ಮ ಸಮೀಪದಲ್ಲಿ",

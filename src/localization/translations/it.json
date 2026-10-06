@@ -82,6 +82,15 @@
       "todos_one": "{{count}} cosa da fare oggi",
       "todos_other": "{{count}} cose da fare oggi",
       "meanwhile": "Nel frattempo: {{what}}"
+    },
+    "prep": {
+      "title": "Preparazione del viaggio",
+      "noBookings": "Ancora nessuna prenotazione",
+      "nightsBooked_one": "{{booked}} notte su {{count}} prenotata",
+      "nightsBooked_other": "{{booked}} notti su {{count}} prenotate",
+      "noStays": "Nessun alloggio prenotato",
+      "gap": "Nessun alloggio per {{range}}",
+      "save": "Salva"
     }
   },
   "settings": {
@@ -1179,7 +1188,11 @@
       "addToDay": "Aggiungi"
     },
     "anytime": "In qualsiasi momento",
-    "wishlistTitle": "Lista dei desideri"
+    "wishlistTitle": "Lista dei desideri",
+    "mustDo": {
+      "title": "Da non perdere a {{place}}",
+      "dismiss": "Nascondi {{name}}"
+    }
   },
   "places": {
     "nearYou": "Vicino a te",

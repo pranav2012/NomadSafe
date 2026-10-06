@@ -13,11 +13,14 @@ import { localizeEventTitle } from "@/features/itinerary/utils/eventText";
 import { isForEveryone, isForMe } from "@/features/itinerary/utils/people";
 import type { TimelineEntry } from "@/features/itinerary/utils/timeline";
 import { transitModeOf } from "@/features/itinerary/utils/transit";
+import type { MustDo } from "@/features/itinerary/utils/mustDos";
+import { MustDoRow } from "@/features/itinerary/components/MustDoRow";
 
 type Entry = TimelineEntry<TripEvent>;
 type Row = { kind: "mine"; entry: Entry; together: boolean } | { kind: "theirs"; entries: Entry[] };
 
 const WISHLIST_PICKS = 3;
+const MUST_DO_PICKS = 3;
 
 function mapsSearchUrl(place: string, city: string | undefined) {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(city ? `${place}, ${city}` : place)}`;
@@ -52,15 +55,22 @@ export function DayPlan({
   day,
   now,
   city,
+  mustDos,
   onPress,
   onAdd,
   onToggleDone,
   onSchedule,
+  onAddMustDo,
+  onDismissMustDo,
 }: {
   events: TripEvent[];
   day: Date;
   now: Date;
   city?: string;
+  /** Suggestions for this day's place, offered when it's free. */
+  mustDos: MustDo[];
+  onAddMustDo: (item: MustDo) => void;
+  onDismissMustDo: (item: MustDo) => void;
   onPress: (event: TripEvent) => void;
   onAdd: () => void;
   onToggleDone: (event: TripEvent) => void;
@@ -219,6 +229,14 @@ export function DayPlan({
             <AuraButton size="md" variant="secondary" label={t("itinerary.day.addToDay")} onPress={() => onSchedule(event, day)} />
           </View>
         ))}
+        {mustDos.length > 0 ? (
+          <>
+            <Text style={[styles.label, { color: c.textSoft, fontFamily: f.semibold }]}>{t("itinerary.mustDo.title", { place: city ?? "" })}</Text>
+            {mustDos.slice(0, MUST_DO_PICKS).map((item) => (
+              <MustDoRow key={item.key} item={item} actionLabel={t("itinerary.day.addToDay")} onAdd={() => onAddMustDo(item)} onDismiss={() => onDismissMustDo(item)} />
+            ))}
+          </>
+        ) : null}
         <AuraButton size="md" variant="secondary" icon="plus" label={t("itinerary.day.addStop")} onPress={onAdd} style={styles.freeAction} />
       </View>
     );

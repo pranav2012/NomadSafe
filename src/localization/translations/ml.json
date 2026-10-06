@@ -82,6 +82,15 @@
       "todos_one": "ഇന്ന് {{count}} കാര്യം",
       "todos_other": "ഇന്ന് {{count}} കാര്യങ്ങൾ",
       "meanwhile": "അതിനിടെ: {{what}}"
+    },
+    "prep": {
+      "title": "യാത്രാ തയ്യാറെടുപ്പ്",
+      "noBookings": "ഇതുവരെ ബുക്കിംഗ് ഇല്ല",
+      "nightsBooked_one": "{{count}} ൽ {{booked}} രാത്രി ബുക്ക് ചെയ്തു",
+      "nightsBooked_other": "{{count}} ൽ {{booked}} രാത്രികൾ ബുക്ക് ചെയ്തു",
+      "noStays": "ഇതുവരെ താമസം ബുക്ക് ചെയ്തിട്ടില്ല",
+      "gap": "{{range}} ന് താമസമില്ല",
+      "save": "സേവ് ചെയ്യുക"
     }
   },
   "settings": {
@@ -1179,7 +1188,11 @@
       "addToDay": "ചേർക്കുക"
     },
     "anytime": "എപ്പോൾ വേണമെങ്കിലും",
-    "wishlistTitle": "വിഷ്‌ലിസ്റ്റ്"
+    "wishlistTitle": "വിഷ്‌ലിസ്റ്റ്",
+    "mustDo": {
+      "title": "{{place}} ൽ കാണേണ്ടവ",
+      "dismiss": "{{name}} മറയ്ക്കുക"
+    }
   },
   "places": {
     "nearYou": "നിങ്ങൾക്ക് സമീപം",
