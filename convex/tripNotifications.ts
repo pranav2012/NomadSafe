@@ -49,6 +49,25 @@ const TEMPLATES: Record<string, Template> = {
   "zh-CN": { added: "{actor} 添加了 {title} · {amount}", updated: "{actor} 更新了 {title}", deleted: "{actor} 删除了 {title}", paid: "{actor} 记录了一笔付款 · {amount}", paymentRemoved: "{actor} 删除了一笔付款", many: "{actor} 对支出做了 {count} 处更改" },
 };
 
+// Placeholders: {actor}, {title}.
+const TICKET_ASK: Record<string, string> = {
+  en: "{actor} needs the ticket for {title}. Tap to send it.",
+  ar: "{actor} يحتاج تذكرة {title}. اضغط لإرسالها.",
+  de: "{actor} braucht das Ticket für {title}. Tippe, um es zu senden.",
+  es: "{actor} necesita el billete de {title}. Toca para enviarlo.",
+  fr: "{actor} a besoin du billet pour {title}. Touchez pour l'envoyer.",
+  hi: "{actor} को {title} का टिकट चाहिए। भेजने के लिए टैप करें।",
+  it: "{actor} ha bisogno del biglietto per {title}. Tocca per inviarlo.",
+  ja: "{actor}さんが{title}のチケットを必要としています。タップして送信。",
+  kn: "{actor} ಅವರಿಗೆ {title} ಟಿಕೆಟ್ ಬೇಕು. ಕಳುಹಿಸಲು ಟ್ಯಾಪ್ ಮಾಡಿ.",
+  ko: "{actor}님이 {title} 티켓이 필요해요. 탭해서 보내세요.",
+  ml: "{actor} ന് {title} ടിക്കറ്റ് വേണം. അയയ്ക്കാൻ ടാപ്പ് ചെയ്യുക.",
+  "pt-BR": "{actor} precisa do ingresso de {title}. Toque para enviar.",
+  ta: "{actor} க்கு {title} டிக்கெட் தேவை. அனுப்ப தட்டவும்.",
+  te: "{actor} కి {title} టికెట్ కావాలి. పంపడానికి నొక్కండి.",
+  "zh-CN": "{actor} 需要 {title} 的票据。点按即可发送。",
+};
+
 function fill(template: string, values: Record<string, string>) {
   return template.replace(/\{(\w+)\}/g, (_, key: string) => values[key] ?? "");
 }
@@ -274,6 +293,27 @@ export const notifyTrip = internalAction({
       };
     });
 
+    await sendPushMessages(ctx, messages);
+  },
+});
+
+/** Asks the members holding an item's ticket to send it; tapping opens the ticket with Send ready. */
+export const notifyTicketAsk = internalAction({
+  args: { tripId: v.id("sharedTrips"), askerMemberId: v.string(), holderMemberIds: v.array(v.string()), clientId: v.string(), title: v.string() },
+  handler: async (ctx, { tripId, askerMemberId, holderMemberIds, clientId, title }) => {
+    const info = await ctx.runQuery(internal.groupTrips.memberPushTargets, { tripId, memberIds: holderMemberIds, actorMemberId: askerMemberId });
+    if (!info || info.targets.length === 0) return;
+    const messages = info.targets.map(({ token, locale }) => ({
+      to: token,
+      title: truncate(info.tripName, NOTIFY_TITLE_CHARS),
+      body: fill(TICKET_ASK[locale] ?? TICKET_ASK[locale.split("-")[0]] ?? TICKET_ASK.en, {
+        actor: truncate(info.actorName, NOTIFY_TITLE_CHARS),
+        title: truncate(title, NOTIFY_TITLE_CHARS),
+      }),
+      sound: "default" as const,
+      channelId: CHANNEL_ID,
+      data: { source: SOURCE, tripId: String(tripId), type: "ticket_ask", eventId: clientId },
+    }));
     await sendPushMessages(ctx, messages);
   },
 });

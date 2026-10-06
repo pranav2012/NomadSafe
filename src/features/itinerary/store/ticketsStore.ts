@@ -9,7 +9,9 @@ export interface Ticket {
   kind: "pdf" | "image";
   /** Local file in the app's private documents folder; tickets never leave the phone. */
   uri: string;
-  source: "gmail" | "file" | "photo";
+  source: "gmail" | "file" | "photo" | "received";
+  /** Shared trips: show the group that you have it ("on Pranav's phone"). Off by default for flights. */
+  shared?: boolean;
   /** Gmail imports: `<message id>:<file name>`, so a rescan doesn't save the same file twice. */
   sourceKey?: string;
   addedAt: string;
@@ -19,6 +21,7 @@ interface TicketsState {
   tickets: Ticket[];
   add: (ticket: Ticket) => void;
   remove: (ids: string[]) => void;
+  setShared: (id: string, shared: boolean) => void;
   reset: () => void;
 }
 
@@ -29,6 +32,7 @@ export const useTicketsStore = create<TicketsState>()(
       tickets: [],
       add: (ticket) => set((state) => ({ tickets: [...state.tickets, ticket] })),
       remove: (ids) => set((state) => ({ tickets: state.tickets.filter((ticket) => !ids.includes(ticket.id)) })),
+      setShared: (id, shared) => set((state) => ({ tickets: state.tickets.map((ticket) => (ticket.id === id ? { ...ticket, shared } : ticket)) })),
       reset: () => set({ tickets: [] }),
     }),
     { name: "tickets-store", storage: createJSONStorage(() => mmkvStateStorage) },

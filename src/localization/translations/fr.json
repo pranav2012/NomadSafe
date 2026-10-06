@@ -1704,6 +1704,20 @@
     "position": "{{index}} sur {{total}}",
     "openFailed": "Impossible d'ouvrir ce fichier.",
     "previous": "Précédent",
-    "next": "Suivant"
+    "next": "Suivant",
+    "send": "Envoyer",
+    "visibleToGroup": "Visible par le groupe",
+    "heldBy": "Sur le téléphone de {{names}}",
+    "ask": "Le demander",
+    "askTitle": "{{names}} a ce billet",
+    "askBody": "Lui demander de vous l'envoyer ? Une notification lui sera envoyée.",
+    "asked": "Demandé à {{names}}",
+    "askedRecently": "Vous l'avez demandé récemment. Réessayez dans un moment.",
+    "askFailed": "Envoi impossible. Vérifiez votre connexion.",
+    "receiveTitle": "Ajouter ce billet à…",
+    "receiveNoTrip": "Aucun voyage ouvert",
+    "receiveNothing": "Rien à ajouter.",
+    "receiveNoItems": "Ce voyage n'a encore aucun élément. Ajoutez-en un d'abord.",
+    "receiveFailed": "Impossible d'enregistrer ce fichier."
   }
 }

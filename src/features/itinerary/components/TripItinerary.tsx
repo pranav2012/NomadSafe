@@ -16,7 +16,9 @@ import { toWallClock } from "@/features/itinerary/utils/wallClock";
 import { mustDosNear, type MustDo } from "@/features/itinerary/utils/mustDos";
 import { useMustDoStore } from "@/features/itinerary/store/mustDoStore";
 import { useTicketsStore } from "@/features/itinerary/store/ticketsStore";
-import { pruneTickets, removeTickets } from "@/features/itinerary/services/tickets";
+import { pruneTickets, reconcileTicketHolders, removeTickets } from "@/features/itinerary/services/tickets";
+import { api, useMutation, type Id } from "@/modules/backend";
+import { SELF_ID } from "@/features/expenses/utils/split";
 import { upNext } from "@/features/itinerary/utils/timeline";
 import { fromDateKey } from "@/features/trips/utils/dates";
 import { logger } from "@/modules/logger";
@@ -89,8 +91,30 @@ export function TripItinerary({
 
   // Items removed elsewhere (sync, another member) leave their files behind; tidy up once per mount.
   useEffect(() => {
-    void pruneTickets();
+    void pruneTickets().then(reconcileTicketHolders);
   }, []);
+
+  const askMutation = useMutation(api.groupTrips.askForTicket);
+  const askForTicket = (event: TripEvent) => {
+    const serverTripId = trip.shared?.tripId;
+    if (!serverTripId) return;
+    const names = (event.ticketHolders ?? []).filter((person) => person !== SELF_ID).join(", ");
+    showAlert(t("tickets.askTitle", { names }), t("tickets.askBody", { names }), [
+      { text: t("common.cancel"), style: "cancel" },
+      {
+        text: t("tickets.ask"),
+        onPress: () => {
+          track("today_action", { action: "ask_ticket" });
+          askMutation({ tripId: serverTripId as Id<"sharedTrips">, clientId: event.id })
+            .then(({ sent }) => showToast(sent ? t("tickets.asked", { names }) : t("tickets.askedRecently")))
+            .catch((error: unknown) => {
+              logger.warn("tickets", "ask failed", error);
+              showToast(t("tickets.askFailed"));
+            });
+        },
+      },
+    ]);
+  };
   const dismissed = useMustDoStore((state) => state.dismissed[trip.id]);
   const dismissMustDo = useMustDoStore((state) => state.dismiss);
   const city = place?.name.split(",")[0];
@@ -218,6 +242,7 @@ export function TripItinerary({
             onPress={setEditing}
             ticketEventIds={ticketEventIds}
             onOpenTickets={openTickets}
+            onAskForTicket={trip.shared ? askForTicket : undefined}
             onToggleDone={toggleDone}
             onSchedule={scheduleOn}
             onAdd={() => {
@@ -302,6 +327,13 @@ export function TripItinerary({
           defaultStart={editing === "new" ? defaultStartFor(day, now) : undefined}
           tripStart={tripStart}
           companions={trip.companions}
+          sharedTrip={Boolean(trip.shared)}
+          onAskForTicket={() => {
+            if (editing === "new") return;
+            const event = editing;
+            setEditing(null);
+            askForTicket(event);
+          }}
           onOpenTicket={(ticketId) => {
             if (editing === "new") return;
             const eventId = editing.id;

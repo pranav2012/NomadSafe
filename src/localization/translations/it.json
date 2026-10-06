@@ -1704,6 +1704,20 @@
     "position": "{{index}} di {{total}}",
     "openFailed": "Impossibile aprire questo file.",
     "previous": "Precedente",
-    "next": "Successivo"
+    "next": "Successivo",
+    "send": "Invia",
+    "visibleToGroup": "Visibile al gruppo",
+    "heldBy": "Sul telefono di {{names}}",
+    "ask": "Chiedilo",
+    "askTitle": "{{names}} ha questo biglietto",
+    "askBody": "Chiedergli di mandartelo? Riceverà una notifica.",
+    "asked": "Chiesto a {{names}}",
+    "askedRecently": "L'hai chiesto da poco. Riprova tra un po'.",
+    "askFailed": "Invio non riuscito. Controlla la connessione.",
+    "receiveTitle": "Aggiungi questo biglietto a…",
+    "receiveNoTrip": "Nessun viaggio aperto",
+    "receiveNothing": "Niente da aggiungere.",
+    "receiveNoItems": "Questo viaggio non ha ancora elementi. Aggiungine uno prima.",
+    "receiveFailed": "Impossibile salvare questo file."
   }
 }

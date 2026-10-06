@@ -1704,6 +1704,20 @@
     "position": "{{index}} / {{total}}",
     "openFailed": "이 파일을 열 수 없어요.",
     "previous": "이전",
-    "next": "다음"
+    "next": "다음",
+    "send": "보내기",
+    "visibleToGroup": "그룹에 표시",
+    "heldBy": "{{names}}님 폰에 있음",
+    "ask": "요청하기",
+    "askTitle": "{{names}}님이 이 티켓을 가지고 있어요",
+    "askBody": "보내 달라고 요청할까요? 알림이 가요.",
+    "asked": "{{names}}님에게 요청했어요",
+    "askedRecently": "방금 요청했어요. 잠시 후 다시 시도하세요.",
+    "askFailed": "보낼 수 없어요. 연결을 확인하세요.",
+    "receiveTitle": "이 티켓을 추가할 항목…",
+    "receiveNoTrip": "열린 여행이 없어요",
+    "receiveNothing": "추가할 것이 없어요.",
+    "receiveNoItems": "이 여행에 아직 항목이 없어요. 먼저 추가하세요.",
+    "receiveFailed": "이 파일을 저장할 수 없어요."
   }
 }

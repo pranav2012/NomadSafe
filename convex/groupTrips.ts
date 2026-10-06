@@ -1,6 +1,6 @@
 import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
-import { HOUR, RateLimiter } from "@convex-dev/rate-limiter";
+import { HOUR, MINUTE, RateLimiter } from "@convex-dev/rate-limiter";
 import { components, internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
@@ -26,6 +26,8 @@ const rateLimiter = new RateLimiter(components.rateLimiter, {
   tripRecordsPush: { kind: "token bucket", rate: 600, period: HOUR, capacity: 200 },
   // Joining is a handful of taps; this stops scripted guessing of invite codes.
   tripJoin: { kind: "token bucket", rate: 20, period: HOUR, capacity: 10 },
+  // One "can you send me the ticket?" per item per person every half hour.
+  ticketAsk: { kind: "fixed window", rate: 1, period: 30 * MINUTE },
 });
 
 function assertTripData(data: unknown) {
@@ -561,6 +563,60 @@ export const clearRecordAuthor = internalMutation({
     if (!page.isDone) {
       await ctx.scheduler.runAfter(0, internal.groupTrips.clearRecordAuthor, { tripId, userId, cursor: page.continueCursor });
     }
+  },
+});
+
+/**
+ * Asks whoever holds an item's ticket to send it: a push to the members the item's `ticketHolders`
+ * names (other than the caller). Tickets themselves never touch the server.
+ */
+export const askForTicket = mutation({
+  args: { tripId: v.id("sharedTrips"), clientId: v.string() },
+  handler: async (ctx, { tripId, clientId }) => {
+    assertMaxLength(clientId, MAX_CLIENT_ID, "Item id");
+    const user = await requireUser(ctx);
+    const me = await requireMember(ctx, tripId, user.id);
+    const record = await ctx.db
+      .query("tripRecords")
+      .withIndex("by_trip_record", (q) => q.eq("tripId", tripId).eq("kind", "event").eq("clientId", clientId))
+      .unique();
+    const data = record && !record.deleted ? (record.data as { title?: unknown; ticketHolders?: unknown } | null) : null;
+    const holders = Array.isArray(data?.ticketHolders)
+      ? data.ticketHolders.filter((id): id is string => typeof id === "string" && id !== me.memberId)
+      : [];
+    if (holders.length === 0) throw new Error("No one has shared this ticket");
+    const { ok } = await rateLimiter.limit(ctx, "ticketAsk", { key: `${user.id}:${tripId}:${clientId}` });
+    if (!ok) return { sent: false };
+    await ctx.scheduler.runAfter(0, internal.tripNotifications.notifyTicketAsk, {
+      tripId,
+      askerMemberId: me.memberId,
+      holderMemberIds: holders,
+      clientId,
+      title: typeof data?.title === "string" ? data.title : "",
+    });
+    return { sent: true };
+  },
+});
+
+/** Push tokens of specific members (a direct ask, so a muted trip still gets it). */
+export const memberPushTargets = internalQuery({
+  args: { tripId: v.id("sharedTrips"), memberIds: v.array(v.string()), actorMemberId: v.string() },
+  handler: async (ctx, { tripId, memberIds, actorMemberId }) => {
+    const trip = await ctx.db.get(tripId);
+    if (!trip) return null;
+    const members = await membersOf(ctx, tripId);
+    const actor = members.find((member) => member.memberId === actorMemberId);
+    const targets: { token: string; locale: string }[] = [];
+    for (const member of members) {
+      if (!member.userId || !memberIds.includes(member.memberId) || member.status !== "active") continue;
+      const tokens = await ctx.db
+        .query("pushTokens")
+        .withIndex("by_user", (q) => q.eq("userId", member.userId!))
+        .collect();
+      targets.push(...tokens.map((token) => ({ token: token.token, locale: token.locale })));
+    }
+    const tripName = (trip.data as { name?: unknown } | null)?.name;
+    return { tripName: typeof tripName === "string" ? tripName : "", actorName: actor?.name ?? "", targets };
   },
 });
 

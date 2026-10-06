@@ -1704,6 +1704,20 @@
     "position": "{{index}} of {{total}}",
     "openFailed": "Couldn't open this file.",
     "previous": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "send": "Send",
+    "visibleToGroup": "Visible to the group",
+    "heldBy": "On {{names}}'s phone",
+    "ask": "Ask for it",
+    "askTitle": "{{names}} has this ticket",
+    "askBody": "Ask them to send it to you? They'll get a notification.",
+    "asked": "Asked {{names}}",
+    "askedRecently": "You asked recently. Try again in a little while.",
+    "askFailed": "Couldn't send that. Check your connection.",
+    "receiveTitle": "Add this ticket to…",
+    "receiveNoTrip": "No trip is open",
+    "receiveNothing": "Nothing to add.",
+    "receiveNoItems": "This trip has no items yet. Add one first.",
+    "receiveFailed": "Couldn't save this file."
   }
 }

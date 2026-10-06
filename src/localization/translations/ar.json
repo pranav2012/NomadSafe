@@ -1704,6 +1704,20 @@
     "position": "{{index}} من {{total}}",
     "openFailed": "تعذّر فتح هذا الملف.",
     "previous": "السابق",
-    "next": "التالي"
+    "next": "التالي",
+    "send": "إرسال",
+    "visibleToGroup": "مرئي للمجموعة",
+    "heldBy": "على هاتف {{names}}",
+    "ask": "اطلبها",
+    "askTitle": "التذكرة لدى {{names}}",
+    "askBody": "هل تطلب منه إرسالها إليك؟ سيصله إشعار.",
+    "asked": "تم الطلب من {{names}}",
+    "askedRecently": "طلبتها مؤخرًا. حاول بعد قليل.",
+    "askFailed": "تعذّر الإرسال. تحقّق من اتصالك.",
+    "receiveTitle": "أضف هذه التذكرة إلى…",
+    "receiveNoTrip": "لا توجد رحلة مفتوحة",
+    "receiveNothing": "لا شيء لإضافته.",
+    "receiveNoItems": "لا عناصر في هذه الرحلة بعد. أضف عنصرًا أولًا.",
+    "receiveFailed": "تعذّر حفظ هذا الملف."
   }
 }

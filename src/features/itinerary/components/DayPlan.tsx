@@ -64,6 +64,7 @@ export function DayPlan({
   onDismissMustDo,
   ticketEventIds,
   onOpenTickets,
+  onAskForTicket,
 }: {
   events: TripEvent[];
   day: Date;
@@ -75,6 +76,8 @@ export function DayPlan({
   /** Items with tickets saved on this phone get a ticket button. */
   ticketEventIds: Set<string>;
   onOpenTickets: (eventId: string) => void;
+  /** Shared trips: items only someone else holds a ticket for offer to ask them for it. */
+  onAskForTicket?: (event: TripEvent) => void;
   onDismissMustDo: (item: MustDo) => void;
   onPress: (event: TripEvent) => void;
   onAdd: () => void;
@@ -170,6 +173,15 @@ export function DayPlan({
             style={[styles.round, { backgroundColor: c.surfaceStrong }]}
           >
             <Icon name="ticket" size={14} color={c.text} />
+          </PressableScale>
+        ) : onAskForTicket && (event.ticketHolders ?? []).some((person) => person !== SELF_ID) ? (
+          <PressableScale
+            onPress={() => onAskForTicket(event)}
+            accessibilityRole="button"
+            accessibilityLabel={t("tickets.heldBy", { names: (event.ticketHolders ?? []).filter((person) => person !== SELF_ID).join(", ") })}
+            style={[styles.round, styles.remote, { borderColor: c.textMuted }]}
+          >
+            <Icon name="ticket" size={14} color={c.textMuted} />
           </PressableScale>
         ) : null}
         {mapsButton(event)}
@@ -307,6 +319,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 15 },
   sub: { fontSize: 13 },
   round: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  remote: { borderWidth: 1, borderStyle: "dashed" },
   check: { width: 24, height: 24, borderRadius: 12, borderWidth: 1.5, alignItems: "center", justifyContent: "center" },
   theirs: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 11, paddingStart: 40, paddingEnd: 14 },
   spine: { position: "absolute", left: 30, top: 0, bottom: 0, width: 2, borderRadius: 1 },

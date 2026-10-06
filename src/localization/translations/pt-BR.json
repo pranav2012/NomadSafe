@@ -1704,6 +1704,20 @@
     "position": "{{index}} de {{total}}",
     "openFailed": "Não foi possível abrir este arquivo.",
     "previous": "Anterior",
-    "next": "Próximo"
+    "next": "Próximo",
+    "send": "Enviar",
+    "visibleToGroup": "Visível para o grupo",
+    "heldBy": "No celular de {{names}}",
+    "ask": "Pedir",
+    "askTitle": "{{names}} tem este ingresso",
+    "askBody": "Pedir para te enviar? A pessoa vai receber uma notificação.",
+    "asked": "Você pediu para {{names}}",
+    "askedRecently": "Você pediu há pouco. Tente de novo daqui a pouco.",
+    "askFailed": "Não foi possível enviar. Verifique sua conexão.",
+    "receiveTitle": "Adicionar este ingresso a…",
+    "receiveNoTrip": "Nenhuma viagem aberta",
+    "receiveNothing": "Nada para adicionar.",
+    "receiveNoItems": "Esta viagem ainda não tem itens. Adicione um primeiro.",
+    "receiveFailed": "Não foi possível salvar este arquivo."
   }
 }

@@ -54,9 +54,9 @@ export interface AnalyticsEvents {
   itinerary_event_deleted: { source: EventSource };
   itinerary_day_viewed: { relative_day: number };
   ticket_opened: { kind: "pdf" | "image"; count: number };
-  ticket_added: { source: "gmail" | "file" | "photo"; count: number };
+  ticket_added: { source: "gmail" | "file" | "photo" | "received"; count: number };
   must_do_suggestion: { action: "added" | "dismissed"; where: "free_day" | "trip_prep" };
-  today_action: { action: "maps" | "add_stop" | "expand_globe" | "collapse_globe" | "back_to_today" | "done" | "undone" | "schedule_wishlist" };
+  today_action: { action: "maps" | "add_stop" | "expand_globe" | "collapse_globe" | "back_to_today" | "done" | "undone" | "schedule_wishlist" | "ask_ticket" };
   recap_opened: { source: "home" | "notification" | "trips"; stops: number };
   recap_finished: { stops: number };
   recap_shared: { format: "image" | "video"; spend: boolean };

@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { AuraButton, AuraChip, AuraDateField, AuraField, AuraSegmented, AuraSheet, Icon, PressableScale, useAura } from "@/atoms";
+import { AuraButton, AuraChip, AuraDateField, AuraField, AuraSegmented, AuraSheet, AuraSwitch, Icon, PressableScale, useAura } from "@/atoms";
 import { track } from "@/modules/analytics";
-import { attachFiles, attachPhotos } from "@/features/itinerary/services/tickets";
+import { attachFiles, attachPhotos, sendTicket, setTicketShared } from "@/features/itinerary/services/tickets";
 import { useTicketsStore } from "@/features/itinerary/store/ticketsStore";
 import { auraEventColors } from "@/constants/aura";
 import { useLocalization } from "@/localization";
@@ -52,6 +52,8 @@ export function EventForm({
   tripStart,
   companions,
   onOpenTicket,
+  sharedTrip,
+  onAskForTicket,
   visible,
   onSave,
   onDelete,
@@ -66,6 +68,9 @@ export function EventForm({
   companions: string[];
   /** Opens a saved ticket full screen (the parent closes this sheet first). */
   onOpenTicket: (ticketId: string) => void;
+  /** Shared trips: tickets get a "Visible to the group" switch, and others' tickets can be asked for. */
+  sharedTrip: boolean;
+  onAskForTicket: () => void;
   visible: boolean;
   onSave: (values: EventFormValues) => void;
   onDelete?: () => void;
@@ -88,6 +93,7 @@ export function EventForm({
   const [people, setPeople] = useState<string[]>(event?.people ?? []);
   const allTickets = useTicketsStore((state) => state.tickets);
   const tickets = event ? allTickets.filter((ticket) => ticket.eventId === event.id) : [];
+  const others = (event?.ticketHolders ?? []).filter((person) => person !== SELF_ID);
   const addTickets = async (source: "file" | "photo") => {
     if (!event) return;
     const count = source === "file" ? await attachFiles(event.id) : await attachPhotos(event.id);
@@ -230,19 +236,42 @@ export function EventForm({
           {event ? (
             <>
               {tickets.map((ticket) => (
-                <PressableScale
-                  key={ticket.id}
-                  onPress={() => onOpenTicket(ticket.id)}
-                  accessibilityRole="button"
-                  style={[styles.ticket, { backgroundColor: c.surface, borderColor: c.hairline }]}
-                >
-                  <Icon name={ticket.kind === "pdf" ? "ticket" : "camera"} size={15} color={c.textSoft} />
-                  <Text numberOfLines={1} style={[styles.ticketName, { color: c.text, fontFamily: f.medium }]}>
-                    {ticket.name}
-                  </Text>
-                  <Icon name="chevronRight" size={13} color={c.textMuted} />
-                </PressableScale>
+                <View key={ticket.id} style={[styles.ticketCard, { backgroundColor: c.surface, borderColor: c.hairline }]}>
+                  <PressableScale onPress={() => onOpenTicket(ticket.id)} accessibilityRole="button" style={styles.ticket}>
+                    <Icon name={ticket.kind === "pdf" ? "ticket" : "camera"} size={15} color={c.textSoft} />
+                    <Text numberOfLines={1} style={[styles.ticketName, { color: c.text, fontFamily: f.medium }]}>
+                      {ticket.name}
+                    </Text>
+                    <PressableScale
+                      onPress={() => void sendTicket(ticket)}
+                      accessibilityRole="button"
+                      accessibilityLabel={t("tickets.send")}
+                      style={[styles.send, { backgroundColor: c.surfaceStrong }]}
+                    >
+                      <Icon name="share" size={14} color={c.text} />
+                    </PressableScale>
+                  </PressableScale>
+                  {sharedTrip ? (
+                    <View style={[styles.visible, { borderTopColor: c.hairline }]}>
+                      <Text style={[styles.visibleText, { color: c.textSoft, fontFamily: f.regular }]}>{t("tickets.visibleToGroup")}</Text>
+                      <AuraSwitch
+                        value={ticket.shared !== false}
+                        onValueChange={(next) => setTicketShared(ticket, next)}
+                        accessibilityLabel={t("tickets.visibleToGroup")}
+                      />
+                    </View>
+                  ) : null}
+                </View>
               ))}
+              {others.length > 0 && tickets.length === 0 ? (
+                <View style={[styles.ticketCard, styles.ticket, { backgroundColor: c.surface, borderColor: c.hairline }]}>
+                  <Icon name="users" size={15} color={c.textSoft} />
+                  <Text numberOfLines={1} style={[styles.ticketName, { color: c.text, fontFamily: f.medium }]}>
+                    {t("tickets.heldBy", { names: others.join(", ") })}
+                  </Text>
+                  <AuraButton size="md" variant="secondary" label={t("tickets.ask")} onPress={onAskForTicket} />
+                </View>
+              ) : null}
               <View style={styles.types}>
                 <AuraChip label={t("tickets.addFile")} icon="ticket" onPress={() => void addTickets("file")} />
                 <AuraChip label={t("tickets.addPhoto")} icon="camera" onPress={() => void addTickets("photo")} />
@@ -279,7 +308,11 @@ const styles = StyleSheet.create({
   types: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   hint: { fontSize: 13.5, lineHeight: 19 },
   people: { gap: 10 },
-  ticket: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, height: 46, borderRadius: 14, borderWidth: StyleSheet.hairlineWidth },
+  ticketCard: { borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, overflow: "hidden" },
+  ticket: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, minHeight: 50 },
+  send: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  visible: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 14, paddingVertical: 8, borderTopWidth: StyleSheet.hairlineWidth },
+  visibleText: { fontSize: 13.5 },
   ticketName: { flex: 1, fontSize: 14 },
   peopleLabel: { fontSize: 13.5 },
   actions: { flexDirection: "row", gap: 10 },

@@ -24,6 +24,8 @@ export interface TripEvent {
   people?: string[];
   /** Ticked off; shared with everyone on the trip. */
   doneAt?: string;
+  /** Shared trips: who has a ticket for this item on their phone (labels only; files never sync). */
+  ticketHolders?: string[];
   source: EventSource;
   note?: string;
   rawText?: string;

@@ -1704,6 +1704,20 @@
     "position": "{{index}} von {{total}}",
     "openFailed": "Diese Datei ließ sich nicht öffnen.",
     "previous": "Zurück",
-    "next": "Weiter"
+    "next": "Weiter",
+    "send": "Senden",
+    "visibleToGroup": "Für die Gruppe sichtbar",
+    "heldBy": "Auf {{names}}s Handy",
+    "ask": "Anfragen",
+    "askTitle": "{{names}} hat dieses Ticket",
+    "askBody": "Bitten, es dir zu schicken? Es kommt eine Benachrichtigung.",
+    "asked": "{{names}} gefragt",
+    "askedRecently": "Du hast gerade erst gefragt. Versuch es gleich noch mal.",
+    "askFailed": "Konnte nicht gesendet werden. Prüfe deine Verbindung.",
+    "receiveTitle": "Dieses Ticket hinzufügen zu…",
+    "receiveNoTrip": "Keine Reise geöffnet",
+    "receiveNothing": "Nichts hinzuzufügen.",
+    "receiveNoItems": "Diese Reise hat noch keine Einträge. Leg zuerst einen an.",
+    "receiveFailed": "Diese Datei ließ sich nicht speichern."
   }
 }

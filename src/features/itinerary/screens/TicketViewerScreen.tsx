@@ -11,7 +11,7 @@ import { auraFonts as f } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { PrivateView, track } from "@/modules/analytics";
 import { logger } from "@/modules/logger";
-import { removeTickets } from "@/features/itinerary/services/tickets";
+import { removeTickets, sendTicket } from "@/features/itinerary/services/tickets";
 import { useEventsStore } from "@/features/itinerary/store/eventsStore";
 import { useTicketsStore, type Ticket } from "@/features/itinerary/store/ticketsStore";
 import { localizeEventTitle } from "@/features/itinerary/utils/eventText";
@@ -122,6 +122,9 @@ export default function TicketViewerScreen() {
             {tickets.length > 1 ? `${ticket.name} · ${t("tickets.position", { index: index + 1, total: tickets.length })}` : ticket.name}
           </Text>
         </View>
+        <PressableScale onPress={() => void sendTicket(ticket)} accessibilityRole="button" accessibilityLabel={t("tickets.send")} style={styles.round}>
+          <Icon name="share" size={17} color={INK} />
+        </PressableScale>
         <PressableScale onPress={confirmRemove} accessibilityRole="button" accessibilityLabel={t("tickets.remove")} style={styles.round}>
           <Icon name="trash" size={17} color={INK} />
         </PressableScale>

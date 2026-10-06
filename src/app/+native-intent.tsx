@@ -1,4 +1,5 @@
 import { noteIncomingLink } from "@/features/expenses/services/voiceCaptureSession";
+import { isIncomingFileLink, useIncomingTicketStore } from "@/features/itinerary/store/incomingTicketStore";
 import { isQuickSosLink, useQuickSosStore } from "@/features/safety/store/quickSosStore";
 import { usePendingJoinStore } from "@/features/trips/store/pendingJoinStore";
 import { inviteCodeFromPath } from "@/features/trips/utils/inviteLinks";
@@ -10,6 +11,11 @@ const OAUTH_REDIRECT = /^(?:[\w.+-]+:\/{1,2}|\/)oauthredirect(?:[/?#]|$)/;
 export function redirectSystemPath({ path }: { path: string; initial: boolean }) {
   // Not a screen: navigating would unmount the sheet waiting for the auth result.
   if (OAUTH_REDIRECT.test(path)) return null;
+  // A ticket sent by someone and opened with NomadSafe: the user picks which item it belongs to.
+  if (isIncomingFileLink(path)) {
+    useIncomingTicketStore.getState().set(path);
+    return "/receive-ticket";
+  }
   const fromWidget = isWidgetToken(linkParam(path, WIDGET_TOKEN_PARAM));
   // The SOS widget: the Safety tab starts the cancel countdown once it's on screen. The same link
   // from another app (no matching token) only opens the Safety tab.

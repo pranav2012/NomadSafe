@@ -125,7 +125,8 @@ function toServerRecord(kind: SharedKind, record: LocalRecord, map: Translate): 
   if (kind === "event") {
     const { tripId: _trip, externalId: _external, sourceIds: _sources, ...rest } = stripRaw(record as TripEvent);
     const people = mapPeople(rest.people, map);
-    return people === null ? null : { ...rest, people };
+    const ticketHolders = mapPeople(rest.ticketHolders, map);
+    return people === null || ticketHolders === null ? null : { ...rest, people, ticketHolders };
   }
   if (kind === "settlement") {
     const { tripId: _trip, ...rest } = record as Settlement;
@@ -145,7 +146,8 @@ function toLocalRecord(kind: SharedKind, data: unknown, tripId: string, map: Tra
   if (kind === "event") {
     const event = data as TripEvent;
     const people = mapPeople(event.people, map);
-    return people === null ? null : { ...event, tripId, people };
+    const ticketHolders = mapPeople(event.ticketHolders, map);
+    return people === null || ticketHolders === null ? null : { ...event, tripId, people, ticketHolders };
   }
   if (kind === "settlement") {
     const settlement = data as Settlement;

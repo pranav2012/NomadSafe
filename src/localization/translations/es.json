@@ -1704,6 +1704,20 @@
     "position": "{{index}} de {{total}}",
     "openFailed": "No se pudo abrir este archivo.",
     "previous": "Anterior",
-    "next": "Siguiente"
+    "next": "Siguiente",
+    "send": "Enviar",
+    "visibleToGroup": "Visible para el grupo",
+    "heldBy": "En el teléfono de {{names}}",
+    "ask": "Pedirlo",
+    "askTitle": "{{names}} tiene este billete",
+    "askBody": "¿Pedirle que te lo envíe? Recibirá una notificación.",
+    "asked": "Se lo pediste a {{names}}",
+    "askedRecently": "Lo pediste hace poco. Inténtalo dentro de un rato.",
+    "askFailed": "No se pudo enviar. Revisa tu conexión.",
+    "receiveTitle": "Añadir este billete a…",
+    "receiveNoTrip": "No hay ningún viaje abierto",
+    "receiveNothing": "Nada que añadir.",
+    "receiveNoItems": "Este viaje aún no tiene elementos. Añade uno primero.",
+    "receiveFailed": "No se pudo guardar este archivo."
   }
 }

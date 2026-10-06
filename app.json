@@ -34,7 +34,24 @@
           "location",
           "fetch",
           "remote-notification"
-        ]
+        ],
+        "CFBundleDocumentTypes": [
+          {
+            "CFBundleTypeName": "PDF document",
+            "LSHandlerRank": "Alternate",
+            "LSItemContentTypes": [
+              "com.adobe.pdf"
+            ]
+          },
+          {
+            "CFBundleTypeName": "Image",
+            "LSHandlerRank": "Alternate",
+            "LSItemContentTypes": [
+              "public.image"
+            ]
+          }
+        ],
+        "LSSupportsOpeningDocumentsInPlace": false
       },
       "entitlements": {
         "com.apple.security.application-groups": [
@@ -83,6 +100,24 @@
         "android.permission.READ_MEDIA_VIDEO",
         "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
         "android.permission.DOWNLOAD_WITHOUT_NOTIFICATION"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "category": [
+            "DEFAULT"
+          ],
+          "data": [
+            {
+              "scheme": "content",
+              "mimeType": "application/pdf"
+            },
+            {
+              "scheme": "content",
+              "mimeType": "image/*"
+            }
+          ]
+        }
       ]
     },
     "web": {

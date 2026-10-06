@@ -1704,6 +1704,20 @@
     "position": "{{index}} / {{total}}",
     "openFailed": "このファイルを開けませんでした。",
     "previous": "前へ",
-    "next": "次へ"
+    "next": "次へ",
+    "send": "送る",
+    "visibleToGroup": "グループに表示",
+    "heldBy": "{{names}}さんの端末にあります",
+    "ask": "送ってもらう",
+    "askTitle": "{{names}}さんがこのチケットを持っています",
+    "askBody": "送ってもらうよう頼みますか？通知が届きます。",
+    "asked": "{{names}}さんに頼みました",
+    "askedRecently": "さっき頼んだばかりです。少し待ってからもう一度。",
+    "askFailed": "送信できませんでした。接続を確認してください。",
+    "receiveTitle": "このチケットを追加する先…",
+    "receiveNoTrip": "開いている旅行がありません",
+    "receiveNothing": "追加するものはありません。",
+    "receiveNoItems": "この旅行にはまだ予定がありません。先に追加してください。",
+    "receiveFailed": "このファイルを保存できませんでした。"
   }
 }
