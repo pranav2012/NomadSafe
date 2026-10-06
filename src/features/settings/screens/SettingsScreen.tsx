@@ -104,8 +104,6 @@ export default function SettingsScreen() {
   const setUnitSystem = useSettingsStore((s) => s.setUnitSystem);
   const timeFormat = useSettingsStore((s) => s.timeFormat);
   const setTimeFormat = useSettingsStore((s) => s.setTimeFormat);
-  const tripModeEnabled = useSettingsStore((s) => s.tripModeEnabled);
-  const setTripModeEnabled = useSettingsStore((s) => s.setTripModeEnabled);
   const defaultCheckInDuration = useSettingsStore((s) => s.defaultCheckInDuration);
   const setDefaultCheckInDuration = useSettingsStore((s) => s.setDefaultCheckInDuration);
   const localAiEnabled = useSettingsStore((s) => s.localAiEnabled);
@@ -629,13 +627,6 @@ export default function SettingsScreen() {
             detail={t("settings.homeCountrySub")}
             value={homeCountry.code ? countryDisplayName(homeCountry.code, locale) : t("settings.homeCountryNone")}
             onPress={() => setSheet("homeCountry")}
-          />
-          <AuraListRow
-            icon="flag"
-            tone={AMBER}
-            label={t("settings.tripMode")}
-            detail={tripModeEnabled ? t("settings.tripModeSub") : t("settings.tripModeOffSub")}
-            trailing={<AuraSwitch value={tripModeEnabled} onValueChange={setTripModeEnabled} accessibilityLabel={t("settings.tripMode")} />}
           />
         </AuraListGroup>
 

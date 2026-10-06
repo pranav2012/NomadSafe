@@ -107,9 +107,6 @@
     "safetySection": "안전",
     "emergencyContacts": "비상 연락처",
     "defaultCheckIn": "기본 체크인",
-    "tripMode": "여행 모드",
-    "tripModeSub": "단체 여행, 경비, 안전을 함께 추적",
-    "tripModeOffSub": "일상 가계부 + 솔로 안전 모드",
     "localAi": "온디바이스 AI",
     "localAiDisabled": "비활성화됨 — 모든 로컬 AI 꺼짐",
     "aiUnsupported": "이 기기에서는 로컬 AI가 지원되지 않습니다",
@@ -1426,7 +1423,7 @@
     "tierName_pro": "Pro",
     "plusTagline": "무제한 여행, 모든 기능",
     "proTagline": "Plus의 모든 기능에 온라인 AI까지",
-    "featureUnlimitedTrips": "여행을 무제한으로 계획하고 관리",
+    "featureUnlimitedTrips": "여행과 그룹 무제한",
     "featureEverything": "안전, 지출, 정산, 공유 여행 모두 포함",
     "featureOfflineAi": "오프라인에서도 작동하는 기기 내 AI",
     "featureOwnKey": "가지고 있는 AI API 키도 사용 가능",
@@ -1464,7 +1461,9 @@
     "restoreFailedBody": "스토어에 연결할 수 없어요. 연결을 확인하고 다시 시도해 주세요.",
     "renewalTerms": "구독은 Google Play에서 취소할 때까지 자동으로 갱신돼요. 평생 이용권은 1회 구매예요.",
     "renewalTermsIos": "구독은 App Store에서 취소할 때까지 자동으로 갱신돼요. 평생 이용권은 1회 구매예요.",
-    "termsOfUse": "이용약관"
+    "termsOfUse": "이용약관",
+    "titleGroups": "무료 그룹 {{count}}개를 모두 사용했어요",
+    "ledeGroups": "무료 플랜에는 내가 만든 그룹 {{count}}개가 포함되며, 친구 그룹 참여는 언제나 무료예요. 업그레이드하면 원하는 만큼 그룹을 만들 수 있어요."
   },
   "aiKey": {
     "title": "내 API 키",

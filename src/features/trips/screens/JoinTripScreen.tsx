@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AuraButton, AuraCard, AuraChip, AuraField, AuraLoader, Icon, PressableScale, useAura } from "@/atoms";
 import { useAuthStore } from "@/features/auth/store/authStore";
 import { registerTripPush } from "@/features/sync";
-import { useTripsStore } from "@/features/trips/store/tripsStore";
+import { isTrip, selectMoneyGroups, useTripsStore, type MoneyGroup } from "@/features/trips/store/tripsStore";
 import { track, PrivateView } from "@/modules/analytics";
 import { fromDateKey } from "@/features/trips/utils/dates";
 import { useLocalization } from "@/localization";
@@ -15,26 +15,28 @@ import { useSheetTopInset } from "@/hooks/useSheetTopInset";
 const NEW_MEMBER = "__new__";
 const ARRIVAL_TIMEOUT_MS = 8000;
 
-/** Waits for the joined trip to arrive through live sync, then makes it the active trip. */
-function openWhenSynced(serverTripId: string): Promise<boolean> {
-  const select = () => useTripsStore.getState().trips.find((trip) => trip.shared?.tripId === serverTripId);
+/** Waits for the joined trip or group to arrive through live sync; a trip becomes the active trip. */
+function openWhenSynced(serverTripId: string): Promise<MoneyGroup | null> {
+  const select = () => selectMoneyGroups(useTripsStore.getState()).find((item) => item.shared?.tripId === serverTripId);
   return new Promise((resolve) => {
     const activate = () => {
-      const trip = select();
-      if (!trip) return false;
-      useTripsStore.getState().setActiveTrip(trip.id);
-      return true;
+      const item = select();
+      if (!item) return null;
+      if (isTrip(item)) useTripsStore.getState().setActiveTrip(item.id);
+      return item;
     };
-    if (activate()) return resolve(true);
+    const ready = activate();
+    if (ready) return resolve(ready);
     const timer = setTimeout(() => {
       unsubscribe();
-      resolve(false);
+      resolve(null);
     }, ARRIVAL_TIMEOUT_MS);
     const unsubscribe = useTripsStore.subscribe(() => {
-      if (!activate()) return;
+      const item = activate();
+      if (!item) return;
       clearTimeout(timer);
       unsubscribe();
-      resolve(true);
+      resolve(item);
     });
   });
 }
@@ -58,9 +60,9 @@ export default function JoinTripScreen() {
   const selected = choice ?? (preview?.unclaimed.length ? null : NEW_MEMBER);
 
   const finish = async (tripId: string) => {
-    await openWhenSynced(tripId);
+    const joined = await openWhenSynced(tripId);
     router.dismissAll();
-    router.replace("/(tabs)");
+    router.replace(joined && !isTrip(joined) ? "/(tabs)/expenses" : "/(tabs)");
   };
 
   const handleJoin = async () => {

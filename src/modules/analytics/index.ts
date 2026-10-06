@@ -40,7 +40,8 @@ export interface AnalyticsEvents {
   voice_capture_failed: { reason: VoiceCaptureFailure };
   voice_draft_saved: { kind: "expense" | "settlement"; split: boolean; edited: boolean; auto: boolean };
   trip_limit_reached: undefined;
-  paywall_viewed: { reason: "trips" | "ai" | "settings" };
+  group_limit_reached: undefined;
+  paywall_viewed: { reason: "trips" | "groups" | "ai" | "settings" };
   purchase_completed: { tier: PaidTier; period: BillingPeriod; trial: boolean };
   purchases_restored: { tier: "free" | PaidTier };
   ai_provider_used: { provider: AiProvider; task: AiTask; fallback: boolean };

@@ -383,9 +383,6 @@
     "safetySection": "Safety",
     "emergencyContacts": "Emergency contacts",
     "defaultCheckIn": "Default check-in",
-    "tripMode": "Trip mode",
-    "tripModeSub": "Track group trips, expenses, and safety together",
-    "tripModeOffSub": "Day-to-day ledger + solo safety mode",
     "localAi": "On-device AI",
     "localAiSub": "Trip tips and budget help that run on this phone",
     "localAiDisabled": "Disabled — all local AI is off",
@@ -1426,7 +1423,7 @@
     "tierName_pro": "Pro",
     "plusTagline": "Unlimited trips, every feature",
     "proTagline": "Everything in Plus, with online AI",
-    "featureUnlimitedTrips": "Plan and track unlimited trips",
+    "featureUnlimitedTrips": "Unlimited trips and groups",
     "featureEverything": "Safety, expenses, splits and shared trips, all included",
     "featureOfflineAi": "On-device AI that works offline",
     "featureOwnKey": "Use your own AI API key if you have one",
@@ -1464,7 +1461,9 @@
     "restoreFailedBody": "We couldn't reach the store. Check your connection and try again.",
     "renewalTerms": "Subscriptions renew automatically until you cancel in Google Play. Lifetime is a one-time purchase.",
     "renewalTermsIos": "Subscriptions renew automatically until you cancel in App Store. Lifetime is a one-time purchase.",
-    "termsOfUse": "Terms of Use"
+    "termsOfUse": "Terms of Use",
+    "titleGroups": "You've used your {{count}} free groups",
+    "ledeGroups": "Free covers {{count}} groups you own, and joining friends' groups is always free. Upgrade to split with as many groups as you like."
   },
   "aiKey": {
     "title": "Your own API key",

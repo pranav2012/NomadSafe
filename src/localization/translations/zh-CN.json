@@ -107,9 +107,6 @@
     "safetySection": "安全",
     "emergencyContacts": "紧急联系人",
     "defaultCheckIn": "默认签到",
-    "tripMode": "行程模式",
-    "tripModeSub": "共同追踪团队行程、费用和安全",
-    "tripModeOffSub": "日常账本 + 单人安全模式",
     "localAi": "设备端 AI",
     "localAiDisabled": "已禁用 — 所有本地 AI 已关闭",
     "aiUnsupported": "此设备不支持本地 AI",
@@ -1426,7 +1423,7 @@
     "tierName_pro": "Pro",
     "plusTagline": "无限行程，全部功能",
     "proTagline": "包含 Plus 全部功能，外加在线 AI",
-    "featureUnlimitedTrips": "规划和记录无限行程",
+    "featureUnlimitedTrips": "不限数量的旅行和群组",
     "featureEverything": "安全、支出、分账和共享行程，全部包含",
     "featureOfflineAi": "可离线使用的设备端 AI",
     "featureOwnKey": "如有自己的 AI API 密钥，也可使用",
@@ -1464,7 +1461,9 @@
     "restoreFailedBody": "无法连接商店。请检查网络连接后重试。",
     "renewalTerms": "订阅将自动续订，直到你在 Google Play 中取消。终身版为一次性购买。",
     "renewalTermsIos": "订阅将自动续订，直到你在 App Store 中取消。终身版为一次性购买。",
-    "termsOfUse": "使用条款"
+    "termsOfUse": "使用条款",
+    "titleGroups": "你已用完 {{count}} 个免费群组",
+    "ledeGroups": "免费版包含你创建的 {{count}} 个群组，加入朋友的群组始终免费。升级后可使用任意数量的群组。"
   },
   "aiKey": {
     "title": "自己的 API 密钥",

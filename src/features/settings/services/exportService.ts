@@ -17,6 +17,7 @@ export interface NomadSafeExport {
   version: string;
   user: { name: string | null; email?: string; phone?: string } | null;
   trips: ReturnType<typeof useTripsStore.getState>["trips"];
+  groups: ReturnType<typeof useTripsStore.getState>["groups"];
   expenses: ReturnType<typeof useExpensesStore.getState>["expenses"];
   itineraryEvents: ReturnType<typeof useEventsStore.getState>["events"];
   pastTravel: ReturnType<typeof usePassportStore.getState>["entries"];
@@ -30,7 +31,6 @@ export interface NomadSafeExport {
     currencyOverride: string | null;
     localeOverride: string | null;
     homeCountry: string | null;
-    defaultTripMode: string;
     defaultCheckInDuration: number;
   };
   emergencyContacts: ReturnType<typeof emergencyContactsStorage.get>;
@@ -51,6 +51,7 @@ function buildExport(): NomadSafeExport {
         }
       : null,
     trips: useTripsStore.getState().trips,
+    groups: useTripsStore.getState().groups,
     expenses: useExpensesStore.getState().expenses,
     itineraryEvents: useEventsStore.getState().events,
     pastTravel: usePassportStore.getState().entries,
@@ -64,7 +65,6 @@ function buildExport(): NomadSafeExport {
       currencyOverride: settings.currencyOverride,
       homeCountry: settings.homeCountry,
       localeOverride: settings.localeOverride,
-      defaultTripMode: settings.defaultTripMode,
       defaultCheckInDuration: settings.defaultCheckInDuration,
     },
     emergencyContacts: emergencyContactsStorage.get(),

@@ -6,14 +6,14 @@ import { usePassportStore, type PastTravel } from "@/features/passport/store/pas
 import { deleteAllTripPhotos } from "@/features/recap/services/tripPhotos";
 import { deleteAllTickets } from "@/features/itinerary/services/tickets";
 import { useTravelInfoStore } from "@/features/trips/store/travelInfoStore";
-import { pickDefaultActiveTripId, useTripsStore, type Trip } from "@/features/trips/store/tripsStore";
+import { pickDefaultActiveTripId, selectMoneyGroups, useTripsStore, type Group, type Trip } from "@/features/trips/store/tripsStore";
 import { syncWidgets } from "@/features/widget/syncWidgets";
 import { logger } from "@/modules/logger";
 import { storage } from "@/modules/storage";
 import { hashOf } from "../utils/hash";
 import { clearGroupLedgers, keepLocalOnly, makeSharedScope, stripRaw } from "../utils/sharedScope";
 
-type Kind = "trip" | "expense" | "settlement" | "event" | "passport";
+type Kind = "trip" | "group" | "expense" | "settlement" | "event" | "passport";
 
 interface LedgerEntry {
   hash: string;
@@ -46,9 +46,10 @@ function localRecords(): Map<string, { kind: Kind; id: string; data: unknown }> 
   const add = (kind: Kind, id: string, data: unknown) => records.set(`${kind}:${id}`, { kind, id, data });
   // Shared trips and the records they own sync through the trip; only your own unsplit expenses on
   // a shared trip stay in the personal backup.
-  const trips = useTripsStore.getState().trips;
-  const scope = makeSharedScope(userId, trips);
+  const { trips, groups } = useTripsStore.getState();
+  const scope = makeSharedScope(userId, selectMoneyGroups(useTripsStore.getState()));
   for (const trip of trips) if (!trip.shared) add("trip", trip.id, trip);
+  for (const group of groups) if (!group.shared) add("group", group.id, group);
   const { expenses, settlements } = useExpensesStore.getState();
   for (const expense of expenses) if (!scope.has("expense", expense)) add("expense", expense.id, stripRaw(expense));
   for (const settlement of settlements) if (!scope.has("settlement", settlement)) add("settlement", settlement.id, settlement);
@@ -58,7 +59,7 @@ function localRecords(): Map<string, { kind: Kind; id: string; data: unknown }> 
 }
 
 /** Whether the local copy of a record (if any) currently belongs to a shared trip. */
-function isLocallyShared(scope: ReturnType<typeof makeSharedScope>, kind: Exclude<Kind, "trip">, id: string) {
+function isLocallyShared(scope: ReturnType<typeof makeSharedScope>, kind: Exclude<Kind, "trip" | "group">, id: string) {
   if (kind === "passport") return false;
   if (kind === "event") {
     const event = useEventsStore.getState().events.find((item) => item.id === id);
@@ -180,14 +181,14 @@ async function pullChanges(uid: string): Promise<boolean> {
     incoming.set(key, record);
   }
   // Records that now belong to a shared trip are owned by that trip's sync; never touch them here.
-  const scope = makeSharedScope(uid, useTripsStore.getState().trips);
+  const scope = makeSharedScope(uid, selectMoneyGroups(useTripsStore.getState()));
   for (const [key, record] of incoming) {
     const local = { id: record.clientId, ...(record.data as object), tripId: (record.data as { tripId?: string | null } | undefined)?.tripId ?? null };
     const ownedByTrip =
       record.kind === "passport"
         ? false
-        : record.kind === "trip"
-        ? useTripsStore.getState().trips.some((trip) => trip.id === record.clientId && trip.shared)
+        : record.kind === "trip" || record.kind === "group"
+        ? selectMoneyGroups(useTripsStore.getState()).some((item) => item.id === record.clientId && item.shared)
         : isLocallyShared(scope, record.kind, record.clientId) || (!record.deleted && scope.has(record.kind, local));
     if (!ownedByTrip) continue;
     incoming.delete(key);
@@ -231,6 +232,8 @@ function applyRemote(incoming: Map<string, RemoteRecord>) {
     const activeStillThere = trips.some((trip) => trip.id === tripsState.activeTripId);
     useTripsStore.setState({ trips, activeTripId: activeStillThere ? tripsState.activeTripId : pickDefaultActiveTripId(trips) });
   }
+  const groups = merge<Group>(tripsState.groups, "group", incoming);
+  if (groups) useTripsStore.setState({ groups });
   const expensesState = useExpensesStore.getState();
   const expenses = merge<Expense>(expensesState.expenses, "expense", incoming);
   const settlements = merge<Settlement>(expensesState.settlements, "settlement", incoming);

@@ -3,6 +3,7 @@ import { ENTITLEMENT_IDS } from "@convex/billingRules";
 export { ENTITLEMENT_IDS };
 
 export const FREE_TRIP_LIMIT = 2;
+export const FREE_GROUP_LIMIT = 2;
 
 export type PlanTier = "free" | "plus" | "pro";
 
@@ -31,4 +32,9 @@ export function ownedTripCount(trips: readonly { shared?: { role: "owner" | "mem
 
 export function canCreateTrip(trips: readonly { shared?: { role: "owner" | "member" } }[], plan: PlanState): boolean {
   return plan.unlimitedTrips || ownedTripCount(trips) < FREE_TRIP_LIMIT;
+}
+
+/** Groups (not trips) count separately: free covers this many owned groups; joined ones never count. */
+export function canCreateGroup(groups: readonly { shared?: { role: "owner" | "member" } }[], plan: PlanState): boolean {
+  return plan.unlimitedTrips || ownedTripCount(groups) < FREE_GROUP_LIMIT;
 }

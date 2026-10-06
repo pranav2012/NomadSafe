@@ -6,7 +6,6 @@ import { normalizeCurrencyCode } from "@/utils/currency";
 import type { TimeFormat, UnitSystem } from "@/utils/units";
 
 type ThemeMode = "light" | "dark" | "system";
-export type DefaultTripMode = "solo" | "group";
 
 interface SettingsState {
   themeMode: ThemeMode;
@@ -19,8 +18,6 @@ interface SettingsState {
   unitSystem: UnitSystem | null;
   /** null follows the phone's 12/24-hour setting. */
   timeFormat: TimeFormat | null;
-  tripModeEnabled: boolean;
-  defaultTripMode: DefaultTripMode;
   defaultCheckInDuration: number; // seconds
   localAiEnabled: boolean;
   /** Use the user's own key or NomadSafe Cloud when online; off keeps all AI on the phone. */
@@ -40,8 +37,6 @@ interface SettingsState {
   setLocaleOverride: (locale: SupportedLocale | null) => void;
   setUnitSystem: (system: UnitSystem | null) => void;
   setTimeFormat: (format: TimeFormat | null) => void;
-  setTripModeEnabled: (value: boolean) => void;
-  setDefaultTripMode: (mode: DefaultTripMode) => void;
   setDefaultCheckInDuration: (seconds: number) => void;
   setLocalAiEnabled: (value: boolean) => void;
   setOnlineAiEnabled: (value: boolean) => void;
@@ -66,8 +61,6 @@ export const useSettingsStore = create<SettingsState>()(
       localeOverride: null,
       unitSystem: null,
       timeFormat: null,
-      tripModeEnabled: true,
-      defaultTripMode: "solo",
       defaultCheckInDuration: 2 * 60 * 60,
       localAiEnabled: true,
       onlineAiEnabled: true,
@@ -85,8 +78,6 @@ export const useSettingsStore = create<SettingsState>()(
       setLocaleOverride: (locale) => set({ localeOverride: locale }),
       setUnitSystem: (system) => set({ unitSystem: system }),
       setTimeFormat: (format) => set({ timeFormat: format }),
-      setTripModeEnabled: (value) => set({ tripModeEnabled: value }),
-      setDefaultTripMode: (mode) => set({ defaultTripMode: mode }),
       setDefaultCheckInDuration: (seconds) => set({ defaultCheckInDuration: seconds }),
       setLocalAiEnabled: (value) => set({ localAiEnabled: value }),
       setOnlineAiEnabled: (value) => set({ onlineAiEnabled: value }),
@@ -104,8 +95,6 @@ export const useSettingsStore = create<SettingsState>()(
           localeOverride: null,
           unitSystem: null,
           timeFormat: null,
-          tripModeEnabled: true,
-          defaultTripMode: "solo",
           defaultCheckInDuration: 2 * 60 * 60,
           localAiEnabled: true,
           onlineAiEnabled: true,

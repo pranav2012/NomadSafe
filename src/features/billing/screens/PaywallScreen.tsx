@@ -10,6 +10,7 @@ import { logger } from "@/modules/logger";
 import { track } from "@/modules/analytics";
 import { selectionChanged, successNotification } from "@/utils/haptics";
 import {
+  FREE_GROUP_LIMIT,
   FREE_TRIP_LIMIT,
   PACKAGE_IDS,
   freeTrialDays,
@@ -25,7 +26,7 @@ import {
 import { useSheetTopInset } from "@/hooks/useSheetTopInset";
 
 type PaidTier = Exclude<PlanTier, "free">;
-type Reason = "trips" | "ai" | "settings";
+type Reason = "trips" | "groups" | "ai" | "settings";
 
 const [INDIGO, TEAL, VIOLET] = auraStatusColors.calm;
 const TIER_RANK: Record<PlanTier, number> = { free: 0, plus: 1, pro: 2 };
@@ -105,9 +106,11 @@ export default function PaywallScreen() {
   const title =
     reason === "trips"
       ? t("paywall.titleTrips", { count: FREE_TRIP_LIMIT })
-      : reason === "ai"
-        ? t("paywall.titleAi")
-        : t("paywall.title");
+      : reason === "groups"
+        ? t("paywall.titleGroups", { count: FREE_GROUP_LIMIT })
+        : reason === "ai"
+          ? t("paywall.titleAi")
+          : t("paywall.title");
 
   const handleBuy = async () => {
     if (!pkg || busy) return;
@@ -181,7 +184,11 @@ export default function PaywallScreen() {
           </PressableScale>
         </View>
         <Text style={[styles.lede, { color: c.textSoft, fontFamily: f.regular }]}>
-          {reason === "trips" ? t("paywall.ledeTrips", { count: FREE_TRIP_LIMIT }) : t("paywall.lede", { count: FREE_TRIP_LIMIT })}
+          {reason === "trips"
+            ? t("paywall.ledeTrips", { count: FREE_TRIP_LIMIT })
+            : reason === "groups"
+              ? t("paywall.ledeGroups", { count: FREE_GROUP_LIMIT })
+              : t("paywall.lede", { count: FREE_TRIP_LIMIT })}
         </Text>
 
         <AuraSegmented

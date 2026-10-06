@@ -107,9 +107,6 @@
     "safetySection": "Segurança",
     "emergencyContacts": "Contatos de emergência",
     "defaultCheckIn": "Check-in padrão",
-    "tripMode": "Modo viagem",
-    "tripModeSub": "Acompanhe viagens em grupo, despesas e segurança juntos",
-    "tripModeOffSub": "Livro de despesas diárias + modo de segurança solo",
     "localAi": "IA no dispositivo",
     "localAiDisabled": "Desativado — toda a IA local está desligada",
     "aiUnsupported": "IA local não suportada neste dispositivo",
@@ -1426,7 +1423,7 @@
     "tierName_pro": "Pro",
     "plusTagline": "Viagens ilimitadas, todos os recursos",
     "proTagline": "Tudo do Plus, com IA online",
-    "featureUnlimitedTrips": "Planeje e acompanhe viagens ilimitadas",
+    "featureUnlimitedTrips": "Viagens e grupos ilimitados",
     "featureEverything": "Segurança, gastos, divisões e viagens compartilhadas, tudo incluído",
     "featureOfflineAi": "IA no dispositivo que funciona offline",
     "featureOwnKey": "Use sua própria chave de API de IA, se tiver uma",
@@ -1464,7 +1461,9 @@
     "restoreFailedBody": "Não foi possível acessar a loja. Verifique sua conexão e tente novamente.",
     "renewalTerms": "As assinaturas são renovadas automaticamente até você cancelar no Google Play. O plano Vitalício é uma compra única.",
     "renewalTermsIos": "As assinaturas são renovadas automaticamente até você cancelar na App Store. O plano Vitalício é uma compra única.",
-    "termsOfUse": "Termos de Uso"
+    "termsOfUse": "Termos de Uso",
+    "titleGroups": "Você já usou seus {{count}} grupos grátis",
+    "ledeGroups": "O plano grátis inclui {{count}} grupos seus, e entrar nos grupos dos amigos é sempre grátis. Faça upgrade para dividir em quantos grupos quiser."
   },
   "aiKey": {
     "title": "Sua própria chave de API",

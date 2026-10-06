@@ -107,9 +107,6 @@
     "safetySection": "Sécurité",
     "emergencyContacts": "Contacts d'urgence",
     "defaultCheckIn": "Check-in par défaut",
-    "tripMode": "Mode voyage",
-    "tripModeSub": "Suivez les voyages de groupe, les dépenses et la sécurité ensemble",
-    "tripModeOffSub": "Grand livre quotidien + mode sécurité solo",
     "localAi": "IA locale (sur l'appareil)",
     "localAiDisabled": "Désactivé — toute l'IA locale est éteinte",
     "aiUnsupported": "IA locale non prise en charge sur cet appareil",
@@ -1426,7 +1423,7 @@
     "tierName_pro": "Pro",
     "plusTagline": "Voyages illimités, toutes les fonctionnalités",
     "proTagline": "Tout Plus, avec l'IA en ligne",
-    "featureUnlimitedTrips": "Planifiez et suivez des voyages illimités",
+    "featureUnlimitedTrips": "Voyages et groupes illimités",
     "featureEverything": "Sécurité, dépenses, partages et voyages partagés, tout est inclus",
     "featureOfflineAi": "IA sur l'appareil qui fonctionne hors ligne",
     "featureOwnKey": "Utilisez votre propre clé API d'IA si vous en avez une",
@@ -1464,7 +1461,9 @@
     "restoreFailedBody": "Impossible de joindre la boutique. Vérifiez votre connexion et réessayez.",
     "renewalTerms": "Les abonnements se renouvellent automatiquement jusqu'à ce que vous les annuliez dans Google Play. L'offre À vie est un achat unique.",
     "renewalTermsIos": "Les abonnements se renouvellent automatiquement jusqu'à ce que vous les annuliez dans l'App Store. L'offre À vie est un achat unique.",
-    "termsOfUse": "Conditions d'utilisation"
+    "termsOfUse": "Conditions d'utilisation",
+    "titleGroups": "Vous avez utilisé vos {{count}} groupes gratuits",
+    "ledeGroups": "L'offre gratuite couvre {{count}} groupes que vous créez, et rejoindre ceux de vos amis est toujours gratuit. Passez à l'offre supérieure pour partager dans autant de groupes que vous voulez."
   },
   "aiKey": {
     "title": "Votre propre clé API",

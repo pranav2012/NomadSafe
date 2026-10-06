@@ -107,9 +107,6 @@
     "safetySection": "Seguridad",
     "emergencyContacts": "Contactos de de emergencia",
     "defaultCheckIn": "Registro predeterminado",
-    "tripMode": "Modo de viaje",
-    "tripModeSub": "Rastrea viajes grupales, gastos y seguridad en conjunto",
-    "tripModeOffSub": "Libro diario + modo de seguridad individual",
     "localAi": "IA en el dispositivo",
     "localAiDisabled": "Desactivado: toda la IA local está apagada",
     "aiUnsupported": "IA local no compatible con este dispositivo",
@@ -1426,7 +1423,7 @@
     "tierName_pro": "Pro",
     "plusTagline": "Viajes ilimitados, todas las funciones",
     "proTagline": "Todo lo de Plus, con IA en línea",
-    "featureUnlimitedTrips": "Planifica y sigue viajes ilimitados",
+    "featureUnlimitedTrips": "Viajes y grupos ilimitados",
     "featureEverything": "Seguridad, gastos, divisiones y viajes compartidos, todo incluido",
     "featureOfflineAi": "IA en el dispositivo que funciona sin conexión",
     "featureOwnKey": "Usa tu propia clave API de IA si tienes una",
@@ -1464,7 +1461,9 @@
     "restoreFailedBody": "No pudimos conectar con la tienda. Comprueba tu conexión y vuelve a intentarlo.",
     "renewalTerms": "Las suscripciones se renuevan automáticamente hasta que las canceles en Google Play. De por vida es una compra única.",
     "renewalTermsIos": "Las suscripciones se renuevan automáticamente hasta que las canceles en el App Store. De por vida es una compra única.",
-    "termsOfUse": "Términos de uso"
+    "termsOfUse": "Términos de uso",
+    "titleGroups": "Ya usaste tus {{count}} grupos gratis",
+    "ledeGroups": "El plan gratis incluye {{count}} grupos tuyos, y unirte a los grupos de tus amigos siempre es gratis. Mejora tu plan para dividir gastos en todos los grupos que quieras."
   },
   "aiKey": {
     "title": "Tu propia clave API",

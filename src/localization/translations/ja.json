@@ -107,9 +107,6 @@
     "safetySection": "安全",
     "emergencyContacts": "緊急連絡先",
     "defaultCheckIn": "デフォルトのチェックイン",
-    "tripMode": "旅行モード",
-    "tripModeSub": "グループ旅行、経費、安全をまとめて管理",
-    "tripModeOffSub": "日常の台帳 + ソロ安全モード",
     "localAi": "オンデバイスAI",
     "localAiDisabled": "無効 — すべてのローカルAIがオフです",
     "aiUnsupported": "このデバイスはローカルAI非対応です",
@@ -1426,7 +1423,7 @@
     "tierName_pro": "Pro",
     "plusTagline": "旅行無制限、すべての機能",
     "proTagline": "Plus のすべてに加えてオンラインAI",
-    "featureUnlimitedTrips": "旅行を無制限に計画・管理",
+    "featureUnlimitedTrips": "旅行とグループが無制限",
     "featureEverything": "安全機能、支出、割り勘、共有旅行もすべて含まれます",
     "featureOfflineAi": "オフラインでも使えるデバイス上のAI",
     "featureOwnKey": "お持ちのAI APIキーも使えます",
@@ -1464,7 +1461,9 @@
     "restoreFailedBody": "ストアに接続できませんでした。接続を確認してもう一度お試しください。",
     "renewalTerms": "サブスクリプションは Google Play で解約するまで自動更新されます。買い切りは1回限りの購入です。",
     "renewalTermsIos": "サブスクリプションは App Store で解約するまで自動更新されます。買い切りは1回限りの購入です。",
-    "termsOfUse": "利用規約"
+    "termsOfUse": "利用規約",
+    "titleGroups": "無料のグループ {{count}} 件を使い切りました",
+    "ledeGroups": "無料プランでは自分のグループを {{count}} 件まで作成でき、友達のグループへの参加はいつでも無料です。アップグレードするとグループをいくつでも使えます。"
   },
   "aiKey": {
     "title": "自分のAPIキー",

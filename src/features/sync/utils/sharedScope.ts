@@ -1,6 +1,6 @@
 import { SELF_ID } from "@/features/expenses/utils/split";
 import type { Expense } from "@/features/expenses/store/expensesStore";
-import type { Trip } from "@/features/trips/store/tripsStore";
+import type { GroupBase } from "@/features/trips/store/tripsStore";
 import { storage } from "@/modules/storage";
 
 export type SharedKind = "expense" | "settlement" | "event";
@@ -40,12 +40,12 @@ export function keepLocalOnly<T extends LocalOnly>(next: T, previous: LocalOnly 
 }
 
 /**
- * Decides which engine owns a record on a shared trip, and both engines must agree. Settlements and
+ * Decides which engine owns a record on a shared trip or group, and both engines must agree. Settlements and
  * events always belong to the trip. An expense does when it's a group expense, or when it has already
  * been synced with the trip: on the payer's phone "paid by you, not split" doesn't look like a group
  * expense, but it still is one for everyone else.
  */
-export function makeSharedScope(uid: string | null, trips: Trip[]) {
+export function makeSharedScope(uid: string | null, trips: readonly Pick<GroupBase, "id" | "shared">[]) {
   const sharedById = new Map(trips.filter((trip) => trip.shared).map((trip) => [trip.id, trip.shared!.tripId]));
   const ledgerKeys = new Map<string, Set<string>>();
   const syncedKeys = (serverTripId: string) => {

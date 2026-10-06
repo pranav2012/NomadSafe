@@ -107,9 +107,6 @@
     "safetySection": "Sicherheit",
     "emergencyContacts": "Notfallkontakte",
     "defaultCheckIn": "Standard-Check-in",
-    "tripMode": "Reisemodus",
-    "tripModeSub": "Gruppenreisen, Ausgaben und Sicherheit gemeinsam verfolgen",
-    "tripModeOffSub": "Tägliches Kassenbuch + Solo-Sicherheitsmodus",
     "localAi": "Lokale KI",
     "localAiDisabled": "Deaktiviert — gesamte lokale KI ist aus",
     "aiUnsupported": "Lokale KI wird auf diesem Gerät nicht unterstützt",
@@ -1426,7 +1423,7 @@
     "tierName_pro": "Pro",
     "plusTagline": "Unbegrenzte Reisen, alle Funktionen",
     "proTagline": "Alles aus Plus, mit Online-KI",
-    "featureUnlimitedTrips": "Unbegrenzt viele Reisen planen und verfolgen",
+    "featureUnlimitedTrips": "Unbegrenzt viele Reisen und Gruppen",
     "featureEverything": "Sicherheit, Ausgaben, Aufteilungen und geteilte Reisen – alles inklusive",
     "featureOfflineAi": "KI auf dem Gerät, die offline funktioniert",
     "featureOwnKey": "Nutze deinen eigenen KI-API-Schlüssel, wenn du einen hast",
@@ -1464,7 +1461,9 @@
     "restoreFailedBody": "Der Store ist nicht erreichbar. Prüfe deine Verbindung und versuche es erneut.",
     "renewalTerms": "Abos verlängern sich automatisch, bis du sie in Google Play kündigst. Lebenslang ist ein einmaliger Kauf.",
     "renewalTermsIos": "Abos verlängern sich automatisch, bis du sie im App Store kündigst. Lebenslang ist ein einmaliger Kauf.",
-    "termsOfUse": "Nutzungsbedingungen"
+    "termsOfUse": "Nutzungsbedingungen",
+    "titleGroups": "Du hast deine {{count}} kostenlosen Gruppen genutzt",
+    "ledeGroups": "Free umfasst {{count}} eigene Gruppen, und Gruppen von Freunden beizutreten ist immer kostenlos. Mit einem Upgrade teilst du in so vielen Gruppen, wie du willst."
   },
   "aiKey": {
     "title": "Eigener API-Schlüssel",

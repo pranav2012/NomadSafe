@@ -74,6 +74,15 @@ test("free trip limit counts owned trips only", () => {
   assert.equal(plan.canCreateTrip(trips, { unlimitedTrips: true, cloudAi: false }), true);
 });
 
+test("free group limit counts owned groups only, separately from trips", () => {
+  const groups = [{}, { shared: { role: "owner" } }, { shared: { role: "member" } }];
+  assert.equal(plan.FREE_GROUP_LIMIT, 2);
+  assert.equal(plan.canCreateGroup(groups, plan.FREE_PLAN), false);
+  assert.equal(plan.canCreateGroup(groups.slice(1), plan.FREE_PLAN), true);
+  assert.equal(plan.canCreateGroup([], plan.FREE_PLAN), true);
+  assert.equal(plan.canCreateGroup(groups, { unlimitedTrips: true, cloudAi: false }), true);
+});
+
 test("plan tiers from active entitlements", () => {
   assert.equal(plan.tierOf(plan.planFromEntitlements([])), "free");
   assert.equal(plan.tierOf(plan.planFromEntitlements(["unlimited_trips"])), "plus");

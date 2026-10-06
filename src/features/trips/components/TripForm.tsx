@@ -14,7 +14,6 @@ import {
   useAura,
 } from "@/atoms";
 import { aiRuntime, aiService, useAiAvailability, type TripBudgetEstimate } from "@/modules/ai";
-import { useSettingsStore } from "@/features/settings";
 import { normalizeSearchText } from "@/features/trips/data/destinations";
 import {
   type CreateTripInput,
@@ -86,12 +85,7 @@ function getCurrencyAffix(locale: string, currency: string) {
   }
 }
 
-function makeInitialForm(
-  currency: string,
-  defaultMode: TripMode,
-  tripModeEnabled: boolean,
-  seed?: Partial<FormState>,
-): FormState {
+function makeInitialForm(currency: string, seed?: Partial<FormState>): FormState {
   const startDate = startOfLocalDay(new Date());
   return {
     name: "",
@@ -100,7 +94,7 @@ function makeInitialForm(
     destinations: [],
     startDate,
     endDate: addDays(startDate, 6),
-    mode: tripModeEnabled ? defaultMode : "solo",
+    mode: "solo",
     budget: "",
     currency,
     travelerName: "",
@@ -141,8 +135,6 @@ export function TripForm({ editingTrip, onSave, onCancel, destinations, knownCoo
   const { c, f } = useAura();
   const { t, locale, formatCurrency } = useLocalization();
   const defaultCurrency = useDefaultCurrency();
-  const defaultTripMode = useSettingsStore((state) => state.defaultTripMode);
-  const tripModeEnabled = useSettingsStore((state) => state.tripModeEnabled);
   const createTrip = useTripsStore((state) => state.createTrip);
   const updateTrip = useTripsStore((state) => state.updateTrip);
 
@@ -152,12 +144,10 @@ export function TripForm({ editingTrip, onSave, onCancel, destinations, knownCoo
         ? tripToFormState(editingTrip)
         : makeInitialForm(
             defaultCurrency,
-            defaultTripMode,
-            tripModeEnabled,
             destinations?.length ? { destinations, name: defaultTripName(destinations, t) } : undefined,
           ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [editingTrip, defaultCurrency, defaultTripMode, tripModeEnabled],
+    [editingTrip, defaultCurrency],
   );
 
   const [form, setForm] = useState<FormState>(initialForm);
@@ -640,14 +630,14 @@ export function TripForm({ editingTrip, onSave, onCancel, destinations, knownCoo
           onChangeText={(value) => setForm((current) => ({ ...current, name: value, nameSource: value.trim() ? "user" : "auto" }))}
         />
 
-        {tripModeEnabled && !editingTrip?.shared ? (
+        {!editingTrip?.shared ? (
           <View style={styles.modes}>
             <ModeCard active={form.mode === "solo"} icon="compass" title={t("trip.solo")} subtitle={t("trip.soloSub")} onPress={() => updateForm("mode", "solo")} />
             <ModeCard active={form.mode === "group"} icon="users" title={t("trip.group")} subtitle={t("trip.groupSub")} onPress={() => updateForm("mode", "group")} />
           </View>
         ) : null}
 
-        {form.mode === "group" && tripModeEnabled ? (
+        {form.mode === "group" ? (
           <Animated.View entering={FadeInDown.duration(220)} style={styles.group}>
             <AuraField
               label={t("trip.travelers")}
