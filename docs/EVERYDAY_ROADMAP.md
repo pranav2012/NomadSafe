@@ -146,7 +146,7 @@ Personal spending is planned explicitly, in three cases:
 
 It's shown in the home currency (`useHomeCountry()`'s currency, else the phone's), converted with daily rates as elsewhere, with a note for anything that couldn't be converted. It's separate from the balance below it, which is about who owes whom.
 
-**Free vs Plus:** week and month totals with the breakdown are free. Plus adds the charts and insights and export: a trip day by day once it starts, a group month by month once it's a month old, and on the Overview a sparkline in the spending total with the change vs the last week or month, and the top places.
+**Free vs Plus:** week and month totals with the breakdown are free. Plus adds the charts and insights and export: a trip day by day once it starts, a group month by month once it's a month old, and on the Overview (one month at a time, picked from "October ⌄") a sparkline with the month against your usual, categories against usual, a weekend vs weekday line and your biggest spends. A started trip shows its daily pace against the budget; a group shows where it spends once places repeat.
 
 ### Adding an expense
 

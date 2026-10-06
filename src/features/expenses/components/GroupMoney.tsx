@@ -16,7 +16,7 @@ import { GroupActivity } from "@/features/expenses/components/GroupActivity";
 import { RecurringList } from "@/features/expenses/components/RecurringList";
 import { GroupBalances } from "@/features/expenses/components/GroupBalances";
 import { SpendHero } from "@/features/expenses/components/SpendHero";
-import { GroupMonthsChart, TripDaysChart } from "@/features/expenses/components/SpendCharts";
+import { GroupPlaces, TripPaceCard } from "@/features/expenses/components/SpendCharts";
 
 /** Money for one trip or group: balances first when there are people, your spend, then activity by day. */
 export function GroupMoney({
@@ -101,7 +101,11 @@ export function GroupMoney({
                 : null
             }
           />
-          {trip ? <TripDaysChart trip={trip} items={mine} /> : <GroupMonthsChart createdAt={group.createdAt} items={mine} currency={group.currency} />}
+          {trip ? (
+            <TripPaceCard trip={trip} items={mine} />
+          ) : (
+            <GroupPlaces items={conversion.convertedExpenses.map(({ expense, amount }) => ({ amount, date: expense.date, category: expense.category, merchant: expense.merchant }))} currency={group.currency} />
+          )}
         </View>
       ) : null}
 

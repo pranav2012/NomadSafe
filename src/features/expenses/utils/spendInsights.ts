@@ -2,6 +2,7 @@ import { addDays, fromDateKey, startOfLocalDay } from "@/features/trips/utils/da
 import { inRange, periodRange, type SpendPeriod } from "./myMoney";
 
 export interface InsightItem {
+  id?: string;
   amount: number;
   date: string;
   category: string;
@@ -56,41 +57,82 @@ export function tripDailyTotals(items: InsightItem[], trip: { startDate: string;
   return { buckets, step, before };
 }
 
-/** Months between the first item and now (1 for this month); 0 with no items. */
-export function monthsOfHistory(items: { date: string }[], now: Date = new Date()): number {
-  if (items.length === 0) return 0;
-  const first = new Date(Math.min(...items.map((item) => new Date(item.date).getTime())));
-  return (now.getFullYear() - first.getFullYear()) * 12 + now.getMonth() - first.getMonth() + 1;
+export interface CategoryVsUsual {
+  category: string;
+  amount: number;
+  usual: number | null;
 }
 
-export interface PeriodComparison {
-  change: number | null;
-  mover: { category: string; change: number } | null;
+/**
+ * The chosen month's spend by category against your usual month: the average of up to 3 months
+ * before it, counting only months since your first spend (so a new user isn't compared with empty months).
+ */
+export function monthVsUsual(items: InsightItem[], offset: number, now: Date = new Date()) {
+  const month = periodRange("month", offset, now);
+  const current = items.filter((item) => inRange(item.date, month));
+  const first = items.reduce<number | null>((min, item) => {
+    const time = new Date(item.date).getTime();
+    return min === null || time < min ? time : min;
+  }, null);
+  const base = [1, 2, 3]
+    .map((back) => periodRange("month", offset + back, now))
+    .filter((range) => first !== null && range.end.getTime() > first);
+  const baseItems = items.filter((item) => base.some((range) => inRange(item.date, range)));
+  const usualOf = (category: string | null) =>
+    base.length === 0 ? null : sum(baseItems.filter((item) => category === null || item.category === category)) / base.length;
+  const categories: CategoryVsUsual[] = byCategory(current).map((entry) => ({ ...entry, usual: usualOf(entry.category) }));
+  return { total: sum(current), usualTotal: usualOf(null), categories };
 }
 
-/** Total change vs the previous period (null if it had none) and the category that moved most in money. */
-export function comparePeriods(current: InsightItem[], previous: InsightItem[]): PeriodComparison {
-  const before = sum(previous);
-  const change = before > 0 ? sum(current) / before - 1 : null;
-  const was = new Map(byCategory(previous).map((entry) => [entry.category, entry.amount]));
-  let mover: PeriodComparison["mover"] = null;
-  let biggest = 0;
-  for (const entry of byCategory(current)) {
-    const old = was.get(entry.category);
-    if (!old) continue;
-    const diff = Math.abs(entry.amount - old);
-    if (diff > biggest) {
-      biggest = diff;
-      mover = { category: entry.category, change: entry.amount / old - 1 };
-    }
-  }
-  for (const [category, old] of was) {
-    if (!current.some((item) => item.category === category) && old > biggest) {
-      biggest = old;
-      mover = { category, change: -1 };
-    }
-  }
-  return { change, mover };
+/** How much more per day you spend on weekends than weekdays (or the reverse, below 1) over the last 90 days; null when there's too little data or no real difference. */
+export function weekendRatio(items: { amount: number; date: string }[], now: Date = new Date()): number | null {
+  const today = startOfLocalDay(now);
+  const from = addDays(today, -89);
+  const recent = items.filter((item) => {
+    const day = startOfLocalDay(new Date(item.date));
+    return day >= from && day <= today;
+  });
+  if (recent.length < 8) return null;
+  const firstDay = startOfLocalDay(new Date(Math.min(...recent.map((item) => new Date(item.date).getTime()))));
+  const totals = { weekend: 0, weekday: 0 };
+  const days = { weekend: 0, weekday: 0 };
+  for (let day = firstDay; day <= today; day = addDays(day, 1)) days[day.getDay() % 6 === 0 ? "weekend" : "weekday"] += 1;
+  if (days.weekend + days.weekday < 28) return null;
+  for (const item of recent) totals[new Date(item.date).getDay() % 6 === 0 ? "weekend" : "weekday"] += item.amount;
+  const weekendPerDay = totals.weekend / days.weekend;
+  const weekdayPerDay = totals.weekday / days.weekday;
+  if (weekendPerDay <= 0 || weekdayPerDay <= 0) return null;
+  const ratio = weekendPerDay / weekdayPerDay;
+  return ratio >= 1.3 || ratio <= 1 / 1.3 ? ratio : null;
+}
+
+export interface TripPace {
+  perDay: number;
+  spent: number;
+  daysLeft: number;
+  projected: number;
+  plannedPerDay: number | null;
+  leftPerDay: number | null;
+}
+
+/** Your daily pace on a started trip against its budget (0 = none); spends before the start count toward the total, not the pace. */
+export function tripPace(items: InsightItem[], trip: { startDate: string; endDate: string; budget: number }, now: Date = new Date()): TripPace {
+  const { buckets, before } = tripDailyTotals(items, trip, now);
+  const elapsed = buckets.reduce((total, bucket) => total + bucket.days, 0);
+  const onTrip = sum(buckets.map((bucket) => ({ amount: bucket.total })));
+  const totalDays = Math.max(1, Math.round((fromDateKey(trip.endDate).getTime() - fromDateKey(trip.startDate).getTime()) / DAY_MS) + 1);
+  const daysLeft = Math.max(0, totalDays - elapsed);
+  const perDay = onTrip / elapsed;
+  const spent = onTrip + before;
+  const budget = Number.isFinite(trip.budget) && trip.budget > 0 ? trip.budget : null;
+  return {
+    perDay,
+    spent,
+    daysLeft,
+    projected: spent + perDay * daysLeft,
+    plannedPerDay: budget ? budget / totalDays : null,
+    leftPerDay: budget && daysLeft > 0 ? Math.max(0, budget - spent) / daysLeft : null,
+  };
 }
 
 /** The places you spent most at, by merchant name; blank names are left out. */

@@ -384,19 +384,51 @@ test("trip days: trips over a month are grouped by week", () => {
   assert.equal(buckets[7].days, 1);
 });
 
-test("comparing periods: total change and the category that moved most", () => {
-  const previous = [
-    { amount: 1000, date: at(2026, 8, 3), category: "food" },
-    { amount: 500, date: at(2026, 8, 5), category: "travel" },
+test("a month against your usual: up to 3 earlier months, only since your first spend", () => {
+  const now = new Date(2026, 9, 20);
+  const items = [
+    { amount: 300, date: at(2026, 7, 5), category: "food" },
+    { amount: 600, date: at(2026, 8, 5), category: "food" },
+    { amount: 200, date: at(2026, 8, 6), category: "travel" },
+    { amount: 900, date: at(2026, 9, 5), category: "food" },
   ];
-  const current = [
-    { amount: 1500, date: at(2026, 9, 3), category: "food" },
-    { amount: 450, date: at(2026, 9, 5), category: "travel" },
+  const result = insights.monthVsUsual(items, 0, now);
+  assert.equal(result.total, 900);
+  assert.equal(result.usualTotal, 550);
+  assert.deepEqual(result.categories, [{ category: "food", amount: 900, usual: 450 }]);
+  assert.equal(insights.monthVsUsual(items.slice(3), 0, now).usualTotal, null);
+});
+
+test("weekend vs weekday pace needs a month of data and a real difference", () => {
+  const now = new Date(2026, 9, 31, 12);
+  const items = [];
+  for (let back = 0; back < 35; back += 1) {
+    const day = new Date(2026, 9, 31 - back, 12);
+    const weekend = day.getDay() % 6 === 0;
+    items.push({ amount: weekend ? 300 : 100, date: day.toISOString() });
+  }
+  assert.equal(insights.weekendRatio(items, now), 3);
+  assert.equal(insights.weekendRatio(items.map((item) => ({ ...item, amount: 100 })), now), null);
+  assert.equal(insights.weekendRatio(items.slice(0, 7), now), null);
+});
+
+test("trip pace against the budget, with bookings before the start in the total only", () => {
+  const trip = { startDate: "2026-10-01", endDate: "2026-10-10", budget: 10000 };
+  const items = [
+    { amount: 3000, date: at(2026, 8, 20), category: "stays" },
+    { amount: 800, date: at(2026, 9, 1), category: "food" },
+    { amount: 1200, date: at(2026, 9, 2), category: "food" },
   ];
-  const result = insights.comparePeriods(current, previous);
-  assert.equal(Math.round(result.change * 100), 30);
-  assert.deepEqual(result.mover, { category: "food", change: 0.5 });
-  assert.equal(insights.comparePeriods(current, []).change, null);
+  const pace = insights.tripPace(items, trip, new Date(2026, 9, 2, 20));
+  assert.equal(pace.perDay, 1000);
+  assert.equal(pace.spent, 5000);
+  assert.equal(pace.daysLeft, 8);
+  assert.equal(pace.projected, 13000);
+  assert.equal(pace.plannedPerDay, 1000);
+  assert.equal(pace.leftPerDay, 625);
+  const done = insights.tripPace(items, { ...trip, budget: 0 }, new Date(2026, 10, 1));
+  assert.equal(done.projected, done.spent);
+  assert.equal(done.leftPerDay, null);
 });
 
 test("period totals and top places", () => {
@@ -410,5 +442,4 @@ test("period totals and top places", () => {
   assert.deepEqual(insights.periodTotals(items, "month", 2, 0, now).map((month) => [month.offset, month.total]), [[1, 50], [0, 700]]);
   assert.deepEqual(insights.periodTotals(items, "month", 2, 1, now).map((month) => [month.offset, month.total]), [[2, 0], [1, 50]]);
   assert.deepEqual(insights.topPlaces(items, 5).map((place) => [place.name, place.amount, place.count]), [["Uber", 400, 1], ["Cafe", 300, 2]]);
-  assert.equal(insights.monthsOfHistory(items, new Date(2026, 9, 20)), 2);
 });
