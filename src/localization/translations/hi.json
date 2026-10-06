@@ -785,14 +785,9 @@
     "readinessTitle": "सुरक्षा तैयारी",
     "readinessReadyA11y": "तैयार",
     "readinessLocation": "लोकेशन एक्सेस",
-    "readinessLocationOn": "अनुमति दी गई · आपकी लोकेशन SOS मैसेज में शामिल होती है",
-    "readinessLocationOff": "SOS मैसेज में आपकी लोकेशन शामिल करने के लिए ज़रूरी",
     "readinessBackground": "लाइव लोकेशन शेयरिंग",
     "readinessBackgroundOn": "“हमेशा अनुमति दें” चालू है · स्क्रीन बंद होने पर भी शेयरिंग काम करती है",
-    "readinessBackgroundOff": "SOS के दौरान, ऐप बंद होने पर भी, संपर्कों को आपको फ़ॉलो करने देता है",
     "readinessNotifications": "सूचनाएं",
-    "readinessNotificationsOn": "चालू · चेक-इन रिमाइंडर आप तक पहुंचेंगे",
-    "readinessNotificationsOff": "चेक-इन रिमाइंडर के लिए ज़रूरी",
     "readinessBattery": "बैटरी उपयोग",
     "readinessBatteryOn": "अप्रतिबंधित · Android बैकग्राउंड सुरक्षा फ़ीचर्स को नहीं रोकेगा",
     "readinessBatteryOff": "Android लाइव शेयरिंग और रिमाइंडर रोक सकता है। सेटिंग्स में, NomadSafe की बैटरी उपयोग को अप्रतिबंधित सेट करें।",
@@ -853,7 +848,12 @@
     "timerStep3": "अगर आप ऐसा नहीं करते, तो आपके अपनों को आपकी लोकेशन के साथ अलर्ट मिलेगा।",
     "timerTitle": "सुरक्षित पहुँच टाइमर",
     "holdForSos": "SOS के लिए दबाए रखें",
-    "sosHoldHint": "2 सेकंड तक दबाए रखें। आपके अपनों को अलर्ट होने से पहले रद्द करने के लिए आपके पास 5 सेकंड होंगे।"
+    "sosHoldHint": "2 सेकंड तक दबाए रखें। आपके अपनों को अलर्ट होने से पहले रद्द करने के लिए आपके पास 5 सेकंड होंगे।",
+    "readinessLocationShared": "अनुमति दी गई · SOS में आपके अपने देख पाएंगे कि आप कहां हैं",
+    "readinessLocationNeeded": "ज़रूरी है ताकि SOS में आपके अपने देख सकें कि आप कहां हैं",
+    "readinessBackgroundCircle": "SOS के दौरान आपके अपने आपको फ़ॉलो कर सकते हैं, ऐप बंद होने पर भी",
+    "readinessNotificationsTimer": "चालू · टाइमर रिमाइंडर और आपके अपनों के अलर्ट आप तक पहुंचेंगे",
+    "readinessNotificationsNeeded": "टाइमर रिमाइंडर और आपके अपनों के अलर्ट के लिए ज़रूरी"
   },
   "sos": {
     "codeRed": "SOS · कोड रेड",

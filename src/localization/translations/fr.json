@@ -785,14 +785,9 @@
     "readinessTitle": "Préparation à la sécurité",
     "readinessReadyA11y": "Prêt",
     "readinessLocation": "Accès à la localisation",
-    "readinessLocationOn": "Autorisé · votre localisation est incluse dans les messages SOS",
-    "readinessLocationOff": "Nécessaire pour inclure votre localisation dans les messages SOS",
     "readinessBackground": "Partage de localisation en direct",
     "readinessBackgroundOn": "« Toujours autoriser » est activé · le partage fonctionne même écran éteint",
-    "readinessBackgroundOff": "Permet à vos contacts de vous suivre pendant un SOS, même l'application fermée",
     "readinessNotifications": "Notifications",
-    "readinessNotificationsOn": "Activé · les rappels de check-in vous parviendront",
-    "readinessNotificationsOff": "Nécessaire pour les rappels de check-in",
     "readinessBattery": "Utilisation de la batterie",
     "readinessBatteryOn": "Illimitée · Android ne bloquera pas les fonctionnalités de sécurité en arrière-plan",
     "readinessBatteryOff": "Android peut interrompre le partage en direct et les rappels. Dans les réglages, définissez l'utilisation de la batterie de NomadSafe sur Illimitée.",
@@ -853,7 +848,12 @@
     "timerStep3": "Sinon, votre cercle de confiance reçoit une alerte avec votre localisation.",
     "timerTitle": "Minuteur d'arrivée",
     "holdForSos": "Maintenir pour SOS",
-    "sosHoldHint": "Maintenez appuyé 2 secondes. Vous aurez 5 secondes pour annuler avant que votre cercle de confiance soit alerté."
+    "sosHoldHint": "Maintenez appuyé 2 secondes. Vous aurez 5 secondes pour annuler avant que votre cercle de confiance soit alerté.",
+    "readinessLocationShared": "Autorisé · avec un SOS, votre cercle de confiance voit où vous êtes",
+    "readinessLocationNeeded": "Nécessaire pour que votre cercle de confiance voie où vous êtes lors d'un SOS",
+    "readinessBackgroundCircle": "Permet à votre cercle de confiance de vous suivre pendant un SOS, même app fermée",
+    "readinessNotificationsTimer": "Activé · les rappels du minuteur et les alertes de votre cercle vous parviendront",
+    "readinessNotificationsNeeded": "Nécessaire pour les rappels du minuteur et les alertes de votre cercle"
   },
   "sos": {
     "codeRed": "SOS · Code rouge",

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { PrivateView } from "@/modules/analytics";
@@ -71,13 +71,7 @@ export function SafetyMap({ topInset, bottomInset, palette: c, accent, isDark, m
             showsPointsOfInterests={false}
             moveOnMarkerPress={false}
           >
-            {me ? (
-              <Marker coordinate={me} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false} title={t("sharing.youLabel")}>
-                <View style={[styles.meHalo, { backgroundColor: `${accent}33` }]}>
-                  <View style={[styles.meDot, { backgroundColor: accent }]} />
-                </View>
-              </Marker>
-            ) : null}
+            {me ? <MeMarker key={`me-${accent}`} coordinate={me} accent={accent} title={t("sharing.youLabel")} /> : null}
             {people.map((person, i) => {
               const tone = circleTone(person.name);
               return (
@@ -110,6 +104,25 @@ export function SafetyMap({ topInset, bottomInset, palette: c, accent, isDark, m
         </PressableScale>
       ) : null}
     </View>
+  );
+}
+
+/**
+ * Your dot. Android draws a marker into a bitmap once; it tracks view changes for a moment after
+ * mounting so the bitmap includes the inner dot. Remount (new key) to change its colour.
+ */
+function MeMarker({ coordinate, accent, title }: { coordinate: Point; accent: string; title: string }) {
+  const [tracking, setTracking] = useState(true);
+  useEffect(() => {
+    const timer = setTimeout(() => setTracking(false), 600);
+    return () => clearTimeout(timer);
+  }, []);
+  return (
+    <Marker coordinate={coordinate} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={tracking} title={title}>
+      <View style={[styles.meHalo, { backgroundColor: `${accent}33` }]}>
+        <View style={[styles.meDot, { backgroundColor: accent }]} />
+      </View>
+    </Marker>
   );
 }
 

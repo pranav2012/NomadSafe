@@ -785,14 +785,9 @@
     "readinessTitle": "안전 준비도",
     "readinessReadyA11y": "준비됨",
     "readinessLocation": "위치 접근",
-    "readinessLocationOn": "허용됨 · SOS 메시지에 위치가 포함돼요",
-    "readinessLocationOff": "SOS 메시지에 위치를 포함하려면 필요해요",
     "readinessBackground": "실시간 위치 공유",
     "readinessBackgroundOn": "“항상 허용”이 켜져 있어요 · 화면이 꺼져도 공유가 작동해요",
-    "readinessBackgroundOff": "앱이 닫혀 있어도 SOS 중 연락처가 나를 추적할 수 있게 해줘요",
     "readinessNotifications": "알림",
-    "readinessNotificationsOn": "켜짐 · 체크인 알림이 전달돼요",
-    "readinessNotificationsOff": "체크인 알림을 위해 필요해요",
     "readinessBattery": "배터리 사용",
     "readinessBatteryOn": "제한 없음 · Android가 백그라운드 안전 기능을 멈추지 않아요",
     "readinessBatteryOff": "Android가 실시간 공유와 알림을 멈출 수 있어요. 설정에서 NomadSafe 배터리 사용을 '제한 없음'으로 설정하세요.",
@@ -853,7 +848,12 @@
     "timerStep3": "탭하지 않으면 안심 서클에 내 위치가 담긴 알림이 가요.",
     "timerTitle": "안전 도착 타이머",
     "holdForSos": "길게 눌러 SOS",
-    "sosHoldHint": "2초 동안 길게 누르세요. 안심 서클에 알리기 전에 5초 동안 취소할 수 있어요."
+    "sosHoldHint": "2초 동안 길게 누르세요. 안심 서클에 알리기 전에 5초 동안 취소할 수 있어요.",
+    "readinessLocationShared": "허용됨 · SOS 시 안심 서클에 내 위치가 전달돼요",
+    "readinessLocationNeeded": "SOS 때 안심 서클이 내 위치를 볼 수 있으려면 필요해요",
+    "readinessBackgroundCircle": "앱을 닫아도 SOS 중에 안심 서클이 내 위치를 따라갈 수 있어요",
+    "readinessNotificationsTimer": "켜짐 · 타이머 알림과 안심 서클의 알림이 전달돼요",
+    "readinessNotificationsNeeded": "타이머 알림과 안심 서클의 알림을 받으려면 필요해요"
   },
   "sos": {
     "codeRed": "SOS · 코드 레드",

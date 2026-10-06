@@ -867,14 +867,9 @@
     "readinessTitle": "Safety readiness",
     "readinessReadyA11y": "Ready",
     "readinessLocation": "Location access",
-    "readinessLocationOn": "Allowed · your location goes into SOS messages",
-    "readinessLocationOff": "Needed to include your location in SOS messages",
     "readinessBackground": "Live location sharing",
     "readinessBackgroundOn": "“Allow all the time” is on · sharing works with the screen off",
-    "readinessBackgroundOff": "Lets contacts follow you during an SOS, even with the app closed",
     "readinessNotifications": "Notifications",
-    "readinessNotificationsOn": "On · check-in reminders will reach you",
-    "readinessNotificationsOff": "Needed for check-in reminders",
     "readinessBattery": "Battery usage",
     "readinessBatteryOn": "Unrestricted · Android won't stop background safety features",
     "readinessBatteryOff": "Android may stop live sharing and reminders. In settings, set NomadSafe battery usage to Unrestricted.",
@@ -935,7 +930,12 @@
     "timerStep3": "If you don't, your circle gets an alert with your location.",
     "timerTitle": "Safe-arrival timer",
     "holdForSos": "Hold for SOS",
-    "sosHoldHint": "Press and hold for 2 seconds. You'll have 5 seconds to cancel before your circle is alerted."
+    "sosHoldHint": "Press and hold for 2 seconds. You'll have 5 seconds to cancel before your circle is alerted.",
+    "readinessLocationShared": "Allowed · an SOS shows your circle where you are",
+    "readinessLocationNeeded": "Needed so your circle can see where you are in an SOS",
+    "readinessBackgroundCircle": "Lets your circle follow you during an SOS, even with the app closed",
+    "readinessNotificationsTimer": "On · timer reminders and alerts from your circle reach you",
+    "readinessNotificationsNeeded": "Needed for timer reminders and alerts from your circle"
   },
   "sos": {
     "codeRed": "SOS · Code red",

@@ -785,14 +785,9 @@
     "readinessTitle": "Prontidão de segurança",
     "readinessReadyA11y": "Pronto",
     "readinessLocation": "Acesso à localização",
-    "readinessLocationOn": "Permitido · sua localização entra nas mensagens de SOS",
-    "readinessLocationOff": "Necessário para incluir sua localização nas mensagens de SOS",
     "readinessBackground": "Compartilhamento de localização ao vivo",
     "readinessBackgroundOn": "“Permitir o tempo todo” está ativado · o compartilhamento funciona com a tela desligada",
-    "readinessBackgroundOff": "Permite que os contatos sigam você durante um SOS, mesmo com o app fechado",
     "readinessNotifications": "Notificações",
-    "readinessNotificationsOn": "Ativado · os lembretes de check-in chegarão até você",
-    "readinessNotificationsOff": "Necessário para lembretes de check-in",
     "readinessBattery": "Uso de bateria",
     "readinessBatteryOn": "Irrestrito · o Android não interromperá os recursos de segurança em segundo plano",
     "readinessBatteryOff": "O Android pode interromper o compartilhamento ao vivo e os lembretes. Nas configurações, defina o uso de bateria do NomadSafe como Irrestrito.",
@@ -853,7 +848,12 @@
     "timerStep3": "Se você não tocar, seu círculo recebe um alerta com sua localização.",
     "timerTitle": "Timer de chegada segura",
     "holdForSos": "Segure para SOS",
-    "sosHoldHint": "Pressione e segure por 2 segundos. Você terá 5 segundos para cancelar antes de seu círculo ser alertado."
+    "sosHoldHint": "Pressione e segure por 2 segundos. Você terá 5 segundos para cancelar antes de seu círculo ser alertado.",
+    "readinessLocationShared": "Permitido · num SOS, seu círculo vê onde você está",
+    "readinessLocationNeeded": "Necessário para seu círculo ver onde você está num SOS",
+    "readinessBackgroundCircle": "Permite que seu círculo acompanhe você durante um SOS, mesmo com o app fechado",
+    "readinessNotificationsTimer": "Ativado · os lembretes do timer e os alertas do seu círculo chegarão até você",
+    "readinessNotificationsNeeded": "Necessário para os lembretes do timer e os alertas do seu círculo"
   },
   "sos": {
     "codeRed": "SOS · Código vermelho",

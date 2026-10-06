@@ -95,7 +95,7 @@ export function TimerLiveCard({
       <Text style={[styles.liveBody, { color: c.textSoft, fontFamily: f.regular }]}>{body}</Text>
       <View style={styles.liveButtons}>
         <AuraButton label={t("safety.imSafeShort")} icon="check" size="md" onPress={onSafe} style={styles.flex} />
-        <AuraButton label={t("safety.extendShort")} icon="plus" size="md" variant="secondary" onPress={onExtend} />
+        <AuraButton label={`+${t("safety.extendShort")}`} size="md" variant="secondary" onPress={onExtend} />
       </View>
     </View>
   );
@@ -150,7 +150,7 @@ export function CircleRow({ people, alertCount, onPress }: { people: CirclePerso
   const { c, f } = useAura();
   const { t } = useLocalization();
   const empty = alertCount === 0;
-  const shown = people.slice(0, 4);
+  const shown = empty ? [] : people.slice(0, 4);
   return (
     <PressableScale
       onPress={onPress}

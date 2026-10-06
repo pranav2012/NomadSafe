@@ -785,14 +785,9 @@
     "readinessTitle": "Preparazione alla sicurezza",
     "readinessReadyA11y": "Pronto",
     "readinessLocation": "Accesso alla posizione",
-    "readinessLocationOn": "Consentito · la tua posizione entra nei messaggi SOS",
-    "readinessLocationOff": "Necessario per includere la tua posizione nei messaggi SOS",
     "readinessBackground": "Condivisione posizione dal vivo",
     "readinessBackgroundOn": "“Consenti sempre” è attivo · la condivisione funziona con lo schermo spento",
-    "readinessBackgroundOff": "Permette ai contatti di seguirti durante un SOS, anche con l'app chiusa",
     "readinessNotifications": "Notifiche",
-    "readinessNotificationsOn": "Attivo · i promemoria di check-in ti raggiungeranno",
-    "readinessNotificationsOff": "Necessario per i promemoria di check-in",
     "readinessBattery": "Consumo batteria",
     "readinessBatteryOn": "Illimitato · Android non fermerà le funzioni di sicurezza in background",
     "readinessBatteryOff": "Android potrebbe fermare la condivisione dal vivo e i promemoria. Nelle impostazioni, imposta il consumo batteria di NomadSafe su Illimitato.",
@@ -853,7 +848,12 @@
     "timerStep3": "Se non lo fai, la tua cerchia riceve un avviso con la tua posizione.",
     "timerTitle": "Timer di arrivo sicuro",
     "holdForSos": "Tieni premuto per SOS",
-    "sosHoldHint": "Tieni premuto per 2 secondi. Avrai 5 secondi per annullare prima che la tua cerchia venga avvisata."
+    "sosHoldHint": "Tieni premuto per 2 secondi. Avrai 5 secondi per annullare prima che la tua cerchia venga avvisata.",
+    "readinessLocationShared": "Consentito · con un SOS la tua cerchia vede dove sei",
+    "readinessLocationNeeded": "Serve perché la tua cerchia veda dove sei durante un SOS",
+    "readinessBackgroundCircle": "Permette alla tua cerchia di seguirti durante un SOS, anche con l'app chiusa",
+    "readinessNotificationsTimer": "Attive · ti arriveranno i promemoria del timer e gli avvisi della tua cerchia",
+    "readinessNotificationsNeeded": "Servono per i promemoria del timer e gli avvisi della tua cerchia"
   },
   "sos": {
     "codeRed": "SOS · Codice rosso",

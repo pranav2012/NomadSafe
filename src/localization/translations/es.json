@@ -785,14 +785,9 @@
     "readinessTitle": "Preparación de seguridad",
     "readinessReadyA11y": "Listo",
     "readinessLocation": "Acceso a la ubicación",
-    "readinessLocationOn": "Permitido · tu ubicación se incluye en los mensajes SOS",
-    "readinessLocationOff": "Necesario para incluir tu ubicación en los mensajes SOS",
     "readinessBackground": "Ubicación en directo",
     "readinessBackgroundOn": "«Permitir todo el tiempo» está activado · compartir funciona con la pantalla apagada",
-    "readinessBackgroundOff": "Permite que los contactos te sigan durante un SOS, incluso con la app cerrada",
     "readinessNotifications": "Notificaciones",
-    "readinessNotificationsOn": "Activadas · los recordatorios de check-in te llegarán",
-    "readinessNotificationsOff": "Necesarias para los recordatorios de check-in",
     "readinessBattery": "Uso de la batería",
     "readinessBatteryOn": "Sin restricciones · Android no detendrá las funciones de seguridad en segundo plano",
     "readinessBatteryOff": "Android puede detener la ubicación en directo y los recordatorios. En ajustes, establece el uso de batería de NomadSafe como Sin restricciones.",
@@ -853,7 +848,12 @@
     "timerStep3": "Si no lo haces, tu círculo de confianza recibe un aviso con tu ubicación.",
     "timerTitle": "Temporizador de llegada",
     "holdForSos": "Mantén para SOS",
-    "sosHoldHint": "Mantén pulsado 2 segundos. Tendrás 5 segundos para cancelar antes de que se avise a tu círculo de confianza."
+    "sosHoldHint": "Mantén pulsado 2 segundos. Tendrás 5 segundos para cancelar antes de que se avise a tu círculo de confianza.",
+    "readinessLocationShared": "Permitido · con un SOS, tu círculo de confianza ve dónde estás",
+    "readinessLocationNeeded": "Necesario para que tu círculo de confianza vea dónde estás en un SOS",
+    "readinessBackgroundCircle": "Permite que tu círculo de confianza te siga durante un SOS, incluso con la app cerrada",
+    "readinessNotificationsTimer": "Activadas · te llegarán los recordatorios del temporizador y las alertas de tu círculo",
+    "readinessNotificationsNeeded": "Necesarias para los recordatorios del temporizador y las alertas de tu círculo"
   },
   "sos": {
     "codeRed": "SOS · Código rojo",

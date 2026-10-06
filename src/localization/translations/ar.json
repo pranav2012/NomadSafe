@@ -785,14 +785,9 @@
     "readinessTitle": "جاهزية الأمان",
     "readinessReadyA11y": "جاهز",
     "readinessLocation": "الوصول إلى الموقع",
-    "readinessLocationOn": "مسموح · يدخل موقعك في رسائل الاستغاثة",
-    "readinessLocationOff": "مطلوب لتضمين موقعك في رسائل الاستغاثة",
     "readinessBackground": "مشاركة الموقع المباشرة",
     "readinessBackgroundOn": "“السماح دائمًا” مفعّل · تعمل المشاركة والشاشة مطفأة",
-    "readinessBackgroundOff": "يسمح لجهات الاتصال بمتابعتك أثناء الاستغاثة، حتى مع إغلاق التطبيق",
     "readinessNotifications": "الإشعارات",
-    "readinessNotificationsOn": "مفعّل · ستصلك تذكيرات تسجيل الوصول",
-    "readinessNotificationsOff": "مطلوب لتذكيرات تسجيل الوصول",
     "readinessBattery": "استخدام البطارية",
     "readinessBatteryOn": "غير مقيّد · لن يوقف Android ميزات الأمان في الخلفية",
     "readinessBatteryOff": "قد يوقف Android المشاركة المباشرة والتذكيرات. في الإعدادات، اضبط استخدام NomadSafe للبطارية على غير مقيّد.",
@@ -853,7 +848,12 @@
     "timerStep3": "إذا لم تفعل، تتلقى دائرتك المقرّبة تنبيهًا بموقعك.",
     "timerTitle": "مؤقت الوصول الآمن",
     "holdForSos": "اضغط مطولًا لـ SOS",
-    "sosHoldHint": "اضغط مع الاستمرار لمدة ثانيتين. سيكون لديك 5 ثوانٍ للإلغاء قبل تنبيه دائرتك المقرّبة."
+    "sosHoldHint": "اضغط مع الاستمرار لمدة ثانيتين. سيكون لديك 5 ثوانٍ للإلغاء قبل تنبيه دائرتك المقرّبة.",
+    "readinessLocationShared": "مسموح · يُظهر نداء SOS لدائرتك المقرّبة مكانك",
+    "readinessLocationNeeded": "مطلوب لتعرف دائرتك المقرّبة مكانك أثناء SOS",
+    "readinessBackgroundCircle": "يتيح لدائرتك المقرّبة متابعتك أثناء SOS حتى عند إغلاق التطبيق",
+    "readinessNotificationsTimer": "مفعّل · ستصلك تذكيرات المؤقت وتنبيهات دائرتك المقرّبة",
+    "readinessNotificationsNeeded": "مطلوب لتذكيرات المؤقت وتنبيهات دائرتك المقرّبة"
   },
   "sos": {
     "codeRed": "نداء استغاثة · حالة طارئة",

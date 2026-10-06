@@ -785,14 +785,9 @@
     "readinessTitle": "安全准备情况",
     "readinessReadyA11y": "已就绪",
     "readinessLocation": "位置访问",
-    "readinessLocationOn": "已允许 · 你的位置会包含在 SOS 消息中",
-    "readinessLocationOff": "需要以便将你的位置包含在 SOS 消息中",
     "readinessBackground": "实时位置分享",
     "readinessBackgroundOn": "“始终允许”已开启 · 屏幕关闭时分享仍可正常工作",
-    "readinessBackgroundOff": "即使应用已关闭，也能让联系人在 SOS 期间追踪你的位置",
     "readinessNotifications": "通知",
-    "readinessNotificationsOn": "已开启 · 签到提醒会送达给你",
-    "readinessNotificationsOff": "签到提醒需要此权限",
     "readinessBattery": "电池使用情况",
     "readinessBatteryOn": "不受限制 · Android 不会阻止后台安全功能",
     "readinessBatteryOff": "Android 可能会停止实时分享和提醒。请在设置中将 NomadSafe 的电池使用设置为“不受限制”。",
@@ -853,7 +848,12 @@
     "timerStep3": "如果你没有点，守护圈会收到附带你位置的提醒。",
     "timerTitle": "平安到达计时",
     "holdForSos": "长按发送 SOS",
-    "sosHoldHint": "按住 2 秒。在提醒守护圈之前，你有 5 秒可以取消。"
+    "sosHoldHint": "按住 2 秒。在提醒守护圈之前，你有 5 秒可以取消。",
+    "readinessLocationShared": "已允许 · 发出 SOS 时守护圈能看到你在哪里",
+    "readinessLocationNeeded": "需要开启，守护圈才能在 SOS 时看到你在哪里",
+    "readinessBackgroundCircle": "即使关闭应用，SOS 期间守护圈也能跟随你的位置",
+    "readinessNotificationsTimer": "已开启 · 计时提醒和守护圈的提醒会送达给你",
+    "readinessNotificationsNeeded": "计时提醒和守护圈的提醒需要它"
   },
   "sos": {
     "codeRed": "SOS · 紧急警报",

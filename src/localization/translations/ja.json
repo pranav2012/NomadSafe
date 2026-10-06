@@ -785,14 +785,9 @@
     "readinessTitle": "安全準備状況",
     "readinessReadyA11y": "準備完了",
     "readinessLocation": "位置情報アクセス",
-    "readinessLocationOn": "許可済み・あなたの位置情報がSOSメッセージに含まれます",
-    "readinessLocationOff": "SOSメッセージに位置情報を含めるために必要です",
     "readinessBackground": "リアルタイム位置共有",
     "readinessBackgroundOn": "「常に許可」がオン・画面オフでも共有が動作します",
-    "readinessBackgroundOff": "アプリを閉じていてもSOS中に連絡先があなたを追跡できます",
     "readinessNotifications": "通知",
-    "readinessNotificationsOn": "オン・チェックインのリマインダーが届きます",
-    "readinessNotificationsOff": "チェックインのリマインダーに必要です",
     "readinessBattery": "バッテリー使用状況",
     "readinessBatteryOn": "無制限・Androidがバックグラウンドの安全機能を停止しません",
     "readinessBatteryOff": "Androidがリアルタイム共有やリマインダーを停止する可能性があります。設定でNomadSafeのバッテリー使用を「無制限」にしてください。",
@@ -853,7 +848,12 @@
     "timerStep3": "タップしないと、見守りメンバーにあなたの位置情報付きの通知が届きます。",
     "timerTitle": "到着確認タイマー",
     "holdForSos": "長押しでSOS",
-    "sosHoldHint": "2秒間長押ししてください。見守りメンバーに通知されるまで、5秒間キャンセルできます。"
+    "sosHoldHint": "2秒間長押ししてください。見守りメンバーに通知されるまで、5秒間キャンセルできます。",
+    "readinessLocationShared": "許可済み・SOS時に見守りメンバーにあなたの居場所が伝わります",
+    "readinessLocationNeeded": "SOS時に見守りメンバーがあなたの居場所を確認するために必要です",
+    "readinessBackgroundCircle": "アプリを閉じていても、SOS中に見守りメンバーがあなたの位置を追えます",
+    "readinessNotificationsTimer": "オン・タイマーのリマインダーと見守りメンバーからの通知が届きます",
+    "readinessNotificationsNeeded": "タイマーのリマインダーと見守りメンバーからの通知に必要です"
   },
   "sos": {
     "codeRed": "SOS · コードレッド",

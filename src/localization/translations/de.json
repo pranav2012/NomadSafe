@@ -785,14 +785,9 @@
     "readinessTitle": "Sicherheitsbereitschaft",
     "readinessReadyA11y": "Bereit",
     "readinessLocation": "Standortzugriff",
-    "readinessLocationOn": "Erlaubt · dein Standort wird in SOS-Nachrichten aufgenommen",
-    "readinessLocationOff": "Erforderlich, um deinen Standort in SOS-Nachrichten aufzunehmen",
     "readinessBackground": "Live-Standortfreigabe",
     "readinessBackgroundOn": "„Immer erlauben“ ist aktiviert · Freigabe funktioniert bei ausgeschaltetem Bildschirm",
-    "readinessBackgroundOff": "Ermöglicht Kontakten, dir während eines SOS zu folgen, auch bei geschlossener App",
     "readinessNotifications": "Benachrichtigungen",
-    "readinessNotificationsOn": "An · Check-in-Erinnerungen erreichen dich",
-    "readinessNotificationsOff": "Erforderlich für Check-in-Erinnerungen",
     "readinessBattery": "Akkunutzung",
     "readinessBatteryOn": "Uneingeschränkt · Android stoppt keine Sicherheitsfunktionen im Hintergrund",
     "readinessBatteryOff": "Android kann Live-Freigabe und Erinnerungen stoppen. Setze in den Einstellungen die Akkunutzung von NomadSafe auf Uneingeschränkt.",
@@ -853,7 +848,12 @@
     "timerStep3": "Wenn nicht, erhält dein Vertrauenskreis eine Warnung mit deinem Standort.",
     "timerTitle": "Ankunfts-Timer",
     "holdForSos": "Für SOS halten",
-    "sosHoldHint": "2 Sekunden gedrückt halten. Du hast dann 5 Sekunden zum Abbrechen, bevor dein Vertrauenskreis benachrichtigt wird."
+    "sosHoldHint": "2 Sekunden gedrückt halten. Du hast dann 5 Sekunden zum Abbrechen, bevor dein Vertrauenskreis benachrichtigt wird.",
+    "readinessLocationShared": "Erlaubt · bei einem SOS sieht dein Vertrauenskreis, wo du bist",
+    "readinessLocationNeeded": "Nötig, damit dein Vertrauenskreis bei einem SOS sieht, wo du bist",
+    "readinessBackgroundCircle": "Dein Vertrauenskreis kann dir bei einem SOS folgen, auch wenn die App geschlossen ist",
+    "readinessNotificationsTimer": "An · Timer-Erinnerungen und Alarme aus deinem Vertrauenskreis erreichen dich",
+    "readinessNotificationsNeeded": "Nötig für Timer-Erinnerungen und Alarme aus deinem Vertrauenskreis"
   },
   "sos": {
     "codeRed": "SOS · Code Rot",
