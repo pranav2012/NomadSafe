@@ -1907,5 +1907,29 @@
     "joinPrivacy": "成员可以看到群组及其共享花费，包括添加地点。你没有分摊的花费保持私密。",
     "openTrip": "打开群组",
     "joinTitle": "加入群组"
+  },
+  "export": {
+    "action": "导出",
+    "periodAction": "导出{{period}}",
+    "title": "导出花费",
+    "intro_one": "{{count}} 笔花费，含付款人、你的份额和分摊方式。",
+    "intro_other": "{{count}} 笔花费，含付款人、你的份额和分摊方式。",
+    "csv": "电子表格（CSV）",
+    "csvDetail": "可在 Sheets、Excel 或 Numbers 中打开",
+    "pdf": "PDF",
+    "pdfDetail": "可打印或发送的表格",
+    "unavailable": "此手机无法分享。",
+    "failed": "无法创建文件，请重试。",
+    "generated_one": "{{count}} 笔花费 · 来自 NomadSafe",
+    "generated_other": "{{count}} 笔花费 · 来自 NomadSafe",
+    "date": "日期",
+    "description": "描述",
+    "category": "类别",
+    "amount": "金额",
+    "currency": "货币",
+    "group": "旅行或群组",
+    "paidBy": "付款人",
+    "yourShare": "你的份额",
+    "split": "分摊"
   }
 }

@@ -1907,5 +1907,29 @@
     "joinPrivacy": "Mitglieder sehen die Gruppe und ihre geteilten Ausgaben, auch wo sie hinzugefügt wurden. Nicht geteilte Ausgaben bleiben privat.",
     "openTrip": "Gruppe öffnen",
     "joinTitle": "Gruppe beitreten"
+  },
+  "export": {
+    "action": "Exportieren",
+    "periodAction": "{{period}} exportieren",
+    "title": "Ausgaben exportieren",
+    "intro_one": "{{count}} Ausgabe, mit Zahler, deinem Anteil und der Aufteilung.",
+    "intro_other": "{{count}} Ausgaben, mit Zahler, deinem Anteil und der Aufteilung.",
+    "csv": "Tabelle (CSV)",
+    "csvDetail": "Öffnet in Sheets, Excel oder Numbers",
+    "pdf": "PDF",
+    "pdfDetail": "Eine Tabelle zum Drucken oder Senden",
+    "unavailable": "Teilen ist auf diesem Handy nicht verfügbar.",
+    "failed": "Die Datei konnte nicht erstellt werden. Versuch es noch mal.",
+    "generated_one": "{{count}} Ausgabe · aus NomadSafe",
+    "generated_other": "{{count}} Ausgaben · aus NomadSafe",
+    "date": "Datum",
+    "description": "Beschreibung",
+    "category": "Kategorie",
+    "amount": "Betrag",
+    "currency": "Währung",
+    "group": "Reise oder Gruppe",
+    "paidBy": "Bezahlt von",
+    "yourShare": "Dein Anteil",
+    "split": "Aufteilung"
   }
 }

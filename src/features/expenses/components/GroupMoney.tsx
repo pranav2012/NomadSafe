@@ -1,6 +1,8 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { AuraButton, AuraCard, AuraSection, Icon, useAura } from "@/atoms";
+import { AuraButton, AuraCard, AuraSection, Icon, PressableScale, useAura } from "@/atoms";
+import { usePlusGate } from "@/modules/billing";
+import { ExportSheet } from "@/features/expenses/components/ExportSheet";
 import { useLocalization } from "@/localization";
 import { isTrip, type MoneyGroup } from "@/features/trips/store/tripsStore";
 import { daysLeftInTrip, getTripStatus } from "@/features/trips/utils/dates";
@@ -52,6 +54,8 @@ export function GroupMoney({
   const hasPeople = group.companions.length > 0 || expenses.some(isSplitExpense) || settlements.length > 0;
   const hasActivity = expenses.length > 0 || settlements.length > 0;
   const trip = isTrip(group) ? group : null;
+  const plus = usePlusGate();
+  const [exportOpen, setExportOpen] = useState(false);
   const keepHandled = useKeepGroupStore((state) => (trip ? state.handled.includes(trip.id) : true));
   const showKeep = !!trip && !keepHandled && trip.companions.length > 0 && getTripStatus(trip) === "complete";
 
@@ -119,7 +123,16 @@ export function GroupMoney({
         </AuraCard>
       ) : (
         <>
-          <AuraSection title={t("money.activity")} style={styles.section} />
+          <AuraSection
+            title={t("money.activity")}
+            style={styles.section}
+            action={
+              <PressableScale onPress={() => plus.run("export", () => setExportOpen(true))} hitSlop={8} accessibilityRole="button" style={styles.exportAction}>
+                <Icon name={plus.isPlus ? "share" : "lock"} size={14} color={c.textSoft} />
+                <Text style={[styles.exportText, { color: c.textSoft, fontFamily: f.medium }]}>{t("export.action")}</Text>
+              </PressableScale>
+            }
+          />
           <GroupActivity
             expenses={expenses}
             settlements={settlements}
@@ -140,6 +153,7 @@ export function GroupMoney({
           <AuraButton label={t("money.planTrip")} icon="plus" variant="secondary" size="md" onPress={onPlanTrip} style={styles.addPeopleButton} />
         </AuraCard>
       ) : null}
+      <ExportSheet visible={exportOpen} onClose={() => setExportOpen(false)} expenses={expenses} title={group.name} />
     </View>
   );
 }
@@ -155,6 +169,8 @@ const styles = StyleSheet.create({
   addPeopleText: { flex: 1, fontSize: 14, lineHeight: 20 },
   addPeopleButton: { alignSelf: "flex-start" },
   section: { marginTop: 26 },
+  exportAction: { flexDirection: "row", alignItems: "center", gap: 5 },
+  exportText: { fontSize: 13.5 },
   empty: { marginTop: 28, gap: 8 },
   emptyTitle: { fontSize: 18, marginTop: 4 },
   emptyBody: { fontSize: 14.5, lineHeight: 21 },

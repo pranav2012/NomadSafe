@@ -1907,5 +1907,29 @@
     "joinPrivacy": "Os membros veem o grupo e seus gastos compartilhados, inclusive onde foram adicionados. Os gastos que você não divide continuam privados.",
     "openTrip": "Abrir grupo",
     "joinTitle": "Entrar no grupo"
+  },
+  "export": {
+    "action": "Exportar",
+    "periodAction": "Exportar {{period}}",
+    "title": "Exportar gastos",
+    "intro_one": "{{count}} gasto, com quem pagou, sua parte e a divisão.",
+    "intro_other": "{{count}} gastos, com quem pagou, sua parte e a divisão.",
+    "csv": "Planilha (CSV)",
+    "csvDetail": "Abre no Sheets, Excel ou Numbers",
+    "pdf": "PDF",
+    "pdfDetail": "Uma tabela para imprimir ou enviar",
+    "unavailable": "Compartilhar não está disponível neste celular.",
+    "failed": "Não foi possível criar o arquivo. Tente de novo.",
+    "generated_one": "{{count}} gasto · do NomadSafe",
+    "generated_other": "{{count}} gastos · do NomadSafe",
+    "date": "Data",
+    "description": "Descrição",
+    "category": "Categoria",
+    "amount": "Valor",
+    "currency": "Moeda",
+    "group": "Viagem ou grupo",
+    "paidBy": "Pago por",
+    "yourShare": "Sua parte",
+    "split": "Divisão"
   }
 }

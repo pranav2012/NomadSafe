@@ -276,3 +276,22 @@ test("monthly totals cover the last months, oldest first", () => {
   assert.deepEqual(totals.map((entry) => entry.start.getMonth()), [4, 5, 6, 7, 8, 9]);
   assert.deepEqual(totals.map((entry) => entry.total), [0, 0, 0, 0, 50, 100]);
 });
+
+const exportRowsModule = loadModule("src/features/expenses/utils/exportRows.ts");
+
+test("CSV export: quoted cells, your share, payers and split, sorted by date", () => {
+  const labels = { you: "You", notInGroup: "Not in a group", headers: ["Date", "Description", "Category", "Amount", "Currency", "Group", "Paid by", "Your share", "Split"] };
+  const rows = exportRowsModule.exportRows(
+    [
+      { date: "2026-10-02T10:00:00.000Z", merchant: "Pizza, wine", category: "food", amount: 30, currency: "EUR", groupId: "g1", paidBy: "Raj", shares: [{ person: SELF_ID, amount: 15 }, { person: "Raj", amount: 15 }], source: "manual" },
+      { date: "2026-10-01T10:00:00.000Z", merchant: "Coffee", category: "food", amount: 4, currency: "EUR", groupId: null, source: "manual" },
+    ],
+    () => "Flat",
+    labels,
+  );
+  assert.deepEqual(rows[0], ["2026-10-01", "Coffee", "food", "4", "EUR", "Not in a group", "You", "4", ""]);
+  assert.deepEqual(rows[1], ["2026-10-02", "Pizza, wine", "food", "30", "EUR", "Flat", "Raj", "15", "You 15; Raj 15"]);
+  const csv = exportRowsModule.toCsv(rows, labels.headers);
+  assert.ok(csv.includes('"Pizza, wine"'));
+  assert.equal(exportRowsModule.csvCell('say "hi"'), '"say ""hi"""');
+});

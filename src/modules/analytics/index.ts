@@ -27,6 +27,7 @@ export interface AnalyticsEvents {
   app_landing: { tab: "home" | "money" | "other"; reason: "trip" | "habit" | "link" };
   recurring_added: { count: number };
   recurring_created: { frequency: "weekly" | "monthly" | "yearly" };
+  money_exported: { format: "csv" | "pdf"; count: number };
   plus_feature_blocked: { feature: "shares" | "presets" | "recurring" | "charts" | "export" | "receiptScan" };
   trip_joined: { deferred: boolean; claimed_member: boolean };
   invite_deferred_found: { source: "install_referrer" | "clipboard" };

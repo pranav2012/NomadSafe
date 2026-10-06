@@ -15,6 +15,8 @@ import { RecurringList } from "@/features/expenses/components/RecurringList";
 import { OWED, OWES } from "@/features/expenses/components/GroupBalances";
 import { SpendHero } from "@/features/expenses/components/SpendHero";
 import { SpendTrend } from "@/features/expenses/components/SpendTrend";
+import { ExportSheet } from "@/features/expenses/components/ExportSheet";
+import { usePlusGate } from "@/modules/billing";
 
 const SETTLED_AFTER_MS = 30 * 86_400_000;
 
@@ -36,6 +38,8 @@ export function MoneyOverview({
   const [offset, setOffset] = useState(0);
   const [showSettled, setShowSettled] = useState(false);
   const [now] = useState(() => Date.now());
+  const [exportOpen, setExportOpen] = useState(false);
+  const plus = usePlusGate();
   const money = (amount: number) => formatMoney(formatCurrency, amount, homeCurrency);
 
   const range = periodRange(period, offset);
@@ -45,6 +49,11 @@ export function MoneyOverview({
     [expenses, period, offset],
   );
   const spendConversion = useConvertedExpenses(inPeriod, homeCurrency);
+  const periodExpenses = useMemo(
+    () => expenses.filter((expense) => inRange(expense.date, range)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [expenses, period, offset],
+  );
   const mine: Expense[] = spendConversion.convertedExpenses.map(({ expense, amount }) => ({ ...expense, amount, currency: homeCurrency }));
   const spent = sumAmount(mine);
   const [trendStart] = useState(() => periodRange("month", 5).start.getTime());
@@ -149,6 +158,17 @@ export function MoneyOverview({
         </AuraCard>
       ) : null}
 
+      {periodExpenses.length > 0 ? (
+        <AuraButton
+          label={t("export.periodAction", { period: periodLabel })}
+          icon={plus.isPlus ? "share" : "lock"}
+          variant="ghost"
+          size="md"
+          onPress={() => plus.run("export", () => setExportOpen(true))}
+          style={styles.exportButton}
+        />
+      ) : null}
+
       <AuraSection
         title={t("money.groupsAndTrips")}
         action={
@@ -188,6 +208,7 @@ export function MoneyOverview({
           <GroupActivity expenses={loose} showYourPart={false} onOpen={onOpenExpense} />
         </>
       ) : null}
+      <ExportSheet visible={exportOpen} onClose={() => setExportOpen(false)} expenses={periodExpenses} title={`${t("money.yourSpending")} · ${periodLabel}`} />
     </View>
   );
 }
@@ -232,6 +253,7 @@ const styles = StyleSheet.create({
   sourceAmount: { fontSize: 14.5, fontVariant: ["tabular-nums"] },
   chevronSpace: { width: 14 },
   section: { marginTop: 28 },
+  exportButton: { alignSelf: "flex-start", marginTop: 6 },
   newGroup: { flexDirection: "row", alignItems: "center", gap: 4 },
   newGroupText: { fontSize: 13.5 },
   overall: { fontSize: 20, letterSpacing: -0.4, marginBottom: 6 },

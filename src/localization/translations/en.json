@@ -1907,5 +1907,29 @@
     "joinPrivacy": "Members see the group and its shared expenses, including where they were added. Expenses you don't split stay private.",
     "openTrip": "Open group",
     "joinTitle": "Join group"
+  },
+  "export": {
+    "action": "Export",
+    "periodAction": "Export {{period}}",
+    "title": "Export spends",
+    "intro_one": "{{count}} spend, with who paid, your share and the split.",
+    "intro_other": "{{count}} spends, with who paid, your share and the split.",
+    "csv": "Spreadsheet (CSV)",
+    "csvDetail": "Opens in Sheets, Excel or Numbers",
+    "pdf": "PDF",
+    "pdfDetail": "A table to print or send",
+    "unavailable": "Sharing isn't available on this phone.",
+    "failed": "Couldn't create the file. Try again.",
+    "generated_one": "{{count}} spend · from NomadSafe",
+    "generated_other": "{{count}} spends · from NomadSafe",
+    "date": "Date",
+    "description": "Description",
+    "category": "Category",
+    "amount": "Amount",
+    "currency": "Currency",
+    "group": "Trip or group",
+    "paidBy": "Paid by",
+    "yourShare": "Your share",
+    "split": "Split"
   }
 }

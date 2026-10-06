@@ -1907,5 +1907,29 @@
     "joinPrivacy": "멤버는 그룹과 공유 지출(추가된 위치 포함)을 볼 수 있어요. 나누지 않은 지출은 비공개로 남아요.",
     "openTrip": "그룹 열기",
     "joinTitle": "그룹 참여"
+  },
+  "export": {
+    "action": "내보내기",
+    "periodAction": "{{period}} 내보내기",
+    "title": "지출 내보내기",
+    "intro_one": "지출 {{count}}건, 결제한 사람·내 몫·분배 포함.",
+    "intro_other": "지출 {{count}}건, 결제한 사람·내 몫·분배 포함.",
+    "csv": "스프레드시트 (CSV)",
+    "csvDetail": "Sheets, Excel, Numbers에서 열려요",
+    "pdf": "PDF",
+    "pdfDetail": "인쇄하거나 보낼 표",
+    "unavailable": "이 휴대폰에서는 공유할 수 없어요.",
+    "failed": "파일을 만들 수 없어요. 다시 시도하세요.",
+    "generated_one": "지출 {{count}}건 · NomadSafe",
+    "generated_other": "지출 {{count}}건 · NomadSafe",
+    "date": "날짜",
+    "description": "내용",
+    "category": "카테고리",
+    "amount": "금액",
+    "currency": "통화",
+    "group": "여행 또는 그룹",
+    "paidBy": "결제한 사람",
+    "yourShare": "내 몫",
+    "split": "분배"
   }
 }

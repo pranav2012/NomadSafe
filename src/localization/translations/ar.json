@@ -1907,5 +1907,29 @@
     "joinPrivacy": "يرى الأعضاء المجموعة ومصاريفها المشتركة، بما في ذلك مكان إضافتها. المصاريف التي لا تقسمها تبقى خاصة.",
     "openTrip": "افتح المجموعة",
     "joinTitle": "الانضمام إلى مجموعة"
+  },
+  "export": {
+    "action": "تصدير",
+    "periodAction": "تصدير {{period}}",
+    "title": "تصدير المصاريف",
+    "intro_one": "مصروف واحد، مع من دفع وحصتك والتقسيم.",
+    "intro_other": "{{count}} مصاريف، مع من دفع وحصتك والتقسيم.",
+    "csv": "جدول بيانات (CSV)",
+    "csvDetail": "يفتح في Sheets أو Excel أو Numbers",
+    "pdf": "PDF",
+    "pdfDetail": "جدول للطباعة أو الإرسال",
+    "unavailable": "المشاركة غير متاحة على هذا الهاتف.",
+    "failed": "تعذّر إنشاء الملف. حاول مرة أخرى.",
+    "generated_one": "مصروف واحد · من NomadSafe",
+    "generated_other": "{{count}} مصاريف · من NomadSafe",
+    "date": "التاريخ",
+    "description": "الوصف",
+    "category": "الفئة",
+    "amount": "المبلغ",
+    "currency": "العملة",
+    "group": "الرحلة أو المجموعة",
+    "paidBy": "دفع",
+    "yourShare": "حصتك",
+    "split": "التقسيم"
   }
 }

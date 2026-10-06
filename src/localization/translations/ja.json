@@ -1907,5 +1907,29 @@
     "joinPrivacy": "メンバーはグループと共有支出（追加された場所を含む）を見られます。割り勘しない支出は非公開のままです。",
     "openTrip": "グループを開く",
     "joinTitle": "グループに参加"
+  },
+  "export": {
+    "action": "書き出し",
+    "periodAction": "{{period}}を書き出す",
+    "title": "支出を書き出す",
+    "intro_one": "{{count}}件の支出（支払った人、あなたの負担、割り方を含む）。",
+    "intro_other": "{{count}}件の支出（支払った人、あなたの負担、割り方を含む）。",
+    "csv": "スプレッドシート（CSV）",
+    "csvDetail": "スプレッドシート、Excel、Numbersで開けます",
+    "pdf": "PDF",
+    "pdfDetail": "印刷・送信用の表",
+    "unavailable": "この端末では共有できません。",
+    "failed": "ファイルを作成できませんでした。もう一度お試しください。",
+    "generated_one": "{{count}}件の支出 · NomadSafe",
+    "generated_other": "{{count}}件の支出 · NomadSafe",
+    "date": "日付",
+    "description": "内容",
+    "category": "カテゴリ",
+    "amount": "金額",
+    "currency": "通貨",
+    "group": "旅行またはグループ",
+    "paidBy": "支払った人",
+    "yourShare": "あなたの負担",
+    "split": "割り方"
   }
 }
