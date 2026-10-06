@@ -9,6 +9,8 @@ import type { Trip } from "@/features/trips/store/tripsStore";
 import { useEventsStore, type TripEvent } from "@/features/itinerary/store/eventsStore";
 import { EventForm, type EventFormValues } from "@/features/itinerary/components/EventForm";
 import { TimelineList, UpNextList } from "@/features/itinerary/components/ItineraryViews";
+import { DayPlan } from "@/features/itinerary/components/DayPlan";
+import { formatters } from "@/features/itinerary/utils/entryText";
 import { upNext } from "@/features/itinerary/utils/timeline";
 import { fromDateKey } from "@/features/trips/utils/dates";
 import { logger } from "@/modules/logger";
@@ -20,13 +22,37 @@ import { useTripGmailSyncStatus } from "@/features/expenses/store/gmailSyncStatu
 
 const UP_NEXT_COUNT = 3;
 
+/** Where a new event starts: the next full hour on today, 09:00 on another day, now without a day. */
+function defaultStartFor(day: Date | null | undefined, now: number): Date | undefined {
+  if (!day) return undefined;
+  const current = new Date(now);
+  if (day.toDateString() === current.toDateString()) {
+    return new Date(current.getFullYear(), current.getMonth(), current.getDate(), current.getHours() + 1);
+  }
+  return new Date(day.getFullYear(), day.getMonth(), day.getDate(), 9);
+}
+
 /**
- * The trip's itinerary on Home: the next few bookings (tap to edit), a day-by-day "Full itinerary"
- * sheet, adding events, and on-device AI refinement with a review sheet before anything is removed.
+ * The trip's itinerary on Home: the next few bookings (tap to edit), or one day's plan when `day`
+ * is set, a day-by-day "Full itinerary" sheet, adding events, and on-device AI refinement with a
+ * review sheet before anything is removed.
  */
-export function TripItinerary({ trip }: { trip: Trip; accent: string }) {
+export function TripItinerary({
+  trip,
+  day,
+  now: liveNow,
+  city,
+}: {
+  trip: Trip;
+  accent: string;
+  /** Show this day's plan instead of "Up next". */
+  day?: Date | null;
+  now?: Date;
+  /** Added to Maps searches, e.g. "Nishiki Market, Kyoto". */
+  city?: string;
+}) {
   const { c, f } = useAura();
-  const { t } = useLocalization();
+  const { t, locale, hour12 } = useLocalization();
   const events = useEventsStore((state) => state.events);
   const addEvent = useEventsStore((state) => state.addEvent);
   const updateEvent = useEventsStore((state) => state.updateEvent);
@@ -44,8 +70,11 @@ export function TripItinerary({ trip }: { trip: Trip; accent: string }) {
     () => events.filter((event) => event.tripId === trip.id).sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime()),
     [events, trip.id],
   );
-  const [now] = useState(() => Date.now());
+  const [mountedAt] = useState(() => Date.now());
+  const now = liveNow?.getTime() ?? mountedAt;
   const next = upNext(ordered, now, UP_NEXT_COUNT);
+  const isToday = day ? day.toDateString() === new Date(now).toDateString() : false;
+  const sectionTitle = day ? (isToday ? t("home.live.todayTitle") : formatters(locale, hour12).dayHeader.format(day)) : t("itinerary.title");
 
   const handleSave = (values: EventFormValues) => {
     if (editing && editing !== "new") {
@@ -106,7 +135,7 @@ export function TripItinerary({ trip }: { trip: Trip; accent: string }) {
   return (
     <PrivateView>
       <AuraSection
-        title={t("itinerary.title")}
+        title={sectionTitle}
         action={
           <>
             {isAiAvailable && ordered.length > 1 ? (
@@ -124,7 +153,33 @@ export function TripItinerary({ trip }: { trip: Trip; accent: string }) {
         }
       />
 
-      {next.length > 0 ? (
+      {day && ordered.length > 0 ? (
+        <Animated.View entering={FadeIn.duration(300)}>
+          <DayPlan
+            events={ordered}
+            day={day}
+            now={new Date(now)}
+            city={city}
+            onPress={setEditing}
+            onAdd={() => {
+              track("today_action", { action: "add_stop" });
+              setEditing("new");
+            }}
+          />
+          {ordered.length > 0 ? (
+            <AuraButton
+              label={t("itinerary.fullItinerary", { total: ordered.length })}
+              variant="ghost"
+              size="md"
+              onPress={() => {
+                setAllOpen(true);
+                track("itinerary_sheet_opened", { events: ordered.length });
+              }}
+              style={styles.viewAll}
+            />
+          ) : null}
+        </Animated.View>
+      ) : next.length > 0 ? (
         <Animated.View entering={FadeIn.duration(300)}>
           <UpNextList events={next} onPress={setEditing} />
           {ordered.length > 1 ? (
@@ -185,6 +240,7 @@ export function TripItinerary({ trip }: { trip: Trip; accent: string }) {
         <EventForm
           key={editing === "new" ? "new" : editing.id}
           event={editing === "new" ? null : editing}
+          defaultStart={editing === "new" ? defaultStartFor(day, now) : undefined}
           visible
           onSave={handleSave}
           onDelete={

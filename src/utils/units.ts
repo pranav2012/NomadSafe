@@ -74,6 +74,14 @@ export function formatApproxDuration(hours: number, locale: string, label: Label
   return `~${parts.filter(Boolean).join(" ")}`;
 }
 
+/** Exact time left, rounded up to the minute: "45 min", "1 h 20 min", "3 h". */
+export function formatCountdown(minutes: number, locale: string, label: LabelUnit) {
+  const total = Math.max(1, Math.ceil(minutes));
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  return [h > 0 ? label("h", formatNumber(h, locale)) : null, m > 0 ? label("min", formatNumber(m, locale)) : null].filter(Boolean).join(" ");
+}
+
 /** "12.3K": Intl's compact notation is missing on iOS Hermes. */
 export function formatCompactNumber(value: number, locale: string) {
   const abs = Math.abs(value);

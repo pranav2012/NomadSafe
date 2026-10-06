@@ -62,7 +62,24 @@
     "yourStay": "ನಿಮ್ಮ ವಾಸ್ತವ್ಯ",
     "globeHint": "ಗ್ಲೋಬ್. ನಕ್ಷೆಗೆ ಜೂಮ್ ಮಾಡಲು ಪಿಂಚ್ ಮಾಡಿ",
     "backToGlobe": "ಗ್ಲೋಬ್‌ಗೆ ಹಿಂತಿರುಗಿ",
-    "refine": "ಪರಿಷ್ಕರಿಸಿ"
+    "refine": "ಪರಿಷ್ಕರಿಸಿ",
+    "live": {
+      "startsTomorrow": "ನಾಳೆ ಆರಂಭ",
+      "until": "{{time}} ವರೆಗೆ",
+      "now": "ಈಗ",
+      "tonight": "ಇಂದು ರಾತ್ರಿ",
+      "nightOf": "{{total}} ರಲ್ಲಿ ರಾತ್ರಿ {{night}}",
+      "today": "ಇಂದು",
+      "doneForToday": "ಇಂದಿನದು ಮುಗಿಯಿತು",
+      "freeDay": "ಬಿಡುವಿನ ದಿನ",
+      "inDuration": "{{duration}} ನಲ್ಲಿ",
+      "tomorrow": "ನಾಳೆ",
+      "todayTitle": "ಇಂದು",
+      "tonightAt": "ಇಂದು ರಾತ್ರಿ: {{name}}",
+      "showToday": "ಇಂದಿನ ಯೋಜನೆ ತೋರಿಸಿ",
+      "backToToday": "ಇಂದಿಗೆ ಹಿಂತಿರುಗಿ",
+      "backToDayOne": "ದಿನ 1 ಕ್ಕೆ ಹಿಂತಿರುಗಿ"
+    }
   },
   "settings": {
     "title": "ಸೆಟ್ಟಿಂಗ್ಗಳು",
@@ -1136,6 +1153,11 @@
       "bus": "ಬಸ್",
       "car": "ಕಾರು",
       "ferry": "ದೋಣಿ"
+    },
+    "day": {
+      "freeBody": "ಏನೂ ಯೋಜಿಸಿಲ್ಲ. ಒಂದು ನಿಲ್ದಾಣ ಸೇರಿಸಿ ಅಥವಾ ಹತ್ತಿರ ಏನಿದೆ ನೋಡಿ.",
+      "addStop": "ನಿಲ್ದಾಣ ಸೇರಿಸಿ",
+      "openMaps": "{{place}} ಅನ್ನು ಮ್ಯಾಪ್ಸ್‌ನಲ್ಲಿ ತೆರೆಯಿರಿ"
     }
   },
   "places": {

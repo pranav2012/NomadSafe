@@ -62,7 +62,24 @@
     "yourStay": "宿泊先",
     "globeHint": "地球儀。ピンチで地図までズーム",
     "backToGlobe": "地球儀に戻る",
-    "refine": "整理"
+    "refine": "整理",
+    "live": {
+      "startsTomorrow": "明日出発",
+      "until": "{{time}}まで",
+      "now": "今",
+      "tonight": "今夜",
+      "nightOf": "{{total}}泊中{{night}}泊目",
+      "today": "今日",
+      "doneForToday": "今日の予定は完了",
+      "freeDay": "フリーの日",
+      "inDuration": "あと{{duration}}",
+      "tomorrow": "明日",
+      "todayTitle": "今日",
+      "tonightAt": "今夜：{{name}}",
+      "showToday": "今日の予定を表示",
+      "backToToday": "今日に戻る",
+      "backToDayOne": "1日目に戻る"
+    }
   },
   "settings": {
     "title": "設定",
@@ -1136,6 +1153,11 @@
       "bus": "バス",
       "car": "車",
       "ferry": "フェリー"
+    },
+    "day": {
+      "freeBody": "予定はありません。立ち寄り先を追加するか、近くを探してみましょう。",
+      "addStop": "立ち寄り先を追加",
+      "openMaps": "{{place}}をマップで開く"
     }
   },
   "places": {

@@ -37,8 +37,8 @@ export function upNext<T extends BookingLike>(events: T[], now: number, count: n
   return (open.length > 0 ? open : sorted.slice(-count)).slice(0, count);
 }
 
-/** Day-by-day itinerary: a stay shows check-in and check-out, and the quiet days between collapse into one line. */
-export function buildTimeline<T extends BookingLike>(events: T[]): TimelineSection<T>[] {
+/** One entry per moment on the timeline: a stay gives a check-in and a check-out, sorted by time. */
+export function timelineEntries<T extends BookingLike>(events: T[]): TimelineEntry<T>[] {
   const entries: TimelineEntry<T>[] = [];
   for (const event of events) {
     if (event.type === "stay" && isLoneCheckOut(event)) {
@@ -50,8 +50,12 @@ export function buildTimeline<T extends BookingLike>(events: T[]): TimelineSecti
       entries.push({ event, at: event.startAt, role: "single" });
     }
   }
-  entries.sort((a, b) => time(a.at) - time(b.at));
+  return entries.sort((a, b) => time(a.at) - time(b.at));
+}
 
+/** Day-by-day itinerary: a stay shows check-in and check-out, and the quiet days between collapse into one line. */
+export function buildTimeline<T extends BookingLike>(events: T[]): TimelineSection<T>[] {
+  const entries = timelineEntries(events);
   const days = new Map<number, TimelineEntry<T>[]>();
   for (const entry of entries) {
     const key = startOfDay(entry.at).getTime();

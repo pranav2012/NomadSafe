@@ -4,17 +4,8 @@ import { useFocusEffect } from "expo-router";
 import { toLocalDayKey } from "@/features/expenses/utils/dateKey";
 import { useEventsStore } from "@/features/itinerary";
 import { selectActiveTrip, useTripsStore } from "@/features/trips/store/tripsStore";
-import { addDays, fromDateKey, getTripStatus, startOfLocalDay } from "@/features/trips/utils/dates";
+import { homeStage } from "@/features/home/utils/stage";
 import { track } from "@/modules/analytics";
-
-/** Which Home the user sees: no trip, before it (the last day before is "eve"), during or after. */
-function homeStage(trip: { startDate: string; endDate: string } | null, now: Date) {
-  if (!trip) return "none" as const;
-  const status = getTripStatus(trip, now);
-  if (status === "active") return "active" as const;
-  if (status === "complete") return "ended" as const;
-  return addDays(startOfLocalDay(now), 1) >= fromDateKey(trip.startDate) ? ("eve" as const) : ("upcoming" as const);
-}
 
 function trackHomeViewed() {
   const now = new Date();

@@ -28,11 +28,11 @@ import Animated, {
   type SharedValue,
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
-import { Icon, LiveDot, PressableScale, RollingNumber, springs } from "@/atoms";
+import { Icon, LiveDot, PressableScale, RollingNumber, springs, type IconName } from "@/atoms";
 import type { EmergencyContact } from "@/features/onboarding/services/emergencyContactsStorage";
 import { lightImpact } from "@/utils/haptics";
 import { useAnimationsActive } from "@/hooks/useAnimationsActive";
-import type { HomeData } from "@/features/home/types";
+import type { HomeData, LivePass } from "@/features/home/types";
 import { SAFETY_KIND_META } from "./safety/kinds";
 import { useLocalization } from "@/localization";
 import type { SafetyPlace } from "@/features/home/hooks/useTripSafety";
@@ -120,13 +120,15 @@ interface BoardingPassProps {
   emergency: EmergencyInfo;
   /** True while the page scrolls; the aura and tilt hold still so scroll frames aren't dropped. */
   scrolling?: SharedValue<boolean>;
+  /** During the trip (and the day before): what's on now and next, instead of the route and day count. */
+  live?: LivePass | null;
 }
 
 /**
  * Trip as a Wallet-style pass: the safety-state aura glows inside it under a holographic foil
  * that shifts as the phone tilts (or as you drag it). Tap to flip it to an emergency card.
  */
-export function BoardingPass({ data, palette: c, accent, gradient, isDark, emergency, scrolling }: BoardingPassProps) {
+export function BoardingPass({ data, palette: c, accent, gradient, isDark, emergency, scrolling, live }: BoardingPassProps) {
   const { width: windowWidth } = useWindowDimensions();
   const width = windowWidth - 40;
   const [isBack, setIsBack] = useState(false);
@@ -218,7 +220,12 @@ export function BoardingPass({ data, palette: c, accent, gradient, isDark, emerg
     <GestureDetector gesture={Gesture.Exclusive(pan, tap)}>
       <Animated.View style={[styles.card, { width, height: HEIGHT }, cardStyle]}>
         {animating ? <GravitySensor target={gravity} scrolling={scrolling} /> : null}
-        <Animated.View style={[StyleSheet.absoluteFill, frontStyle]} accessible accessibilityRole="button" accessibilityLabel={data.tripName}>
+        <Animated.View
+          style={[StyleSheet.absoluteFill, frontStyle]}
+          accessible
+          accessibilityRole="button"
+          accessibilityLabel={live ? [data.tripName, live.heading, live.stub ? `${live.stub.time} ${live.stub.title}` : null].filter(Boolean).join(", ") : data.tripName}
+        >
           <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
             <Group clip={cardShape}>
               <Fill>
@@ -242,46 +249,62 @@ export function BoardingPass({ data, palette: c, accent, gradient, isDark, emerg
           <View style={styles.front}>
             <View style={styles.headerRow}>
               <Text numberOfLines={1} style={[styles.tripName, { color: c.textSoft }]}>
-                {data.tripName}
+                {live ? `${data.tripName} · ${live.heading}` : data.tripName}
               </Text>
               <View style={styles.status}>
                 <LiveDot color={accent} active={data.isSharing} size={6} />
                 <Text style={[styles.statusText, { color: c.textSoft }]}>{data.sharingLabel}</Text>
               </View>
             </View>
-            <View style={styles.routeRow}>
-              <View>
-                <Text style={[styles.code, { color: c.text }]}>{code(from)}</Text>
-                <Text numberOfLines={1} style={[styles.city, { color: c.textMuted }]}>
-                  {from}
+            {live && live.top.kind === "text" ? (
+              <View style={styles.nowBlock}>
+                <Text style={[styles.nowLabel, { color: accent }]}>{live.top.label}</Text>
+                <Text numberOfLines={1} style={[styles.nowTitle, { color: c.text }]}>
+                  {live.top.title}
                 </Text>
+                {live.top.sub ? (
+                  <Text numberOfLines={1} style={[styles.city, styles.nowSub, { color: c.textMuted }]}>
+                    {live.top.sub}
+                  </Text>
+                ) : null}
               </View>
-              {many ? (
-                <>
-                  <View style={styles.flightLine}>
-                    <View style={[styles.flightDash, { borderColor: c.textMuted }]} />
-                    <Icon name="send" size={16} color={accent} />
-                    <View style={[styles.flightDash, { borderColor: c.textMuted }]} />
-                  </View>
-                  <View style={styles.alignEnd}>
-                    <Text style={[styles.code, { color: c.text }]}>{code(to)}</Text>
-                    <Text numberOfLines={1} style={[styles.city, { color: c.textMuted }]}>
-                      {to}
-                    </Text>
-                  </View>
-                </>
-              ) : null}
-            </View>
-            <View style={styles.stubRow}>
-              <View style={styles.dayBlock}>
-                <RollingNumber value={bigNumber} lineHeight={50} style={[styles.bigNumber, { color: c.text }]} />
-                {!upcoming ? <Text style={[styles.of, { color: c.textMuted }]}>/{data.totalDays}</Text> : null}
+            ) : live && live.top.kind === "route" ? (
+              <RouteRow from={live.top.from} to={live.top.to} fromName={live.top.fromName} toName={live.top.toName} icon={live.top.icon} palette={c} accent={accent} />
+            ) : (
+              <RouteRow
+                from={code(from)}
+                to={many ? code(to) : null}
+                fromName={from ?? ""}
+                toName={to ?? ""}
+                icon="send"
+                palette={c}
+                accent={accent}
+              />
+            )}
+            {live?.stub ? (
+              <View style={styles.stubRow}>
+                <Text style={[styles.bigTime, { color: c.text }]}>{live.stub.time}</Text>
+                <View style={[styles.alignEnd, styles.stubText]}>
+                  <Text numberOfLines={1} style={[styles.meta, { color: c.text }]}>
+                    {live.stub.label}
+                  </Text>
+                  <Text numberOfLines={1} style={[styles.metaSub, { color: c.textMuted }]}>
+                    {live.stub.title}
+                  </Text>
+                </View>
               </View>
-              <View style={styles.alignEnd}>
-                <Text style={[styles.meta, { color: c.text }]}>{upcoming ? data.dayLabel : data.daysLeftLabel}</Text>
-                <Text style={[styles.metaSub, { color: c.textMuted }]}>{data.travellersLabel}</Text>
+            ) : (
+              <View style={styles.stubRow}>
+                <View style={styles.dayBlock}>
+                  <RollingNumber value={bigNumber} lineHeight={50} style={[styles.bigNumber, { color: c.text }]} />
+                  {!upcoming ? <Text style={[styles.of, { color: c.textMuted }]}>/{data.totalDays}</Text> : null}
+                </View>
+                <View style={styles.alignEnd}>
+                  <Text style={[styles.meta, { color: c.text }]}>{upcoming ? data.dayLabel : data.daysLeftLabel}</Text>
+                  <Text style={[styles.metaSub, { color: c.textMuted }]}>{data.travellersLabel}</Text>
+                </View>
               </View>
-            </View>
+            )}
           </View>
         </Animated.View>
 
@@ -376,6 +399,51 @@ function EmergencyRow({
   );
 }
 
+/** "BLR ─ ✈ ─ NRT" with the place names under the codes; `to` null shows the origin alone. */
+function RouteRow({
+  from,
+  to,
+  fromName,
+  toName,
+  icon,
+  palette: c,
+  accent,
+}: {
+  from: string;
+  to: string | null;
+  fromName: string;
+  toName: string;
+  icon: IconName;
+  palette: AuraPalette;
+  accent: string;
+}) {
+  return (
+    <View style={styles.routeRow}>
+      <View>
+        <Text style={[styles.code, { color: c.text }]}>{from}</Text>
+        <Text numberOfLines={1} style={[styles.city, { color: c.textMuted }]}>
+          {fromName}
+        </Text>
+      </View>
+      {to !== null ? (
+        <>
+          <View style={styles.flightLine}>
+            <View style={[styles.flightDash, { borderColor: c.textMuted }]} />
+            <Icon name={icon} size={16} color={accent} />
+            <View style={[styles.flightDash, { borderColor: c.textMuted }]} />
+          </View>
+          <View style={styles.alignEnd}>
+            <Text style={[styles.code, { color: c.text }]}>{to}</Text>
+            <Text numberOfLines={1} style={[styles.city, { color: c.textMuted }]}>
+              {toName}
+            </Text>
+          </View>
+        </>
+      ) : null}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   card: { alignSelf: "center", borderRadius: RADIUS },
   notch: { position: "absolute", width: 22, height: 22, borderRadius: 11 },
@@ -393,6 +461,12 @@ const styles = StyleSheet.create({
   stubRow: { position: "absolute", left: 20, right: 20, bottom: 10, flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" },
   dayBlock: { flexDirection: "row", alignItems: "flex-end" },
   bigNumber: { fontFamily: f.semibold, fontSize: 46, letterSpacing: -1.5 },
+  bigTime: { fontFamily: f.semibold, fontSize: 38, letterSpacing: -1.2, fontVariant: ["tabular-nums"] },
+  stubText: { flexShrink: 1, marginStart: 12, marginBottom: 4 },
+  nowBlock: { marginTop: 10 },
+  nowLabel: { fontFamily: f.semibold, fontSize: 11.5, letterSpacing: 1, textTransform: "uppercase" },
+  nowTitle: { fontFamily: f.semibold, fontSize: 22, letterSpacing: -0.4, marginTop: 2 },
+  nowSub: { maxWidth: undefined, marginTop: 1 },
   of: { fontFamily: f.medium, fontSize: 16, marginBottom: 9, marginStart: 2 },
   meta: { fontFamily: f.semibold, fontSize: 14 },
   metaSub: { fontFamily: f.regular, fontSize: 12.5, marginTop: 2 },

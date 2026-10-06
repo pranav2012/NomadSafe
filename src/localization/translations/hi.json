@@ -62,7 +62,24 @@
     "yourStay": "आपका ठहराव",
     "globeHint": "ग्लोब। मानचित्र तक ज़ूम करने के लिए पिंच करें",
     "backToGlobe": "ग्लोब पर वापस जाएँ",
-    "refine": "सुधारें"
+    "refine": "सुधारें",
+    "live": {
+      "startsTomorrow": "कल से शुरू",
+      "until": "{{time}} तक",
+      "now": "अभी",
+      "tonight": "आज रात",
+      "nightOf": "{{total}} में से रात {{night}}",
+      "today": "आज",
+      "doneForToday": "आज का सब हो गया",
+      "freeDay": "खाली दिन",
+      "inDuration": "{{duration}} में",
+      "tomorrow": "कल",
+      "todayTitle": "आज",
+      "tonightAt": "आज रात: {{name}}",
+      "showToday": "आज की योजना दिखाएँ",
+      "backToToday": "आज पर वापस जाएँ",
+      "backToDayOne": "दिन 1 पर वापस जाएँ"
+    }
   },
   "settings": {
     "title": "सेटिंग्स",
@@ -1136,6 +1153,11 @@
       "bus": "बस",
       "car": "कार",
       "ferry": "फ़ेरी"
+    },
+    "day": {
+      "freeBody": "कुछ तय नहीं है। कोई पड़ाव जोड़ें या आस-पास देखें।",
+      "addStop": "पड़ाव जोड़ें",
+      "openMaps": "{{place}} को मैप्स में खोलें"
     }
   },
   "places": {

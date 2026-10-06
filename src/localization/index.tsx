@@ -8,6 +8,7 @@ import { getEffectiveCurrency } from "@/utils/currency";
 import {
   deviceUnitPrefs,
   formatApproxDuration,
+  formatCountdown,
   formatCompactNumber,
   formatDistance,
   formatRain,
@@ -46,6 +47,7 @@ interface LocalizationContextValue {
   formatDistance: (km: number) => string;
   formatRain: (mm: number) => string;
   formatApproxDuration: (hours: number) => string;
+  formatCountdown: (minutes: number) => string;
   formatCompactNumber: (value: number) => string;
 }
 
@@ -217,6 +219,7 @@ export function LocalizationProvider({ children }: { children: React.ReactNode }
       formatDistance: (km) => formatDistance(km, units.distance, formatLocale, label),
       formatRain: (mm) => formatRain(mm, units.rain, formatLocale, label),
       formatApproxDuration: (hours) => formatApproxDuration(hours, formatLocale, label),
+      formatCountdown: (minutes) => formatCountdown(minutes, formatLocale, label),
       formatCompactNumber: (value) => formatCompactNumber(value, formatLocale),
     };
   }, [currency, deviceCurrency, deviceHour12, deviceLocale, deviceUnits, hour12, isRTL, locale, resource, units]);

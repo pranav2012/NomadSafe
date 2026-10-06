@@ -47,7 +47,7 @@ export function useHomeData(): HomeData | null {
   const start = fromDateKey(trip.startDate);
   const end = fromDateKey(trip.endDate);
   const totalDays = countInclusiveDays(start, end);
-  const status = getTripStatus(trip);
+  const status = getTripStatus(trip, now);
   const day =
     status === "upcoming" ? 0 : status === "complete" ? totalDays : Math.min(countInclusiveDays(start, startOfLocalDay(now)), totalDays);
   const dayDates = Array.from({ length: totalDays }, (_, i) => shortDate.format(addDays(start, i)));

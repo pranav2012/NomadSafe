@@ -62,7 +62,24 @@
     "yourStay": "Your stay",
     "globeHint": "Globe. Pinch to zoom into the map",
     "backToGlobe": "Back to globe",
-    "refine": "Refine"
+    "refine": "Refine",
+    "live": {
+      "startsTomorrow": "Starts tomorrow",
+      "until": "until {{time}}",
+      "now": "Now",
+      "tonight": "Tonight",
+      "nightOf": "Night {{night}} of {{total}}",
+      "today": "Today",
+      "doneForToday": "Done for today",
+      "freeDay": "Free day",
+      "inDuration": "in {{duration}}",
+      "tomorrow": "Tomorrow",
+      "todayTitle": "Today",
+      "tonightAt": "Tonight: {{name}}",
+      "showToday": "Show today's plan",
+      "backToToday": "Back to today",
+      "backToDayOne": "Back to day 1"
+    }
   },
   "trip": {
     "createEyebrow": "New trip",
@@ -288,6 +305,11 @@
       "bus": "Bus",
       "car": "Car",
       "ferry": "Ferry"
+    },
+    "day": {
+      "freeBody": "Nothing planned. Add a stop, or see what's nearby.",
+      "addStop": "Add a stop",
+      "openMaps": "Open {{place}} in Maps"
     }
   },
   "places": {

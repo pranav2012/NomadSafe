@@ -7,6 +7,7 @@ import { EVENT_TYPES, TRANSIT_MODES, type EventType, type TransitMode } from "@/
 import type { TripEvent } from "@/features/itinerary/store/eventsStore";
 import { localizeEventDetail, localizeEventTitle } from "@/features/itinerary/utils/eventText";
 import { transitModeOf } from "@/features/itinerary/utils/transit";
+import { toWallClock } from "@/features/itinerary/utils/wallClock";
 
 export interface EventFormValues {
   type: EventType;
@@ -38,12 +39,15 @@ function restoreDetailHead(edited: string, original: string | undefined, localiz
 /** Sheet to create or edit a single itinerary event; shows Delete when editing. */
 export function EventForm({
   event,
+  defaultStart,
   visible,
   onSave,
   onDelete,
   onClose,
 }: {
   event: TripEvent | null;
+  /** Start time for a new event (e.g. the day picked on Home); now when omitted. */
+  defaultStart?: Date;
   visible: boolean;
   onSave: (values: EventFormValues) => void;
   onDelete?: () => void;
@@ -57,9 +61,9 @@ export function EventForm({
   const [initialDetail] = useState(() => (event ? (localizeEventDetail(event.detail, t) ?? "") : ""));
   const [detail, setDetail] = useState(initialDetail);
   const [transitMode, setTransitMode] = useState<TransitMode | undefined>(() => (event ? transitModeOf(event) : undefined));
-  const [when, setWhen] = useState<Date>(event ? new Date(event.startAt) : new Date());
+  const [when, setWhen] = useState<Date>(() => (event ? new Date(event.startAt) : (defaultStart ?? new Date())));
   const [until, setUntil] = useState<Date>(() =>
-    event?.endAt ? new Date(event.endAt) : new Date((event ? new Date(event.startAt) : new Date()).getTime() + DAY_MS),
+    event?.endAt ? new Date(event.endAt) : new Date((event ? new Date(event.startAt) : (defaultStart ?? new Date())).getTime() + DAY_MS),
   );
   const savedDetail = restoreDetailHead(detail.trim(), event?.detail, initialDetail);
   // A lone check-out (from a booking email) is its own entry and has no separate end.
@@ -79,12 +83,12 @@ export function EventForm({
 
   const save = () => {
     if (!canSave) return;
-    const endAt = hasEnd && until.getTime() > when.getTime() ? until.toISOString() : undefined;
+    const endAt = hasEnd && until.getTime() > when.getTime() ? toWallClock(until) : undefined;
     onSave({
       type,
       title: title.trim(),
       detail: savedDetail,
-      startAt: when.toISOString(),
+      startAt: toWallClock(when),
       endAt,
       transitMode: type === "transit" ? transitMode : undefined,
     });

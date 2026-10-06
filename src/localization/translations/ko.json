@@ -62,7 +62,24 @@
     "yourStay": "숙소",
     "globeHint": "지구본. 핀치하여 지도로 확대",
     "backToGlobe": "지구본으로 돌아가기",
-    "refine": "정리"
+    "refine": "정리",
+    "live": {
+      "startsTomorrow": "내일 시작",
+      "until": "{{time}}까지",
+      "now": "지금",
+      "tonight": "오늘 밤",
+      "nightOf": "{{total}}박 중 {{night}}박째",
+      "today": "오늘",
+      "doneForToday": "오늘 일정 끝",
+      "freeDay": "자유로운 날",
+      "inDuration": "{{duration}} 후",
+      "tomorrow": "내일",
+      "todayTitle": "오늘",
+      "tonightAt": "오늘 밤: {{name}}",
+      "showToday": "오늘 일정 보기",
+      "backToToday": "오늘로 돌아가기",
+      "backToDayOne": "1일차로 돌아가기"
+    }
   },
   "settings": {
     "title": "설정",
@@ -1136,6 +1153,11 @@
       "bus": "버스",
       "car": "자동차",
       "ferry": "페리"
+    },
+    "day": {
+      "freeBody": "계획된 일정이 없어요. 들를 곳을 추가하거나 근처를 둘러보세요.",
+      "addStop": "들를 곳 추가",
+      "openMaps": "지도에서 {{place}} 열기"
     }
   },
   "places": {

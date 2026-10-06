@@ -62,7 +62,24 @@
     "yourStay": "Votre hébergement",
     "globeHint": "Globe. Pincez pour zoomer sur la carte",
     "backToGlobe": "Retour au globe",
-    "refine": "Affiner"
+    "refine": "Affiner",
+    "live": {
+      "startsTomorrow": "Commence demain",
+      "until": "jusqu'à {{time}}",
+      "now": "Maintenant",
+      "tonight": "Ce soir",
+      "nightOf": "Nuit {{night}} sur {{total}}",
+      "today": "Aujourd'hui",
+      "doneForToday": "Terminé pour aujourd'hui",
+      "freeDay": "Journée libre",
+      "inDuration": "dans {{duration}}",
+      "tomorrow": "Demain",
+      "todayTitle": "Aujourd'hui",
+      "tonightAt": "Ce soir : {{name}}",
+      "showToday": "Voir le programme du jour",
+      "backToToday": "Revenir à aujourd'hui",
+      "backToDayOne": "Revenir au jour 1"
+    }
   },
   "settings": {
     "title": "Paramètres",
@@ -1136,6 +1153,11 @@
       "bus": "Bus",
       "car": "Voiture",
       "ferry": "Ferry"
+    },
+    "day": {
+      "freeBody": "Rien de prévu. Ajoutez une étape ou découvrez ce qu'il y a autour.",
+      "addStop": "Ajouter une étape",
+      "openMaps": "Ouvrir {{place}} dans Plans"
     }
   },
   "places": {

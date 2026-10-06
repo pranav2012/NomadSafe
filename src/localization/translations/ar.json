@@ -62,7 +62,24 @@
     "yourStay": "مكان إقامتك",
     "globeHint": "الكرة الأرضية. قرّب بإصبعين للوصول إلى الخريطة",
     "backToGlobe": "العودة إلى الكرة الأرضية",
-    "refine": "تحسين"
+    "refine": "تحسين",
+    "live": {
+      "startsTomorrow": "تبدأ غدًا",
+      "until": "حتى {{time}}",
+      "now": "الآن",
+      "tonight": "الليلة",
+      "nightOf": "الليلة {{night}} من {{total}}",
+      "today": "اليوم",
+      "doneForToday": "انتهى يومك",
+      "freeDay": "يوم حر",
+      "inDuration": "بعد {{duration}}",
+      "tomorrow": "غدًا",
+      "todayTitle": "اليوم",
+      "tonightAt": "الليلة: {{name}}",
+      "showToday": "عرض خطة اليوم",
+      "backToToday": "العودة إلى اليوم",
+      "backToDayOne": "العودة إلى اليوم 1"
+    }
   },
   "settings": {
     "title": "الإعدادات",
@@ -1136,6 +1153,11 @@
       "bus": "حافلة",
       "car": "سيارة",
       "ferry": "عبّارة"
+    },
+    "day": {
+      "freeBody": "لا شيء مخطط. أضف محطة أو اكتشف ما حولك.",
+      "addStop": "أضف محطة",
+      "openMaps": "افتح {{place}} في الخرائط"
     }
   },
   "places": {

@@ -66,6 +66,11 @@ const TEX_H = 1024;
 const SKY_W = 2048;
 const SKY_H = 1024;
 const DEG = Math.PI / 180;
+// Horizon strip: a globe wider than the screen, its centre below the strip so only the top arc shows,
+// tilted so the focused stop sits just under the edge.
+const HORIZON_RADIUS = 1.15;
+const HORIZON_TILT = 1.2;
+const HORIZON_EDGE = 0.32;
 const SMOOTH = { filter: FilterMode.Linear, mipmap: MipmapMode.Linear };
 
 interface GlobeTextures {
@@ -468,6 +473,9 @@ interface GlobeProps {
   overview?: boolean;
   /** Open on the whole route, every stop on screen, rather than zoomed in on the focused stop. */
   showRoute?: boolean;
+  /** Draw only the globe's top arc as a short strip; pinch is off and a tap calls `onPress`. */
+  horizon?: boolean;
+  onPress?: () => void;
 }
 
 /** Projects a lat/lng onto the globe's disc; z < 0 means it is on the far side. */
@@ -515,7 +523,7 @@ function arcPoint(a: GlobeStop, b: GlobeStop, t: number) {
  * On mount it spins and zooms in on the current stop; drag to spin it, pinch out for the route and
  * the whole globe or in to hand off to the map.
  */
-export function Globe({ stops, focusIndex, width, height, origin, contacts = [], contactColor, accent, isDark, onZoomThrough, entry, topInset = 0, onTouchActive, scrolling, overview = false, showRoute = false }: GlobeProps) {
+export function Globe({ stops, focusIndex, width, height, origin, contacts = [], contactColor, accent, isDark, onZoomThrough, entry, topInset = 0, onTouchActive, scrolling, overview = false, showRoute = false, horizon = false, onPress }: GlobeProps) {
   const textures = useGlobeTextures();
   const dayImage = textures?.day ?? null;
   const nightImage = textures?.night ?? null;
@@ -529,17 +537,19 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
   const clock = useSharedValue(0);
   const shaderTime = useSharedValue(0);
   const shaderTickAt = useSharedValue(0);
-  const baseRadius = Math.min(width, height - topInset) * 0.45;
+  const baseRadius = horizon ? width * HORIZON_RADIUS : Math.min(width, height - topInset) * 0.45;
   const focus = stops[focusIndex] ?? { name: "", latitude: 20, longitude: 0 };
   const frame = useMemo(
     () =>
-      overview
+      horizon
+        ? { lat: Math.max(-1.3, Math.min(1.3, focus.latitude * DEG)) - HORIZON_TILT, lng: focus.longitude * DEG, zoom: MIN_ZOOM }
+        : overview
         ? { lat: Math.max(-0.6, Math.min(0.6, focus.latitude * DEG * 0.8)), lng: focus.longitude * DEG, zoom: MIN_ZOOM }
         : showRoute && stops.length > 0
           ? frameRoute(stops)
           : frameFocus(focus),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [overview, showRoute, stops, focus.latitude, focus.longitude],
+    [horizon, overview, showRoute, stops, focus.latitude, focus.longitude],
   );
   const spinning = overview && stops.length === 0 && !reduceMotion;
   const restZoom = frame.zoom;
@@ -559,7 +569,7 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
   const handoffHinted = useSharedValue(false);
   const fade = useDerivedValue(() => 1 - Math.min(1, Math.max(0, (zoom.get() - handoffZoom) / (maxZoom - handoffZoom))) * 0.6);
   const cx = width / 2;
-  const cy = topInset + (height - topInset) / 2;
+  const cy = horizon ? topInset + (height - topInset) * HORIZON_EDGE + baseRadius : topInset + (height - topInset) / 2;
   const targetLng = frame.lng;
   const targetLat = frame.lat;
 
@@ -728,12 +738,16 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
       zoom.set(withSpring(Math.min(maxZoom, Math.max(MIN_ZOOM, zoom.get())), springs.sheet));
     });
 
+  const tap = Gesture.Tap().onEnd(() => {
+    if (onPress) scheduleOnRN(onPress);
+  });
+
   const fadeStyle = useAnimatedStyle(() => ({ opacity: fade.get() }));
 
   // No Skia layers here (group opacity, blur): under Graphite the off-screen render pass they need
   // crashes the Adreno Vulkan driver, so the fade is a native opacity and glows are plain strokes.
   return (
-    <GestureDetector gesture={Gesture.Simultaneous(pinch, pan)}>
+    <GestureDetector gesture={horizon ? Gesture.Exclusive(pan, tap) : Gesture.Simultaneous(pinch, pan)}>
       <View style={{ width, height }}>
         {textures && dayImage && nightImage ? (
           <Animated.View style={[StyleSheet.absoluteFill, fadeStyle]}>

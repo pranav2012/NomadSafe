@@ -62,7 +62,24 @@
     "yourStay": "你的住宿",
     "globeHint": "地球仪。双指放大进入地图",
     "backToGlobe": "返回地球仪",
-    "refine": "优化"
+    "refine": "优化",
+    "live": {
+      "startsTomorrow": "明天出发",
+      "until": "至 {{time}}",
+      "now": "现在",
+      "tonight": "今晚",
+      "nightOf": "第 {{night}} 晚，共 {{total}} 晚",
+      "today": "今天",
+      "doneForToday": "今天的行程已完成",
+      "freeDay": "自由日",
+      "inDuration": "{{duration}}后",
+      "tomorrow": "明天",
+      "todayTitle": "今天",
+      "tonightAt": "今晚：{{name}}",
+      "showToday": "查看今日行程",
+      "backToToday": "回到今天",
+      "backToDayOne": "回到第 1 天"
+    }
   },
   "settings": {
     "title": "设置",
@@ -1136,6 +1153,11 @@
       "bus": "巴士",
       "car": "汽车",
       "ferry": "渡轮"
+    },
+    "day": {
+      "freeBody": "暂无安排。添加一个地点，或看看附近有什么。",
+      "addStop": "添加地点",
+      "openMaps": "在地图中打开 {{place}}"
     }
   },
   "places": {

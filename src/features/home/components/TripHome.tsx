@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { PrivateView } from "@/modules/analytics";
+import { PrivateView, track } from "@/modules/analytics";
 import { LinearGradient } from "expo-linear-gradient";
 import { AuraButton, Icon, PressableScale, RollingNumber, useTabBarInset, AuraTopFade } from "@/atoms";
 import { useGmailStatus } from "@/features/expenses/hooks/useGmailStatus";
@@ -12,7 +12,11 @@ import { useGlobeContext } from "@/features/home/hooks/useGlobeContext";
 import { useHotelPin, useSafetyPlaces } from "@/features/home/hooks/useTripSafety";
 import type { HomeData } from "@/features/home/types";
 import { todayStopIndex } from "@/features/home/utils/globeTiles";
-import { TripItinerary } from "@/features/itinerary";
+import { TripItinerary, useEventsStore } from "@/features/itinerary";
+import { useLivePass } from "@/features/home/hooks/useLivePass";
+import { homeStage } from "@/features/home/utils/stage";
+import { addDays, fromDateKey } from "@/features/trips/utils/dates";
+import { useNow } from "@/hooks/useNow";
 import { useRecapStore } from "@/features/recap";
 import { emergencyContactsStorage } from "@/features/onboarding/services/emergencyContactsStorage";
 import { NearbyPlaces } from "@/features/places/components/NearbyPlaces";
@@ -28,6 +32,9 @@ import { Globe } from "./aura/globe/Globe";
 import { distanceKm } from "./aura/globe/sun";
 import { InlineSafetyMap } from "./aura/safety/InlineSafetyMap";
 import { SpendChart } from "./aura/SpendChart";
+
+// Hero height (below the header) for the horizon strip during the trip.
+const HORIZON_HEIGHT = 150;
 
 export interface UserLocation {
   city?: string;
@@ -89,6 +96,18 @@ export function TripHome({
   const [railDay, setRailDay] = useState<number | null>(null);
   const [spendDay, setSpendDay] = useState<number | null>(null);
   const replayOpen = useRecapStore((state) => state.replayOpen);
+  const allEvents = useEventsStore((state) => state.events);
+  const tripEvents = allEvents.filter((event) => event.tripId === trip.id);
+  const now = useNow();
+  const stage = homeStage(trip, now);
+  // The day before and during the trip, Home leads with the day's plan and the globe shrinks to a horizon.
+  const liveMode = stage === "active" || stage === "eve";
+  const [globeExpanded, setGlobeExpanded] = useState(false);
+  const horizon = liveMode && !globeExpanded;
+  const todayIndex = stage === "active" ? Math.max(0, data.day - 1) : 0;
+  const [pickedDay, setPickedDay] = useState<number | null>(null);
+  const selectedIndex = pickedDay ?? todayIndex;
+  const selectedDate = addDays(fromDateKey(trip.startDate), selectedIndex);
 
   const globeHeight = Math.round(width * 0.8);
   const headerSpace = insets.top + 62;
@@ -96,6 +115,14 @@ export function TripHome({
   const focusIndex = todayStopIndex(data.stops, data.phase, data.day, data.totalDays, here);
   const focusStop = data.stops[focusIndex];
   const globe = useGlobeContext(focusStop);
+  const selectedStop = pickedDay === null ? focusStop : data.stops[todayStopIndex(data.stops, "active", selectedIndex + 1, data.totalDays, null)];
+  const live = useLivePass({ events: tripEvents, now, stage, day: data.day, totalDays: data.totalDays, city: focusStop?.name.split(",")[0] });
+  const heroHeight = horizon ? HORIZON_HEIGHT : globeHeight;
+
+  const selectDay = (index: number) => {
+    setPickedDay(index === todayIndex ? null : index);
+    track("itinerary_day_viewed", { relative_day: index - todayIndex });
+  };
   const safetyPlaces = useSafetyPlaces(focusStop);
   const hotel = useHotelPin(focusStop, data.stayName ?? undefined);
   const [contacts] = useState(() => emergencyContactsStorage.get());
@@ -160,6 +187,86 @@ export function TripHome({
   // The header sits over the globe's dark space backdrop in globe mode, even in light mode.
   const hc = hero.mode === "globe" ? auraDark : c;
 
+  const moneyCard =
+    !data.hasSpends ? (
+      <View style={[styles.moneyCard, styles.moneyEmpty, { backgroundColor: c.surface, borderColor: c.hairline }]}>
+        <View style={[styles.cardHighlight, { backgroundColor: c.highlight }]} />
+        <View style={styles.emptyHead}>
+          <View style={[styles.emptyIcon, { backgroundColor: c.surfaceStrong }]}>
+            <Icon name="wallet" size={18} color={c.text} />
+          </View>
+          <View style={styles.flex}>
+            <Text style={[styles.emptyTitle, { color: c.text }]}>{t("expenses.noExpensesTitle")}</Text>
+            <Text style={[styles.emptyBody, { color: c.textSoft }]}>
+              {!gmail.configured
+                ? t("expenses.homeEmptyBodyNoGmail")
+                : gmail.connected
+                  ? t("expenses.homeEmptyBodyConnected")
+                  : t("expenses.homeEmptyBody")}
+            </Text>
+          </View>
+        </View>
+        <View style={styles.emptyActions}>
+          {gmail.configured ? (
+            <AuraButton
+              size="md"
+              icon="mail"
+              label={gmail.connected ? t("expenses.gmailFetch") : t("expenses.gmailConnect")}
+              onPress={() => onImportSpends("gmail")}
+              style={styles.flex}
+            />
+          ) : null}
+          <AuraButton
+            size="md"
+            variant={gmail.configured ? "secondary" : "primary"}
+            icon="messageCircle"
+            label={t("expenses.pasteAlertShort")}
+            onPress={() => onImportSpends("paste")}
+            style={styles.flex}
+          />
+        </View>
+      </View>
+    ) : (
+      <View style={[styles.moneyCard, { backgroundColor: c.surface, borderColor: c.hairline }]}>
+        <View style={[styles.cardHighlight, { backgroundColor: c.highlight }]} />
+        <View style={styles.moneyText}>
+          <Text style={[styles.moneyLabel, { color: c.textMuted }]}>{scrubbedSpend ? scrubbedSpend.label : data.moneyLabel}</Text>
+          <RollingNumber
+            value={scrubbedSpend ? scrubbedSpend.amountLabel : data.moneyValue}
+            lineHeight={42}
+            style={[styles.moneyValue, { color: c.text }]}
+          />
+        </View>
+        {showChart ? (
+          <View style={styles.chart}>
+            <SpendChart
+              values={data.spendDays.map((d) => d.amount)}
+              accent={accent}
+              guide={isDark ? "rgba(255,255,255,0.2)" : "rgba(14,16,24,0.16)"}
+              onScrub={setSpendDay}
+              height={84}
+            />
+          </View>
+        ) : null}
+      </View>
+    );
+
+  const quickActions = (
+    <View style={styles.actions}>
+      <ActionButton icon="plus" label={t("expenses.addAction")} palette={c} accent={accent} onPress={onAddSpend} />
+      <ActionButton
+        icon="check"
+        label={t("safety.factorCheckIn")}
+        palette={c}
+        accent={accent}
+        live={checkInActive}
+        onPress={onCheckIn}
+      />
+      <ActionButton icon="users" label={t("tabs.share")} palette={c} accent={accent} live={data.isSharing} onPress={onToggleShare} />
+      <ActionButton icon="alertTriangle" label={t("settings.smsSos")} palette={c} accent={accent} onPress={onSos} />
+    </View>
+  );
+
   return (
     <View style={[styles.flex, { backgroundColor: c.bg }]}>
       <Animated.ScrollView
@@ -173,7 +280,7 @@ export function TripHome({
           paddingBottom: tabBarInset + 24,
         }}
       >
-        <View style={{ height: headerSpace + globeHeight }}>
+        <View style={{ height: headerSpace + heroHeight }}>
         <View style={[styles.heroTop, { top: insets.top + 12 }]}>
           <Text numberOfLines={1} style={[styles.greeting, { color: hc.textSoft }]}>
             {data.greeting}, {data.userName}
@@ -209,8 +316,13 @@ export function TripHome({
                 stops={data.stops}
                 focusIndex={focusIndex}
                 width={width}
-                height={headerSpace + globeHeight}
+                height={headerSpace + heroHeight}
                 topInset={headerSpace}
+                horizon={horizon}
+                onPress={() => {
+                  track("today_action", { action: "expand_globe" });
+                  setGlobeExpanded(true);
+                }}
                 origin={globe.origin}
                 contacts={globe.contacts}
                 contactColor="#3DDC97"
@@ -248,6 +360,19 @@ export function TripHome({
         {hero.mode === "globe" ? (
           <LinearGradient pointerEvents="none" colors={[`${c.bg}00`, c.bg]} style={styles.heroFade} />
         ) : null}
+        {liveMode && globeExpanded && hero.mode === "globe" ? (
+          <PressableScale
+            onPress={() => {
+              track("today_action", { action: "collapse_globe" });
+              setGlobeExpanded(false);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={t("home.live.showToday")}
+            style={[styles.round, styles.collapse, { backgroundColor: c.surfaceStrong, borderColor: c.hairline }]}
+          >
+            <Icon name="chevronDown" size={16} color={c.text} />
+          </PressableScale>
+        ) : null}
         </View>
 
         {chips.length > 0 ? (
@@ -274,7 +399,16 @@ export function TripHome({
         {topSlot}
 
         <PrivateView style={styles.passWrap}>
-          <BoardingPass data={data} palette={c} accent={heroAccent} gradient={auraStatusColors.calm} isDark={isDark} emergency={emergency} scrolling={scrolling} />
+          <BoardingPass
+            data={data}
+            palette={c}
+            accent={heroAccent}
+            gradient={auraStatusColors.calm}
+            isDark={isDark}
+            emergency={emergency}
+            scrolling={scrolling}
+            live={live}
+          />
         </PrivateView>
 
         <View style={styles.body}>
@@ -282,11 +416,14 @@ export function TripHome({
             totalDays={data.totalDays}
             today={data.day}
             onScrub={setRailDay}
+            selected={liveMode ? selectedIndex : null}
+            onSelect={liveMode ? selectDay : undefined}
             height={36}
             colors={{
               past: c.textSoft,
               future: isDark ? "rgba(255,255,255,0.2)" : "rgba(14,16,24,0.16)",
               today: accent,
+              selected: c.text,
             }}
           />
           <View style={styles.railLabels}>
@@ -300,90 +437,32 @@ export function TripHome({
               >
                 {railCaption}
               </Animated.Text>
+            ) : liveMode && pickedDay !== null ? (
+              <PressableScale
+                onPress={() => {
+                  track("today_action", { action: "back_to_today" });
+                  setPickedDay(null);
+                }}
+                accessibilityRole="button"
+                style={[styles.backToday, { backgroundColor: c.surfaceStrong, borderColor: c.hairline }]}
+              >
+                <Text style={[styles.backTodayText, { color: c.text }]}>{stage === "eve" ? t("home.live.backToDayOne") : t("home.live.backToToday")}</Text>
+              </PressableScale>
             ) : null}
             <Text style={[styles.railLabel, { color: c.textMuted }]}>{data.dayDates[data.dayDates.length - 1]}</Text>
           </View>
 
-          {!data.hasSpends ? (
-            <View style={[styles.moneyCard, styles.moneyEmpty, { backgroundColor: c.surface, borderColor: c.hairline }]}>
-              <View style={[styles.cardHighlight, { backgroundColor: c.highlight }]} />
-              <View style={styles.emptyHead}>
-                <View style={[styles.emptyIcon, { backgroundColor: c.surfaceStrong }]}>
-                  <Icon name="wallet" size={18} color={c.text} />
-                </View>
-                <View style={styles.flex}>
-                  <Text style={[styles.emptyTitle, { color: c.text }]}>{t("expenses.noExpensesTitle")}</Text>
-                  <Text style={[styles.emptyBody, { color: c.textSoft }]}>
-                    {!gmail.configured
-                      ? t("expenses.homeEmptyBodyNoGmail")
-                      : gmail.connected
-                        ? t("expenses.homeEmptyBodyConnected")
-                        : t("expenses.homeEmptyBody")}
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.emptyActions}>
-                {gmail.configured ? (
-                  <AuraButton
-                    size="md"
-                    icon="mail"
-                    label={gmail.connected ? t("expenses.gmailFetch") : t("expenses.gmailConnect")}
-                    onPress={() => onImportSpends("gmail")}
-                    style={styles.flex}
-                  />
-                ) : null}
-                <AuraButton
-                  size="md"
-                  variant={gmail.configured ? "secondary" : "primary"}
-                  icon="messageCircle"
-                  label={t("expenses.pasteAlertShort")}
-                  onPress={() => onImportSpends("paste")}
-                  style={styles.flex}
-                />
-              </View>
+          {liveMode ? (
+            <View style={styles.dayPlan}>
+              <TripItinerary trip={trip} accent={accent} day={selectedDate} now={now} city={selectedStop?.name} />
             </View>
-          ) : (
-            <View style={[styles.moneyCard, { backgroundColor: c.surface, borderColor: c.hairline }]}>
-              <View style={[styles.cardHighlight, { backgroundColor: c.highlight }]} />
-              <View style={styles.moneyText}>
-                <Text style={[styles.moneyLabel, { color: c.textMuted }]}>{scrubbedSpend ? scrubbedSpend.label : data.moneyLabel}</Text>
-                <RollingNumber
-                  value={scrubbedSpend ? scrubbedSpend.amountLabel : data.moneyValue}
-                  lineHeight={42}
-                  style={[styles.moneyValue, { color: c.text }]}
-                />
-              </View>
-              {showChart ? (
-                <View style={styles.chart}>
-                  <SpendChart
-                    values={data.spendDays.map((d) => d.amount)}
-                    accent={accent}
-                    guide={isDark ? "rgba(255,255,255,0.2)" : "rgba(14,16,24,0.16)"}
-                    onScrub={setSpendDay}
-                    height={84}
-                  />
-                </View>
-              ) : null}
-            </View>
-          )}
-
-          <View style={styles.actions}>
-            <ActionButton icon="plus" label={t("expenses.addAction")} palette={c} accent={accent} onPress={onAddSpend} />
-            <ActionButton
-              icon="check"
-              label={t("safety.factorCheckIn")}
-              palette={c}
-              accent={accent}
-              live={checkInActive}
-              onPress={onCheckIn}
-            />
-            <ActionButton icon="users" label={t("tabs.share")} palette={c} accent={accent} live={data.isSharing} onPress={onToggleShare} />
-            <ActionButton icon="alertTriangle" label={t("settings.smsSos")} palette={c} accent={accent} onPress={onSos} />
-          </View>
+          ) : null}
+          {liveMode ? quickActions : moneyCard}
+          {liveMode ? moneyCard : quickActions}
         </View>
 
         <View style={styles.body}>
-          <TripItinerary trip={trip} accent={accent} />
+          {liveMode ? null : <TripItinerary trip={trip} accent={accent} now={now} />}
           <NearbyPlaces userLocation={userLocation} />
         </View>
       </Animated.ScrollView>
@@ -460,6 +539,10 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
   },
   railCaption: { fontFamily: f.semibold, fontSize: 13 },
+  backToday: { height: 26, paddingHorizontal: 11, borderRadius: 13, borderWidth: StyleSheet.hairlineWidth, justifyContent: "center" },
+  backTodayText: { fontFamily: f.semibold, fontSize: 12 },
+  dayPlan: { marginTop: 8 },
+  collapse: { position: "absolute", right: 20, bottom: 14, zIndex: 2 },
   moneyCard: {
     marginTop: 22,
     borderRadius: 24,

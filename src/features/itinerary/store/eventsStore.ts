@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { mmkvStateStorage } from "@/modules/storage";
 import type { EventType, TransitMode } from "@/features/itinerary/constants/eventTypes";
 import { consolidateEmailBookings, mergeBooking, sameBooking } from "@/features/itinerary/utils/bookings";
+import { normalizeWallClock } from "@/features/itinerary/utils/wallClock";
 
 export type EventSource = "manual" | "email";
 
@@ -15,7 +16,7 @@ export interface TripEvent {
   detail?: string;
   /** Transit only; older events have none and are guessed with `transitModeOf`. */
   transitMode?: TransitMode;
-  /** ISO datetime the event starts. */
+  /** Wall-clock time at the place, no zone ("2026-10-18T15:00:00"); see `toWallClock`. */
   startAt: string;
   endAt?: string;
   source: EventSource;
@@ -204,11 +205,22 @@ export const useEventsStore = create<EventsState>()(
     {
       name: "itinerary-store",
       storage: createJSONStorage(() => mmkvStateStorage),
-      version: 2,
+      version: 3,
       migrate: (persisted, version) => {
-        const state = persisted as { events?: TripEvent[] };
+        let state = persisted as { events?: TripEvent[] };
         // v2: one event per booking instead of check-in/check-out pairs and per-email copies.
-        if (version < 2 && state.events) return { ...state, events: consolidateEmailBookings(state.events) };
+        if (version < 2 && state.events) state = { ...state, events: consolidateEmailBookings(state.events) };
+        // v3: times typed in the form were instants; keep them as the wall-clock time the user picked.
+        if (version < 3 && state.events) {
+          state = {
+            ...state,
+            events: state.events.map((event) => ({
+              ...event,
+              startAt: normalizeWallClock(event.startAt),
+              ...(event.endAt ? { endAt: normalizeWallClock(event.endAt) } : null),
+            })),
+          };
+        }
         return state;
       },
     },
