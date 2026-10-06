@@ -84,13 +84,15 @@
       "meanwhile": "그동안: {{what}}"
     },
     "prep": {
-      "title": "여행 준비",
-      "noBookings": "아직 예약이 없어요",
+      "title": "떠나기 전에",
       "nightsBooked_one": "{{count}}박 중 {{booked}}박 예약됨",
       "nightsBooked_other": "{{count}}박 중 {{booked}}박 예약됨",
-      "noStays": "아직 숙소를 예약하지 않았어요",
       "gap": "{{range}} 숙소 없음",
-      "save": "저장",      "mustDos_one": "{{place}}의 필수 코스 {{count}}곳",      "mustDos_other": "{{place}}의 필수 코스 {{count}}곳",      "savedTitle": "위시리스트에 저장했어요",      "savedBody": "{{name}}이(가) 전체 일정에 있어요. 날짜를 정해 보세요"
+      "save": "저장",
+      "mustDos_one": "{{place}}의 필수 코스 {{count}}곳",
+      "mustDos_other": "{{place}}의 필수 코스 {{count}}곳",
+      "savedTitle": "위시리스트에 저장했어요",
+      "savedBody": "{{name}}이(가) 전체 일정에 있어요. 날짜를 정해 보세요"
     },
     "everyday": {
       "owed_one": "{{count}}개 그룹에서 {{amount}} 받을 돈",

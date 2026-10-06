@@ -84,13 +84,15 @@
       "meanwhile": "ಅಷ್ಟರಲ್ಲಿ: {{what}}"
     },
     "prep": {
-      "title": "ಪ್ರವಾಸದ ತಯಾರಿ",
-      "noBookings": "ಇನ್ನೂ ಯಾವುದೇ ಬುಕಿಂಗ್ ಇಲ್ಲ",
+      "title": "ಹೊರಡುವ ಮುನ್ನ",
       "nightsBooked_one": "{{count}} ರಲ್ಲಿ {{booked}} ರಾತ್ರಿ ಬುಕ್ ಆಗಿದೆ",
       "nightsBooked_other": "{{count}} ರಲ್ಲಿ {{booked}} ರಾತ್ರಿಗಳು ಬುಕ್ ಆಗಿವೆ",
-      "noStays": "ಇನ್ನೂ ವಸತಿ ಬುಕ್ ಆಗಿಲ್ಲ",
       "gap": "{{range}} ಕ್ಕೆ ವಸತಿ ಇಲ್ಲ",
-      "save": "ಉಳಿಸಿ",      "mustDos_one": "{{place}}ನಲ್ಲಿ {{count}} ನೋಡಲೇಬೇಕಾದದ್ದು",      "mustDos_other": "{{place}}ನಲ್ಲಿ {{count}} ನೋಡಲೇಬೇಕಾದವು",      "savedTitle": "ವಿಶ್‌ಲಿಸ್ಟ್‌ಗೆ ಉಳಿಸಲಾಗಿದೆ",      "savedBody": "{{name}} ನಿಮ್ಮ ಪೂರ್ಣ ಪ್ರವಾಸ ಯೋಜನೆಯಲ್ಲಿದೆ, ಒಂದು ದಿನಕ್ಕೆ ಯೋಜಿಸಿ"
+      "save": "ಉಳಿಸಿ",
+      "mustDos_one": "{{place}}ನಲ್ಲಿ {{count}} ನೋಡಲೇಬೇಕಾದದ್ದು",
+      "mustDos_other": "{{place}}ನಲ್ಲಿ {{count}} ನೋಡಲೇಬೇಕಾದವು",
+      "savedTitle": "ವಿಶ್‌ಲಿಸ್ಟ್‌ಗೆ ಉಳಿಸಲಾಗಿದೆ",
+      "savedBody": "{{name}} ನಿಮ್ಮ ಪೂರ್ಣ ಪ್ರವಾಸ ಯೋಜನೆಯಲ್ಲಿದೆ, ಒಂದು ದಿನಕ್ಕೆ ಯೋಜಿಸಿ"
     },
     "everyday": {
       "owed_one": "{{count}} ಗುಂಪಿನಲ್ಲಿ ನಿಮಗೆ {{amount}} ಬರಬೇಕು",

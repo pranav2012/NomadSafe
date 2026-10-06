@@ -84,13 +84,15 @@
       "meanwhile": "その間：{{what}}"
     },
     "prep": {
-      "title": "旅の準備",
-      "noBookings": "まだ予約がありません",
+      "title": "出発前に",
       "nightsBooked_one": "{{count}}泊中{{booked}}泊予約済み",
       "nightsBooked_other": "{{count}}泊中{{booked}}泊予約済み",
-      "noStays": "まだ宿泊先が未予約です",
       "gap": "{{range}}の宿泊先がありません",
-      "save": "保存",      "mustDos_one": "{{place}}の必見スポット{{count}}件",      "mustDos_other": "{{place}}の必見スポット{{count}}件",      "savedTitle": "ウィッシュリストに保存しました",      "savedBody": "{{name}}は旅程に入っています。日にちを決めましょう"
+      "save": "保存",
+      "mustDos_one": "{{place}}の必見スポット{{count}}件",
+      "mustDos_other": "{{place}}の必見スポット{{count}}件",
+      "savedTitle": "ウィッシュリストに保存しました",
+      "savedBody": "{{name}}は旅程に入っています。日にちを決めましょう"
     },
     "everyday": {
       "owed_one": "{{count}}件のグループで{{amount}}受け取り",

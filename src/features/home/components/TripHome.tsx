@@ -440,12 +440,6 @@ export function TripHome({
           </View>
         ) : null}
 
-        {stage === "upcoming" ? (
-          <PrivateView style={[styles.body, styles.prep]}>
-            <TripPrepCard trip={trip} events={tripEvents} firstStop={data.stops[0]} />
-          </PrivateView>
-        ) : null}
-
         <View style={styles.body}>
           <DayRail
             totalDays={data.totalDays}
@@ -486,6 +480,12 @@ export function TripHome({
             ) : null}
             <Text style={[styles.railLabel, { color: c.textMuted }]}>{data.dayDates[data.dayDates.length - 1]}</Text>
           </View>
+
+          {stage === "upcoming" ? (
+            <PrivateView>
+              <TripPrepCard trip={trip} events={tripEvents} firstStop={data.stops[0]} />
+            </PrivateView>
+          ) : null}
 
           {liveMode ? (
             <View style={styles.dayPlan}>
@@ -584,7 +584,6 @@ const styles = StyleSheet.create({
   backToday: { height: 26, paddingHorizontal: 11, borderRadius: 13, borderWidth: StyleSheet.hairlineWidth, justifyContent: "center" },
   backTodayText: { fontFamily: f.semibold, fontSize: 12 },
   dayPlan: { marginTop: 8 },
-  prep: { marginBottom: 18 },
   ticketWrap: { marginTop: -2, marginBottom: 10 },
   ticketPill: { flexDirection: "row", alignItems: "center", gap: 10, height: 44, paddingHorizontal: 16, borderRadius: 22, borderWidth: StyleSheet.hairlineWidth },
   ticketText: { flex: 1, fontFamily: f.semibold, fontSize: 14 },

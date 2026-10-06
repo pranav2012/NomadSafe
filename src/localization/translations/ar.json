@@ -84,13 +84,15 @@
       "meanwhile": "في الأثناء: {{what}}"
     },
     "prep": {
-      "title": "تحضير الرحلة",
-      "noBookings": "لا حجوزات بعد",
+      "title": "قبل أن تسافر",
       "nightsBooked_one": "{{booked}} من {{count}} ليلة محجوزة",
       "nightsBooked_other": "{{booked}} من {{count}} ليالٍ محجوزة",
-      "noStays": "لا إقامة محجوزة بعد",
       "gap": "لا إقامة في {{range}}",
-      "save": "حفظ",      "mustDos_one": "{{count}} مكان لا يُفوَّت في {{place}}",      "mustDos_other": "{{count}} أماكن لا تُفوَّت في {{place}}",      "savedTitle": "حُفظ في قائمة رغباتك",      "savedBody": "{{name}} في خط رحلتك الكامل، جاهز لتحديد يوم له"
+      "save": "حفظ",
+      "mustDos_one": "{{count}} مكان لا يُفوَّت في {{place}}",
+      "mustDos_other": "{{count}} أماكن لا تُفوَّت في {{place}}",
+      "savedTitle": "حُفظ في قائمة رغباتك",
+      "savedBody": "{{name}} في خط رحلتك الكامل، جاهز لتحديد يوم له"
     },
     "everyday": {
       "owed_one": "لك {{amount}} في مجموعة واحدة",

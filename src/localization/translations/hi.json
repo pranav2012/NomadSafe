@@ -84,13 +84,15 @@
       "meanwhile": "इस बीच: {{what}}"
     },
     "prep": {
-      "title": "यात्रा की तैयारी",
-      "noBookings": "अभी कोई बुकिंग नहीं",
+      "title": "जाने से पहले",
       "nightsBooked_one": "{{count}} में से {{booked}} रात बुक",
       "nightsBooked_other": "{{count}} में से {{booked}} रातें बुक",
-      "noStays": "अभी कोई ठहरने की बुकिंग नहीं",
       "gap": "{{range}} के लिए ठहरने की जगह नहीं",
-      "save": "सहेजें",      "mustDos_one": "{{place}} में {{count}} ज़रूर देखने वाली जगह",      "mustDos_other": "{{place}} में {{count}} ज़रूर देखने वाली जगहें",      "savedTitle": "विशलिस्ट में सेव हो गया",      "savedBody": "{{name}} आपकी पूरी यात्रा योजना में है, किसी दिन के लिए तैयार"
+      "save": "सहेजें",
+      "mustDos_one": "{{place}} में {{count}} ज़रूर देखने वाली जगह",
+      "mustDos_other": "{{place}} में {{count}} ज़रूर देखने वाली जगहें",
+      "savedTitle": "विशलिस्ट में सेव हो गया",
+      "savedBody": "{{name}} आपकी पूरी यात्रा योजना में है, किसी दिन के लिए तैयार"
     },
     "everyday": {
       "owed_one": "{{count}} ग्रुप में आपको {{amount}} मिलने हैं",

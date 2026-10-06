@@ -84,13 +84,15 @@
       "meanwhile": "Meanwhile: {{what}}"
     },
     "prep": {
-      "title": "Trip prep",
-      "noBookings": "No bookings yet",
+      "title": "Before you go",
       "nightsBooked_one": "{{booked}} of {{count}} night booked",
       "nightsBooked_other": "{{booked}} of {{count}} nights booked",
-      "noStays": "No stays booked yet",
       "gap": "No stay for {{range}}",
-      "save": "Save",      "mustDos_one": "{{count}} must-do in {{place}}",      "mustDos_other": "{{count}} must-dos in {{place}}",      "savedTitle": "Saved to your wishlist",      "savedBody": "{{name}} is in your full itinerary, ready to plan for a day"
+      "save": "Save",
+      "mustDos_one": "{{count}} must-do in {{place}}",
+      "mustDos_other": "{{count}} must-dos in {{place}}",
+      "savedTitle": "Saved to your wishlist",
+      "savedBody": "{{name}} is in your full itinerary, ready to plan for a day"
     },
     "everyday": {
       "owed_one": "You're owed {{amount}} in {{count}} group",

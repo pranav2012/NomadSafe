@@ -84,13 +84,15 @@
       "meanwhile": "与此同时：{{what}}"
     },
     "prep": {
-      "title": "行前准备",
-      "noBookings": "还没有预订",
+      "title": "出发前",
       "nightsBooked_one": "共 {{count}} 晚，已订 {{booked}} 晚",
       "nightsBooked_other": "共 {{count}} 晚，已订 {{booked}} 晚",
-      "noStays": "还没有预订住宿",
       "gap": "{{range}} 没有住宿",
-      "save": "保存",      "mustDos_one": "{{place}}必去 {{count}} 处",      "mustDos_other": "{{place}}必去 {{count}} 处",      "savedTitle": "已存入心愿单",      "savedBody": "{{name}} 已在完整行程中，可安排到某一天"
+      "save": "保存",
+      "mustDos_one": "{{place}}必去 {{count}} 处",
+      "mustDos_other": "{{place}}必去 {{count}} 处",
+      "savedTitle": "已存入心愿单",
+      "savedBody": "{{name}} 已在完整行程中，可安排到某一天"
     },
     "everyday": {
       "owed_one": "在 {{count}} 个群组中应收 {{amount}}",

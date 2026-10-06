@@ -84,13 +84,15 @@
       "meanwhile": "Nel frattempo: {{what}}"
     },
     "prep": {
-      "title": "Preparazione del viaggio",
-      "noBookings": "Ancora nessuna prenotazione",
+      "title": "Prima di partire",
       "nightsBooked_one": "{{booked}} notte su {{count}} prenotata",
       "nightsBooked_other": "{{booked}} notti su {{count}} prenotate",
-      "noStays": "Nessun alloggio prenotato",
       "gap": "Nessun alloggio per {{range}}",
-      "save": "Salva",      "mustDos_one": "{{count}} da non perdere a {{place}}",      "mustDos_other": "{{count}} da non perdere a {{place}}",      "savedTitle": "Salvato nella tua lista dei desideri",      "savedBody": "{{name}} è nel tuo itinerario completo, pronto per un giorno"
+      "save": "Salva",
+      "mustDos_one": "{{count}} da non perdere a {{place}}",
+      "mustDos_other": "{{count}} da non perdere a {{place}}",
+      "savedTitle": "Salvato nella tua lista dei desideri",
+      "savedBody": "{{name}} è nel tuo itinerario completo, pronto per un giorno"
     },
     "everyday": {
       "owed_one": "Ti devono {{amount}} in {{count}} gruppo",
