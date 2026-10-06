@@ -190,6 +190,16 @@ export default function AiScreen() {
         : waiting
           ? t("aiTab.provision.waitingForWifiTitle")
           : t("aiTab.noModel");
+  // Short status for the header pill; the full wording stays in its accessibility label.
+  const statusText = onlineName
+    ? ai.remote === "byok" ? onlineName : t("aiTab.status.cloud")
+    : ready
+      ? t("aiTab.status.onDevice")
+      : downloading
+        ? `${provisionPercent(provisioning)}%`
+        : waiting
+          ? t("aiTab.provision.waitingForWifiTitle")
+          : t("aiTab.noModel");
   const dotColor = onlineName || ready ? READY : downloading ? accent : waiting ? auraStatusAccent.live : c.textMuted;
 
   return (
@@ -224,7 +234,7 @@ export default function AiScreen() {
             >
               <LiveDot color={dotColor} size={7} active={downloading && !onlineName} />
               <Text numberOfLines={1} style={[styles.chipText, { color: c.text, fontFamily: f.medium }]}>
-                {pillText}
+                {statusText}
               </Text>
               <Icon name="chevronDown" size={13} color={c.textMuted} strokeWidth={2} />
             </PressableScale>
@@ -234,21 +244,19 @@ export default function AiScreen() {
 
       {chatEnabled ? (
         <>
-          <View style={styles.contextRow}>
-            <PressableScale
-              onPress={() => setContextOpen(true)}
-              accessibilityRole="button"
-              accessibilityLabel={t("aiTab.context.label", { name: contextLabel })}
-              accessibilityHint={t("aiTab.context.hint")}
-              style={[styles.contextChip, { backgroundColor: c.surfaceStrong, borderColor: c.hairline }]}
-            >
-              <Text style={[styles.contextPrefix, { color: c.textSoft, fontFamily: f.regular }]}>{t("aiTab.context.about")}</Text>
-              <Text numberOfLines={1} style={[styles.contextName, { color: c.text, fontFamily: f.semibold }]}>
-                {contextLabel}
-              </Text>
-              <Icon name="chevronDown" size={13} color={c.textMuted} strokeWidth={2} />
-            </PressableScale>
-          </View>
+          <PressableScale
+            onPress={() => setContextOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel={t("aiTab.context.label", { name: contextLabel })}
+            accessibilityHint={t("aiTab.context.hint")}
+            hitSlop={8}
+            style={styles.context}
+          >
+            <Text numberOfLines={1} style={[styles.contextName, { color: c.textSoft, fontFamily: f.medium }]}>
+              {contextLabel}
+            </Text>
+            <Icon name="chevronDown" size={14} color={c.textMuted} strokeWidth={2} />
+          </PressableScale>
           <AuraOptionSheet
             visible={contextOpen}
             onClose={() => setContextOpen(false)}
@@ -288,10 +296,8 @@ const styles = StyleSheet.create({
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, paddingHorizontal: 20, paddingBottom: 12 },
   title: { fontSize: 34, letterSpacing: -1.2 },
   titleRow: { flexDirection: "row", alignItems: "center", gap: 14 },
-  contextRow: { paddingHorizontal: 20, paddingBottom: 8 },
-  contextChip: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", maxWidth: "100%", height: 32, paddingHorizontal: 12, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth },
-  contextPrefix: { fontSize: 13 },
-  contextName: { fontSize: 13, flexShrink: 1 },
+  context: { flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "flex-start", maxWidth: "80%", marginTop: -8, marginHorizontal: 20, marginBottom: 10 },
+  contextName: { fontSize: 15, letterSpacing: -0.2, flexShrink: 1 },
   actions: { flexDirection: "row", alignItems: "center", gap: 8, flexShrink: 1 },
   iconButton: {
     width: 34,

@@ -699,7 +699,6 @@
     "introHint": "Ask about your trip, your spending or travel tips. It all runs on this phone.",
     "privacyFooter": "Runs entirely on your phone · never leaves the device",
     "today": "Today",
-    "chatPlaceholder": "Ask Nomad about your spend…",
     "chatModel": "Using {{model}}",
     "chatModelLoadError": "Could not load the local model. Open the model status at the top of the AI tab, download it again and try again.",
     "notifyBannerText": "Get notified when Nomad finishes a reply while you're away.",
@@ -798,7 +797,6 @@
       "bodyTemporary": "All messages in this temporary chat will be deleted."
     },
     "context": {
-      "about": "About",
       "general": "General",
       "generalDetail": "No money facts, just chat",
       "hint": "Choose which trip, group or money the AI talks about",
@@ -806,6 +804,16 @@
       "overviewDetail": "Your spending and balances everywhere",
       "subtitle": "Each has its own chat. This doesn't change your active trip.",
       "title": "Ask about"
+    },
+    "status": {
+      "cloud": "Cloud",
+      "onDevice": "On-device"
+    },
+    "placeholder": {
+      "trip": "Ask about your trip or spending…",
+      "group": "Ask about this group's spending…",
+      "overview": "Ask about your spending…",
+      "general": "Ask Nomad anything…"
     }
   },
   "milestones": {

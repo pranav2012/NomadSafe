@@ -642,7 +642,6 @@
     "introHint": "旅行や支出、旅のヒントについて質問できます。すべてこのスマホ上で動作します。",
     "privacyFooter": "すべてスマートフォン上で実行 · データがデバイス外に出ることはありません",
     "today": "今日",
-    "chatPlaceholder": "支出についてNomadに尋ねる...",
     "chatModel": "使用モデル: {{model}}",
     "notifyBannerText": "離れている間にNomadが回答を完了したら通知します。",
     "notifyBannerAction": "オンにする",
@@ -744,7 +743,6 @@
       "bodyTemporary": "この一時チャットのメッセージがすべて削除されます。"
     },
     "context": {
-      "about": "対象",
       "general": "一般",
       "generalDetail": "お金の情報なしで会話",
       "hint": "AIが話題にする旅行、グループ、お金を選ぶ",
@@ -752,6 +750,16 @@
       "overviewDetail": "すべての支出と残高",
       "subtitle": "それぞれ別のチャットです。進行中の旅行は変わりません。",
       "title": "質問の対象"
+    },
+    "status": {
+      "cloud": "クラウド",
+      "onDevice": "端末内"
+    },
+    "placeholder": {
+      "trip": "旅行や支出について質問…",
+      "group": "このグループの支出について質問…",
+      "overview": "支出について質問…",
+      "general": "Nomadに何でも質問…"
     }
   },
   "safety": {

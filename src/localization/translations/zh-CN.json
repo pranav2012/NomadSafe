@@ -642,7 +642,6 @@
     "introHint": "可以询问你的行程、支出或旅行建议。一切都在这部手机上运行。",
     "privacyFooter": "完全在手机上运行 · 绝不离开设备",
     "today": "今天",
-    "chatPlaceholder": "向 Nomad 提问关于您支出的问题…",
     "chatModel": "正在使用 {{model}}",
     "notifyBannerText": "当你离开时，Nomad 完成回复后会通知你。",
     "notifyBannerAction": "开启",
@@ -744,7 +743,6 @@
       "bodyTemporary": "此临时聊天中的所有消息都将被删除。"
     },
     "context": {
-      "about": "关于",
       "general": "通用",
       "generalDetail": "不含资金数据，只聊天",
       "hint": "选择 AI 要谈论的旅行、群组或资金",
@@ -752,6 +750,16 @@
       "overviewDetail": "你在各处的花费和余额",
       "subtitle": "每个都有独立的对话。不会更改你进行中的旅行。",
       "title": "询问内容"
+    },
+    "status": {
+      "cloud": "云端",
+      "onDevice": "本机"
+    },
+    "placeholder": {
+      "trip": "问问你的旅行或支出…",
+      "group": "问问这个群组的支出…",
+      "overview": "问问你的支出…",
+      "general": "向 Nomad 随便提问…"
     }
   },
   "safety": {

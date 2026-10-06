@@ -24,7 +24,9 @@ import { useAnimationsActive } from "@/hooks/useAnimationsActive";
 import { useLocalization } from "@/localization";
 import { track } from "@/modules/analytics";
 import { useChatStore, useChatStreamStore } from "../store/chatStore";
-import { useChatConversationKey } from "../hooks/useChatConversationKey";
+import { useChatContext, useChatConversationKey } from "../hooks/useChatConversationKey";
+import { GENERAL_CONTEXT, OVERVIEW_CONTEXT } from "../services/chatContext";
+import { useTripsStore } from "@/features/trips/store/tripsStore";
 import { aiRuntime, modelNotifications, remoteLabel, useAiAvailability, useAiProvisioning, useAiSources } from "@/modules/ai";
 import { useSettingsStore } from "@/features/settings/store/settingsStore";
 import { provisionUnavailableText } from "../utils/provisionCopy";
@@ -71,6 +73,17 @@ export function AiChat({
   const tabBarInset = useTabBarInset();
   const conversationKey = useChatConversationKey();
   const temporary = useChatStore((s) => s.temporary);
+  const context = useChatContext();
+  const contextIsTrip = useTripsStore((s) => s.trips.some((trip) => trip.id === context));
+  const placeholder = t(
+    context === GENERAL_CONTEXT
+      ? "aiTab.placeholder.general"
+      : context === OVERVIEW_CONTEXT
+        ? "aiTab.placeholder.overview"
+        : contextIsTrip
+          ? "aiTab.placeholder.trip"
+          : "aiTab.placeholder.group",
+  );
   const conversation = useChatStore((state) => state.conversations[conversationKey] ?? EMPTY_CONVERSATION);
   const messages = conversation.messages;
   const generatingKey = useChatStore((state) => state.generatingConversationKey);
@@ -309,6 +322,7 @@ export function AiChat({
             busy={busy}
             busyElsewhere={busyElsewhere}
             modelName={onlineName ?? activeModelName}
+            placeholder={placeholder}
             online={onlineName !== null}
             onPickSource={aiSources.sources.length > 1 ? () => setSourcePickerOpen(true) : undefined}
             blurTarget={Platform.OS === "android" ? blurTarget : undefined}

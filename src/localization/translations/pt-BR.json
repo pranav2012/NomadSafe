@@ -642,7 +642,6 @@
     "introHint": "Pergunte sobre sua viagem, seus gastos ou dicas de viagem. Tudo roda neste celular.",
     "privacyFooter": "Funciona inteiramente no seu celular · nunca sai do dispositivo",
     "today": "Hoje",
-    "chatPlaceholder": "Pergunte ao Nomad sobre seus gastos…",
     "chatModel": "Usando {{model}}",
     "notifyBannerText": "Receba um aviso quando o Nomad terminar uma resposta enquanto você estiver fora.",
     "notifyBannerAction": "Ativar",
@@ -744,7 +743,6 @@
       "bodyTemporary": "Todas as mensagens deste chat temporário serão apagadas."
     },
     "context": {
-      "about": "Sobre",
       "general": "Geral",
       "generalDetail": "Sem dados de dinheiro, só conversa",
       "hint": "Escolha de qual viagem, grupo ou dinheiro a IA fala",
@@ -752,6 +750,16 @@
       "overviewDetail": "Seus gastos e saldos em tudo",
       "subtitle": "Cada um tem seu próprio chat. Isso não muda sua viagem ativa.",
       "title": "Perguntar sobre"
+    },
+    "status": {
+      "cloud": "Nuvem",
+      "onDevice": "No aparelho"
+    },
+    "placeholder": {
+      "trip": "Pergunte sobre sua viagem ou seus gastos…",
+      "group": "Pergunte sobre os gastos deste grupo…",
+      "overview": "Pergunte sobre seus gastos…",
+      "general": "Pergunte qualquer coisa ao Nomad…"
     }
   },
   "safety": {

@@ -642,7 +642,6 @@
     "introHint": "Posez vos questions sur votre voyage, vos dépenses ou des conseils de voyage. Tout fonctionne sur ce téléphone.",
     "privacyFooter": "S'exécute entièrement sur votre téléphone · ne quitte jamais l'appareil",
     "today": "Aujourd'hui",
-    "chatPlaceholder": "Posez une question à Nomad sur vos dépenses…",
     "chatModel": "Modèle utilisé : {{model}}",
     "notifyBannerText": "Sois notifié lorsque Nomad termine une réponse pendant ton absence.",
     "notifyBannerAction": "Activer",
@@ -744,7 +743,6 @@
       "bodyTemporary": "Tous les messages de cette discussion temporaire seront supprimés."
     },
     "context": {
-      "about": "À propos de",
       "general": "Général",
       "generalDetail": "Sans chiffres, juste discuter",
       "hint": "Choisis le voyage, le groupe ou l'argent dont parle l'IA",
@@ -752,6 +750,16 @@
       "overviewDetail": "Tes dépenses et soldes partout",
       "subtitle": "Chacun a sa propre discussion. Ton voyage en cours ne change pas.",
       "title": "Poser des questions sur"
+    },
+    "status": {
+      "cloud": "Cloud",
+      "onDevice": "Sur l’appareil"
+    },
+    "placeholder": {
+      "trip": "Pose une question sur ton voyage ou tes dépenses…",
+      "group": "Pose une question sur les dépenses du groupe…",
+      "overview": "Pose une question sur tes dépenses…",
+      "general": "Demande ce que tu veux à Nomad…"
     }
   },
   "safety": {

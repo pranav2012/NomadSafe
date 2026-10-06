@@ -642,7 +642,6 @@
     "introHint": "Frag nach deiner Reise, deinen Ausgaben oder Reisetipps. Alles läuft auf diesem Handy.",
     "privacyFooter": "Läuft vollständig auf deinem Telefon · verlässt nie das Gerät",
     "today": "Heute",
-    "chatPlaceholder": "Frage Nomad nach deinen Ausgaben…",
     "chatModel": "Verwendet {{model}}",
     "notifyBannerText": "Lass dich benachrichtigen, wenn Nomad eine Antwort fertigstellt, während du weg bist.",
     "notifyBannerAction": "Aktivieren",
@@ -744,7 +743,6 @@
       "bodyTemporary": "Alle Nachrichten in diesem temporären Chat werden gelöscht."
     },
     "context": {
-      "about": "Über",
       "general": "Allgemein",
       "generalDetail": "Ohne Geldfakten, einfach chatten",
       "hint": "Wähle, über welche Reise, Gruppe oder welches Geld die KI spricht",
@@ -752,6 +750,16 @@
       "overviewDetail": "Deine Ausgaben und Salden überall",
       "subtitle": "Jede hat ihren eigenen Chat. Deine aktive Reise ändert sich nicht.",
       "title": "Fragen zu"
+    },
+    "status": {
+      "cloud": "Cloud",
+      "onDevice": "Auf dem Gerät"
+    },
+    "placeholder": {
+      "trip": "Frag nach deiner Reise oder deinen Ausgaben…",
+      "group": "Frag nach den Ausgaben dieser Gruppe…",
+      "overview": "Frag nach deinen Ausgaben…",
+      "general": "Frag Nomad, was du willst…"
     }
   },
   "safety": {

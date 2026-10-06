@@ -642,7 +642,6 @@
     "introHint": "Chiedi del tuo viaggio, delle tue spese o consigli di viaggio. Funziona tutto su questo telefono.",
     "privacyFooter": "Eseguito interamente sul tuo telefono · non lascia mai il dispositivo",
     "today": "Oggi",
-    "chatPlaceholder": "Chiedi a Nomad informazioni sulle tue spese…",
     "chatModel": "Utilizzo di {{model}}",
     "chatModelLoadError": "Impossibile caricare il modello locale. Apri lo stato del modello in alto nella scheda AI, scaricalo di nuovo e riprova.",
     "notifyBannerText": "Ricevi una notifica quando Nomad finisce di rispondere mentre non ci sei.",
@@ -744,7 +743,6 @@
       "bodyTemporary": "Tutti i messaggi di questa chat temporanea verranno eliminati."
     },
     "context": {
-      "about": "Su",
       "general": "Generale",
       "generalDetail": "Senza dati sui soldi, solo chat",
       "hint": "Scegli di quale viaggio, gruppo o soldi parla l'IA",
@@ -752,6 +750,16 @@
       "overviewDetail": "Le tue spese e i saldi ovunque",
       "subtitle": "Ognuno ha la sua chat. Il viaggio attivo non cambia.",
       "title": "Chiedi su"
+    },
+    "status": {
+      "cloud": "Cloud",
+      "onDevice": "Sul dispositivo"
+    },
+    "placeholder": {
+      "trip": "Chiedi del tuo viaggio o delle tue spese…",
+      "group": "Chiedi delle spese di questo gruppo…",
+      "overview": "Chiedi delle tue spese…",
+      "general": "Chiedi qualsiasi cosa a Nomad…"
     }
   },
   "safety": {
