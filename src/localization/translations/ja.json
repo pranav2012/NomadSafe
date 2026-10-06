@@ -1341,12 +1341,14 @@
     "betweenOthers": "ほかの人どうし",
     "perShare": "1口あたり{{amount}}",
     "savePreset": "この割り方を保存",
-    "presetSaved": "保存しました。次回タップすると同じ割り方になります。"
+    "presetSaved": "保存しました。次回タップすると同じ割り方になります。",
+    "paidYou": "{{from}}さんからあなたへ支払い",
+    "youPaid": "あなたから{{to}}さんへ支払い"
   },
   "voiceExpense": {
     "speakToAdd": "話して支出を追加",
     "noTrip": "旅行なし",
-    "chooseTrip": "旅行を選択",
+    "chooseTrip": "追加先",
     "activeTrip": "進行中",
     "tapToSpeak": "マイクをタップして、支払った内容を話してください",
     "listening": "聞き取り中…",
@@ -1391,8 +1393,8 @@
     "widget": {
       "eyebrow": "話して追加",
       "speak": "話す",
-      "noTrip": "旅行はまだありません",
-      "changeTrip": "旅行を変更",
+      "noTrip": "旅行やグループはまだありません",
+      "changeTrip": "変更",
       "defaultTrip": "進行中の旅行"
     },
     "addingToName": "{{name}}に追加",

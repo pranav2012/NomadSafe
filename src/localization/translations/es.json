@@ -1341,12 +1341,14 @@
     "betweenOthers": "Entre otros",
     "perShare": "{{amount}} por parte",
     "savePreset": "Guardar este reparto",
-    "presetSaved": "Guardado. Tócalo la próxima vez para repartir igual."
+    "presetSaved": "Guardado. Tócalo la próxima vez para repartir igual.",
+    "paidYou": "{{from}} te pagó",
+    "youPaid": "Pagaste a {{to}}"
   },
   "voiceExpense": {
     "speakToAdd": "Añadir gasto por voz",
     "noTrip": "Sin viaje",
-    "chooseTrip": "Elegir viaje",
+    "chooseTrip": "Añadir a",
     "activeTrip": "Activo",
     "tapToSpeak": "Toca el micrófono y di lo que pagaste",
     "listening": "Escuchando…",
@@ -1391,8 +1393,8 @@
     "widget": {
       "eyebrow": "Habla para añadir",
       "speak": "Hablar",
-      "noTrip": "Aún no hay viaje",
-      "changeTrip": "Cambiar viaje",
+      "noTrip": "Aún sin viaje ni grupo",
+      "changeTrip": "Cambiar",
       "defaultTrip": "Viaje activo"
     },
     "addingToName": "Añadiendo a {{name}}",

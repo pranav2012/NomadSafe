@@ -1341,12 +1341,14 @@
     "betweenOthers": "다른 사람들끼리",
     "perShare": "1몫당 {{amount}}",
     "savePreset": "이 분배 저장",
-    "presetSaved": "저장했어요. 다음에 탭하면 같은 방식으로 나눠요."
+    "presetSaved": "저장했어요. 다음에 탭하면 같은 방식으로 나눠요.",
+    "paidYou": "{{from}}님이 나에게 결제",
+    "youPaid": "내가 {{to}}님에게 결제"
   },
   "voiceExpense": {
     "speakToAdd": "말로 지출 추가",
     "noTrip": "여행 없음",
-    "chooseTrip": "여행 선택",
+    "chooseTrip": "추가할 곳",
     "activeTrip": "진행 중",
     "tapToSpeak": "마이크를 누르고 결제한 내용을 말해 보세요",
     "listening": "듣는 중…",
@@ -1391,8 +1393,8 @@
     "widget": {
       "eyebrow": "말로 추가",
       "speak": "말하기",
-      "noTrip": "아직 여행 없음",
-      "changeTrip": "여행 변경",
+      "noTrip": "아직 여행이나 그룹이 없어요",
+      "changeTrip": "변경",
       "defaultTrip": "진행 중인 여행"
     },
     "addingToName": "{{name}}에 추가",

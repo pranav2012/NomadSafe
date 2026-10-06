@@ -1341,12 +1341,14 @@
     "betweenOthers": "بين الآخرين",
     "perShare": "{{amount}} لكل حصة",
     "savePreset": "احفظ هذا التقسيم",
-    "presetSaved": "تم الحفظ. اضغط عليه في المرة القادمة للتقسيم بالطريقة نفسها."
+    "presetSaved": "تم الحفظ. اضغط عليه في المرة القادمة للتقسيم بالطريقة نفسها.",
+    "paidYou": "دفع لك {{from}}",
+    "youPaid": "دفعت لـ {{to}}"
   },
   "voiceExpense": {
     "speakToAdd": "أضف نفقة بالصوت",
     "noTrip": "بدون رحلة",
-    "chooseTrip": "اختر رحلة",
+    "chooseTrip": "أضف إلى",
     "activeTrip": "نشطة",
     "tapToSpeak": "اضغط على الميكروفون وقل ما دفعته",
     "listening": "جارٍ الاستماع…",
@@ -1391,8 +1393,8 @@
     "widget": {
       "eyebrow": "تحدث للإضافة",
       "speak": "تحدث",
-      "noTrip": "لا توجد رحلة بعد",
-      "changeTrip": "تغيير الرحلة",
+      "noTrip": "لا رحلة أو مجموعة بعد",
+      "changeTrip": "تغيير",
       "defaultTrip": "الرحلة النشطة"
     },
     "addingToName": "إضافة إلى {{name}}",

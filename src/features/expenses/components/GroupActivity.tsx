@@ -7,6 +7,7 @@ import { ExpenseRow } from "@/features/expenses/components/ExpenseRow";
 import { personLabel } from "@/features/expenses/components/SplitEditor";
 import { toLocalDayKey } from "@/features/expenses/utils/dateKey";
 import { formatMoney } from "@/features/expenses/utils/money";
+import { SELF_ID } from "@/features/expenses/utils/split";
 
 const PAGE = 40;
 
@@ -96,7 +97,11 @@ export function GroupActivity({
                   <Icon name="swap" size={17} color={c.textSoft} />
                 </View>
                 <Text style={[styles.paymentWho, { color: c.text, fontFamily: f.medium }]} numberOfLines={1}>
-                  {t("split.paid", { from: personLabel(item.settlement.from, t), to: personLabel(item.settlement.to, t) })}
+                  {item.settlement.to === SELF_ID
+                    ? t("split.paidYou", { from: personLabel(item.settlement.from, t) })
+                    : item.settlement.from === SELF_ID
+                      ? t("split.youPaid", { to: personLabel(item.settlement.to, t) })
+                      : t("split.paid", { from: personLabel(item.settlement.from, t), to: personLabel(item.settlement.to, t) })}
                 </Text>
                 <Text style={[styles.paymentAmount, { color: c.textSoft, fontFamily: f.semibold }]}>
                   {formatMoney(formatCurrency, item.settlement.amount, item.settlement.currency)}

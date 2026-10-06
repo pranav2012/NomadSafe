@@ -1341,12 +1341,14 @@
     "betweenOthers": "其他人之间",
     "perShare": "每份 {{amount}}",
     "savePreset": "保存此分摊方式",
-    "presetSaved": "已保存。下次点按即可用同样方式分摊。"
+    "presetSaved": "已保存。下次点按即可用同样方式分摊。",
+    "paidYou": "{{from}} 付给了你",
+    "youPaid": "你付给了 {{to}}"
   },
   "voiceExpense": {
     "speakToAdd": "语音添加支出",
     "noTrip": "无行程",
-    "chooseTrip": "选择行程",
+    "chooseTrip": "添加到",
     "activeTrip": "进行中",
     "tapToSpeak": "点击麦克风，说出你付了什么",
     "listening": "正在聆听…",
@@ -1391,8 +1393,8 @@
     "widget": {
       "eyebrow": "说出来添加",
       "speak": "说话",
-      "noTrip": "暂无行程",
-      "changeTrip": "切换行程",
+      "noTrip": "还没有旅行或群组",
+      "changeTrip": "更改",
       "defaultTrip": "当前行程"
     },
     "addingToName": "添加到 {{name}}",

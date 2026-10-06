@@ -1341,12 +1341,14 @@
     "betweenOthers": "Between others",
     "perShare": "{{amount}} per share",
     "savePreset": "Save this split",
-    "presetSaved": "Saved. Tap it next time to split the same way."
+    "presetSaved": "Saved. Tap it next time to split the same way.",
+    "paidYou": "{{from}} paid you",
+    "youPaid": "You paid {{to}}"
   },
   "voiceExpense": {
     "speakToAdd": "Speak to add expense",
     "noTrip": "No trip",
-    "chooseTrip": "Choose trip",
+    "chooseTrip": "Add to",
     "activeTrip": "Active",
     "tapToSpeak": "Tap the mic and say what you paid",
     "listening": "Listening…",
@@ -1391,8 +1393,8 @@
     "widget": {
       "eyebrow": "Speak to add",
       "speak": "Speak",
-      "noTrip": "No trip yet",
-      "changeTrip": "Change trip",
+      "noTrip": "No trip or group yet",
+      "changeTrip": "Change",
       "defaultTrip": "Active trip"
     },
     "addingToName": "Adding to {{name}}",
