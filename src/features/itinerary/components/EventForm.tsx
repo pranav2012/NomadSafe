@@ -1,9 +1,10 @@
 import React, { useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
-import { AuraButton, AuraChip, AuraDateField, AuraField, AuraSheet } from "@/atoms";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { AuraButton, AuraChip, AuraDateField, AuraField, AuraSegmented, AuraSheet, useAura } from "@/atoms";
 import { auraEventColors } from "@/constants/aura";
 import { useLocalization } from "@/localization";
-import { EVENT_TYPES, TRANSIT_MODES, type EventType, type TransitMode } from "@/features/itinerary/constants/eventTypes";
+import { SELF_ID } from "@/features/expenses/utils/split";
+import { EVENT_TYPES, TRANSIT_MODES, canBeUntimed, type EventTiming, type EventType, type TransitMode } from "@/features/itinerary/constants/eventTypes";
 import type { TripEvent } from "@/features/itinerary/store/eventsStore";
 import { localizeEventDetail, localizeEventTitle } from "@/features/itinerary/utils/eventText";
 import { transitModeOf } from "@/features/itinerary/utils/transit";
@@ -18,7 +19,12 @@ export interface EventFormValues {
   endAt?: string;
   /** Set only for transit events. */
   transitMode?: TransitMode;
+  timing?: EventTiming;
+  /** Undefined means everyone. */
+  people?: string[];
 }
+
+type When = "time" | EventTiming;
 
 const DAY_MS = 86_400_000;
 const HOUR_MS = 3_600_000;
@@ -40,6 +46,8 @@ function restoreDetailHead(edited: string, original: string | undefined, localiz
 export function EventForm({
   event,
   defaultStart,
+  tripStart,
+  companions,
   visible,
   onSave,
   onDelete,
@@ -48,12 +56,17 @@ export function EventForm({
   event: TripEvent | null;
   /** Start time for a new event (e.g. the day picked on Home); now when omitted. */
   defaultStart?: Date;
+  /** Wishlist items are filed under the trip's first day. */
+  tripStart: Date;
+  /** Other travellers; "Who's it for" shows when there are any. */
+  companions: string[];
   visible: boolean;
   onSave: (values: EventFormValues) => void;
   onDelete?: () => void;
   onClose: () => void;
 }) {
   const { t } = useLocalization();
+  const { c, f } = useAura();
 
   // The parent remounts this form (via `key`) for each open, so state initializes fresh from props.
   const [type, setType] = useState<EventType>(event?.type ?? "activity");
@@ -65,11 +78,27 @@ export function EventForm({
   const [until, setUntil] = useState<Date>(() =>
     event?.endAt ? new Date(event.endAt) : new Date((event ? new Date(event.startAt) : (defaultStart ?? new Date())).getTime() + DAY_MS),
   );
+  const [pickedWhen, setWhenKind] = useState<When>(event?.timing ?? "time");
+  const [people, setPeople] = useState<string[]>(event?.people ?? []);
+  const untimedAllowed = canBeUntimed(type);
+  const whenKind: When = untimedAllowed ? pickedWhen : "time";
+  const everyone = [SELF_ID, ...companions];
+
+  const changeType = (next: EventType) => {
+    if (!event && next === "note" && pickedWhen === "time") setWhenKind("anytime");
+    setType(next);
+  };
+  // Picking every person is the same as everyone, so it's stored as "everyone".
+  const togglePerson = (person: string) => {
+    const next = people.includes(person) ? people.filter((p) => p !== person) : [...people, person];
+    setPeople(next.length === everyone.length ? [] : next);
+  };
+
   const savedDetail = restoreDetailHead(detail.trim(), event?.detail, initialDetail);
   // A lone check-out (from a booking email) is its own entry and has no separate end.
   const isLoneCheckOut = type === "stay" && !event?.endAt && savedDetail.split(DETAIL_SEPARATOR)[0] === "Check-out";
   // Stays always have a check-out; a transit shows its arrival only when one is known.
-  const hasEnd = (type === "stay" && !isLoneCheckOut) || (type === "transit" && Boolean(event?.endAt));
+  const hasEnd = whenKind === "time" && ((type === "stay" && !isLoneCheckOut) || (type === "transit" && Boolean(event?.endAt)));
   const canSave = title.trim().length > 0;
 
   // Moving the start past the end shifts the end by the same duration, so it stays valid.
@@ -84,13 +113,17 @@ export function EventForm({
   const save = () => {
     if (!canSave) return;
     const endAt = hasEnd && until.getTime() > when.getTime() ? toWallClock(until) : undefined;
+    const day = new Date(when.getFullYear(), when.getMonth(), when.getDate());
+    const keptWishlistAt = event?.timing === "wishlist" ? new Date(event.startAt) : tripStart;
     onSave({
       type,
       title: title.trim(),
       detail: savedDetail,
-      startAt: toWallClock(when),
+      startAt: toWallClock(whenKind === "time" ? when : whenKind === "anytime" ? day : keptWishlistAt),
       endAt,
       transitMode: type === "transit" ? transitMode : undefined,
+      timing: whenKind === "time" ? undefined : whenKind,
+      people: people.length > 0 ? people : undefined,
     });
   };
 
@@ -122,7 +155,7 @@ export function EventForm({
               icon={meta.icon}
               dot={meta.id === type ? undefined : auraEventColors[meta.id]}
               selected={meta.id === type}
-              onPress={() => setType(meta.id)}
+              onPress={() => changeType(meta.id)}
             />
           ))}
         </View>
@@ -141,12 +174,35 @@ export function EventForm({
         ) : null}
         <AuraField label={t("itinerary.form.title")} value={title} onChangeText={setTitle} placeholder={t("itinerary.form.titlePlaceholder")} returnKeyType="next" />
         <AuraField label={t("itinerary.form.detail")} value={detail} onChangeText={setDetail} placeholder={t("itinerary.form.detailPlaceholder")} />
-        <AuraDateField
-          label={type === "stay" ? t("itinerary.defaults.checkIn") : type === "transit" ? t("itinerary.defaults.departure") : t("itinerary.form.when")}
-          value={when}
-          onChange={changeWhen}
-          withTime
-        />
+        {untimedAllowed ? (
+          <AuraSegmented
+            options={[
+              { value: "time", label: t("itinerary.form.atTime") },
+              { value: "anytime", label: t("itinerary.form.anytime") },
+              { value: "wishlist", label: t("itinerary.form.wishlist") },
+            ]}
+            value={whenKind}
+            onChange={setWhenKind}
+          />
+        ) : null}
+        {whenKind === "wishlist" ? (
+          <Text style={[styles.hint, { color: c.textMuted, fontFamily: f.regular }]}>{t("itinerary.form.wishlistHint")}</Text>
+        ) : (
+          <AuraDateField
+            label={
+              whenKind === "anytime"
+                ? t("itinerary.form.day")
+                : type === "stay"
+                  ? t("itinerary.defaults.checkIn")
+                  : type === "transit"
+                    ? t("itinerary.defaults.departure")
+                    : t("itinerary.form.when")
+            }
+            value={when}
+            onChange={changeWhen}
+            withTime={whenKind === "time"}
+          />
+        )}
         {hasEnd ? (
           <AuraDateField
             label={type === "stay" ? t("itinerary.defaults.checkOut") : t("itinerary.defaults.arrival")}
@@ -156,6 +212,22 @@ export function EventForm({
             withTime
           />
         ) : null}
+        {companions.length > 0 ? (
+          <View style={styles.people}>
+            <Text style={[styles.peopleLabel, { color: c.textSoft, fontFamily: f.medium }]}>{t("itinerary.form.whoFor")}</Text>
+            <View style={styles.types}>
+              <AuraChip label={t("itinerary.form.everyone")} icon="users" selected={people.length === 0} onPress={() => setPeople([])} />
+              {everyone.map((person) => (
+                <AuraChip
+                  key={person}
+                  label={person === SELF_ID ? t("itinerary.form.you") : person}
+                  selected={people.includes(person)}
+                  onPress={() => togglePerson(person)}
+                />
+              ))}
+            </View>
+          </View>
+        ) : null}
       </ScrollView>
     </AuraSheet>
   );
@@ -164,6 +236,9 @@ export function EventForm({
 const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, paddingTop: 6, paddingBottom: 8, gap: 18 },
   types: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  hint: { fontSize: 13.5, lineHeight: 19 },
+  people: { gap: 10 },
+  peopleLabel: { fontSize: 13.5 },
   actions: { flexDirection: "row", gap: 10 },
   delete: { paddingHorizontal: 18 },
   flex: { flex: 1 },

@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { mmkvStateStorage } from "@/modules/storage";
-import type { EventType, TransitMode } from "@/features/itinerary/constants/eventTypes";
+import type { EventTiming, EventType, TransitMode } from "@/features/itinerary/constants/eventTypes";
 import { consolidateEmailBookings, mergeBooking, sameBooking } from "@/features/itinerary/utils/bookings";
 import { normalizeWallClock } from "@/features/itinerary/utils/wallClock";
 
@@ -16,9 +16,14 @@ export interface TripEvent {
   detail?: string;
   /** Transit only; older events have none and are guessed with `transitModeOf`. */
   transitMode?: TransitMode;
-  /** Wall-clock time at the place, no zone ("2026-10-18T15:00:00"); see `toWallClock`. */
+  /** Wall-clock time at the place, no zone ("2026-10-18T15:00:00"); see `toWallClock`. Midnight of the day for "anytime"; only orders wishlist items. */
   startAt: string;
   endAt?: string;
+  timing?: EventTiming;
+  /** Who it's for: SELF_ID and companion names (member ids on the server); empty means everyone. */
+  people?: string[];
+  /** Ticked off; shared with everyone on the trip. */
+  doneAt?: string;
   source: EventSource;
   note?: string;
   rawText?: string;
@@ -41,6 +46,8 @@ export interface CreateEventInput {
   transitMode?: TransitMode;
   startAt: string;
   endAt?: string;
+  timing?: EventTiming;
+  people?: string[];
   source: EventSource;
   note?: string;
   rawText?: string;

@@ -78,7 +78,10 @@
       "tonightAt": "今夜：{{name}}",
       "showToday": "今日の予定を表示",
       "backToToday": "今日に戻る",
-      "backToDayOne": "1日目に戻る"
+      "backToDayOne": "1日目に戻る",
+      "todos_one": "今日のやること {{count}}件",
+      "todos_other": "今日のやること {{count}}件",
+      "meanwhile": "その間：{{what}}"
     }
   },
   "settings": {
@@ -1117,7 +1120,9 @@
     "types": {
       "activity": "アクティビティ",
       "transit": "移動",
-      "stay": "宿泊"
+      "stay": "宿泊",
+      "food": "食事",
+      "note": "メモ"
     },
     "refineNoneTitle": "予定はすでに整理済みです",
     "refineNoneBody": "重複や不要な予定は見つかりませんでした。",
@@ -1136,7 +1141,15 @@
       "when": "日時",
       "delete": "削除",
       "save": "変更を保存",
-      "add": "予定を追加"
+      "add": "予定を追加",
+      "atTime": "時間指定",
+      "anytime": "いつでも",
+      "wishlist": "行きたいリスト",
+      "wishlistHint": "行きたいリストに保存しました。好きなときに日程に追加できます。",
+      "day": "日付",
+      "whoFor": "誰の予定",
+      "everyone": "全員",
+      "you": "あなた"
     },
     "defaults": {
       "hotelStay": "ホテル滞在",
@@ -1157,8 +1170,16 @@
     "day": {
       "freeBody": "予定はありません。立ち寄り先を追加するか、近くを探してみましょう。",
       "addStop": "立ち寄り先を追加",
-      "openMaps": "{{place}}をマップで開く"
-    }
+      "openMaps": "{{place}}をマップで開く",
+      "markDone": "{{title}}を完了にする",
+      "togetherAgain": "再び合流",
+      "splitUp_one": "{{from}}〜{{to}} 別行動 · {{names}}の予定{{count}}件",
+      "splitUp_other": "{{from}}〜{{to}} 別行動 · {{names}}の予定{{count}}件",
+      "freeBodyWishlist": "予定はありません。行きたいリストから選びましょう：",
+      "addToDay": "追加"
+    },
+    "anytime": "いつでも",
+    "wishlistTitle": "行きたいリスト"
   },
   "places": {
     "nearYou": "近くのスポット",

@@ -1,4 +1,4 @@
-import type { EventType, TransitMode } from "@/features/itinerary/constants/eventTypes";
+import type { EventTiming, EventType, TransitMode } from "@/features/itinerary/constants/eventTypes";
 
 export interface BookingLike {
   type: EventType;
@@ -11,6 +11,9 @@ export interface BookingLike {
   sourceIds?: string[];
   bookingRef?: string;
   transitMode?: TransitMode;
+  timing?: EventTiming;
+  people?: string[];
+  doneAt?: string;
 }
 
 interface StoredBooking extends BookingLike {

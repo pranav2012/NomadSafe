@@ -53,7 +53,7 @@ export interface AnalyticsEvents {
   itinerary_event_edited: { source: EventSource };
   itinerary_event_deleted: { source: EventSource };
   itinerary_day_viewed: { relative_day: number };
-  today_action: { action: "maps" | "add_stop" | "expand_globe" | "collapse_globe" | "back_to_today" };
+  today_action: { action: "maps" | "add_stop" | "expand_globe" | "collapse_globe" | "back_to_today" | "done" | "undone" | "schedule_wishlist" };
   recap_opened: { source: "home" | "notification" | "trips"; stops: number };
   recap_finished: { stops: number };
   recap_shared: { format: "image" | "video"; spend: boolean };

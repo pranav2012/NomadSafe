@@ -78,7 +78,10 @@
       "tonightAt": "Esta noche: {{name}}",
       "showToday": "Ver el plan de hoy",
       "backToToday": "Volver a hoy",
-      "backToDayOne": "Volver al día 1"
+      "backToDayOne": "Volver al día 1",
+      "todos_one": "{{count}} pendiente hoy",
+      "todos_other": "{{count}} pendientes hoy",
+      "meanwhile": "Mientras tanto: {{what}}"
     }
   },
   "settings": {
@@ -1117,7 +1120,9 @@
     "types": {
       "activity": "Actividad",
       "transit": "Traslado",
-      "stay": "Alojamiento"
+      "stay": "Alojamiento",
+      "food": "Comida",
+      "note": "Nota"
     },
     "refineNoneTitle": "Eventos ya refinados",
     "refineNoneBody": "No se encontraron eventos duplicados o adicionales.",
@@ -1136,7 +1141,15 @@
       "when": "Cuándo",
       "delete": "Eliminar",
       "save": "Guardar cambios",
-      "add": "Añadir evento"
+      "add": "Añadir evento",
+      "atTime": "A una hora",
+      "anytime": "En cualquier momento",
+      "wishlist": "Lista de deseos",
+      "wishlistHint": "Guardado en tu lista de deseos. Añádelo a un día cuando quieras.",
+      "day": "Día",
+      "whoFor": "Para quién",
+      "everyone": "Todos",
+      "you": "Tú"
     },
     "defaults": {
       "hotelStay": "Estancia en hotel",
@@ -1157,8 +1170,16 @@
     "day": {
       "freeBody": "No hay nada planeado. Añade una parada o mira qué hay cerca.",
       "addStop": "Añadir parada",
-      "openMaps": "Abrir {{place}} en Mapas"
-    }
+      "openMaps": "Abrir {{place}} en Mapas",
+      "markDone": "Marcar {{title}} como hecho",
+      "togetherAgain": "Juntos de nuevo",
+      "splitUp_one": "Separados {{from}}–{{to}} · {{count}} plan para {{names}}",
+      "splitUp_other": "Separados {{from}}–{{to}} · {{count}} planes para {{names}}",
+      "freeBodyWishlist": "No hay nada planeado. Elige algo de tu lista de deseos:",
+      "addToDay": "Añadir"
+    },
+    "anytime": "En cualquier momento",
+    "wishlistTitle": "Lista de deseos"
   },
   "places": {
     "nearYou": "Cerca de ti",

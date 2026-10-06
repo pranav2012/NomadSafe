@@ -78,7 +78,10 @@
       "tonightAt": "Ce soir : {{name}}",
       "showToday": "Voir le programme du jour",
       "backToToday": "Revenir à aujourd'hui",
-      "backToDayOne": "Revenir au jour 1"
+      "backToDayOne": "Revenir au jour 1",
+      "todos_one": "{{count}} chose à faire aujourd'hui",
+      "todos_other": "{{count}} choses à faire aujourd'hui",
+      "meanwhile": "Pendant ce temps : {{what}}"
     }
   },
   "settings": {
@@ -1117,7 +1120,9 @@
     "types": {
       "activity": "Activité",
       "transit": "Transport",
-      "stay": "Séjour"
+      "stay": "Séjour",
+      "food": "Repas",
+      "note": "Note"
     },
     "refineNoneTitle": "Événements déjà affinés",
     "refineNoneBody": "Aucun doublon ou événement superflu n'a été trouvé.",
@@ -1136,7 +1141,15 @@
       "when": "Quand",
       "delete": "Supprimer",
       "save": "Enregistrer les modifications",
-      "add": "Ajouter l'événement"
+      "add": "Ajouter l'événement",
+      "atTime": "À une heure",
+      "anytime": "N'importe quand",
+      "wishlist": "Liste d'envies",
+      "wishlistHint": "Enregistré dans votre liste d'envies. Ajoutez-le à un jour quand vous voulez.",
+      "day": "Jour",
+      "whoFor": "Pour qui",
+      "everyone": "Tout le monde",
+      "you": "Vous"
     },
     "defaults": {
       "hotelStay": "Séjour à l'hôtel",
@@ -1157,8 +1170,16 @@
     "day": {
       "freeBody": "Rien de prévu. Ajoutez une étape ou découvrez ce qu'il y a autour.",
       "addStop": "Ajouter une étape",
-      "openMaps": "Ouvrir {{place}} dans Plans"
-    }
+      "openMaps": "Ouvrir {{place}} dans Plans",
+      "markDone": "Marquer {{title}} comme fait",
+      "togetherAgain": "De nouveau ensemble",
+      "splitUp_one": "Séparés {{from}}–{{to}} · {{count}} programme pour {{names}}",
+      "splitUp_other": "Séparés {{from}}–{{to}} · {{count}} programmes pour {{names}}",
+      "freeBodyWishlist": "Rien de prévu. Choisissez quelque chose dans votre liste d'envies :",
+      "addToDay": "Ajouter"
+    },
+    "anytime": "N'importe quand",
+    "wishlistTitle": "Liste d'envies"
   },
   "places": {
     "nearYou": "Près de vous",

@@ -78,7 +78,10 @@
       "tonightAt": "오늘 밤: {{name}}",
       "showToday": "오늘 일정 보기",
       "backToToday": "오늘로 돌아가기",
-      "backToDayOne": "1일차로 돌아가기"
+      "backToDayOne": "1일차로 돌아가기",
+      "todos_one": "오늘 할 일 {{count}}개",
+      "todos_other": "오늘 할 일 {{count}}개",
+      "meanwhile": "그동안: {{what}}"
     }
   },
   "settings": {
@@ -1117,7 +1120,9 @@
     "types": {
       "activity": "활동",
       "transit": "이동",
-      "stay": "숙박"
+      "stay": "숙박",
+      "food": "식사",
+      "note": "메모"
     },
     "refineNoneTitle": "이미 정리된 일정이에요",
     "refineNoneBody": "중복되거나 불필요한 일정이 발견되지 않았어요.",
@@ -1136,7 +1141,15 @@
       "when": "일시",
       "delete": "삭제",
       "save": "변경 사항 저장",
-      "add": "일정 추가"
+      "add": "일정 추가",
+      "atTime": "시간 지정",
+      "anytime": "언제든",
+      "wishlist": "위시리스트",
+      "wishlistHint": "위시리스트에 저장했어요. 원할 때 날짜에 추가하세요.",
+      "day": "날짜",
+      "whoFor": "누구의 일정",
+      "everyone": "모두",
+      "you": "나"
     },
     "defaults": {
       "hotelStay": "호텔 숙박",
@@ -1157,8 +1170,16 @@
     "day": {
       "freeBody": "계획된 일정이 없어요. 들를 곳을 추가하거나 근처를 둘러보세요.",
       "addStop": "들를 곳 추가",
-      "openMaps": "지도에서 {{place}} 열기"
-    }
+      "openMaps": "지도에서 {{place}} 열기",
+      "markDone": "{{title}} 완료로 표시",
+      "togetherAgain": "다시 함께",
+      "splitUp_one": "{{from}}–{{to}} 따로 · {{names}}의 일정 {{count}}개",
+      "splitUp_other": "{{from}}–{{to}} 따로 · {{names}}의 일정 {{count}}개",
+      "freeBodyWishlist": "계획된 일정이 없어요. 위시리스트에서 골라 보세요:",
+      "addToDay": "추가"
+    },
+    "anytime": "언제든",
+    "wishlistTitle": "위시리스트"
   },
   "places": {
     "nearYou": "내 주변",

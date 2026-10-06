@@ -16,6 +16,7 @@ import { getTripGmailCoverage, setTripGmailCoverage } from "@/features/expenses/
 import { buildEventCandidates } from "@/features/itinerary/services/itineraryExtraction";
 import { parseBookingEmail } from "@/features/itinerary/services/bookingEmailParser";
 import { isGenericTitle } from "@/features/itinerary/utils/bookings";
+import { transitModeOf } from "@/features/itinerary/utils/transit";
 import { toLocalDayKey } from "@/features/expenses/utils/dateKey";
 import { useEventsStore, type EmailMergeResult } from "@/features/itinerary/store/eventsStore";
 import { useTripsStore, type Trip } from "@/features/trips/store/tripsStore";
@@ -132,6 +133,8 @@ async function addNewEvents(messages: RawMessage[], trip: Trip): Promise<EmailMe
       transitMode: candidate.transitMode,
       startAt: candidate.startAt,
       endAt: candidate.endAt,
+      // Flight tickets are per person: on a trip with others, a flight from your inbox is yours.
+      people: trip.companions.length > 0 && transitModeOf(candidate) === "flight" ? [SELF_ID] : undefined,
       source: candidate.source,
       note: candidate.note,
       rawText: candidate.rawText,

@@ -78,7 +78,10 @@
       "tonightAt": "الليلة: {{name}}",
       "showToday": "عرض خطة اليوم",
       "backToToday": "العودة إلى اليوم",
-      "backToDayOne": "العودة إلى اليوم 1"
+      "backToDayOne": "العودة إلى اليوم 1",
+      "todos_one": "مهمة واحدة اليوم",
+      "todos_other": "{{count}} مهام اليوم",
+      "meanwhile": "في الأثناء: {{what}}"
     }
   },
   "settings": {
@@ -1117,7 +1120,9 @@
     "types": {
       "activity": "نشاط",
       "transit": "تنقل",
-      "stay": "إقامة"
+      "stay": "إقامة",
+      "food": "طعام",
+      "note": "ملاحظة"
     },
     "refineNoneTitle": "الأحداث محسّنة بالفعل",
     "refineNoneBody": "لم يتم العثور على أحداث رحلة مكررة أو إضافية.",
@@ -1136,7 +1141,15 @@
       "when": "الوقت",
       "delete": "حذف",
       "save": "حفظ التغييرات",
-      "add": "إضافة حدث"
+      "add": "إضافة حدث",
+      "atTime": "في وقت محدد",
+      "anytime": "في أي وقت",
+      "wishlist": "قائمة الأمنيات",
+      "wishlistHint": "حُفظ في قائمة أمنياتك. أضفه إلى يوم متى شئت.",
+      "day": "اليوم",
+      "whoFor": "لمن هذا",
+      "everyone": "الجميع",
+      "you": "أنت"
     },
     "defaults": {
       "hotelStay": "إقامة فندقية",
@@ -1157,8 +1170,16 @@
     "day": {
       "freeBody": "لا شيء مخطط. أضف محطة أو اكتشف ما حولك.",
       "addStop": "أضف محطة",
-      "openMaps": "افتح {{place}} في الخرائط"
-    }
+      "openMaps": "افتح {{place}} في الخرائط",
+      "markDone": "تحديد {{title}} كمنجز",
+      "togetherAgain": "معًا من جديد",
+      "splitUp_one": "افتراق {{from}}–{{to}} · خطة واحدة لـ {{names}}",
+      "splitUp_other": "افتراق {{from}}–{{to}} · {{count}} خطط لـ {{names}}",
+      "freeBodyWishlist": "لا شيء مخطط. اختر شيئًا من قائمة أمنياتك:",
+      "addToDay": "إضافة"
+    },
+    "anytime": "في أي وقت",
+    "wishlistTitle": "قائمة الأمنيات"
   },
   "places": {
     "nearYou": "بالقرب منك",

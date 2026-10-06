@@ -131,7 +131,7 @@ export interface TripNameSuggestion {
 
 export interface ItineraryEventRefinementInput {
   id: string;
-  type: "transit" | "stay" | "activity";
+  type: "transit" | "stay" | "activity" | "food" | "note";
   title: string;
   detail?: string;
   startAt: string;

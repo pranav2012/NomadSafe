@@ -11,6 +11,7 @@ import { EventForm, type EventFormValues } from "@/features/itinerary/components
 import { TimelineList, UpNextList } from "@/features/itinerary/components/ItineraryViews";
 import { DayPlan } from "@/features/itinerary/components/DayPlan";
 import { formatters } from "@/features/itinerary/utils/entryText";
+import { toWallClock } from "@/features/itinerary/utils/wallClock";
 import { upNext } from "@/features/itinerary/utils/timeline";
 import { fromDateKey } from "@/features/trips/utils/dates";
 import { logger } from "@/modules/logger";
@@ -73,6 +74,9 @@ export function TripItinerary({
   const [mountedAt] = useState(() => Date.now());
   const now = liveNow?.getTime() ?? mountedAt;
   const next = upNext(ordered, now, UP_NEXT_COUNT);
+  // Refine only tidies Gmail imports; what the user added is theirs to keep.
+  const imported = ordered.filter((event) => event.source === "email");
+  const tripStart = fromDateKey(trip.startDate);
   const isToday = day ? day.toDateString() === new Date(now).toDateString() : false;
   const sectionTitle = day ? (isToday ? t("home.live.todayTitle") : formatters(locale, hour12).dayHeader.format(day)) : t("itinerary.title");
 
@@ -85,6 +89,8 @@ export function TripItinerary({
         transitMode: values.transitMode,
         startAt: values.startAt,
         endAt: values.endAt,
+        timing: values.timing,
+        people: values.people,
         editedAt: new Date().toISOString(),
       });
       track("itinerary_event_edited", { source: editing.source });
@@ -97,12 +103,24 @@ export function TripItinerary({
         transitMode: values.transitMode,
         startAt: values.startAt,
         endAt: values.endAt,
+        timing: values.timing,
+        people: values.people,
         source: "manual",
       });
       track("itinerary_event_added", { source: "manual", count: 1 });
     }
     setEditing(null);
     if (editing === "new") showInterstitial("itinerary_event_added");
+  };
+
+  const toggleDone = (event: TripEvent) => {
+    track("today_action", { action: event.doneAt ? "undone" : "done" });
+    updateEvent(event.id, { doneAt: event.doneAt ? undefined : new Date().toISOString() });
+  };
+
+  const scheduleOn = (event: TripEvent, target: Date) => {
+    track("today_action", { action: "schedule_wishlist" });
+    updateEvent(event.id, { timing: "anytime", startAt: toWallClock(new Date(target.getFullYear(), target.getMonth(), target.getDate())) });
   };
 
   // The refine result is a natural break once the user has dealt with it.
@@ -113,11 +131,11 @@ export function TripItinerary({
   };
 
   const handleRefine = useCallback(async () => {
-    if (isRefining || ordered.length === 0) return;
+    if (isRefining || imported.length === 0) return;
     setIsRefining(true);
     try {
-      const refinement = await aiService.refineItinerary(ordered);
-      const remove = ordered.filter((event) => !refinement.keepIds.includes(event.id)).map((event) => event.id);
+      const refinement = await aiService.refineItinerary(imported);
+      const remove = imported.filter((event) => !refinement.keepIds.includes(event.id)).map((event) => event.id);
       if (remove.length === 0) {
         showToast(t("itinerary.refineNoneTitle"), t("itinerary.refineNoneBody"));
         return;
@@ -130,7 +148,7 @@ export function TripItinerary({
       await aiRuntime.release();
       setIsRefining(false);
     }
-  }, [isRefining, ordered, t]);
+  }, [isRefining, imported, t]);
 
   return (
     <PrivateView>
@@ -138,7 +156,7 @@ export function TripItinerary({
         title={sectionTitle}
         action={
           <>
-            {isAiAvailable && ordered.length > 1 ? (
+            {isAiAvailable && imported.length > 1 ? (
               <AuraButton
                 label={isRefining ? t("itinerary.refining") : t("home.refine")}
                 icon="sparkle"
@@ -161,6 +179,8 @@ export function TripItinerary({
             now={new Date(now)}
             city={city}
             onPress={setEditing}
+            onToggleDone={toggleDone}
+            onSchedule={scheduleOn}
             onAdd={() => {
               track("today_action", { action: "add_stop" });
               setEditing("new");
@@ -241,6 +261,8 @@ export function TripItinerary({
           key={editing === "new" ? "new" : editing.id}
           event={editing === "new" ? null : editing}
           defaultStart={editing === "new" ? defaultStartFor(day, now) : undefined}
+          tripStart={tripStart}
+          companions={trip.companions}
           visible
           onSave={handleSave}
           onDelete={

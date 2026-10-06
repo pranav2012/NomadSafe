@@ -8,4 +8,5 @@ export {
   EVENT_TYPES,
   getEventTypeMeta,
   type EventType,
+  type EventTiming,
 } from "./constants/eventTypes";

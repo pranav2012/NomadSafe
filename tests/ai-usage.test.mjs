@@ -47,7 +47,6 @@ test("per-feature counts move up and down without going negative", () => {
     chatSummary: 0,
     tripBudget: 2,
     tripName: 0,
-    itinerary: 0,
     voiceExpense: 0,
   });
 });

@@ -1,6 +1,8 @@
 import type { TripEvent } from "@/features/itinerary";
 import { TRANSIT_MODES } from "@/features/itinerary/constants/eventTypes";
-import { livePlan, tonightStay } from "@/features/itinerary/utils/dayPlan";
+import { SELF_ID } from "@/features/expenses/utils/split";
+import { anytimeOnDay, livePlan, othersNow, tonightStay } from "@/features/itinerary/utils/dayPlan";
+import { isForMe } from "@/features/itinerary/utils/people";
 import { describeEntry, formatters, routeOf } from "@/features/itinerary/utils/entryText";
 import { localizeEventTitle } from "@/features/itinerary/utils/eventText";
 import type { TimelineEntry } from "@/features/itinerary/utils/timeline";
@@ -48,7 +50,8 @@ export function useLivePass({ events, now, stage, day, totalDays, city }: LivePa
   const nextAt = next ? new Date(next.at) : null;
   const ends = next && next.event.type === "transit" ? parseRouteEnds(routeOf(next.event.detail)) : null;
   const tonight = tonightStay(events, today);
-  const hasToday = events.some((event) => startOfLocalDay(new Date(event.startAt)).getTime() === today.getTime());
+  const hasToday = events.some((event) => event.timing !== "wishlist" && isForMe(event) && startOfLocalDay(new Date(event.startAt)).getTime() === today.getTime());
+  const todos = anytimeOnDay(events, today).filter((event) => isForMe(event) && !event.doneAt);
 
   let top: LivePass["top"];
   if (current) {
@@ -63,6 +66,13 @@ export function useLivePass({ events, now, stage, day, totalDays, city }: LivePa
       fromName: ends[0],
       toName: ends[1],
       icon: TRANSIT_MODES.find((entry) => entry.id === mode)?.icon ?? "send",
+    };
+  } else if (todos.length > 0) {
+    top = {
+      kind: "text",
+      label: t("home.live.today"),
+      title: t("home.live.todos", { count: todos.length }),
+      sub: todos.map((event) => localizeEventTitle(event.title, t)).join(" · "),
     };
   } else if (tonight) {
     top = {
@@ -87,5 +97,16 @@ export function useLivePass({ events, now, stage, day, totalDays, city }: LivePa
     stub = { time: format.time.format(nextAt), label, title: titleOf(next) };
   }
 
-  return { heading, top, stub };
+  const other = othersNow(events, nowMs)[0];
+  const meanwhile = other
+    ? [
+        (other.event.people ?? []).filter((person) => person !== SELF_ID).join(", "),
+        titleOf(other),
+        other.event.endAt ? t("home.live.until", { time: format.time.format(new Date(other.event.endAt)) }) : null,
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    : undefined;
+
+  return { heading, top, stub, meanwhile: meanwhile ? t("home.live.meanwhile", { what: meanwhile }) : undefined };
 }

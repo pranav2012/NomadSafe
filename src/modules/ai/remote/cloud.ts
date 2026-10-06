@@ -25,7 +25,7 @@ function noteFailure(kind: CloudQuota, code: string | undefined) {
 
 /** Runs one structured task on NomadSafe Cloud; `task` picks the per-feature counter on the server. */
 export async function cloudCompleteJson(task: AiTask, system: string, prompt: string, schema: JsonTask): Promise<string> {
-  if (task === "chat" || task === "expenseCategory") throw new RemoteAiError(`${task} can't use cloud tasks`);
+  if (task === "chat" || task === "expenseCategory" || task === "itinerary") throw new RemoteAiError(`${task} can't use cloud tasks`);
   try {
     const args = await withAppCheck({ system, prompt, schemaName: schema.name, schema: schema.schema, task });
     return await convex.action(api.ai.complete, args);

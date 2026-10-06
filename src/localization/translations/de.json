@@ -78,7 +78,10 @@
       "tonightAt": "Heute Nacht: {{name}}",
       "showToday": "Heutigen Plan zeigen",
       "backToToday": "Zurück zu heute",
-      "backToDayOne": "Zurück zu Tag 1"
+      "backToDayOne": "Zurück zu Tag 1",
+      "todos_one": "{{count}} To-do heute",
+      "todos_other": "{{count}} To-dos heute",
+      "meanwhile": "Währenddessen: {{what}}"
     }
   },
   "settings": {
@@ -1117,7 +1120,9 @@
     "types": {
       "activity": "Aktivität",
       "transit": "Transit",
-      "stay": "Aufenthalt"
+      "stay": "Aufenthalt",
+      "food": "Essen",
+      "note": "Notiz"
     },
     "refineNoneTitle": "Ereignisse bereits verfeinert",
     "refineNoneBody": "Es wurden keine doppelten oder zusätzlichen Reise-Ereignisse gefunden.",
@@ -1136,7 +1141,15 @@
       "when": "Wann",
       "delete": "Löschen",
       "save": "Änderungen speichern",
-      "add": "Ereignis hinzufügen"
+      "add": "Ereignis hinzufügen",
+      "atTime": "Zu einer Uhrzeit",
+      "anytime": "Jederzeit",
+      "wishlist": "Wunschliste",
+      "wishlistHint": "Auf deiner Wunschliste gespeichert. Leg es einem Tag zu, wann immer du willst.",
+      "day": "Tag",
+      "whoFor": "Für wen",
+      "everyone": "Alle",
+      "you": "Du"
     },
     "defaults": {
       "hotelStay": "Hotelaufenthalt",
@@ -1157,8 +1170,16 @@
     "day": {
       "freeBody": "Nichts geplant. Füge einen Stopp hinzu oder schau, was in der Nähe ist.",
       "addStop": "Stopp hinzufügen",
-      "openMaps": "{{place}} in Karten öffnen"
-    }
+      "openMaps": "{{place}} in Karten öffnen",
+      "markDone": "{{title}} als erledigt markieren",
+      "togetherAgain": "Wieder zusammen",
+      "splitUp_one": "Getrennt {{from}}–{{to}} · {{count}} Plan für {{names}}",
+      "splitUp_other": "Getrennt {{from}}–{{to}} · {{count}} Pläne für {{names}}",
+      "freeBodyWishlist": "Nichts geplant. Such dir etwas von deiner Wunschliste aus:",
+      "addToDay": "Hinzufügen"
+    },
+    "anytime": "Jederzeit",
+    "wishlistTitle": "Wunschliste"
   },
   "places": {
     "nearYou": "In deiner Nähe",

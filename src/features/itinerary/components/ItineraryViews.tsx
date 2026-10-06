@@ -63,7 +63,7 @@ export function UpNextList({ events, onPress }: { events: TripEvent[]; onPress: 
   );
 }
 
-/** The full itinerary grouped by day, with stays shown once at check-in and check-out. */
+/** The full itinerary: wishlist ideas first, then each day, with stays shown once at check-in and check-out. */
 export function TimelineList({
   events,
   tripStart,
@@ -78,9 +78,26 @@ export function TimelineList({
   const format = formatters(locale, hour12);
   const [now] = useState(() => Date.now());
   const sections = buildTimeline(events);
+  const wishlist = events.filter((event) => event.timing === "wishlist");
 
   return (
     <ScrollView contentContainerStyle={styles.timeline} showsVerticalScrollIndicator={false}>
+      {wishlist.length > 0 ? (
+        <View style={styles.day}>
+          <Text style={[styles.dayHeader, { color: c.textSoft, fontFamily: f.semibold }]}>{t("itinerary.wishlistTitle")}</Text>
+          {wishlist.map((event) => (
+            <PressableScale key={event.id} onPress={() => onPress(event)} pressedScale={0.98} accessibilityRole="button" style={styles.entry}>
+              <View style={styles.entryTime}>
+                <Icon name="bookmark" size={14} color={c.textMuted} />
+              </View>
+              <TypeIcon event={event} />
+              <Text numberOfLines={1} style={[styles.title, styles.text, { color: c.text, fontFamily: f.semibold }]}>
+                {localizeEventTitle(event.title, t)}
+              </Text>
+            </PressableScale>
+          ))}
+        </View>
+      ) : null}
       {sections.map((section) => {
         if (section.kind === "staying") {
           const range =
@@ -114,10 +131,15 @@ export function TimelineList({
                   accessibilityRole="button"
                   style={styles.entry}
                 >
-                  <Text style={[styles.entryTime, { color: c.textMuted, fontFamily: f.medium }]}>{format.time.format(new Date(entry.at))}</Text>
+                  <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.entryTime, { color: c.textMuted, fontFamily: f.medium }]}>
+                    {entry.event.timing === "anytime" ? t("itinerary.anytime") : format.time.format(new Date(entry.at))}
+                  </Text>
                   <TypeIcon event={entry.event} />
-                  <View style={styles.text}>
-                    <Text numberOfLines={1} style={[styles.title, { color: c.text, fontFamily: f.semibold }]}>
+                  <View style={[styles.text, { opacity: entry.event.doneAt ? 0.55 : 1 }]}>
+                    <Text
+                      numberOfLines={1}
+                      style={[styles.title, { color: c.text, fontFamily: f.semibold, textDecorationLine: entry.event.doneAt ? "line-through" : "none" }]}
+                    >
                       {title}
                     </Text>
                     {sub ? (

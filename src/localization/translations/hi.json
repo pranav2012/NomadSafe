@@ -78,7 +78,10 @@
       "tonightAt": "आज रात: {{name}}",
       "showToday": "आज की योजना दिखाएँ",
       "backToToday": "आज पर वापस जाएँ",
-      "backToDayOne": "दिन 1 पर वापस जाएँ"
+      "backToDayOne": "दिन 1 पर वापस जाएँ",
+      "todos_one": "आज {{count}} काम",
+      "todos_other": "आज {{count}} काम",
+      "meanwhile": "इस बीच: {{what}}"
     }
   },
   "settings": {
@@ -1117,7 +1120,9 @@
     "types": {
       "activity": "गतिविधि",
       "transit": "यात्रा",
-      "stay": "ठहराव"
+      "stay": "ठहराव",
+      "food": "खाना",
+      "note": "नोट"
     },
     "refineNoneTitle": "इवेंट्स पहले ही सुधारे जा चुके हैं",
     "refineNoneBody": "कोई डुप्लिकेट या अतिरिक्त ट्रिप इवेंट नहीं मिला।",
@@ -1136,7 +1141,15 @@
       "when": "कब",
       "delete": "हटाएं",
       "save": "बदलाव सेव करें",
-      "add": "इवेंट जोड़ें"
+      "add": "इवेंट जोड़ें",
+      "atTime": "तय समय पर",
+      "anytime": "कभी भी",
+      "wishlist": "विशलिस्ट",
+      "wishlistHint": "आपकी विशलिस्ट में सहेजा गया। जब चाहें इसे किसी दिन में जोड़ें।",
+      "day": "दिन",
+      "whoFor": "किसके लिए",
+      "everyone": "सभी",
+      "you": "आप"
     },
     "defaults": {
       "hotelStay": "होटल में ठहराव",
@@ -1157,8 +1170,16 @@
     "day": {
       "freeBody": "कुछ तय नहीं है। कोई पड़ाव जोड़ें या आस-पास देखें।",
       "addStop": "पड़ाव जोड़ें",
-      "openMaps": "{{place}} को मैप्स में खोलें"
-    }
+      "openMaps": "{{place}} को मैप्स में खोलें",
+      "markDone": "{{title}} को पूरा मार्क करें",
+      "togetherAgain": "फिर से साथ",
+      "splitUp_one": "{{from}}–{{to}} अलग · {{names}} के लिए {{count}} योजना",
+      "splitUp_other": "{{from}}–{{to}} अलग · {{names}} के लिए {{count}} योजनाएँ",
+      "freeBodyWishlist": "कुछ तय नहीं है। अपनी विशलिस्ट से कुछ चुनें:",
+      "addToDay": "जोड़ें"
+    },
+    "anytime": "कभी भी",
+    "wishlistTitle": "विशलिस्ट"
   },
   "places": {
     "nearYou": "आपके पास",

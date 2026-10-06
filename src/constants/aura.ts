@@ -77,7 +77,7 @@ export const auraStatusAccent: Record<AuraStatus, string> = {
 
 
 /** Itinerary event type colours in the Aura palette. */
-export const auraEventColors = { transit: "#FFB547", stay: "#22C7B8", activity: "#8B97FF" } as const;
+export const auraEventColors = { transit: "#FFB547", stay: "#22C7B8", activity: "#8B97FF", food: "#FF7A8A", note: "#9AA3B5" } as const;
 
 /** Expense category colours in the Aura palette. */
 export const auraCategoryColors = { food: "#FF7A6B", stays: "#22C7B8", travel: "#FFB547", shopping: "#5B8CFF", other: "#9AA0B4" } as const;

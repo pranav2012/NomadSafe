@@ -21,8 +21,8 @@ export const AI_TASK_ROUTES: Record<AiTask, readonly AiProvider[]> = {
   chatSummary: ONLINE_FIRST,
   tripBudget: ONLINE_FIRST,
   tripName: ONLINE_FIRST,
-  // The router strips Gmail-sourced events before any online call; those always stay on the phone.
-  itinerary: ONLINE_FIRST,
+  // Refine only cleans up Gmail imports (never what the user added), and Gmail text must stay on the phone.
+  itinerary: ["local"],
   // Only the transcript text goes online, never audio.
   voiceExpense: ONLINE_FIRST,
   // Imports carry raw Gmail/SMS text, which must never leave the device (Google Limited Use).

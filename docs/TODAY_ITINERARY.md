@@ -15,6 +15,7 @@ Reference: japan.theclau.de/d/1 (a hand-written day plan: steps, transit legs, t
 - No-trip and past-trip Home keep the globe flow; finished trips hand off to the recap.
 - Must-do suggestions come from a list bundled with the app (curated popular places per city), not Google Places or AI. Works offline.
 - Tickets open in an in-app viewer (`react-native-pdf`, needs a dev-client rebuild) with max brightness for QR codes.
+- Step 2 (built): `food` and `note` types; `timing` ("anytime" items sit at 00:00 of their day, "wishlist" items have no day); `doneAt` ticks shared with everyone; `people` (SELF_ID/names locally, member ids on the server, empty = everyone) on any trip with companions, Gmail flights default to the importer; other people's items fold into one row with "Together again" after; the pass shows today's to-dos and a "Meanwhile" line; Refine only tidies Gmail imports, on the phone.
 - Baseline analytics shipped first (`home_viewed`, `itinerary_sheet_opened`, `itinerary_event_added/edited/deleted`).
 
 ## Home by trip stage

@@ -1,6 +1,9 @@
 import type { IconName } from "@/atoms";
 
-export type EventType = "transit" | "stay" | "activity";
+export type EventType = "transit" | "stay" | "activity" | "food" | "note";
+
+/** When an item happens: at its time (undefined), any time on its day, or not planned yet (wishlist). */
+export type EventTiming = "anytime" | "wishlist";
 
 /** How a transit event travels; drives the replay's leg colours and distance-by-mode stats. */
 export type TransitMode = "flight" | "train" | "bus" | "car" | "ferry";
@@ -24,9 +27,16 @@ export interface EventTypeMeta {
 
 export const EVENT_TYPES: EventTypeMeta[] = [
   { id: "activity", icon: "compass" },
+  { id: "food", icon: "utensils" },
   { id: "transit", icon: "car" },
   { id: "stay", icon: "building" },
+  { id: "note", icon: "edit" },
 ];
+
+/** Bookings happen at a set time; the rest can also be "anytime that day" or a wishlist idea. */
+export function canBeUntimed(type: EventType): boolean {
+  return type !== "stay" && type !== "transit";
+}
 
 export const EVENT_TYPE_IDS = EVENT_TYPES.map((meta) => meta.id);
 

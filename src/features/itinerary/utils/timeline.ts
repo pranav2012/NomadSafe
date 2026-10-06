@@ -30,17 +30,18 @@ export function nightsBetween(startAt: string, endAt: string): number {
   return Math.max(0, Math.round((startOfDay(endAt).getTime() - startOfDay(startAt).getTime()) / DAY_MS));
 }
 
-/** The next few things on the trip: anything not yet over, including a stay in progress. */
+/** The next few things on the trip: anything timed and not yet over, including a stay in progress. */
 export function upNext<T extends BookingLike>(events: T[], now: number, count: number): T[] {
-  const sorted = [...events].sort((a, b) => time(a.startAt) - time(b.startAt));
+  const sorted = events.filter((event) => !event.timing && !event.doneAt).sort((a, b) => time(a.startAt) - time(b.startAt));
   const open = sorted.filter((event) => new Date(event.endAt ?? event.startAt).getTime() >= now);
   return (open.length > 0 ? open : sorted.slice(-count)).slice(0, count);
 }
 
-/** One entry per moment on the timeline: a stay gives a check-in and a check-out, sorted by time. */
+/** One entry per moment on the timeline (wishlist items have none): a stay gives a check-in and a check-out, sorted by time. */
 export function timelineEntries<T extends BookingLike>(events: T[]): TimelineEntry<T>[] {
   const entries: TimelineEntry<T>[] = [];
   for (const event of events) {
+    if (event.timing === "wishlist") continue;
     if (event.type === "stay" && isLoneCheckOut(event)) {
       entries.push({ event, at: event.startAt, role: "check-out" });
     } else if (event.type === "stay") {

@@ -78,7 +78,10 @@
       "tonightAt": "Tonight: {{name}}",
       "showToday": "Show today's plan",
       "backToToday": "Back to today",
-      "backToDayOne": "Back to day 1"
+      "backToDayOne": "Back to day 1",
+      "todos_one": "{{count}} to-do today",
+      "todos_other": "{{count}} to-dos today",
+      "meanwhile": "Meanwhile: {{what}}"
     }
   },
   "trip": {
@@ -269,7 +272,9 @@
     "types": {
       "activity": "Activity",
       "transit": "Transit",
-      "stay": "Stay"
+      "stay": "Stay",
+      "food": "Food",
+      "note": "Note"
     },
     "refineNoneTitle": "Events already refined",
     "refineNoneBody": "No duplicate or extra trip events were found.",
@@ -288,7 +293,15 @@
       "when": "When",
       "delete": "Delete",
       "save": "Save changes",
-      "add": "Add event"
+      "add": "Add event",
+      "atTime": "At a time",
+      "anytime": "Anytime",
+      "wishlist": "Wishlist",
+      "wishlistHint": "Saved to your wishlist. Add it to a day whenever you like.",
+      "day": "Day",
+      "whoFor": "Who's it for",
+      "everyone": "Everyone",
+      "you": "You"
     },
     "defaults": {
       "hotelStay": "Hotel stay",
@@ -309,8 +322,16 @@
     "day": {
       "freeBody": "Nothing planned. Add a stop, or see what's nearby.",
       "addStop": "Add a stop",
-      "openMaps": "Open {{place}} in Maps"
-    }
+      "openMaps": "Open {{place}} in Maps",
+      "markDone": "Mark {{title}} done",
+      "togetherAgain": "Together again",
+      "splitUp_one": "Split up {{from}}–{{to}} · {{count}} plan for {{names}}",
+      "splitUp_other": "Split up {{from}}–{{to}} · {{count}} plans for {{names}}",
+      "freeBodyWishlist": "Nothing planned. Pick something from your wishlist:",
+      "addToDay": "Add"
+    },
+    "anytime": "Anytime",
+    "wishlistTitle": "Wishlist"
   },
   "places": {
     "nearYou": "Near you",

@@ -90,3 +90,39 @@ test("countdowns are exact to the minute, rounded up", () => {
   assert.equal(formatCountdown(120, "en", label), "2 h");
   assert.equal(formatCountdown(0, "en", label), "1 min");
 });
+
+const { anytimeOnDay, othersNow, wishlistOf } = loadModule("src/features/itinerary/utils/dayPlan.ts");
+const { upNext } = loadModule("src/features/itinerary/utils/timeline.ts");
+const SELF = "__self__";
+
+const suica = event({ type: "note", title: "Buy a Suica", startAt: at(19, 0), timing: "anytime" });
+const tea = event({ type: "food", title: "Ippodo tea", startAt: at(19, 0), timing: "anytime", doneAt: "2026-10-19T08:00:00Z" });
+const ghibli = event({ type: "activity", title: "Ghibli Museum", startAt: at(18, 0), timing: "wishlist" });
+const myFlight = event({ type: "transit", title: "JL754", detail: "DEL → NRT", startAt: at(19, 12), endAt: at(19, 18), people: [SELF] });
+const suhasLab = event({ type: "activity", title: "teamLab", startAt: at(19, 13), endAt: at(19, 18), people: ["Suhas"] });
+const doneLunch = event({ type: "food", title: "Lunch", startAt: at(19, 12, 30), doneAt: "2026-10-19T03:00:00Z" });
+const mixed = [...events, suica, tea, ghibli, myFlight, suhasLab, doneLunch];
+
+test("anytime items sit on their day, not-done first; wishlist items are on no day", () => {
+  assert.deepEqual(anytimeOnDay(mixed, new Date(2026, 9, 19)).map((e) => e.title), ["Buy a Suica", "Ippodo tea"]);
+  assert.deepEqual(wishlistOf(mixed).map((e) => e.title), ["Ghibli Museum"]);
+  assert.ok(entriesOnDay(mixed, new Date(2026, 9, 18)).every((entry) => entry.event.title !== "Ghibli Museum"));
+});
+
+test("now and next skip anytime, done and other people's items", () => {
+  const plan = livePlan(mixed, ms(19, 12, 10));
+  assert.equal(plan.current?.event.title, "JL754");
+  assert.equal(plan.next?.event.title, "Nishiki Market");
+  assert.equal(livePlan(mixed, ms(19, 0, 30)).next?.event.title, "Fushimi Inari");
+});
+
+test("meanwhile shows what others are doing right now", () => {
+  assert.deepEqual(othersNow(mixed, ms(19, 14)).map((entry) => entry.event.title), ["teamLab"]);
+  assert.equal(othersNow(mixed, ms(19, 19)).length, 0);
+});
+
+test("up next only lists timed items that aren't done", () => {
+  const titles = upNext(mixed, ms(19, 0, 30), 10).map((e) => e.title);
+  assert.ok(!titles.includes("Buy a Suica") && !titles.includes("Ghibli Museum") && !titles.includes("Lunch"));
+  assert.ok(titles.includes("teamLab"));
+});

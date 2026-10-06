@@ -78,7 +78,10 @@
       "tonightAt": "今晚：{{name}}",
       "showToday": "查看今日行程",
       "backToToday": "回到今天",
-      "backToDayOne": "回到第 1 天"
+      "backToDayOne": "回到第 1 天",
+      "todos_one": "今天有 {{count}} 件待办",
+      "todos_other": "今天有 {{count}} 件待办",
+      "meanwhile": "与此同时：{{what}}"
     }
   },
   "settings": {
@@ -1117,7 +1120,9 @@
     "types": {
       "activity": "活动",
       "transit": "交通",
-      "stay": "住宿"
+      "stay": "住宿",
+      "food": "餐饮",
+      "note": "备注"
     },
     "refineNoneTitle": "活动已整理完毕",
     "refineNoneBody": "未发现重复或多余的行程活动。",
@@ -1136,7 +1141,15 @@
       "when": "时间",
       "delete": "删除",
       "save": "保存更改",
-      "add": "添加活动"
+      "add": "添加活动",
+      "atTime": "指定时间",
+      "anytime": "随时",
+      "wishlist": "心愿单",
+      "wishlistHint": "已保存到心愿单。随时可以把它加到某一天。",
+      "day": "日期",
+      "whoFor": "给谁",
+      "everyone": "所有人",
+      "you": "你"
     },
     "defaults": {
       "hotelStay": "酒店住宿",
@@ -1157,8 +1170,16 @@
     "day": {
       "freeBody": "暂无安排。添加一个地点，或看看附近有什么。",
       "addStop": "添加地点",
-      "openMaps": "在地图中打开 {{place}}"
-    }
+      "openMaps": "在地图中打开 {{place}}",
+      "markDone": "将 {{title}} 标为完成",
+      "togetherAgain": "再次会合",
+      "splitUp_one": "{{from}}–{{to}} 分头行动 · {{names}} 的 {{count}} 项安排",
+      "splitUp_other": "{{from}}–{{to}} 分头行动 · {{names}} 的 {{count}} 项安排",
+      "freeBodyWishlist": "暂无安排。从心愿单里挑一个吧：",
+      "addToDay": "添加"
+    },
+    "anytime": "随时",
+    "wishlistTitle": "心愿单"
   },
   "places": {
     "nearYou": "你附近",

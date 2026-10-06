@@ -62,4 +62,6 @@ export interface LivePass {
     | { kind: "text"; label: string; title: string; sub?: string };
   /** Below it: the next item's time; null when nothing else is planned. */
   stub: { time: string; label: string; title: string } | null;
+  /** On trips with others: what someone else is doing right now, e.g. "Suhas · teamLab · until 18:00". */
+  meanwhile?: string;
 }

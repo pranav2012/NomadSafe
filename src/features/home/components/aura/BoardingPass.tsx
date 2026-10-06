@@ -270,7 +270,16 @@ export function BoardingPass({ data, palette: c, accent, gradient, isDark, emerg
               </View>
             ) : live && live.top.kind === "route" ? (
               <RouteRow from={live.top.from} to={live.top.to} fromName={live.top.fromName} toName={live.top.toName} icon={live.top.icon} palette={c} accent={accent} />
-            ) : (
+            ) : null}
+            {live?.meanwhile ? (
+              <View style={styles.meanwhile}>
+                <Icon name="users" size={12} color={c.textMuted} />
+                <Text numberOfLines={1} style={[styles.meanwhileText, { color: c.textMuted }]}>
+                  {live.meanwhile}
+                </Text>
+              </View>
+            ) : null}
+            {live ? null : (
               <RouteRow
                 from={code(from)}
                 to={many ? code(to) : null}
@@ -467,6 +476,8 @@ const styles = StyleSheet.create({
   nowLabel: { fontFamily: f.semibold, fontSize: 11.5, letterSpacing: 1, textTransform: "uppercase" },
   nowTitle: { fontFamily: f.semibold, fontSize: 22, letterSpacing: -0.4, marginTop: 2 },
   nowSub: { maxWidth: undefined, marginTop: 1 },
+  meanwhile: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 },
+  meanwhileText: { fontFamily: f.medium, fontSize: 12, flexShrink: 1 },
   of: { fontFamily: f.medium, fontSize: 16, marginBottom: 9, marginStart: 2 },
   meta: { fontFamily: f.semibold, fontSize: 14 },
   metaSub: { fontFamily: f.regular, fontSize: 12.5, marginTop: 2 },

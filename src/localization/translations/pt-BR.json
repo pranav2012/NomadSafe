@@ -78,7 +78,10 @@
       "tonightAt": "Hoje à noite: {{name}}",
       "showToday": "Ver o plano de hoje",
       "backToToday": "Voltar para hoje",
-      "backToDayOne": "Voltar para o dia 1"
+      "backToDayOne": "Voltar para o dia 1",
+      "todos_one": "{{count}} tarefa hoje",
+      "todos_other": "{{count}} tarefas hoje",
+      "meanwhile": "Enquanto isso: {{what}}"
     }
   },
   "settings": {
@@ -1117,7 +1120,9 @@
     "types": {
       "activity": "Atividade",
       "transit": "Trânsito",
-      "stay": "Estadia"
+      "stay": "Estadia",
+      "food": "Comida",
+      "note": "Nota"
     },
     "refineNoneTitle": "Eventos já refinados",
     "refineNoneBody": "Nenhum evento duplicado ou extra foi encontrado.",
@@ -1136,7 +1141,15 @@
       "when": "Quando",
       "delete": "Excluir",
       "save": "Salvar alterações",
-      "add": "Adicionar evento"
+      "add": "Adicionar evento",
+      "atTime": "Em um horário",
+      "anytime": "A qualquer hora",
+      "wishlist": "Lista de desejos",
+      "wishlistHint": "Salvo na sua lista de desejos. Adicione a um dia quando quiser.",
+      "day": "Dia",
+      "whoFor": "Para quem",
+      "everyone": "Todos",
+      "you": "Você"
     },
     "defaults": {
       "hotelStay": "Estadia no hotel",
@@ -1157,8 +1170,16 @@
     "day": {
       "freeBody": "Nada planejado. Adicione uma parada ou veja o que tem por perto.",
       "addStop": "Adicionar parada",
-      "openMaps": "Abrir {{place}} no Mapas"
-    }
+      "openMaps": "Abrir {{place}} no Mapas",
+      "markDone": "Marcar {{title}} como feito",
+      "togetherAgain": "Juntos de novo",
+      "splitUp_one": "Separados {{from}}–{{to}} · {{count}} plano para {{names}}",
+      "splitUp_other": "Separados {{from}}–{{to}} · {{count}} planos para {{names}}",
+      "freeBodyWishlist": "Nada planejado. Escolha algo da sua lista de desejos:",
+      "addToDay": "Adicionar"
+    },
+    "anytime": "A qualquer hora",
+    "wishlistTitle": "Lista de desejos"
   },
   "places": {
     "nearYou": "Perto de você",

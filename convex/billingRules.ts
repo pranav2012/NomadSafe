@@ -71,7 +71,7 @@ export function remainingQuota(used: number, kind: CloudAiKind): number {
 }
 
 /** Features that may use NomadSafe Cloud; must match the online tasks in src/modules/ai/policy.ts. */
-export const CLOUD_AI_TASKS = ["chat", "chatSummary", "tripBudget", "tripName", "itinerary", "voiceExpense"] as const;
+export const CLOUD_AI_TASKS = ["chat", "chatSummary", "tripBudget", "tripName", "voiceExpense"] as const;
 
 export type CloudAiTask = (typeof CLOUD_AI_TASKS)[number];
 

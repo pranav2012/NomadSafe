@@ -109,11 +109,23 @@ function mapShares(shares: ExpenseShare[] | undefined, map: Translate): ExpenseS
   return out;
 }
 
+function mapPeople(people: string[] | undefined, map: Translate): string[] | undefined | null {
+  if (!people) return undefined;
+  const out: string[] = [];
+  for (const person of people) {
+    const mapped = map(person);
+    if (mapped === null) return null;
+    out.push(mapped);
+  }
+  return out;
+}
+
 /** A local record in server form (member ids, no local trip id, raw text or Gmail id), or null if someone isn't a member yet. */
 function toServerRecord(kind: SharedKind, record: LocalRecord, map: Translate): unknown {
   if (kind === "event") {
     const { tripId: _trip, externalId: _external, sourceIds: _sources, ...rest } = stripRaw(record as TripEvent);
-    return rest;
+    const people = mapPeople(rest.people, map);
+    return people === null ? null : { ...rest, people };
   }
   if (kind === "settlement") {
     const { tripId: _trip, ...rest } = record as Settlement;
@@ -130,7 +142,11 @@ function toServerRecord(kind: SharedKind, record: LocalRecord, map: Translate): 
 
 /** The server form back in this phone's terms, or null if it mentions a member this phone doesn't know yet. */
 function toLocalRecord(kind: SharedKind, data: unknown, tripId: string, map: Translate): LocalRecord | null {
-  if (kind === "event") return { ...(data as TripEvent), tripId };
+  if (kind === "event") {
+    const event = data as TripEvent;
+    const people = mapPeople(event.people, map);
+    return people === null ? null : { ...event, tripId, people };
+  }
   if (kind === "settlement") {
     const settlement = data as Settlement;
     const from = map(settlement.from);
