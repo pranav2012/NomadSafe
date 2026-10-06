@@ -392,11 +392,28 @@ test("a month against your usual: up to 3 earlier months, only since your first 
     { amount: 200, date: at(2026, 8, 6), category: "travel" },
     { amount: 900, date: at(2026, 9, 5), category: "food" },
   ];
-  const result = insights.monthVsUsual(items, 0, now);
+  const result = insights.periodVsUsual(items, "month", 0, now);
   assert.equal(result.total, 900);
   assert.equal(result.usualTotal, 550);
   assert.deepEqual(result.categories, [{ category: "food", amount: 900, usual: 450 }]);
-  assert.equal(insights.monthVsUsual(items.slice(3), 0, now).usualTotal, null);
+  assert.equal(insights.periodVsUsual(items.slice(3), "month", 0, now).usualTotal, null);
+  assert.equal(insights.periodVsUsual(items, "year", 0, now).usualTotal, null);
+  const lastYear = [...items, { amount: 1000, date: at(2025, 5, 1), category: "food" }];
+  assert.equal(insights.periodVsUsual(lastYear, "year", 0, now).usualTotal, 1000);
+});
+
+test("a year by month, averaged over the months since the first spend", () => {
+  const now = new Date(2026, 9, 20);
+  const items = [
+    { amount: 300, date: at(2026, 7, 5) },
+    { amount: 600, date: at(2026, 8, 5) },
+    { amount: 900, date: at(2026, 9, 5) },
+  ];
+  const { months, average } = insights.yearByMonth(items, 0, now);
+  assert.equal(months.length, 10);
+  assert.deepEqual(months.slice(7).map((month) => month.total), [300, 600, 900]);
+  assert.equal(average, 600);
+  assert.equal(insights.yearByMonth(items, 1, now).months.length, 12);
 });
 
 test("weekend vs weekday pace needs a month of data and a real difference", () => {

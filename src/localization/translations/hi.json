@@ -1885,7 +1885,6 @@
     "placeCount_other": "{{count}} खर्च",
     "allSettledWith_one": "{{count}} व्यक्ति के साथ सब चुकता",
     "allSettledWith_other": "{{count}} लोगों के साथ सब चुकता",
-    "chooseMonth": "महीना दिखाएँ",
     "usualMonth": {
       "above": "आपके सामान्य महीने से {{pct}}% ज़्यादा",
       "below": "आपके सामान्य महीने से {{pct}}% कम",
@@ -1912,7 +1911,22 @@
       "leftPerDay_one": "{{count}} दिन के लिए {{amount}}/दिन बचा",
       "leftPerDay_other": "{{count}} दिनों के लिए {{amount}}/दिन बचा"
     },
-    "groupPlaces": "ग्रुप कहाँ खर्च करता है"
+    "groupPlaces": "ग्रुप कहाँ खर्च करता है",
+    "thisMonth": "इस महीने",
+    "thisYear": "इस साल",
+    "choosePeriod": "खर्च दिखाएँ",
+    "usualYear": {
+      "above": "{{year}} से {{pct}}% ज़्यादा",
+      "below": "{{year}} से {{pct}}% कम",
+      "about": "{{year}} जितना ही"
+    },
+    "vsYear": {
+      "above": "{{year}} से +{{pct}}%",
+      "below": "{{year}} से −{{pct}}%",
+      "about": "{{year}} जितना",
+      "new": "नया"
+    },
+    "monthlyAverage": "औसतन {{amount}} हर महीने"
   },
   "groupShare": {
     "deleteBlocked": "इस ग्रुप को हटाने से पहले जुड़े हुए सभी लोगों को हटाएँ। चाहें तो इसे आर्काइव करके अपनी सूची से छिपा सकते हैं।",

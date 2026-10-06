@@ -14,7 +14,7 @@ import { GroupActivity } from "@/features/expenses/components/GroupActivity";
 import { RecurringList } from "@/features/expenses/components/RecurringList";
 import { OWED, OWES } from "@/features/expenses/components/GroupBalances";
 import { SpendHero } from "@/features/expenses/components/SpendHero";
-import { BiggestSpends, MonthInsights, OverviewTrend } from "@/features/expenses/components/SpendInsights";
+import { BiggestSpends, OverviewTrend, PeriodInsights, type OverviewPeriod } from "@/features/expenses/components/SpendInsights";
 import { periodTotals } from "@/features/expenses/utils/spendInsights";
 import { usePlusGate } from "@/modules/billing";
 import { ExportSheet } from "@/features/expenses/components/ExportSheet";
@@ -40,8 +40,8 @@ export function MoneyOverview({
   const { t, locale, currency: homeCurrency, formatCurrency } = useLocalization();
   const groups = useTripsStore(selectMoneyGroups);
   const expenses = useExpensesStore((state) => state.expenses);
-  const [offset, setOffset] = useState(0);
-  const [monthsOpen, setMonthsOpen] = useState(false);
+  const [period, setPeriod] = useState<OverviewPeriod>({ kind: "month", offset: 0 });
+  const [pickerOpen, setPickerOpen] = useState(false);
   const plus = usePlusGate();
   const [showSettled, setShowSettled] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
@@ -49,23 +49,31 @@ export function MoneyOverview({
   const [now] = useState(() => Date.now());
   const money = (amount: number) => formatMoney(formatCurrency, amount, homeCurrency);
 
-  const range = periodRange("month", offset);
+  const range = periodRange(period.kind, period.offset);
   const inPeriod = useMemo(
     () => expenses.filter((expense) => inRange(expense.date, range)).map((expense) => ({ ...expense, amount: myShareOf(expense) })),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [expenses, offset],
+    [expenses, period],
   );
   const spendConversion = useConvertedExpenses(inPeriod, homeCurrency);
   const periodExpenses = useMemo(
     () => expenses.filter((expense) => inRange(expense.date, range)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [expenses, offset],
+    [expenses, period],
   );
   const mine: Expense[] = spendConversion.convertedExpenses.map(({ expense, amount }) => ({ ...expense, amount, currency: homeCurrency }));
   const spent = sumAmount(mine);
   const allMine = useMemo(() => expenses.map((expense) => ({ ...expense, amount: myShareOf(expense) })), [expenses]);
   const insightConversion = useConvertedExpenses(allMine, homeCurrency);
-  const insightItems = insightConversion.convertedExpenses.map(({ expense, amount }) => ({ id: expense.id, amount, date: expense.date, category: expense.category, merchant: expense.merchant }));
+  const groupName = (groupId: string | null) => groups.find((group) => group.id === groupId)?.name ?? t("money.notInGroup");
+  const insightItems = insightConversion.convertedExpenses.map(({ expense, amount }) => ({
+    id: expense.id,
+    amount,
+    date: expense.date,
+    category: expense.category,
+    merchant: expense.merchant,
+    group: groupName(expense.groupId),
+  }));
 
   const { rows, overall, ready: overallReady } = useOverallBalance();
   const isSettled = (row: GroupBalanceRow) => row.unconverted === 0 && Math.abs(row.net) < 0.005 && now - row.lastActivity > SETTLED_AFTER_MS;
@@ -73,35 +81,48 @@ export function MoneyOverview({
   const settled = rows.filter(isSettled);
   const loose = useMemo(() => expenses.filter((expense) => expense.groupId === null), [expenses]);
 
+  const thisYear = new Date().getFullYear();
   const monthLabel = (offsetBack: number) => {
     const start = periodRange("month", offsetBack).start;
-    return new Intl.DateTimeFormat(locale, { month: "long", year: start.getFullYear() === new Date().getFullYear() ? undefined : "numeric" }).format(start);
+    return new Intl.DateTimeFormat(locale, { month: "long", year: start.getFullYear() === thisYear ? undefined : "numeric" }).format(start);
   };
-  const periodLabel = monthLabel(offset);
-  const firstDate = expenses.reduce((min, expense) => Math.min(min, new Date(expense.date).getTime()), Date.now());
-  const monthsBack = Math.min(MAX_MONTHS_BACK, Math.max(0, (new Date().getFullYear() - new Date(firstDate).getFullYear()) * 12 + new Date().getMonth() - new Date(firstDate).getMonth()));
-  const monthTotals = periodTotals(insightItems, "month", monthsBack + 1);
-  const monthOptions: AuraOption<number>[] = monthTotals
-    .map((month) => ({ value: month.offset, label: monthLabel(month.offset), detail: month.total > 0 ? money(month.total) : undefined }))
-    .reverse();
+  const periodLabel = period.kind === "year" ? String(thisYear - period.offset) : monthLabel(period.offset);
+  const firstDate = new Date(expenses.reduce((min, expense) => Math.min(min, new Date(expense.date).getTime()), Date.now()));
+  const monthsBack = Math.min(MAX_MONTHS_BACK, Math.max(0, (thisYear - firstDate.getFullYear()) * 12 + new Date().getMonth() - firstDate.getMonth()));
+  const yearsBack = Math.max(0, thisYear - firstDate.getFullYear());
+  const totalOf = (kind: OverviewPeriod["kind"], offsetBack: number) => {
+    const total = periodTotals(insightItems, kind, 1, offsetBack)[0].total;
+    return total > 0 ? money(total) : undefined;
+  };
+  const key = (value: OverviewPeriod) => `${value.kind}:${value.offset}`;
+  const periodOptions: AuraOption<string>[] = [
+    { value: "month:0", label: t("money.thisMonth"), detail: totalOf("month", 0) },
+    { value: "year:0", label: t("money.thisYear"), detail: totalOf("year", 0) },
+    ...Array.from({ length: monthsBack }, (_, index) => ({ value: `month:${index + 1}`, label: monthLabel(index + 1), detail: totalOf("month", index + 1) })),
+    ...Array.from({ length: yearsBack }, (_, index) => ({ value: `year:${index + 1}`, label: String(thisYear - index - 1), detail: totalOf("year", index + 1) })),
+  ];
+  const pickPeriod = (value: string) => {
+    const [kind, offset] = value.split(":");
+    setPeriod({ kind: kind === "year" ? "year" : "month", offset: Number(offset) });
+  };
   const unconvertedLabel = spendConversion.unconvertedTotals.map((entry) => formatMoney(formatCurrency, entry.amount, entry.currency)).join(" + ");
 
   const row = ({ group }: GroupBalanceRow) => <GroupListRow key={group.id} group={group} onPress={() => onOpenGroup(group.id)} />;
 
   return (
     <View>
-      <PressableScale
-        onPress={() => setMonthsOpen(true)}
-        disabled={monthsBack === 0}
-        haptic={false}
-        accessibilityRole="button"
-        accessibilityHint={t("money.chooseMonth")}
-        style={styles.monthPicker}
-      >
+      <PressableScale onPress={() => setPickerOpen(true)} haptic={false} accessibilityRole="button" accessibilityHint={t("money.choosePeriod")} style={styles.monthPicker}>
         <Text style={[styles.monthLabel, { color: c.text, fontFamily: f.semibold }]}>{periodLabel}</Text>
-        {monthsBack > 0 ? <Icon name="chevronDown" size={16} color={c.textSoft} /> : null}
+        <Icon name="chevronDown" size={16} color={c.textSoft} />
       </PressableScale>
-      <AuraOptionSheet visible={monthsOpen} onClose={() => setMonthsOpen(false)} title={t("money.chooseMonth")} options={monthOptions} selected={offset} onSelect={setOffset} />
+      <AuraOptionSheet
+        visible={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        title={t("money.choosePeriod")}
+        options={periodOptions}
+        selected={key(period)}
+        onSelect={pickPeriod}
+      />
 
       <SpendHero
         label={t("money.yourSpending")}
@@ -118,19 +139,11 @@ export function MoneyOverview({
             : null
         }
       >
-        <OverviewTrend items={insightItems} offset={offset} />
+        <OverviewTrend items={insightItems} period={period} currency={homeCurrency} />
       </SpendHero>
 
-      <MonthInsights items={insightItems} currency={homeCurrency} offset={offset} />
-      <BiggestSpends
-        items={insightItems}
-        currency={homeCurrency}
-        offset={offset}
-        onOpen={(id) => {
-          const expense = expenses.find((entry) => entry.id === id);
-          if (expense) onOpenExpense(expense);
-        }}
-      />
+      <PeriodInsights items={insightItems} currency={homeCurrency} period={period} />
+      <BiggestSpends items={insightItems} currency={homeCurrency} period={period} />
 
       <AuraSection
         title={t("money.groupsAndTrips")}

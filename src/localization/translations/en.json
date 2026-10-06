@@ -1885,7 +1885,6 @@
     "placeCount_other": "{{count}} spends",
     "allSettledWith_one": "All settled up with {{count}} person",
     "allSettledWith_other": "All settled up with {{count}} people",
-    "chooseMonth": "Show month",
     "usualMonth": {
       "above": "{{pct}}% above your usual month",
       "below": "{{pct}}% below your usual month",
@@ -1912,7 +1911,22 @@
       "leftPerDay_one": "{{amount}}/day left for {{count}} day",
       "leftPerDay_other": "{{amount}}/day left for {{count}} days"
     },
-    "groupPlaces": "Where the group spends"
+    "groupPlaces": "Where the group spends",
+    "thisMonth": "This month",
+    "thisYear": "This year",
+    "choosePeriod": "Show spending for",
+    "usualYear": {
+      "above": "{{pct}}% more than {{year}}",
+      "below": "{{pct}}% less than {{year}}",
+      "about": "About the same as {{year}}"
+    },
+    "vsYear": {
+      "above": "+{{pct}}% vs {{year}}",
+      "below": "−{{pct}}% vs {{year}}",
+      "about": "Same as {{year}}",
+      "new": "New"
+    },
+    "monthlyAverage": "{{amount}} a month on average"
   },
   "groupShare": {
     "deleteBlocked": "Remove everyone who joined before deleting this group. You can archive it to hide it from your list instead.",

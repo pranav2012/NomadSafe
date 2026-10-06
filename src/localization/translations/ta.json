@@ -1885,7 +1885,6 @@
     "placeCount_other": "{{count}} செலவுகள்",
     "allSettledWith_one": "{{count}} நபருடன் அனைத்தும் தீர்க்கப்பட்டது",
     "allSettledWith_other": "{{count}} பேருடன் அனைத்தும் தீர்க்கப்பட்டது",
-    "chooseMonth": "மாதத்தைக் காட்டு",
     "usualMonth": {
       "above": "உங்கள் வழக்கமான மாதத்தை விட {{pct}}% அதிகம்",
       "below": "உங்கள் வழக்கமான மாதத்தை விட {{pct}}% குறைவு",
@@ -1912,7 +1911,22 @@
       "leftPerDay_one": "{{count}} நாளுக்கு {{amount}}/நாள் மீதம்",
       "leftPerDay_other": "{{count}} நாட்களுக்கு {{amount}}/நாள் மீதம்"
     },
-    "groupPlaces": "குழு எங்கே செலவிடுகிறது"
+    "groupPlaces": "குழு எங்கே செலவிடுகிறது",
+    "thisMonth": "இந்த மாதம்",
+    "thisYear": "இந்த ஆண்டு",
+    "choosePeriod": "செலவைக் காட்டு",
+    "usualYear": {
+      "above": "{{year}} ஐ விட {{pct}}% அதிகம்",
+      "below": "{{year}} ஐ விட {{pct}}% குறைவு",
+      "about": "{{year}} போலவே"
+    },
+    "vsYear": {
+      "above": "{{year}} உடன் +{{pct}}%",
+      "below": "{{year}} உடன் −{{pct}}%",
+      "about": "{{year}} போலவே",
+      "new": "புதியது"
+    },
+    "monthlyAverage": "சராசரியாக மாதம் {{amount}}"
   },
   "groupShare": {
     "deleteBlocked": "இந்தக் குழுவை நீக்கும் முன் சேர்ந்த அனைவரையும் நீக்கவும். அதற்குப் பதிலாக காப்பகப்படுத்தி பட்டியலில் இருந்து மறைக்கலாம்.",

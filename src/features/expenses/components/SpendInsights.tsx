@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { Canvas, Circle, Path, Skia } from "react-native-skia";
 import { AuraCard, Icon, PressableScale, useAura } from "@/atoms";
 import { auraCategoryColors, auraStatusAccent } from "@/constants/aura";
@@ -7,14 +7,19 @@ import { useLocalization } from "@/localization";
 import { usePlusGate } from "@/modules/billing";
 import { formatMoney } from "@/features/expenses/utils/money";
 import { inRange, periodRange } from "@/features/expenses/utils/myMoney";
-import { monthVsUsual, periodTotals, weekendRatio, type InsightItem } from "@/features/expenses/utils/spendInsights";
+import { periodTotals, periodVsUsual, weekendRatio, yearByMonth, type InsightItem } from "@/features/expenses/utils/spendInsights";
 import { OWED, OWES } from "@/features/expenses/components/GroupBalances";
 
 const SPARK_HEIGHT = 44;
 const DOT = 3.5;
 const MONTHS = 6;
-const BIGGEST = 3;
+const BIGGEST = 5;
 const ABOUT = 0.1;
+
+export interface OverviewPeriod {
+  kind: "month" | "year";
+  offset: number;
+}
 
 type Change = { key: "above" | "below" | "about" | "new"; pct: number };
 
@@ -23,16 +28,15 @@ function changeOf(amount: number, usual: number | null): Change | null {
   if (usual <= 0) return amount > 0 ? { key: "new", pct: 0 } : null;
   const change = amount / usual - 1;
   if (Math.abs(change) < ABOUT) return { key: "about", pct: 0 };
-  return {
-    key: change > 0 ? "above" : "below",
-    pct: Math.round(Math.abs(change) * 100),
-  };
+  return { key: change > 0 ? "above" : "below", pct: Math.round(Math.abs(change) * 100) };
 }
 
-/** Under the Overview total (Plus): six months up to the chosen one as a sparkline, and the month against your usual. */
-export function OverviewTrend({ items, offset }: { items: InsightItem[]; offset: number }) {
+const lastYearOf = (period: OverviewPeriod) => String(new Date().getFullYear() - period.offset - 1);
+
+/** Under the Overview total (Plus): a sparkline (six months up to the month, or the year's months) and how it compares with your usual or last year. */
+export function OverviewTrend({ items, period, currency }: { items: InsightItem[]; period: OverviewPeriod; currency: string }) {
   const { c, f } = useAura();
-  const { t, locale } = useLocalization();
+  const { t, locale, formatCurrency } = useLocalization();
   const plus = usePlusGate();
 
   if (!plus.isPlus) {
@@ -44,14 +48,25 @@ export function OverviewTrend({ items, offset }: { items: InsightItem[]; offset:
     );
   }
 
-  const points = periodTotals(items, "month", MONTHS, offset);
-  const { total, usualTotal } = monthVsUsual(items, offset);
+  const year = period.kind === "year" ? yearByMonth(items, period.offset) : null;
+  const points = year ? year.months : periodTotals(items, "month", MONTHS, period.offset);
+  const { total, usualTotal } = periodVsUsual(items, period.kind, period.offset);
   const change = changeOf(total, usualTotal);
   const label = (date: Date) => new Intl.DateTimeFormat(locale, { month: "short" }).format(date);
+  const lines = [
+    change && change.key !== "new"
+      ? {
+          icon: change.key === "above" ? ("trendUp" as const) : change.key === "below" ? ("trendDown" as const) : null,
+          color: change.key === "above" ? OWES : OWED,
+          text: period.kind === "year" ? t(`money.usualYear.${change.key}`, { pct: change.pct, year: lastYearOf(period) }) : t(`money.usualMonth.${change.key}`, { pct: change.pct }),
+        }
+      : null,
+    year && year.average > 0 ? { icon: "calendar" as const, color: c.textSoft, text: t("money.monthlyAverage", { amount: formatMoney(formatCurrency, year.average, currency) }) } : null,
+  ].filter((line) => line !== null);
 
   return (
     <View style={styles.trend}>
-      {points.some((point) => point.total > 0) ? (
+      {points.length > 1 && points.some((point) => point.total > 0) ? (
         <>
           <Sparkline values={points.map((point) => point.total)} color={auraStatusAccent.calm} accessibilityLabel={points.map((point) => label(point.start)).join(", ")} />
           <View style={styles.ends}>
@@ -60,12 +75,12 @@ export function OverviewTrend({ items, offset }: { items: InsightItem[]; offset:
           </View>
         </>
       ) : null}
-      {change && change.key !== "new" ? (
-        <View style={styles.compare}>
-          {change.key !== "about" ? <Icon name={change.key === "above" ? "trendUp" : "trendDown"} size={15} color={change.key === "above" ? OWES : OWED} /> : null}
-          <Text style={[styles.compareText, { color: c.textSoft, fontFamily: f.regular }]}>{t(`money.usualMonth.${change.key}`, { pct: change.pct })}</Text>
+      {lines.map((line) => (
+        <View key={line.text} style={styles.compare}>
+          {line.icon ? <Icon name={line.icon} size={15} color={line.color} /> : <View style={styles.iconSpace} />}
+          <Text style={[styles.compareText, { color: c.textSoft, fontFamily: f.regular }]}>{line.text}</Text>
         </View>
-      ) : null}
+      ))}
     </View>
   );
 }
@@ -115,17 +130,19 @@ function Sparkline({ values, color, accessibilityLabel }: { values: number[]; co
   );
 }
 
-/** The chosen month by category against your usual, plus your weekend pattern (Plus). */
-export function MonthInsights({ items, currency, offset }: { items: InsightItem[]; currency: string; offset: number }) {
+/** The month or year by category against your usual (or last year), plus your weekend pattern for the current period (Plus). */
+export function PeriodInsights({ items, currency, period }: { items: InsightItem[]; currency: string; period: OverviewPeriod }) {
   const { c, f } = useAura();
   const { t, formatCurrency } = useLocalization();
   const plus = usePlusGate();
   if (!plus.isPlus) return null;
-  const { categories } = monthVsUsual(items, offset);
-  const ratio = weekendRatio(items);
+  const { categories } = periodVsUsual(items, period.kind, period.offset);
+  const ratio = period.offset === 0 ? weekendRatio(items) : null;
   if (categories.length === 0 && ratio === null) return null;
   const money = (amount: number) => formatMoney(formatCurrency, amount, currency);
   const top = Math.max(...categories.map((entry) => entry.amount), 1);
+  const changeText = (change: Change) =>
+    period.kind === "year" ? t(`money.vsYear.${change.key}`, { pct: change.pct, year: lastYearOf(period) }) : t(`money.usual.${change.key}`, { pct: change.pct });
 
   return (
     <AuraCard style={styles.card}>
@@ -143,43 +160,21 @@ export function MonthInsights({ items, currency, offset }: { items: InsightItem[
               <Text style={[styles.categoryAmount, { color: c.text, fontFamily: f.medium }]}>{money(entry.amount)}</Text>
               {change ? (
                 <Text
-                  style={[
-                    styles.categoryChange,
-                    {
-                      color: change.key === "above" ? OWES : change.key === "below" ? OWED : c.textMuted,
-                      fontFamily: f.regular,
-                    },
-                  ]}
+                  style={[styles.categoryChange, { color: change.key === "above" ? OWES : change.key === "below" ? OWED : c.textMuted, fontFamily: f.regular }]}
                   numberOfLines={1}
                 >
-                  {t(`money.usual.${change.key}`, { pct: change.pct })}
+                  {changeText(change)}
                 </Text>
               ) : null}
             </View>
             <View style={[styles.categoryTrack, { backgroundColor: c.surfaceStrong }]}>
-              <View
-                style={[
-                  styles.categoryFill,
-                  {
-                    width: `${(entry.amount / top) * 100}%`,
-                    backgroundColor: color,
-                  },
-                ]}
-              />
+              <View style={[styles.categoryFill, { width: `${(entry.amount / top) * 100}%`, backgroundColor: color }]} />
             </View>
           </View>
         );
       })}
       {ratio !== null ? (
-        <View
-          style={[
-            styles.weekend,
-            categories.length > 0 && {
-              borderTopWidth: StyleSheet.hairlineWidth,
-              borderColor: c.hairline,
-            },
-          ]}
-        >
+        <View style={[styles.weekend, categories.length > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderColor: c.hairline }]}>
           <Icon name="calendar" size={15} color={c.textSoft} />
           <Text style={[styles.weekendText, { color: c.textSoft, fontFamily: f.regular }]}>
             {ratio > 1 ? t("money.weekendMore", { ratio: ratio.toFixed(1) }) : t("money.weekdayMore", { ratio: (1 / ratio).toFixed(1) })}
@@ -190,15 +185,15 @@ export function MonthInsights({ items, currency, offset }: { items: InsightItem[
   );
 }
 
-/** Your largest spends (your share) in the chosen month; each opens the spend (Plus). */
-export function BiggestSpends({ items, currency, offset, onOpen }: { items: InsightItem[]; currency: string; offset: number; onOpen: (id: string) => void }) {
+/** Your largest spends (your share) in the chosen period as a sideways row of small cards: amount, name, where and when (Plus). */
+export function BiggestSpends({ items, currency, period }: { items: InsightItem[]; currency: string; period: OverviewPeriod }) {
   const { c, f } = useAura();
   const { t, locale, formatCurrency } = useLocalization();
   const plus = usePlusGate();
   if (!plus.isPlus) return null;
-  const month = periodRange("month", offset);
+  const range = periodRange(period.kind, period.offset);
   const biggest = items
-    .filter((item) => item.id && item.amount > 0 && inRange(item.date, month))
+    .filter((item) => item.amount > 0 && inRange(item.date, range))
     .sort((a, b) => b.amount - a.amount)
     .slice(0, BIGGEST);
   if (biggest.length === 0) return null;
@@ -206,43 +201,39 @@ export function BiggestSpends({ items, currency, offset, onOpen }: { items: Insi
   const day = (date: string) => new Intl.DateTimeFormat(locale, { month: "short", day: "numeric" }).format(new Date(date));
 
   return (
-    <AuraCard style={styles.card}>
-      <Text style={[styles.cardTitle, { color: c.textMuted, fontFamily: f.medium }]}>{t("money.biggestSpends")}</Text>
-      {biggest.map((item, index) => (
-        <PressableScale
-          key={item.id}
-          haptic={false}
-          pressedScale={0.98}
-          onPress={() => item.id && onOpen(item.id)}
-          accessibilityRole="button"
-          style={[
-            styles.spend,
-            index > 0 && {
-              borderTopWidth: StyleSheet.hairlineWidth,
-              borderColor: c.hairline,
-            },
-          ]}
-        >
-          <View style={styles.flex}>
-            <Text style={[styles.categoryName, { color: c.text, fontFamily: f.regular }]} numberOfLines={1}>
+    <View style={styles.biggest}>
+      <Text style={[styles.biggestTitle, { color: c.textMuted, fontFamily: f.medium }]}>{t("money.biggestSpends")}</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.biggestScroll} contentContainerStyle={styles.biggestRow}>
+        {biggest.map((item, index) => (
+          <View
+            key={item.id ?? index}
+            accessible
+            accessibilityLabel={[money(item.amount), item.merchant, item.group, day(item.date)].filter(Boolean).join(", ")}
+            style={[styles.spendCard, { backgroundColor: c.card, borderColor: c.hairline }]}
+          >
+            <Text style={[styles.spendAmount, { color: c.text, fontFamily: f.semibold }]} numberOfLines={1}>
+              {money(item.amount)}
+            </Text>
+            <Text style={[styles.spendName, { color: c.text, fontFamily: f.regular }]} numberOfLines={1}>
               {item.merchant || t(`expenses.category.${item.category}`)}
             </Text>
-            <Text style={[styles.spendMeta, { color: c.textMuted, fontFamily: f.regular }]}>{day(item.date)}</Text>
+            <Text style={[styles.spendMeta, { color: c.textMuted, fontFamily: f.regular }]} numberOfLines={1}>
+              {[item.group, day(item.date)].filter(Boolean).join(" · ")}
+            </Text>
           </View>
-          <Text style={[styles.categoryAmount, { color: c.text, fontFamily: f.medium }]}>{money(item.amount)}</Text>
-        </PressableScale>
-      ))}
-    </AuraCard>
+        ))}
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
   trend: { marginTop: 16, gap: 6 },
   spark: { height: SPARK_HEIGHT },
   ends: { flexDirection: "row", justifyContent: "space-between" },
   end: { fontSize: 11.5 },
   compare: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 },
+  iconSpace: { width: 15 },
   compareText: { flex: 1, fontSize: 13.5, lineHeight: 19 },
   locked: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 12 },
   lockedText: { fontSize: 13 },
@@ -250,30 +241,20 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 13.5, marginBottom: 6 },
   category: { paddingVertical: 7, gap: 7 },
   categoryRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  categoryTrack: {
-    height: 4,
-    borderRadius: 2,
-    marginLeft: 18,
-    overflow: "hidden",
-  },
+  categoryTrack: { height: 4, borderRadius: 2, marginLeft: 18, overflow: "hidden" },
   categoryFill: { height: 4, borderRadius: 2 },
   dot: { width: 8, height: 8, borderRadius: 4 },
   categoryName: { flex: 1, fontSize: 14.5 },
   categoryAmount: { fontSize: 14.5, fontVariant: ["tabular-nums"] },
   categoryChange: { fontSize: 12.5, minWidth: 92, textAlign: "right" },
-  weekend: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingTop: 12,
-    marginTop: 6,
-  },
+  weekend: { flexDirection: "row", alignItems: "center", gap: 8, paddingTop: 12, marginTop: 6 },
   weekendText: { flex: 1, fontSize: 13.5, lineHeight: 19 },
-  spend: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingVertical: 10,
-  },
-  spendMeta: { fontSize: 12, marginTop: 2 },
+  biggest: { marginTop: 22 },
+  biggestTitle: { fontSize: 13.5, marginBottom: 10 },
+  biggestScroll: { marginHorizontal: -20 },
+  biggestRow: { paddingHorizontal: 20, gap: 10 },
+  spendCard: { width: 148, borderRadius: 18, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 14, paddingVertical: 12, gap: 3 },
+  spendAmount: { fontSize: 17, letterSpacing: -0.3, fontVariant: ["tabular-nums"] },
+  spendName: { fontSize: 13.5 },
+  spendMeta: { fontSize: 12 },
 });

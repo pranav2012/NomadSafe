@@ -1885,7 +1885,6 @@
     "placeCount_other": "{{count}} مصروفات",
     "allSettledWith_one": "تمت التسوية مع شخص واحد",
     "allSettledWith_other": "تمت التسوية مع {{count}} أشخاص",
-    "chooseMonth": "عرض الشهر",
     "usualMonth": {
       "above": "أعلى بنسبة {{pct}}% من شهرك المعتاد",
       "below": "أقل بنسبة {{pct}}% من شهرك المعتاد",
@@ -1912,7 +1911,22 @@
       "leftPerDay_one": "يتبقى {{amount}}/يوم ليوم واحد",
       "leftPerDay_other": "يتبقى {{amount}}/يوم لـ{{count}} أيام"
     },
-    "groupPlaces": "أين تنفق المجموعة"
+    "groupPlaces": "أين تنفق المجموعة",
+    "thisMonth": "هذا الشهر",
+    "thisYear": "هذا العام",
+    "choosePeriod": "عرض الإنفاق لـ",
+    "usualYear": {
+      "above": "أكثر بنسبة {{pct}}% من {{year}}",
+      "below": "أقل بنسبة {{pct}}% من {{year}}",
+      "about": "تقريبًا مثل {{year}}"
+    },
+    "vsYear": {
+      "above": "+{{pct}}% مقابل {{year}}",
+      "below": "−{{pct}}% مقابل {{year}}",
+      "about": "مثل {{year}}",
+      "new": "جديد"
+    },
+    "monthlyAverage": "{{amount}} شهريًا في المتوسط"
   },
   "groupShare": {
     "deleteBlocked": "أزل كل من انضم قبل حذف هذه المجموعة. يمكنك أرشفتها بدلًا من ذلك لإخفائها من قائمتك.",

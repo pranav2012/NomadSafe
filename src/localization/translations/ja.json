@@ -1885,7 +1885,6 @@
     "placeCount_other": "{{count}}件",
     "allSettledWith_one": "{{count}}人と精算済み",
     "allSettledWith_other": "{{count}}人と精算済み",
-    "chooseMonth": "月を表示",
     "usualMonth": {
       "above": "いつもの月より{{pct}}%多い",
       "below": "いつもの月より{{pct}}%少ない",
@@ -1912,7 +1911,22 @@
       "leftPerDay_one": "残り{{count}}日、1日{{amount}}",
       "leftPerDay_other": "残り{{count}}日、1日{{amount}}"
     },
-    "groupPlaces": "グループの使い道"
+    "groupPlaces": "グループの使い道",
+    "thisMonth": "今月",
+    "thisYear": "今年",
+    "choosePeriod": "表示する期間",
+    "usualYear": {
+      "above": "{{year}}年より{{pct}}%多い",
+      "below": "{{year}}年より{{pct}}%少ない",
+      "about": "{{year}}年とほぼ同じ"
+    },
+    "vsYear": {
+      "above": "{{year}}年比 +{{pct}}%",
+      "below": "{{year}}年比 −{{pct}}%",
+      "about": "{{year}}年並み",
+      "new": "新規"
+    },
+    "monthlyAverage": "平均 月{{amount}}"
   },
   "groupShare": {
     "deleteBlocked": "このグループを削除する前に、参加した人をすべて外してください。代わりにアーカイブして一覧から隠すこともできます。",

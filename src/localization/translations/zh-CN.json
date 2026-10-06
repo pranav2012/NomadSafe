@@ -1885,7 +1885,6 @@
     "placeCount_other": "{{count}} 笔",
     "allSettledWith_one": "已与 {{count}} 人结清",
     "allSettledWith_other": "已与 {{count}} 人结清",
-    "chooseMonth": "显示月份",
     "usualMonth": {
       "above": "比平常月份多 {{pct}}%",
       "below": "比平常月份少 {{pct}}%",
@@ -1912,7 +1911,22 @@
       "leftPerDay_one": "剩余 {{count}} 天，每天 {{amount}}",
       "leftPerDay_other": "剩余 {{count}} 天，每天 {{amount}}"
     },
-    "groupPlaces": "群组花在哪里"
+    "groupPlaces": "群组花在哪里",
+    "thisMonth": "本月",
+    "thisYear": "今年",
+    "choosePeriod": "查看支出",
+    "usualYear": {
+      "above": "比 {{year}} 年多 {{pct}}%",
+      "below": "比 {{year}} 年少 {{pct}}%",
+      "about": "与 {{year}} 年差不多"
+    },
+    "vsYear": {
+      "above": "较 {{year}} +{{pct}}%",
+      "below": "较 {{year}} −{{pct}}%",
+      "about": "与 {{year}} 相当",
+      "new": "新增"
+    },
+    "monthlyAverage": "平均每月 {{amount}}"
   },
   "groupShare": {
     "deleteBlocked": "删除此群组前，请先移除所有已加入的人。你也可以归档它，从列表中隐藏。",

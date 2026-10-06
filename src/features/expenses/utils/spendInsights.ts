@@ -7,6 +7,7 @@ export interface InsightItem {
   date: string;
   category: string;
   merchant?: string;
+  group?: string;
 }
 
 export interface CategoryAmount {
@@ -63,25 +64,43 @@ export interface CategoryVsUsual {
   usual: number | null;
 }
 
-/**
- * The chosen month's spend by category against your usual month: the average of up to 3 months
- * before it, counting only months since your first spend (so a new user isn't compared with empty months).
- */
-export function monthVsUsual(items: InsightItem[], offset: number, now: Date = new Date()) {
-  const month = periodRange("month", offset, now);
-  const current = items.filter((item) => inRange(item.date, month));
-  const first = items.reduce<number | null>((min, item) => {
+function firstTime(items: { date: string }[]): number | null {
+  return items.reduce<number | null>((min, item) => {
     const time = new Date(item.date).getTime();
     return min === null || time < min ? time : min;
   }, null);
-  const base = [1, 2, 3]
-    .map((back) => periodRange("month", offset + back, now))
+}
+
+/**
+ * A month or year by category against your usual: for a month, the average of up to 3 months before it; for a year,
+ * the year before. Only periods since your first spend count, so a new user isn't compared with empty ones.
+ */
+export function periodVsUsual(items: InsightItem[], period: "month" | "year", offset: number, now: Date = new Date()) {
+  const current = items.filter((item) => inRange(item.date, periodRange(period, offset, now)));
+  const first = firstTime(items);
+  const base = (period === "month" ? [1, 2, 3] : [1])
+    .map((back) => periodRange(period, offset + back, now))
     .filter((range) => first !== null && range.end.getTime() > first);
   const baseItems = items.filter((item) => base.some((range) => inRange(item.date, range)));
   const usualOf = (category: string | null) =>
     base.length === 0 ? null : sum(baseItems.filter((item) => category === null || item.category === category)) / base.length;
   const categories: CategoryVsUsual[] = byCategory(current).map((entry) => ({ ...entry, usual: usualOf(entry.category) }));
   return { total: sum(current), usualTotal: usualOf(null), categories };
+}
+
+/** A year's months up to this month (oldest first), and its monthly average over the months since your first spend. */
+export function yearByMonth(items: { amount: number; date: string }[], offset: number, now: Date = new Date()) {
+  const year = now.getFullYear() - offset;
+  const lastMonth = offset === 0 ? now.getMonth() : 11;
+  const months = Array.from({ length: lastMonth + 1 }, (_, month) => {
+    const start = new Date(year, month, 1);
+    const range = { start, end: new Date(year, month + 1, 1) };
+    return { start, total: sum(items.filter((item) => inRange(item.date, range))) };
+  });
+  const first = firstTime(items);
+  const counted = months.filter((month) => first !== null && new Date(month.start.getFullYear(), month.start.getMonth() + 1, 1).getTime() > first).length;
+  const total = sum(months.map((month) => ({ amount: month.total })));
+  return { months, average: counted > 0 ? total / counted : 0 };
 }
 
 /** How much more per day you spend on weekends than weekdays (or the reverse, below 1) over the last 90 days; null when there's too little data or no real difference. */

@@ -1885,7 +1885,6 @@
     "placeCount_other": "{{count}} dépenses",
     "allSettledWith_one": "Tout est réglé avec {{count}} personne",
     "allSettledWith_other": "Tout est réglé avec {{count}} personnes",
-    "chooseMonth": "Afficher le mois",
     "usualMonth": {
       "above": "{{pct}} % au-dessus de votre mois habituel",
       "below": "{{pct}} % en dessous de votre mois habituel",
@@ -1912,7 +1911,22 @@
       "leftPerDay_one": "Il reste {{amount}}/jour pour {{count}} jour",
       "leftPerDay_other": "Il reste {{amount}}/jour pour {{count}} jours"
     },
-    "groupPlaces": "Où le groupe dépense"
+    "groupPlaces": "Où le groupe dépense",
+    "thisMonth": "Ce mois-ci",
+    "thisYear": "Cette année",
+    "choosePeriod": "Afficher les dépenses de",
+    "usualYear": {
+      "above": "{{pct}} % de plus qu'en {{year}}",
+      "below": "{{pct}} % de moins qu'en {{year}}",
+      "about": "À peu près comme en {{year}}"
+    },
+    "vsYear": {
+      "above": "+{{pct}} % vs {{year}}",
+      "below": "−{{pct}} % vs {{year}}",
+      "about": "Comme {{year}}",
+      "new": "Nouveau"
+    },
+    "monthlyAverage": "{{amount}} par mois en moyenne"
   },
   "groupShare": {
     "deleteBlocked": "Retire toutes les personnes qui ont rejoint avant de supprimer ce groupe. Tu peux aussi l'archiver pour le masquer de ta liste.",

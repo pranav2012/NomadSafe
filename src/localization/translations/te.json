@@ -1885,7 +1885,6 @@
     "placeCount_other": "{{count}} ఖర్చులు",
     "allSettledWith_one": "{{count}} వ్యక్తితో అంతా సెటిల్ అయింది",
     "allSettledWith_other": "{{count}} మందితో అంతా సెటిల్ అయింది",
-    "chooseMonth": "నెలను చూపించు",
     "usualMonth": {
       "above": "మీ సాధారణ నెల కంటే {{pct}}% ఎక్కువ",
       "below": "మీ సాధారణ నెల కంటే {{pct}}% తక్కువ",
@@ -1912,7 +1911,22 @@
       "leftPerDay_one": "{{count}} రోజుకు {{amount}}/రోజు మిగిలింది",
       "leftPerDay_other": "{{count}} రోజులకు {{amount}}/రోజు మిగిలింది"
     },
-    "groupPlaces": "గ్రూప్ ఎక్కడ ఖర్చు చేస్తుంది"
+    "groupPlaces": "గ్రూప్ ఎక్కడ ఖర్చు చేస్తుంది",
+    "thisMonth": "ఈ నెల",
+    "thisYear": "ఈ సంవత్సరం",
+    "choosePeriod": "ఖర్చు చూపించు",
+    "usualYear": {
+      "above": "{{year}} కంటే {{pct}}% ఎక్కువ",
+      "below": "{{year}} కంటే {{pct}}% తక్కువ",
+      "about": "{{year}} అంతే"
+    },
+    "vsYear": {
+      "above": "{{year}} తో +{{pct}}%",
+      "below": "{{year}} తో −{{pct}}%",
+      "about": "{{year}} అంతే",
+      "new": "కొత్తది"
+    },
+    "monthlyAverage": "సగటున నెలకు {{amount}}"
   },
   "groupShare": {
     "deleteBlocked": "ఈ గ్రూప్‌ను తొలగించే ముందు చేరిన అందరినీ తీసివేయండి. బదులుగా ఆర్కైవ్ చేసి జాబితా నుంచి దాచవచ్చు.",

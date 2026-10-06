@@ -1885,7 +1885,6 @@
     "placeCount_other": "{{count}} ചെലവുകൾ",
     "allSettledWith_one": "{{count}} ആളുമായി എല്ലാം തീർത്തു",
     "allSettledWith_other": "{{count}} പേരുമായി എല്ലാം തീർത്തു",
-    "chooseMonth": "മാസം കാണിക്കുക",
     "usualMonth": {
       "above": "സാധാരണ മാസത്തേക്കാൾ {{pct}}% കൂടുതൽ",
       "below": "സാധാരണ മാസത്തേക്കാൾ {{pct}}% കുറവ്",
@@ -1912,7 +1911,22 @@
       "leftPerDay_one": "{{count}} ദിവസത്തേക്ക് {{amount}}/ദിവസം ബാക്കി",
       "leftPerDay_other": "{{count}} ദിവസത്തേക്ക് {{amount}}/ദിവസം ബാക്കി"
     },
-    "groupPlaces": "ഗ്രൂപ്പ് എവിടെ ചെലവാക്കുന്നു"
+    "groupPlaces": "ഗ്രൂപ്പ് എവിടെ ചെലവാക്കുന്നു",
+    "thisMonth": "ഈ മാസം",
+    "thisYear": "ഈ വർഷം",
+    "choosePeriod": "ചെലവ് കാണിക്കുക",
+    "usualYear": {
+      "above": "{{year}} നേക്കാൾ {{pct}}% കൂടുതൽ",
+      "below": "{{year}} നേക്കാൾ {{pct}}% കുറവ്",
+      "about": "{{year}} ലേതു പോലെ"
+    },
+    "vsYear": {
+      "above": "{{year}} നെ അപേക്ഷിച്ച് +{{pct}}%",
+      "below": "{{year}} നെ അപേക്ഷിച്ച് −{{pct}}%",
+      "about": "{{year}} പോലെ",
+      "new": "പുതിയത്"
+    },
+    "monthlyAverage": "ശരാശരി മാസം {{amount}}"
   },
   "groupShare": {
     "deleteBlocked": "ഈ ഗ്രൂപ്പ് ഇല്ലാതാക്കുന്നതിന് മുമ്പ് ചേർന്ന എല്ലാവരെയും നീക്കം ചെയ്യുക. പകരം ആർക്കൈവ് ചെയ്ത് ലിസ്റ്റിൽ നിന്ന് മറയ്ക്കാം.",

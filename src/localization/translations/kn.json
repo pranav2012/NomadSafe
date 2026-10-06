@@ -1885,7 +1885,6 @@
     "placeCount_other": "{{count}} ಖರ್ಚುಗಳು",
     "allSettledWith_one": "{{count}} ವ್ಯಕ್ತಿಯೊಂದಿಗೆ ಎಲ್ಲಾ ಚುಕ್ತಾ",
     "allSettledWith_other": "{{count}} ಜನರೊಂದಿಗೆ ಎಲ್ಲಾ ಚುಕ್ತಾ",
-    "chooseMonth": "ತಿಂಗಳು ತೋರಿಸಿ",
     "usualMonth": {
       "above": "ನಿಮ್ಮ ಸಾಮಾನ್ಯ ತಿಂಗಳಿಗಿಂತ {{pct}}% ಹೆಚ್ಚು",
       "below": "ನಿಮ್ಮ ಸಾಮಾನ್ಯ ತಿಂಗಳಿಗಿಂತ {{pct}}% ಕಡಿಮೆ",
@@ -1912,7 +1911,22 @@
       "leftPerDay_one": "{{count}} ದಿನಕ್ಕೆ {{amount}}/ದಿನ ಉಳಿದಿದೆ",
       "leftPerDay_other": "{{count}} ದಿನಗಳಿಗೆ {{amount}}/ದಿನ ಉಳಿದಿದೆ"
     },
-    "groupPlaces": "ಗುಂಪು ಎಲ್ಲಿ ಖರ್ಚು ಮಾಡುತ್ತದೆ"
+    "groupPlaces": "ಗುಂಪು ಎಲ್ಲಿ ಖರ್ಚು ಮಾಡುತ್ತದೆ",
+    "thisMonth": "ಈ ತಿಂಗಳು",
+    "thisYear": "ಈ ವರ್ಷ",
+    "choosePeriod": "ಖರ್ಚು ತೋರಿಸಿ",
+    "usualYear": {
+      "above": "{{year}} ಕ್ಕಿಂತ {{pct}}% ಹೆಚ್ಚು",
+      "below": "{{year}} ಕ್ಕಿಂತ {{pct}}% ಕಡಿಮೆ",
+      "about": "{{year}} ರಷ್ಟೇ"
+    },
+    "vsYear": {
+      "above": "{{year}} ಕ್ಕೆ +{{pct}}%",
+      "below": "{{year}} ಕ್ಕೆ −{{pct}}%",
+      "about": "{{year}} ರಷ್ಟೇ",
+      "new": "ಹೊಸದು"
+    },
+    "monthlyAverage": "ಸರಾಸರಿ ತಿಂಗಳಿಗೆ {{amount}}"
   },
   "groupShare": {
     "deleteBlocked": "ಈ ಗುಂಪನ್ನು ಅಳಿಸುವ ಮೊದಲು ಸೇರಿದ ಎಲ್ಲರನ್ನೂ ತೆಗೆದುಹಾಕಿ. ಬದಲಿಗೆ ಆರ್ಕೈವ್ ಮಾಡಿ ಪಟ್ಟಿಯಿಂದ ಮರೆಮಾಡಬಹುದು.",

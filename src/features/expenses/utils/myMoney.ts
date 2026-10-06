@@ -26,10 +26,14 @@ export function myLentOf(expense: MoneyExpense): number | null {
   return myPaidOf(expense) - myShareOf(expense);
 }
 
-export type SpendPeriod = "week" | "month";
+export type SpendPeriod = "week" | "month" | "year";
 
-/** Week (Monday first) or month `offset` periods back from `now`; end is exclusive. */
+/** Week (Monday first), month or year `offset` periods back from `now`; end is exclusive. */
 export function periodRange(period: SpendPeriod, offset: number, now: Date = new Date()): { start: Date; end: Date } {
+  if (period === "year") {
+    const start = new Date(now.getFullYear() - offset, 0, 1);
+    return { start, end: new Date(start.getFullYear() + 1, 0, 1) };
+  }
   if (period === "month") {
     const start = new Date(now.getFullYear(), now.getMonth() - offset, 1);
     return { start, end: new Date(start.getFullYear(), start.getMonth() + 1, 1) };

@@ -1885,7 +1885,6 @@
     "placeCount_other": "{{count}}건",
     "allSettledWith_one": "{{count}}명과 모두 정산됨",
     "allSettledWith_other": "{{count}}명과 모두 정산됨",
-    "chooseMonth": "월 선택",
     "usualMonth": {
       "above": "평소 한 달보다 {{pct}}% 많음",
       "below": "평소 한 달보다 {{pct}}% 적음",
@@ -1912,7 +1911,22 @@
       "leftPerDay_one": "{{count}}일 동안 하루 {{amount}} 남음",
       "leftPerDay_other": "{{count}}일 동안 하루 {{amount}} 남음"
     },
-    "groupPlaces": "그룹 지출처"
+    "groupPlaces": "그룹 지출처",
+    "thisMonth": "이번 달",
+    "thisYear": "올해",
+    "choosePeriod": "지출 기간",
+    "usualYear": {
+      "above": "{{year}}년보다 {{pct}}% 많음",
+      "below": "{{year}}년보다 {{pct}}% 적음",
+      "about": "{{year}}년과 비슷함"
+    },
+    "vsYear": {
+      "above": "{{year}}년 대비 +{{pct}}%",
+      "below": "{{year}}년 대비 −{{pct}}%",
+      "about": "{{year}}년과 비슷",
+      "new": "새 항목"
+    },
+    "monthlyAverage": "월평균 {{amount}}"
   },
   "groupShare": {
     "deleteBlocked": "이 그룹을 삭제하기 전에 참여한 사람을 모두 내보내세요. 대신 보관하면 목록에서 숨길 수 있어요.",
