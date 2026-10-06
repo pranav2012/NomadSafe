@@ -8,7 +8,7 @@ import { tripRecordKindValidator } from "./schema";
 import { MAX_CLIENT_ID } from "./sync";
 import { assertMaxLength, clampClientTime, newInviteCode, normalizeInviteCode, stripEmailNote } from "./securityRules";
 import { NOTIFY_TITLE_CHARS, queueTripNotification } from "./tripNotifications";
-import { requireUser } from "./users";
+import { getAuthenticatedUser, requireUser } from "./users";
 
 const MAX_BATCH = 100;
 const MAX_RECORD_BYTES = 64 * 1024;
@@ -153,11 +153,16 @@ export const shareTrip = mutation({
   },
 });
 
-/** Every shared trip the caller belongs to, with members; reactive so phones learn about changes live. */
+/**
+ * Every shared trip the caller belongs to, with members; reactive so phones learn about changes live.
+ * Null (not an empty list, which would read as "left every trip") while the client is between auth
+ * tokens, e.g. reconnecting after a deploy.
+ */
 export const myTrips = query({
   args: {},
   handler: async (ctx) => {
-    const user = await requireUser(ctx);
+    const user = await getAuthenticatedUser(ctx);
+    if (!user) return null;
     const memberships = await ctx.db
       .query("tripMembers")
       .withIndex("by_user", (q) => q.eq("userId", user.id))

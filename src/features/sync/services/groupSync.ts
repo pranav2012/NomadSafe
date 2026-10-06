@@ -487,7 +487,7 @@ export function startGroupSync(userId: string) {
   const onList = () => {
     let list: ServerTrip[] | undefined;
     try {
-      list = watch.localQueryResult() as ServerTrip[] | undefined;
+      list = (watch.localQueryResult() as ServerTrip[] | null | undefined) ?? undefined;
     } catch (err) {
       logger.warn("group-sync", "trip list failed", err);
       return;
