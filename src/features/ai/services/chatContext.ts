@@ -1,8 +1,8 @@
-import { findMoneyGroup, isTrip, selectMoneyGroups, useTripsStore, type Group, type MoneyGroup, type Trip } from "@/features/trips/store/tripsStore";
+import { isArchivedGroup, findMoneyGroup, isTrip, selectMoneyGroups, useTripsStore, type Group, type MoneyGroup, type Trip } from "@/features/trips/store/tripsStore";
 import { useAiContextStore } from "@/features/ai/store/aiContextStore";
 import { myShareOf, periodRange, inRange } from "@/features/expenses/utils/myMoney";
 import { toLocalDayKey } from "@/features/expenses/utils/dateKey";
-import { computeNetBalances, isSplitExpense, roundMoney, SELF_ID, simplifyDebts } from "@/features/expenses/utils/split";
+import { computeNetBalances, isSplitExpense, pairwiseDebts, roundMoney, SELF_ID, simplifyDebts } from "@/features/expenses/utils/split";
 import { getDefaultCurrency } from "@/localization";
 import { useExpensesStore } from "@/features/expenses/store/expensesStore";
 import {
@@ -137,11 +137,11 @@ async function balanceLines(group: MoneyGroup, locale: string): Promise<string[]
   const { net, unconverted } = computeNetBalances(split, payments, (_, currency, date) => rate(currency, date));
   const money = (amount: number) => formatMoney(amount, group.currency, locale);
   const mine = roundMoney(net.get(SELF_ID) ?? 0, group.currency);
-  const transfers = simplifyDebts(net, group.currency);
+  const transfers = group.smartSplit === false ? pairwiseDebts(split, payments, (_, currency, date) => rate(currency, date), group.currency) : simplifyDebts(net, group.currency);
   const lines = [
     `- Your balance: ${mine > 0 ? `you are owed ${money(mine)}` : mine < 0 ? `you owe ${money(-mine)}` : "settled up"}`,
     transfers.length > 0
-      ? `- Who pays whom to settle up (already simplified): ${transfers.map((transfer) => `${who(transfer.from)} pays ${who(transfer.to)} ${money(transfer.amount)}`).join("; ")}`
+      ? `- Who pays whom to settle up${group.smartSplit === false ? " (as is, pair by pair)" : " (already simplified)"}: ${transfers.map((transfer) => `${who(transfer.from)} pays ${who(transfer.to)} ${money(transfer.amount)}`).join("; ")}`
       : "- Everyone is settled up",
   ];
   if (unconverted > 0) lines.push(`- ${unconverted} entry(ies) left out of balances: exchange rate unavailable`);
@@ -222,7 +222,7 @@ async function overviewSnapshot(now: Date) {
   if (bySource.size > 0) {
     lines.push(`- Where it went this month: ${[...bySource.entries()].sort((a, b) => b[1] - a[1]).map(([name, amount]) => `${name} ${money(amount)}`).join("; ")}`);
   }
-  for (const group of groups.filter((item) => !item.shared?.archived)) {
+  for (const group of groups.filter((item) => !isArchivedGroup(item))) {
     const balance = await balanceLines(group, locale);
     lines.push(`- ${isTrip(group) ? "Trip" : "Group"} "${group.name}" (${group.currency}): ${balance.map((line) => line.replace(/^- /, "")).join(" | ")}`);
   }

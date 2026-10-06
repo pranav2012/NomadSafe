@@ -2,7 +2,7 @@ import { translate } from "@/localization/translate";
 import { logger } from "@/modules/logger";
 import { notifications } from "@/modules/notifications";
 import { storage } from "@/modules/storage";
-import type { Trip } from "@/features/trips/store/tripsStore";
+import { isArchivedGroup, type Trip } from "@/features/trips/store/tripsStore";
 import { addDays, fromDateKey } from "@/features/trips/utils/dates";
 import { isRecapFinished } from "../store/recapStore";
 
@@ -39,7 +39,7 @@ export async function syncRecapNotifications(trips: Trip[], finished: Record<str
     if (granted) {
       for (const trip of trips) {
         const at = recapNotificationTime(trip);
-        if (at > now && !isRecapFinished(trip, finished) && !trip.shared?.archived) wanted.set(trip.id, { trip, at });
+        if (at > now && !isRecapFinished(trip, finished) && !isArchivedGroup(trip)) wanted.set(trip.id, { trip, at });
       }
     }
 

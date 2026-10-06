@@ -1987,5 +1987,21 @@
     "done_one": "{{count}} lançamento importado",
     "done_other": "{{count}} lançamentos importados",
     "doneBody": "Compartilhe o grupo em Pessoas para todos verem os mesmos saldos."
+  },
+  "groupSettings": {
+    "title": "Configurações",
+    "smartSplit": "Divisão inteligente",
+    "forEveryone": "Vale para todos",
+    "smartFooter": "Menos pagamentos: se A deve a B e B deve a C, A paga C direto.",
+    "asIsFooter": "Como está: mostra exatamente quem deve a quem em cada gasto, em pares.",
+    "archiveFooter": "Esconde das suas listas, do seletor e da IA. Dá para arquivar quando estiver quitado.",
+    "unarchiveFooter": "Traz de volta para suas listas.",
+    "archiveUnsettledTitle": "Acerte primeiro",
+    "archiveUnsettledBody": "Você pode arquivar quando seu saldo aqui for zero.",
+    "archivedSection_one": "Arquivados · {{count}}",
+    "archivedSection_other": "Arquivados · {{count}}",
+    "deleteInTrips": "Excluir em Viagens",
+    "sharedNote": "Arquivar só esconde para você; os outros continuam vendo.",
+    "localNote": "Isto fica no seu celular (e no seu backup, se estiver ativo)."
   }
 }

@@ -3,12 +3,12 @@ import type { GroupBase } from "@/features/trips/store/tripsStore";
 import { useExpensesStore } from "@/features/expenses/store/expensesStore";
 import { useConvertedExpenses } from "@/features/expenses/hooks/useTripExpenseSummary";
 import { toLocalDayKey } from "@/features/expenses/utils/dateKey";
-import { computeNetBalances, currencyFractionDigits, isSplitExpense, roundMoney, SELF_ID, simplifyDebts } from "@/features/expenses/utils/split";
+import { computeNetBalances, currencyFractionDigits, isSplitExpense, pairwiseDebts, roundMoney, SELF_ID, simplifyDebts } from "@/features/expenses/utils/split";
 
 const rateKey = (currency: string, date: string) => `${currency}|${toLocalDayKey(date)}`;
 
 /** Balances of a trip or group in its currency: everyone's net, simplified transfers and yours. */
-export function useGroupBalances(group: Pick<GroupBase, "id" | "currency" | "companions">) {
+export function useGroupBalances(group: Pick<GroupBase, "id" | "currency" | "companions" | "smartSplit">) {
   const allExpenses = useExpensesStore((state) => state.expenses);
   const allSettlements = useExpensesStore((state) => state.settlements);
   const splitExpenses = useMemo(
@@ -28,7 +28,9 @@ export function useGroupBalances(group: Pick<GroupBase, "id" | "currency" | "com
   );
   // A single minor unit (₹0.01) is left by rounding in other apps' exports, not a real debt.
   const minorUnit = 10 ** -currencyFractionDigits(group.currency);
-  const transfers = simplifyDebts(net, group.currency).filter((transfer) => transfer.amount > minorUnit + 1e-9);
+  const convert = (_: number, currency: string, date: string) => (currency === group.currency ? 1 : rates.get(rateKey(currency, date)) ?? null);
+  const all = group.smartSplit === false ? pairwiseDebts(splitExpenses, settlements, convert, group.currency) : simplifyDebts(net, group.currency);
+  const transfers = all.filter((transfer) => transfer.amount > minorUnit + 1e-9);
   const rawNet = roundMoney(net.get(SELF_ID) ?? 0, group.currency);
   const myNet = Math.abs(rawNet) <= minorUnit + 1e-9 ? 0 : rawNet;
   const everyone = [...new Set([SELF_ID, ...group.companions, ...net.keys()])];

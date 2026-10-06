@@ -1987,5 +1987,21 @@
     "done_one": "{{count}}件を取り込みました",
     "done_other": "{{count}}件を取り込みました",
     "doneBody": "メンバーから共有すると、全員が同じ残高を見られます。"
+  },
+  "groupSettings": {
+    "title": "設定",
+    "smartSplit": "スマート精算",
+    "forEveryone": "メンバー全員に適用",
+    "smartFooter": "支払い回数を最少に：AがBに、BがCに借りていれば、AがCに直接払います。",
+    "asIsFooter": "そのまま：各支出から誰が誰にいくら借りているかをペアごとに表示します。",
+    "archiveFooter": "リスト、切り替え、AIから非表示にします。精算済みならアーカイブできます。",
+    "unarchiveFooter": "リストに戻します。",
+    "archiveUnsettledTitle": "先に精算してください",
+    "archiveUnsettledBody": "ここでの残高がゼロになればアーカイブできます。",
+    "archivedSection_one": "アーカイブ · {{count}}",
+    "archivedSection_other": "アーカイブ · {{count}}",
+    "deleteInTrips": "旅行タブで削除",
+    "sharedNote": "アーカイブは自分だけ非表示になり、ほかの人には残ります。",
+    "localNote": "これは端末上にあります（バックアップがオンならバックアップにも）。"
   }
 }

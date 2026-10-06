@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { AuraButton, AuraCard, AuraSection, AuraSegmented, Icon, PressableScale, useAura } from "@/atoms";
 import { useLocalization } from "@/localization";
-import { isTrip, selectMoneyGroups, useTripsStore, type MoneyGroup } from "@/features/trips/store/tripsStore";
+import { isArchivedGroup, isTrip, selectMoneyGroups, useTripsStore, type MoneyGroup } from "@/features/trips/store/tripsStore";
 import { useExpensesStore, type Expense } from "@/features/expenses/store/expensesStore";
 import { useConvertedExpenses } from "@/features/expenses/hooks/useTripExpenseSummary";
 import { useGroupBalances } from "@/features/expenses/hooks/useGroupBalances";
@@ -37,6 +37,8 @@ export function MoneyOverview({
   const [period, setPeriod] = useState<SpendPeriod>("month");
   const [offset, setOffset] = useState(0);
   const [showSettled, setShowSettled] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
+  const archivedGroups = groups.filter(isArchivedGroup);
   const [now] = useState(() => Date.now());
   const [exportOpen, setExportOpen] = useState(false);
   const plus = usePlusGate();
@@ -197,6 +199,16 @@ export function MoneyOverview({
             <Icon name={showSettled ? "chevronDown" : "chevronRight"} size={14} color={c.textMuted} />
           </PressableScale>
           {showSettled ? settled.map(row) : null}
+        </>
+      ) : null}
+
+      {archivedGroups.length > 0 ? (
+        <>
+          <PressableScale haptic={false} onPress={() => setShowArchived(!showArchived)} accessibilityRole="button" style={styles.settledToggle}>
+            <Text style={[styles.settledLabel, { color: c.textMuted, fontFamily: f.medium }]}>{t("groupSettings.archivedSection", { count: archivedGroups.length })}</Text>
+            <Icon name={showArchived ? "chevronDown" : "chevronRight"} size={14} color={c.textMuted} />
+          </PressableScale>
+          {showArchived ? archivedGroups.map((group) => <GroupListRow key={group.id} group={group} onPress={() => onOpenGroup(group.id)} />) : null}
         </>
       ) : null}
 

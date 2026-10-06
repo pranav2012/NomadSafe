@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { StyleSheet, Text } from "react-native";
 import { AuraOptionSheet, Icon, PressableScale, useAura, type AuraOption } from "@/atoms";
 import { useLocalization } from "@/localization";
-import { isTrip, selectMoneyGroups, useTripsStore } from "@/features/trips/store/tripsStore";
+import { isArchivedGroup, isTrip, selectMoneyGroups, useTripsStore } from "@/features/trips/store/tripsStore";
 import { getTripStatus } from "@/features/trips/utils/dates";
 import { OVERVIEW } from "@/features/expenses/store/moneyViewStore";
 
@@ -14,7 +14,7 @@ export function MoneySwitcher({ selected, onSelect }: { selected: string; onSele
   const activeTripId = useTripsStore((state) => state.activeTripId);
   const [open, setOpen] = useState(false);
 
-  const visible = groups.filter((group) => !group.shared?.archived);
+  const visible = groups.filter((group) => !isArchivedGroup(group));
   const active = visible.filter((group) => group.id === activeTripId);
   const plain = visible.filter((group) => !isTrip(group));
   const otherTrips = visible.filter((group) => isTrip(group) && group.id !== activeTripId);

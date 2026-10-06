@@ -1987,5 +1987,21 @@
     "done_one": "Imported {{count}} entry",
     "done_other": "Imported {{count}} entries",
     "doneBody": "Share the group from People so everyone sees the same balances."
+  },
+  "groupSettings": {
+    "title": "Settings",
+    "smartSplit": "Smart split",
+    "forEveryone": "Applies to everyone in it",
+    "smartFooter": "Fewest payments: if A owes B and B owes C, A pays C directly.",
+    "asIsFooter": "As is: shows exactly who owes whom from each spend, pair by pair.",
+    "archiveFooter": "Hides it from your lists, the switcher and AI. You can archive once you're settled up.",
+    "unarchiveFooter": "Brings it back to your lists.",
+    "archiveUnsettledTitle": "Settle up first",
+    "archiveUnsettledBody": "You can archive once your balance here is zero.",
+    "archivedSection_one": "Archived · {{count}}",
+    "archivedSection_other": "Archived · {{count}}",
+    "deleteInTrips": "Delete from Trips",
+    "sharedNote": "Archiving only hides it for you; it stays for everyone else.",
+    "localNote": "This lives on your phone (and your backup, if it's on)."
   }
 }

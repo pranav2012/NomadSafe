@@ -1987,5 +1987,21 @@
     "done_one": "已导入 {{count}} 条",
     "done_other": "已导入 {{count}} 条",
     "doneBody": "在成员中分享群组，让大家看到相同的余额。"
+  },
+  "groupSettings": {
+    "title": "设置",
+    "smartSplit": "智能结算",
+    "forEveryone": "对其中所有人生效",
+    "smartFooter": "最少转账：如果 A 欠 B、B 欠 C，A 直接付给 C。",
+    "asIsFooter": "原样：按每笔花费逐对显示谁欠谁多少。",
+    "archiveFooter": "从你的列表、切换器和 AI 中隐藏。结清后即可归档。",
+    "unarchiveFooter": "放回你的列表。",
+    "archiveUnsettledTitle": "请先结清",
+    "archiveUnsettledBody": "你在这里的余额为零后即可归档。",
+    "archivedSection_one": "已归档 · {{count}}",
+    "archivedSection_other": "已归档 · {{count}}",
+    "deleteInTrips": "在旅行中删除",
+    "sharedNote": "归档只对你隐藏，其他人仍可见。",
+    "localNote": "这些数据在你的手机上（开启备份时也在备份中）。"
   }
 }

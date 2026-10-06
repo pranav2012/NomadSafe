@@ -17,7 +17,7 @@ import {
 import { auraCategoryColors } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { CURRENCY_OPTIONS } from "@/utils/currency";
-import { findMoneyGroup, isTrip, selectMoneyGroups, useTripsStore } from "@/features/trips/store/tripsStore";
+import { isArchivedGroup, findMoneyGroup, isTrip, selectMoneyGroups, useTripsStore } from "@/features/trips/store/tripsStore";
 import { useRecurringStore } from "@/features/expenses/store/recurringStore";
 import { toLocalDayKey } from "@/features/expenses/utils/dateKey";
 import type { RepeatFrequency } from "@/features/expenses/utils/recurring";
@@ -237,7 +237,7 @@ function ExpenseFormBody({
   const targetOptions = [
     { value: NO_GROUP, label: t("money.notInGroup") },
     ...allGroups
-      .filter((group) => !group.shared?.archived || group.id === targetId)
+      .filter((group) => !isArchivedGroup(group) || group.id === targetId)
       .map((group) => ({ value: group.id, label: isTrip(group) ? group.name : `${group.emoji ?? "👥"} ${group.name}`, detail: isTrip(group) ? t("money.tripBadge") : undefined })),
   ];
   const showTarget = source !== "voice" && !companionsOverride;

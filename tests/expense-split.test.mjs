@@ -337,3 +337,23 @@ test("itemised receipt: items per person, extras in proportion, exact total", ()
   const shares = split.splitByUnits(1320, "INR", weights).shares;
   assert.equal(shares.reduce((sum, share) => sum + share.amount, 0), 1320);
 });
+
+test("as-is debts keep each pair; smart split passes debts along", () => {
+  const expenses = [
+    { amount: 100, currency: "INR", date: "2026-10-01", paidBy: "B", shares: [{ person: "A", amount: 100 }] },
+    { amount: 100, currency: "INR", date: "2026-10-01", paidBy: "C", shares: [{ person: "B", amount: 100 }] },
+  ];
+  assert.deepEqual(split.pairwiseDebts(expenses, [], same, "INR"), [
+    { from: "A", to: "B", amount: 100 },
+    { from: "B", to: "C", amount: 100 },
+  ]);
+  const { net } = split.computeNetBalances(expenses, [], same);
+  assert.deepEqual(split.simplifyDebts(net, "INR"), [{ from: "A", to: "C", amount: 100 }]);
+  const paidBack = split.pairwiseDebts(expenses, [{ from: "A", to: "B", amount: 40, currency: "INR", date: "2026-10-02" }], same, "INR");
+  assert.deepEqual(paidBack[0], { from: "A", to: "B", amount: 60 });
+  const twoPayers = [{ amount: 90, currency: "INR", date: "2026-10-01", payers: [{ person: "X", amount: 60 }, { person: "Y", amount: 30 }], shares: [{ person: "Z", amount: 90 }] }];
+  assert.deepEqual(split.pairwiseDebts(twoPayers, [], same, "INR"), [
+    { from: "Z", to: "X", amount: 60 },
+    { from: "Z", to: "Y", amount: 30 },
+  ]);
+});

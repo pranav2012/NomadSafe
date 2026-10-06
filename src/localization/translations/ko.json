@@ -1987,5 +1987,21 @@
     "done_one": "{{count}}건을 가져왔어요",
     "done_other": "{{count}}건을 가져왔어요",
     "doneBody": "사람에서 그룹을 공유하면 모두 같은 잔액을 봐요."
+  },
+  "groupSettings": {
+    "title": "설정",
+    "smartSplit": "스마트 정산",
+    "forEveryone": "모두에게 적용",
+    "smartFooter": "결제를 최소로: A가 B에게, B가 C에게 빚지면 A가 C에게 바로 줘요.",
+    "asIsFooter": "있는 그대로: 지출마다 누가 누구에게 얼마를 줘야 하는지 쌍별로 보여줘요.",
+    "archiveFooter": "목록, 전환, AI에서 숨겨요. 정산이 끝나면 보관할 수 있어요.",
+    "unarchiveFooter": "목록으로 되돌려요.",
+    "archiveUnsettledTitle": "먼저 정산하세요",
+    "archiveUnsettledBody": "여기 잔액이 0이 되면 보관할 수 있어요.",
+    "archivedSection_one": "보관됨 · {{count}}",
+    "archivedSection_other": "보관됨 · {{count}}",
+    "deleteInTrips": "여행에서 삭제",
+    "sharedNote": "보관하면 나에게만 숨겨지고 다른 사람에게는 그대로예요.",
+    "localNote": "이건 내 휴대폰에 있어요(백업이 켜져 있으면 백업에도)."
   }
 }

@@ -18,11 +18,10 @@ import {
 import { auraStatusColors } from "@/constants/aura";
 import { inviteUrl } from "@/constants/legal";
 import { useAuthStore } from "@/features/auth/store/authStore";
-import { isSettledUp, registerGroupPush, shareGroup } from "@/features/sync";
-import { useChatStore } from "@/features/ai/store/chatStore";
+import { registerGroupPush, shareGroup } from "@/features/sync";
 import { useExpensesStore } from "@/features/expenses/store/expensesStore";
 import { payersOf } from "@/features/expenses/utils/split";
-import { findMoneyGroup, isTrip, useTripsStore, type GroupMember, type MoneyGroup } from "@/features/trips/store/tripsStore";
+import { findMoneyGroup, isArchivedGroup, isTrip, useTripsStore, type GroupMember, type MoneyGroup } from "@/features/trips/store/tripsStore";
 import { useLocalization } from "@/localization";
 import { PrivateView } from "@/modules/analytics";
 
@@ -40,7 +39,7 @@ function isReferenced(groupId: string, person: string) {
 }
 
 /** People, invite link and settings for a trip or group; shares it first if needed. */
-export function GroupPeopleSheet({ groupId, onClose, onDeleted }: { groupId: string | null; onClose: () => void; onDeleted?: () => void }) {
+export function GroupPeopleSheet({ groupId, onClose }: { groupId: string | null; onClose: () => void }) {
   const { c, f } = useAura();
   const { t } = useLocalization();
   // Sharing re-keys the trip or group, so follow it to its new id.
@@ -52,10 +51,8 @@ export function GroupPeopleSheet({ groupId, onClose, onDeleted }: { groupId: str
   const userName = useAuthStore((s) => s.user?.name ?? "");
   const [busy, setBusy] = useState(false);
   const setPreferences = useMutation(api.groups.setPreferences);
-  const leaveTrip = useMutation(api.groups.leaveGroup);
   const removeMember = useMutation(api.groups.removeMember);
   const resetInviteCode = useMutation(api.groups.resetInviteCode);
-  const deleteSharedTrip = useMutation(api.groups.deleteSharedGroup);
 
   const close = () => {
     setCurrentId(null);
@@ -85,25 +82,6 @@ export function GroupPeopleSheet({ groupId, onClose, onDeleted }: { groupId: str
     setCompanions(trip, trip.companions.filter((existing) => existing !== name));
   };
 
-  const deleteLocalGroup = () => {
-    if (!trip || isTrip(trip)) return;
-    showAlert(t("groupShare.deleteTitle"), t("groupShare.deleteBodyLocal"), [
-      { text: t("common.cancel"), style: "cancel" },
-      {
-        text: t("groupShare.deleteTrip"),
-        style: "destructive",
-        onPress: () => {
-          const groupIdToDelete = trip.id;
-          close();
-          useExpensesStore.getState().removeByGroupId(groupIdToDelete);
-          useChatStore.getState().removeConversation(groupIdToDelete);
-          useTripsStore.getState().deleteGroup(groupIdToDelete);
-          onDeleted?.();
-        },
-      },
-    ]);
-  };
-
   const run = async (action: () => Promise<unknown>) => {
     setBusy(true);
     try {
@@ -118,7 +96,6 @@ export function GroupPeopleSheet({ groupId, onClose, onDeleted }: { groupId: str
   const shared = trip?.shared;
   const serverId = shared?.groupId as Id<"sharedGroups"> | undefined;
   const isOwner = shared?.role === "owner";
-  const othersJoined = shared?.members.some((member) => member.linked && member.memberId !== shared.myMemberId && member.status === "active") ?? false;
 
   const startSharing = () =>
     trip &&
@@ -147,37 +124,13 @@ export function GroupPeopleSheet({ groupId, onClose, onDeleted }: { groupId: str
       },
     ]);
 
-  const onLeave = () => {
-    if (!trip || !serverId) return;
-    if (!isSettledUp(trip)) {
-      showAlert(t("groupTrip.leaveUnsettledTitle"), t(k("leaveUnsettledBody")));
-      return;
-    }
-    confirm(t(k("leaveTitle")), t(k("leaveBody")), t(k("leave")), () => leaveTrip({ groupId: serverId }), close);
-  };
-
-  const onDelete = () => {
-    if (!serverId) return;
-    if (othersJoined) {
-      showAlert(t(k("deleteTrip")), t(k("deleteBlocked")));
-      return;
-    }
-    confirm(t(k("deleteTitle")), t(k("deleteBody")), t(k("deleteTrip")), () => deleteSharedTrip({ groupId: serverId }), close);
-  };
-
   const memberDetail = (member: GroupMember) => {
     if (member.status === "left" || member.status === "removed") return t(k("left"));
     if (!member.linked) return t("groupTrip.notJoined");
     return member.role === "owner" ? t("groupTrip.owner") : undefined;
   };
 
-  const footer = !trip ? null : !shared ? (
-    <AuraButton label={t("groupTrip.createLink")} icon="users" onPress={startSharing} loading={busy} />
-  ) : isOwner ? (
-    <AuraButton label={t(k("deleteTrip"))} icon="trash" variant="secondary" onPress={onDelete} disabled={busy} />
-  ) : (
-    <AuraButton label={t(k("leave"))} icon="logout" variant="secondary" onPress={onLeave} disabled={busy} />
-  );
+  const footer = trip && !shared ? <AuraButton label={t("groupTrip.createLink")} icon="users" onPress={startSharing} loading={busy} /> : null;
 
   return (
     <AuraSheet
@@ -212,9 +165,6 @@ export function GroupPeopleSheet({ groupId, onClose, onDeleted }: { groupId: str
         {!trip ? null : !shared ? (
           <>
             <Text style={[styles.intro, { color: c.textSoft, fontFamily: f.regular }]}>{t(k("shareIntro"))}</Text>
-            {!isTrip(trip) ? (
-              <AuraButton label={t("groupShare.deleteTrip")} icon="trash" variant="ghost" size="md" onPress={deleteLocalGroup} style={styles.deleteLocal} />
-            ) : null}
           </>
         ) : !shared.myMemberId || !shared.inviteCode ? (
           <View style={styles.pending}>
@@ -307,8 +257,8 @@ export function GroupPeopleSheet({ groupId, onClose, onDeleted }: { groupId: str
 }
 
 /** Whether a trip or group is archived from this user's own list (shared ones only). */
-export function isArchived(trip: Pick<MoneyGroup, "shared">) {
-  return trip.shared?.archived === true;
+export function isArchived(trip: Pick<MoneyGroup, "shared" | "archived">) {
+  return isArchivedGroup(trip);
 }
 
 const styles = StyleSheet.create({
@@ -317,5 +267,4 @@ const styles = StyleSheet.create({
   pending: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 12 },
   people: { gap: 10, marginBottom: 14 },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  deleteLocal: { alignSelf: "flex-start", marginTop: 14 },
 });

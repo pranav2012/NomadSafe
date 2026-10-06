@@ -1,4 +1,4 @@
-import type { Group, Trip } from "@/features/trips/store/tripsStore";
+import { isArchivedGroup, type Group, type Trip } from "@/features/trips/store/tripsStore";
 
 export const GENERAL_CONTEXT = "general";
 export const OVERVIEW_CONTEXT = "overview";
@@ -27,7 +27,7 @@ export function chooseChatContext({ picked, activeTripId, trips, groups, expense
   if (picked && (trips.some((trip) => trip.id === picked) || groups.some((group) => group.id === picked))) return picked;
   if (activeTripId) return activeTripId;
   const latest = groups
-    .filter((group) => !group.shared?.archived)
+    .filter((group) => !isArchivedGroup(group))
     .map((group) => ({ id: group.id, at: lastActivity(group, expenses, settlements) }))
     .sort((a, b) => b.at - a.at)[0];
   return latest?.id ?? GENERAL_CONTEXT;

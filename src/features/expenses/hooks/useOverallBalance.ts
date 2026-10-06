@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useLocalization } from "@/localization";
-import { selectMoneyGroups, useTripsStore, type MoneyGroup } from "@/features/trips/store/tripsStore";
+import { isArchivedGroup, selectMoneyGroups, useTripsStore, type MoneyGroup } from "@/features/trips/store/tripsStore";
 import { useExpensesStore } from "@/features/expenses/store/expensesStore";
 import { useConvertedExpenses } from "@/features/expenses/hooks/useTripExpenseSummary";
 import { toLocalDayKey } from "@/features/expenses/utils/dateKey";
@@ -31,7 +31,7 @@ export function useOverallBalance() {
   const convert = (_: number, currency: string, date: string) => (currency === homeCurrency ? 1 : rates.get(rateKey(currency, date)) ?? null);
 
   const rows: GroupBalanceRow[] = groups
-    .filter((group) => !group.shared?.archived)
+    .filter((group) => !isArchivedGroup(group))
     .map((group) => {
       const groupExpenses = expenses.filter((expense) => expense.groupId === group.id);
       const groupSettlements = settlements.filter((settlement) => settlement.groupId === group.id);

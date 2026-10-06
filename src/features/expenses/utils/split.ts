@@ -222,6 +222,54 @@ export function computeNetBalances(
   return { net, unconverted };
 }
 
+/**
+ * "As is" debts: who owes whom straight from the spends, pair by pair, without passing debts along.
+ * Each person owes every payer their share in proportion to what that payer paid; payments between
+ * two people reduce what one owes the other. Rounded to minor units; zero pairs are dropped.
+ */
+export function pairwiseDebts(
+  expenses: SplitExpenseLike[],
+  settlements: SettlementLike[],
+  convert: (amount: number, currency: string, date: string) => number | null,
+  currency: string,
+): Transfer[] {
+  const owes = new Map<string, number>();
+  const key = (from: string, to: string) => `${from}\u0000${to}`;
+  const add = (from: string, to: string, value: number) => {
+    if (from === to || value === 0) return;
+    owes.set(key(from, to), (owes.get(key(from, to)) ?? 0) + value);
+  };
+  for (const expense of expenses) {
+    if (!isSplitExpense(expense) || expense.amount <= 0) continue;
+    const rate = convert(1, expense.currency, expense.date);
+    if (rate === null) continue;
+    const payers = payersOf(expense);
+    for (const share of expense.shares ?? []) {
+      for (const payer of payers) add(share.person, payer.person, share.amount * (payer.amount / expense.amount) * rate);
+    }
+  }
+  for (const settlement of settlements) {
+    const rate = convert(1, settlement.currency, settlement.date);
+    if (rate === null) continue;
+    add(settlement.to, settlement.from, settlement.amount * rate);
+  }
+  const digits = currencyFractionDigits(currency);
+  const people = new Set<string>();
+  for (const pair of owes.keys()) for (const person of pair.split("\u0000")) people.add(person);
+  const list = [...people].sort();
+  const transfers: Transfer[] = [];
+  for (let i = 0; i < list.length; i += 1) {
+    for (let j = i + 1; j < list.length; j += 1) {
+      const a = list[i];
+      const b = list[j];
+      const minor = toMinor((owes.get(key(a, b)) ?? 0) - (owes.get(key(b, a)) ?? 0), digits);
+      if (minor > 0) transfers.push({ from: a, to: b, amount: fromMinor(minor, digits) });
+      else if (minor < 0) transfers.push({ from: b, to: a, amount: fromMinor(-minor, digits) });
+    }
+  }
+  return transfers;
+}
+
 /** Greedy largest-debtor → largest-creditor matching; at most n-1 transfers. */
 export function simplifyDebts(net: Map<string, number>, currency: string): Transfer[] {
   const digits = currencyFractionDigits(currency);

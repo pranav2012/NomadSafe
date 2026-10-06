@@ -5,7 +5,7 @@ import { useBoundaryStore } from "@/features/recap/utils/boundaries";
 import { countryAt } from "@/features/recap/utils/countryShapes";
 import { useSettingsStore } from "@/features/settings/store/settingsStore";
 import { nearestCityCountry } from "@/features/trips/data/destinations";
-import { getDestinationCoordinates, useTripsStore } from "@/features/trips/store/tripsStore";
+import { isArchivedGroup, getDestinationCoordinates, useTripsStore } from "@/features/trips/store/tripsStore";
 import { countInclusiveDays, fromDateKey, getTripStatus } from "@/features/trips/utils/dates";
 import { usePassportStore } from "../store/passportStore";
 import { buildPassport, type Passport, type PassportTrip } from "../utils/passport";
@@ -48,7 +48,7 @@ export function usePassport(): Passport {
 
   return useMemo(() => {
     const passportTrips: PassportTrip[] = trips
-      .filter((trip) => !trip.shared?.archived)
+      .filter((trip) => !isArchivedGroup(trip))
       .map((trip) => {
         const coordinates = getDestinationCoordinates(trip);
         return {

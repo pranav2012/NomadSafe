@@ -1987,5 +1987,21 @@
     "done_one": "{{count}} Eintrag importiert",
     "done_other": "{{count}} Einträge importiert",
     "doneBody": "Teile die Gruppe über Leute, damit alle dieselben Salden sehen."
+  },
+  "groupSettings": {
+    "title": "Einstellungen",
+    "smartSplit": "Smart aufteilen",
+    "forEveryone": "Gilt für alle darin",
+    "smartFooter": "Wenigste Zahlungen: Schuldet A B und B C, zahlt A direkt an C.",
+    "asIsFooter": "Wie es ist: zeigt genau, wer wem aus jeder Ausgabe was schuldet, Paar für Paar.",
+    "archiveFooter": "Blendet es aus deinen Listen, dem Umschalter und der KI aus. Archivieren geht, sobald alles ausgeglichen ist.",
+    "unarchiveFooter": "Holt es zurück in deine Listen.",
+    "archiveUnsettledTitle": "Erst ausgleichen",
+    "archiveUnsettledBody": "Du kannst archivieren, sobald dein Saldo hier bei null ist.",
+    "archivedSection_one": "Archiviert · {{count}}",
+    "archivedSection_other": "Archiviert · {{count}}",
+    "deleteInTrips": "In Reisen löschen",
+    "sharedNote": "Archivieren blendet es nur für dich aus; für alle anderen bleibt es.",
+    "localNote": "Das liegt auf deinem Handy (und in deinem Backup, falls aktiv)."
   }
 }

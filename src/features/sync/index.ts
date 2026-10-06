@@ -3,6 +3,7 @@ export {
   clearSharedLocalData,
   flushGroupSync,
   isSettledUp,
+  setGroupArchived,
   localGroupId,
   shareGroup,
   startGroupSync,

@@ -62,7 +62,7 @@ const allGroups = () => selectMoneyGroups(useTripsStore.getState());
 /** The fields everyone shares; people are members, and ids differ per phone. Groups say `kind: "group"`. */
 function groupDetails(trip: MoneyGroup) {
   if (!isTrip(trip)) {
-    return { kind: "group" as const, name: trip.name, emoji: trip.emoji, budget: trip.budget, currency: trip.currency, createdAt: trip.createdAt };
+    return { kind: "group" as const, name: trip.name, emoji: trip.emoji, budget: trip.budget, currency: trip.currency, createdAt: trip.createdAt, smartSplit: trip.smartSplit };
   }
   return {
     name: trip.name,
@@ -73,6 +73,7 @@ function groupDetails(trip: MoneyGroup) {
     budget: trip.budget,
     currency: trip.currency,
     createdAt: trip.createdAt,
+    smartSplit: trip.smartSplit,
   };
 }
 
@@ -605,6 +606,22 @@ export async function shareGroup(trip: MoneyGroup, ownerName: string, fromGroupI
     void syncNow();
   }
   return newId;
+}
+
+/**
+ * Archives or unarchives a trip or group from your own lists. Shared ones are per member on the
+ * server (with the local copy updated right away); an archived active trip stops being active.
+ */
+export async function setGroupArchived(group: MoneyGroup, archived: boolean): Promise<void> {
+  if (group.shared) {
+    await convex.mutation(api.groups.setPreferences, { groupId: group.shared.groupId as Id<"sharedGroups">, archived });
+    setMoneyGroups(allGroups().map((item) => (item.id === group.id && item.shared ? { ...item, shared: { ...item.shared, archived } } : item)));
+  } else if (isTrip(group)) {
+    useTripsStore.getState().updateTrip(group.id, { archived });
+  } else {
+    useTripsStore.getState().updateGroup(group.id, { archived });
+  }
+  if (archived && useTripsStore.getState().activeTripId === group.id) useTripsStore.getState().clearActiveTrip();
 }
 
 /** True when the user's own balance on the trip is zero in every currency, so they may leave. */

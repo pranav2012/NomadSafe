@@ -1987,5 +1987,21 @@
     "done_one": "{{count}} élément importé",
     "done_other": "{{count}} éléments importés",
     "doneBody": "Partage le groupe depuis Personnes pour que tout le monde voie les mêmes soldes."
+  },
+  "groupSettings": {
+    "title": "Réglages",
+    "smartSplit": "Partage malin",
+    "forEveryone": "S'applique à tous",
+    "smartFooter": "Moins de paiements : si A doit à B et B doit à C, A paie C directement.",
+    "asIsFooter": "Tel quel : montre exactement qui doit quoi à qui pour chaque dépense, deux à deux.",
+    "archiveFooter": "Le masque de tes listes, du sélecteur et de l'IA. Tu peux archiver une fois à jour.",
+    "unarchiveFooter": "Le remet dans tes listes.",
+    "archiveUnsettledTitle": "Règle d'abord",
+    "archiveUnsettledBody": "Tu pourras archiver quand ton solde ici sera à zéro.",
+    "archivedSection_one": "Archivés · {{count}}",
+    "archivedSection_other": "Archivés · {{count}}",
+    "deleteInTrips": "Supprimer dans Voyages",
+    "sharedNote": "Archiver le masque seulement pour toi ; il reste pour les autres.",
+    "localNote": "Ceci est sur ton téléphone (et dans ta sauvegarde, si elle est active)."
   }
 }

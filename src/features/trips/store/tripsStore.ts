@@ -43,6 +43,14 @@ export interface GroupBase {
   companions: string[];
   createdAt: string;
   shared?: SharedGroupInfo;
+  /** Fewest payments (debts passed along) unless false, which shows who owes whom as is. Shared with members. */
+  smartSplit?: boolean;
+  /** Hidden from your lists (not shared; shared ones use `shared.archived`, per member). */
+  archived?: boolean;
+}
+
+export function isArchivedGroup(group: Pick<GroupBase, "shared" | "archived">): boolean {
+  return group.shared ? group.shared.archived : group.archived === true;
 }
 
 /** A money group without travel details (flatmates, office lunches). Never the active trip. */
@@ -144,7 +152,7 @@ export function setMoneyGroups(list: MoneyGroup[]) {
 
 /** Earliest-starting running trip, else the soonest upcoming one, else null. */
 export function pickDefaultActiveTripId(trips: Trip[]): string | null {
-  const byStart = trips.filter((trip) => !trip.shared?.archived).sort(
+  const byStart = trips.filter((trip) => !isArchivedGroup(trip)).sort(
     (a, b) => fromDateKey(a.startDate).getTime() - fromDateKey(b.startDate).getTime(),
   );
   return (

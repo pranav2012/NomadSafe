@@ -31,6 +31,8 @@ export interface AnalyticsEvents {
   receipt_scanned: { found_total: boolean; lines: number };
   receipt_items_split: { items: number; people: number };
   app_import_completed: { source: "splitwise" | "settleup"; mode: "history" | "balances"; expenses: number; payments: number };
+  group_archived: { archived: boolean; kind: "trip" | "group" };
+  smart_split_changed: { on: boolean };
   plus_feature_blocked: { feature: "shares" | "presets" | "recurring" | "charts" | "export" | "receiptScan" };
   trip_joined: { deferred: boolean; claimed_member: boolean };
   invite_deferred_found: { source: "install_referrer" | "clipboard" };

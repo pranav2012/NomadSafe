@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeIn, FadeInDown, FadeOut, LinearTransition } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { api, type Id, useMutation } from "@/modules/backend";
+import { isSettledUp, setGroupArchived } from "@/features/sync";
 import { AuraButton, AuraField, AuraSheet, Icon, PressableScale, showAlert, useAura, AuraTopFade } from "@/atoms";
 import { auraStatusColors } from "@/constants/aura";
 import { useLocalization } from "@/localization";
@@ -101,16 +101,16 @@ export default function TripsScreen() {
   const [peopleFor, setPeopleFor] = useState<string | null>(null);
   const [joinOpen, setJoinOpen] = useState(false);
   const [joinCode, setJoinCode] = useState("");
-  const setPreferences = useMutation(api.groups.setPreferences);
 
-  // Archiving a shared trip only hides it from this user's list; it stays live for everyone else.
+  // Archiving only hides a trip from this user's lists (a shared one stays live for everyone else),
+  // and only once they're settled up there.
   const toggleArchive = (trip: Trip) => {
-    if (!trip.shared) return;
-    const archived = !trip.shared.archived;
-    setPreferences({ groupId: trip.shared.groupId as Id<"sharedGroups">, archived }).catch(() =>
-      showAlert(t("groupTrip.actionFailed")),
-    );
-    if (archived && trip.id === activeTrip?.id) useTripsStore.getState().clearActiveTrip();
+    const archived = !isArchived(trip);
+    if (archived && !isSettledUp(trip)) {
+      showAlert(t("groupSettings.archiveUnsettledTitle"), t("groupSettings.archiveUnsettledBody"));
+      return;
+    }
+    setGroupArchived(trip, archived).catch(() => showAlert(t("groupTrip.actionFailed")));
   };
 
   const submitJoinCode = () => {
@@ -182,7 +182,7 @@ export default function TripsScreen() {
       onReplay={() => router.push({ pathname: "/trip-recap/[id]", params: { id: trip.id, source: "trips" } })}
       onPeople={() => setPeopleFor(trip.id)}
       onDelete={() => {
-        if (trip.shared) {
+        if (trip.shared || isArchived(trip)) {
           toggleArchive(trip);
           return;
         }
@@ -330,8 +330,8 @@ function TripPass({
   const many = trip.destinations.length > 1;
   const peopleLabel = trip.shared ? t("groupTrip.peopleButton") : t("groupTrip.shareButton");
   // Shared trips are archived from your own list rather than deleted for everyone.
-  const removeLabel = trip.shared ? (trip.shared.archived ? t("groupTrip.unarchive") : t("groupTrip.archive")) : t("trip.delete");
-  const removeIcon = trip.shared ? "bookmark" : "trash";
+  const removeLabel = isArchived(trip) ? t("groupTrip.unarchive") : trip.shared ? t("groupTrip.archive") : t("trip.delete");
+  const removeIcon = trip.shared || isArchived(trip) ? "bookmark" : "trash";
 
   return (
     <Animated.View

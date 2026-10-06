@@ -1987,5 +1987,21 @@
     "done_one": "{{count}} entrada importada",
     "done_other": "{{count}} entradas importadas",
     "doneBody": "Comparte el grupo desde Personas para que todos vean los mismos saldos."
+  },
+  "groupSettings": {
+    "title": "Ajustes",
+    "smartSplit": "Reparto inteligente",
+    "forEveryone": "Se aplica a todos",
+    "smartFooter": "Menos pagos: si A le debe a B y B a C, A le paga directamente a C.",
+    "asIsFooter": "Tal cual: muestra exactamente quién le debe a quién en cada gasto, por parejas.",
+    "archiveFooter": "Lo oculta de tus listas, del selector y de la IA. Puedes archivar cuando no haya deudas.",
+    "unarchiveFooter": "Lo devuelve a tus listas.",
+    "archiveUnsettledTitle": "Salda primero",
+    "archiveUnsettledBody": "Puedes archivar cuando tu saldo aquí sea cero.",
+    "archivedSection_one": "Archivados · {{count}}",
+    "archivedSection_other": "Archivados · {{count}}",
+    "deleteInTrips": "Eliminar en Viajes",
+    "sharedNote": "Archivar solo lo oculta para ti; los demás lo siguen viendo.",
+    "localNote": "Esto vive en tu teléfono (y en tu copia, si está activada)."
   }
 }

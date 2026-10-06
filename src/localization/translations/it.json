@@ -1987,5 +1987,21 @@
     "done_one": "{{count}} voce importata",
     "done_other": "{{count}} voci importate",
     "doneBody": "Condividi il gruppo da Persone così tutti vedono gli stessi saldi."
+  },
+  "groupSettings": {
+    "title": "Impostazioni",
+    "smartSplit": "Divisione smart",
+    "forEveryone": "Vale per tutti",
+    "smartFooter": "Meno pagamenti: se A deve a B e B deve a C, A paga direttamente C.",
+    "asIsFooter": "Così com'è: mostra esattamente chi deve a chi per ogni spesa, a coppie.",
+    "archiveFooter": "Lo nasconde dalle tue liste, dal selettore e dall'IA. Puoi archiviare quando sei in pari.",
+    "unarchiveFooter": "Lo riporta nelle tue liste.",
+    "archiveUnsettledTitle": "Prima mettiti in pari",
+    "archiveUnsettledBody": "Puoi archiviare quando il tuo saldo qui è zero.",
+    "archivedSection_one": "Archiviati · {{count}}",
+    "archivedSection_other": "Archiviati · {{count}}",
+    "deleteInTrips": "Elimina in Viaggi",
+    "sharedNote": "Archiviare lo nasconde solo a te; per gli altri resta.",
+    "localNote": "Questo è sul tuo telefono (e nel backup, se attivo)."
   }
 }

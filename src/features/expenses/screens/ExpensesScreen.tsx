@@ -38,6 +38,7 @@ import { MoneyOverview } from "@/features/expenses/components/MoneyOverview";
 import { MoneySwitcher } from "@/features/expenses/components/MoneySwitcher";
 import { NewGroupSheet } from "@/features/expenses/components/NewGroupSheet";
 import { ImportFromAppSheet } from "@/features/expenses/components/ImportFromAppSheet";
+import { GroupSettingsSheet } from "@/features/expenses/components/GroupSettingsSheet";
 
 /** Money tab: the active trip's money (or the Overview with no trip), a switcher to any group, and a floating capture bar. */
 export default function ExpensesScreen() {
@@ -64,6 +65,7 @@ export default function ExpensesScreen() {
   const [peopleOpen, setPeopleOpen] = useState(false);
   const [newGroupOpen, setNewGroupOpen] = useState(false);
   const [appImport, setAppImport] = useState<{ groupId: string | null } | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [reviewDismissed, setReviewDismissed] = useState(false);
   const viewingActiveTrip = !!activeTrip && group?.id === activeTrip.id;
   const gmailAdded = useTripGmailSyncStatus(viewingActiveTrip ? activeTrip.id : undefined).unseenExpenses;
@@ -121,6 +123,16 @@ export default function ExpensesScreen() {
           <View style={styles.header}>
             <MoneySwitcher selected={viewId} onSelect={select} />
             <View style={styles.headerButtons}>
+              {group ? (
+                <PressableScale
+                  onPress={() => setSettingsOpen(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("groupSettings.title")}
+                  style={[styles.headerButton, { backgroundColor: c.surfaceStrong }]}
+                >
+                  <Icon name="settings" size={17} color={c.text} />
+                </PressableScale>
+              ) : null}
               {group ? (
                 <PressableScale
                   onPress={() => setPeopleOpen(true)}
@@ -208,8 +220,9 @@ export default function ExpensesScreen() {
           setAppImport({ groupId: group?.id ?? null });
         }}
       />
+      <GroupSettingsSheet groupId={settingsOpen ? (group?.id ?? null) : null} onClose={() => setSettingsOpen(false)} onRemoved={() => select(OVERVIEW)} />
       <ImportFromAppSheet visible={appImport !== null} groupId={appImport?.groupId ?? null} onClose={() => setAppImport(null)} onDone={(id) => select(id)} />
-      <GroupPeopleSheet groupId={peopleOpen ? (group?.id ?? null) : null} onClose={() => setPeopleOpen(false)} onDeleted={() => select(OVERVIEW)} />
+      <GroupPeopleSheet groupId={peopleOpen ? (group?.id ?? null) : null} onClose={() => setPeopleOpen(false)} />
       <NewGroupSheet
         visible={newGroupOpen}
         onClose={() => setNewGroupOpen(false)}

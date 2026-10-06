@@ -9,7 +9,7 @@ import { AuraButton, AuraOptionSheet, Icon, LiveDot, PressableScale, showAlert, 
 import { auraStatusAccent } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { useSettingsStore } from "@/features/settings";
-import { findMoneyGroup, isTrip, selectMoneyGroups, useTripsStore } from "@/features/trips/store/tripsStore";
+import { isArchivedGroup, findMoneyGroup, isTrip, selectMoneyGroups, useTripsStore } from "@/features/trips/store/tripsStore";
 import { getTripStatus } from "@/features/trips/utils/dates";
 import { useAiContextStore } from "../store/aiContextStore";
 import { GENERAL_CONTEXT, OVERVIEW_CONTEXT } from "../services/chatContext";
@@ -116,7 +116,7 @@ export default function AiScreen() {
             ? contextGroup.name
             : `${contextGroup.emoji ?? "👥"} ${contextGroup.name}`
           : t("aiTab.context.general");
-  const visibleGroups = moneyGroups.filter((group) => !group.shared?.archived);
+  const visibleGroups = moneyGroups.filter((group) => !isArchivedGroup(group));
   const contextOptions: AuraOption<string>[] = [
     ...visibleGroups.filter((group) => group.id === activeTripId).map((group) => ({ value: group.id, label: group.name, detail: t("money.activeTrip") })),
     ...visibleGroups.filter((group) => !isTrip(group)).map((group) => ({ value: group.id, label: `${isTrip(group) ? "" : `${group.emoji ?? "👥"} `}${group.name}`, detail: t("money.people", { count: group.companions.length + 1 }) })),
