@@ -49,7 +49,7 @@ The basic thing is a **group**: people, a currency, expenses, payments, and opti
 
 ### Moving between trips and groups
 
-- **Money switcher:** the Money header ("Goa trip ▾") lists Overview, then the active trip and your groups (most recent activity first), then ended trips. Switching doesn't change the active trip.
+- **Money switcher:** the Overview is the Money home (titled "Money"), not an entry in the list. A trip or group has a "‹ Overview" back link, and its name ("Goa trip ▾") lists the active trip and your groups (most recent activity first), then ended trips. Switching doesn't change the active trip. The header's only button is ⋯ (people, settings, import, export).
 - **Where an expense goes:** the add-expense sheet has an "in: Goa trip ▾" chip. It defaults to the screen you're on (the trip or group on screen; on the Overview, the same default as voice: the active trip, else the first trip or group), so the flat's rent can go in mid-trip without leaving.
 - **Move to…:** an option on an expense, for when it went into the wrong group or trip. Moving an expense out of a shared group deletes it there and adds it to the new one, through the existing sync.
 - **Voice and the widget** can pick any group or trip.
@@ -81,7 +81,7 @@ Chats are already kept per trip (conversation key = trip id), alongside a Genera
 
 The Money tab has an **Overview** (Money home), plus one money screen per trip or group. There is no separate Personal screen: personal spending is part of the Overview. The Overview is about you across everything; a trip or group screen is about that one place, with everyone in it.
 
-- **Active trip:** opens on that trip's money screen, as today. The header switcher lists Overview, then the active trip and groups (most recent first), then ended trips.
+- **Active trip:** opens on that trip's money screen, as today. "‹ Overview" goes back to the Overview; the switcher lists the active trip and groups (most recent first), then ended trips.
 - **No active trip:** opens on the Overview. From top to bottom:
   1. **Your spending:** a Week / Month switch with arrows for earlier periods, and the total of everything you spent, in the home currency (see Personal spending). Under it, "where it went": one row per trip, group and "Not in a group", each opening that trip or group. Then the category bar.
   2. **Balance:** "You're owed ₹3,450 overall" (or "You owe…"), hidden when everything is settled.
@@ -146,7 +146,7 @@ Personal spending is planned explicitly, in three cases:
 
 It's shown in the home currency (`useHomeCountry()`'s currency, else the phone's), converted with daily rates as elsewhere, with a note for anything that couldn't be converted. It's separate from the balance below it, which is about who owes whom.
 
-**Free vs Plus:** week and month totals with the breakdown are free. Trend charts over months and export are Plus.
+**Free vs Plus:** week and month totals with the breakdown are free. Plus adds the charts and insights and export: a trip day by day once it starts, a group month by month once it's a month old, and on the Overview the comparison with the last week or month, the pace, six months stacked by category (tap a month to open it) and the top places.
 
 ### Adding an expense
 

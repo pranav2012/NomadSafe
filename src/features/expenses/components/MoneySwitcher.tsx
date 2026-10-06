@@ -4,9 +4,8 @@ import { AuraOptionSheet, Icon, PressableScale, useAura, type AuraOption } from 
 import { useLocalization } from "@/localization";
 import { isArchivedGroup, isTrip, selectMoneyGroups, useTripsStore } from "@/features/trips/store/tripsStore";
 import { getTripStatus } from "@/features/trips/utils/dates";
-import { OVERVIEW } from "@/features/expenses/store/moneyViewStore";
 
-/** Money header title: the Overview or a trip/group name, opening a picker; picking never changes the active trip. */
+/** A trip or group name as the Money title, opening a picker of trips and groups; picking never changes the active trip. */
 export function MoneySwitcher({ selected, onSelect }: { selected: string; onSelect: (id: string) => void }) {
   const { c, f } = useAura();
   const { t } = useLocalization();
@@ -22,14 +21,13 @@ export function MoneySwitcher({ selected, onSelect }: { selected: string; onSele
   const ended = otherTrips.filter((trip) => isTrip(trip) && getTripStatus(trip) === "complete");
 
   const options: AuraOption<string>[] = [
-    { value: OVERVIEW, label: t("money.overview"), detail: t("money.overviewDetail") },
     ...active.map((group) => ({ value: group.id, label: group.name, detail: t("money.activeTrip") })),
     ...plain.map((group) => ({ value: group.id, label: `${group.emoji ?? "👥"} ${group.name}`, detail: t("money.people", { count: group.companions.length + 1 }) })),
     ...current.map((group) => ({ value: group.id, label: group.name, detail: t("money.tripBadge") })),
     ...ended.map((group) => ({ value: group.id, label: group.name, detail: t("money.endedTrip") })),
   ];
-  const shown = selected === OVERVIEW ? null : groups.find((group) => group.id === selected);
-  const label = !shown ? t("money.overview") : isTrip(shown) ? shown.name : `${shown.emoji ?? "👥"} ${shown.name}`;
+  const shown = groups.find((group) => group.id === selected);
+  const label = !shown ? "" : isTrip(shown) ? shown.name : `${shown.emoji ?? "👥"} ${shown.name}`;
 
   return (
     <>

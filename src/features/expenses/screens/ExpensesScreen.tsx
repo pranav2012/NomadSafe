@@ -19,7 +19,7 @@ import {
 import { auraStatusAccent } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { PrivateView, track } from "@/modules/analytics";
-import { useStartNewGroup, useStartNewTrip } from "@/modules/billing";
+import { usePlusGate, useStartNewGroup, useStartNewTrip } from "@/modules/billing";
 import { useAuthStore } from "@/features/auth/store/authStore";
 import { shareGroup } from "@/features/sync";
 import { useKeepGroupStore } from "@/features/expenses/store/keepGroupStore";
@@ -39,10 +39,11 @@ import { MoneySwitcher } from "@/features/expenses/components/MoneySwitcher";
 import { NewGroupSheet } from "@/features/expenses/components/NewGroupSheet";
 import { ImportFromAppSheet } from "@/features/expenses/components/ImportFromAppSheet";
 import { GroupSettingsSheet } from "@/features/expenses/components/GroupSettingsSheet";
+import { MoneyActionsSheet, type MoneyAction } from "@/features/expenses/components/MoneyActionsSheet";
 
 /** Money tab: the active trip's money (or the Overview with no trip), a switcher to any group, and a floating capture bar. */
 export default function ExpensesScreen() {
-  const { c, isDark } = useAura();
+  const { c, f, isDark } = useAura();
   const { t } = useLocalization();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -68,6 +69,9 @@ export default function ExpensesScreen() {
   const [appImport, setAppImport] = useState<{ groupId: string | null } | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [reviewDismissed, setReviewDismissed] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const plus = usePlusGate();
   const viewingActiveTrip = !!activeTrip && group?.id === activeTrip.id;
   const gmailAdded = useTripGmailSyncStatus(viewingActiveTrip ? activeTrip.id : undefined).unseenExpenses;
   const gmailLostAccess = useGmailConnectionStore((state) => state.lostAccess && !hasGmailGrant(state.tokens));
@@ -112,6 +116,22 @@ export default function ExpensesScreen() {
 
   const captureBottom = useFloatingBarBottom();
 
+  const exportAction: MoneyAction = {
+    icon: plus.isPlus ? "share" : "lock",
+    label: t("export.action"),
+    detail: plus.isPlus ? undefined : t("money.plusOnly"),
+    onPress: () => plus.run("export", () => setExportOpen(true)),
+  };
+  const importAction: MoneyAction = { icon: "download", label: t("expenses.importTitle"), onPress: () => setImportTab("paste") };
+  const menuActions: MoneyAction[] = group
+    ? [
+        { icon: "users", label: t("money.peopleAction"), onPress: () => setPeopleOpen(true) },
+        { icon: "settings", label: t("groupSettings.title"), onPress: () => setSettingsOpen(true) },
+        importAction,
+        exportAction,
+      ]
+    : [importAction, exportAction];
+
   return (
     <View style={[styles.root, { backgroundColor: c.bg }]}>
       <StatusBar style={isDark ? "light" : "dark"} />
@@ -121,38 +141,28 @@ export default function ExpensesScreen() {
           onScrollBeginDrag={markUsed}
           contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12, paddingBottom: tabBarInset + CAPTURE_BAR_HEIGHT + 28 }]}
         >
+          {group ? (
+            <PressableScale onPress={() => select(OVERVIEW)} hitSlop={8} accessibilityRole="button" style={styles.back}>
+              <Icon name="chevronLeft" size={15} color={c.textSoft} />
+              <Text style={[styles.backText, { color: c.textSoft, fontFamily: f.medium }]}>{t("money.overview")}</Text>
+            </PressableScale>
+          ) : null}
           <View style={styles.header}>
-            <MoneySwitcher selected={viewId} onSelect={select} />
-            <View style={styles.headerButtons}>
-              {group ? (
-                <PressableScale
-                  onPress={() => setSettingsOpen(true)}
-                  accessibilityRole="button"
-                  accessibilityLabel={t("groupSettings.title")}
-                  style={[styles.headerButton, { backgroundColor: c.surfaceStrong }]}
-                >
-                  <Icon name="settings" size={17} color={c.text} />
-                </PressableScale>
-              ) : null}
-              {group ? (
-                <PressableScale
-                  onPress={() => setPeopleOpen(true)}
-                  accessibilityRole="button"
-                  accessibilityLabel={t("groupTrip.peopleTitle")}
-                  style={[styles.headerButton, { backgroundColor: c.surfaceStrong }]}
-                >
-                  <Icon name="users" size={17} color={c.text} />
-                </PressableScale>
-              ) : null}
-              <PressableScale
-                onPress={() => setImportTab("paste")}
-                accessibilityRole="button"
-                accessibilityLabel={t("expenses.importTitle")}
-                style={[styles.headerButton, { backgroundColor: c.surfaceStrong }]}
-              >
-                <Icon name="download" size={17} color={c.text} />
-              </PressableScale>
-            </View>
+            {group ? (
+              <MoneySwitcher selected={group.id} onSelect={select} />
+            ) : (
+              <Text style={[styles.title, { color: c.text, fontFamily: f.semibold }]} accessibilityRole="header">
+                {t("tabs.money")}
+              </Text>
+            )}
+            <PressableScale
+              onPress={() => setMenuOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel={t("money.moreActions")}
+              style={[styles.headerButton, { backgroundColor: c.surfaceStrong }]}
+            >
+              <Icon name="more" size={18} color={c.text} />
+            </PressableScale>
           </View>
 
           {gmailAdded > 0 && activeTrip ? (
@@ -187,9 +197,17 @@ export default function ExpensesScreen() {
                   onImport={() => setImportTab("paste")}
                   onPlanTrip={() => startNewTrip(group.id)}
                   onKeepAsGroup={keepAsGroup}
+                  exportOpen={exportOpen}
+                  onCloseExport={() => setExportOpen(false)}
                 />
               ) : (
-                <MoneyOverview onOpenGroup={select} onOpenExpense={openExpense} onNewGroup={() => startNewGroup(() => setNewGroupOpen(true))} />
+                <MoneyOverview
+                  onOpenGroup={select}
+                  onOpenExpense={openExpense}
+                  onNewGroup={() => startNewGroup(() => setNewGroupOpen(true))}
+                  exportOpen={exportOpen}
+                  onCloseExport={() => setExportOpen(false)}
+                />
               )}
             </Animated.View>
           </PrivateView>
@@ -221,6 +239,7 @@ export default function ExpensesScreen() {
           setAppImport({ groupId: group?.id ?? null });
         }}
       />
+      <MoneyActionsSheet visible={menuOpen} title={group?.name ?? t("money.overview")} actions={menuActions} onClose={() => setMenuOpen(false)} />
       <GroupSettingsSheet groupId={settingsOpen ? (group?.id ?? null) : null} onClose={() => setSettingsOpen(false)} onRemoved={() => select(OVERVIEW)} />
       <ImportFromAppSheet visible={appImport !== null} groupId={appImport?.groupId ?? null} onClose={() => setAppImport(null)} onDone={(id) => select(id)} />
       <GroupPeopleSheet groupId={peopleOpen ? (group?.id ?? null) : null} onClose={() => setPeopleOpen(false)} />
@@ -273,8 +292,10 @@ function Banner({
 const styles = StyleSheet.create({
   root: { flex: 1 },
   scroll: { paddingHorizontal: 20 },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 },
-  headerButtons: { flexDirection: "row", gap: 8 },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 14 },
+  title: { fontSize: 30, letterSpacing: -1, flexShrink: 1 },
+  back: { flexDirection: "row", alignItems: "center", gap: 2, alignSelf: "flex-start", marginBottom: 4, marginLeft: -3 },
+  backText: { fontSize: 14.5 },
   headerButton: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center" },
   banner: { marginBottom: 12, paddingVertical: 12 },
   bannerRow: { flexDirection: "row", alignItems: "center", gap: 10 },

@@ -1,7 +1,6 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { AuraButton, AuraCard, AuraSection, Icon, PressableScale, useAura } from "@/atoms";
-import { usePlusGate } from "@/modules/billing";
+import { AuraButton, AuraCard, AuraSection, Icon, useAura } from "@/atoms";
 import { ExportSheet } from "@/features/expenses/components/ExportSheet";
 import { useLocalization } from "@/localization";
 import { isTrip, type MoneyGroup } from "@/features/trips/store/tripsStore";
@@ -17,7 +16,7 @@ import { GroupActivity } from "@/features/expenses/components/GroupActivity";
 import { RecurringList } from "@/features/expenses/components/RecurringList";
 import { GroupBalances } from "@/features/expenses/components/GroupBalances";
 import { SpendHero } from "@/features/expenses/components/SpendHero";
-import { SpendTrend } from "@/features/expenses/components/SpendTrend";
+import { GroupMonthsChart, TripDaysChart } from "@/features/expenses/components/SpendCharts";
 
 /** Money for one trip or group: balances first when there are people, your spend, then activity by day. */
 export function GroupMoney({
@@ -27,6 +26,8 @@ export function GroupMoney({
   onImport,
   onPlanTrip,
   onKeepAsGroup,
+  exportOpen,
+  onCloseExport,
 }: {
   group: MoneyGroup;
   onOpenExpense: (expense: Expense) => void;
@@ -34,6 +35,8 @@ export function GroupMoney({
   onImport: () => void;
   onPlanTrip: () => void;
   onKeepAsGroup: () => void;
+  exportOpen: boolean;
+  onCloseExport: () => void;
 }) {
   const { c, f } = useAura();
   const { t, formatCurrency } = useLocalization();
@@ -54,8 +57,6 @@ export function GroupMoney({
   const hasPeople = group.companions.length > 0 || expenses.some(isSplitExpense) || settlements.length > 0;
   const hasActivity = expenses.length > 0 || settlements.length > 0;
   const trip = isTrip(group) ? group : null;
-  const plus = usePlusGate();
-  const [exportOpen, setExportOpen] = useState(false);
   const keepHandled = useKeepGroupStore((state) => (trip ? state.handled.includes(trip.id) : true));
   const showKeep = !!trip && !keepHandled && trip.companions.length > 0 && getTripStatus(trip) === "complete";
 
@@ -96,7 +97,7 @@ export function GroupMoney({
                 : null
             }
           />
-          <SpendTrend items={mine} currency={group.currency} />
+          {trip ? <TripDaysChart trip={trip} items={mine} /> : <GroupMonthsChart createdAt={group.createdAt} items={mine} currency={group.currency} />}
         </View>
       ) : null}
 
@@ -123,16 +124,7 @@ export function GroupMoney({
         </AuraCard>
       ) : (
         <>
-          <AuraSection
-            title={t("money.activity")}
-            style={styles.section}
-            action={
-              <PressableScale onPress={() => plus.run("export", () => setExportOpen(true))} hitSlop={8} accessibilityRole="button" style={styles.exportAction}>
-                <Icon name={plus.isPlus ? "share" : "lock"} size={14} color={c.textSoft} />
-                <Text style={[styles.exportText, { color: c.textSoft, fontFamily: f.medium }]}>{t("export.action")}</Text>
-              </PressableScale>
-            }
-          />
+          <AuraSection title={t("money.activity")} style={styles.section} />
           <GroupActivity
             expenses={expenses}
             settlements={settlements}
@@ -153,7 +145,7 @@ export function GroupMoney({
           <AuraButton label={t("money.planTrip")} icon="plus" variant="secondary" size="md" onPress={onPlanTrip} style={styles.addPeopleButton} />
         </AuraCard>
       ) : null}
-      <ExportSheet visible={exportOpen} onClose={() => setExportOpen(false)} expenses={expenses} title={group.name} />
+      <ExportSheet visible={exportOpen} onClose={onCloseExport} expenses={expenses} title={group.name} />
     </View>
   );
 }
@@ -169,8 +161,6 @@ const styles = StyleSheet.create({
   addPeopleText: { flex: 1, fontSize: 14, lineHeight: 20 },
   addPeopleButton: { alignSelf: "flex-start" },
   section: { marginTop: 26 },
-  exportAction: { flexDirection: "row", alignItems: "center", gap: 5 },
-  exportText: { fontSize: 13.5 },
   empty: { marginTop: 28, gap: 8 },
   emptyTitle: { fontSize: 18, marginTop: 4 },
   emptyBody: { fontSize: 14.5, lineHeight: 21 },

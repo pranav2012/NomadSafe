@@ -357,3 +357,65 @@ test("as-is debts keep each pair; smart split passes debts along", () => {
     { from: "Z", to: "Y", amount: 30 },
   ]);
 });
+
+const insights = loadModule("src/features/expenses/utils/spendInsights.ts");
+const at = (y, m, d) => new Date(y, m, d, 12).toISOString();
+
+test("trip days: per day from the start to today, bookings before the start kept apart", () => {
+  const trip = { startDate: "2026-10-01", endDate: "2026-10-10" };
+  const items = [
+    { amount: 9000, date: at(2026, 8, 15), category: "stays" },
+    { amount: 100, date: at(2026, 9, 1), category: "food" },
+    { amount: 300, date: at(2026, 9, 3), category: "food" },
+    { amount: 50, date: at(2026, 9, 3), category: "travel" },
+  ];
+  const { buckets, step, before } = insights.tripDailyTotals(items, trip, new Date(2026, 9, 4, 9));
+  assert.equal(step, 1);
+  assert.equal(before, 9000);
+  assert.deepEqual(buckets.map((bucket) => bucket.total), [100, 0, 350, 0]);
+});
+
+test("trip days: trips over a month are grouped by week", () => {
+  const trip = { startDate: "2026-01-01", endDate: "2026-02-19" };
+  const { buckets, step } = insights.tripDailyTotals([{ amount: 10, date: at(2026, 0, 9), category: "food" }], trip, new Date(2026, 5, 1));
+  assert.equal(step, 7);
+  assert.equal(buckets.length, 8);
+  assert.equal(buckets[1].total, 10);
+  assert.equal(buckets[7].days, 1);
+});
+
+test("comparing periods: total change and the category that moved most", () => {
+  const previous = [
+    { amount: 1000, date: at(2026, 8, 3), category: "food" },
+    { amount: 500, date: at(2026, 8, 5), category: "travel" },
+  ];
+  const current = [
+    { amount: 1500, date: at(2026, 9, 3), category: "food" },
+    { amount: 450, date: at(2026, 9, 5), category: "travel" },
+  ];
+  const result = insights.comparePeriods(current, previous);
+  assert.equal(Math.round(result.change * 100), 30);
+  assert.deepEqual(result.mover, { category: "food", change: 0.5 });
+  assert.equal(insights.comparePeriods(current, []).change, null);
+});
+
+test("pace only for the current period once a few days are in", () => {
+  const now = new Date(2026, 9, 10, 12);
+  assert.equal(Math.round(insights.paceFor("month", 0, 1000, now)), 3100);
+  assert.equal(insights.paceFor("month", 1, 1000, now), null);
+  assert.equal(insights.paceFor("month", 0, 1000, new Date(2026, 9, 2)), null);
+});
+
+test("months by category and top places", () => {
+  const items = [
+    { amount: 200, date: at(2026, 9, 2), category: "food", merchant: "Cafe" },
+    { amount: 100, date: at(2026, 9, 3), category: "food", merchant: " cafe " },
+    { amount: 400, date: at(2026, 9, 4), category: "travel", merchant: "Uber" },
+    { amount: 50, date: at(2026, 8, 4), category: "food", merchant: "" },
+  ];
+  const months = insights.monthlyByCategory(items, 2, new Date(2026, 9, 20));
+  assert.deepEqual(months.map((month) => [month.offset, month.total]), [[1, 50], [0, 700]]);
+  assert.deepEqual(months[1].categories, [{ category: "travel", amount: 400 }, { category: "food", amount: 300 }]);
+  assert.deepEqual(insights.topPlaces(items, 5).map((place) => [place.name, place.amount, place.count]), [["Uber", 400, 1], ["Cafe", 300, 2]]);
+  assert.equal(insights.monthsOfHistory(items, new Date(2026, 9, 20)), 2);
+});

@@ -66,7 +66,8 @@ export type IconName =
   | "train"
   | "bus"
   | "ship"
-  | "footprints";
+  | "footprints"
+  | "more";
 
 const DIRECTIONAL: ReadonlySet<IconName> = new Set(["chevronRight", "chevronLeft", "send", "logout"]);
 
@@ -95,6 +96,15 @@ export function Icon({
   let body: React.ReactNode = null;
 
   switch (name) {
+    case "more":
+      body = (
+        <G fill={color}>
+          <Circle cx="5.5" cy="12" r="1.6" />
+          <Circle cx="12" cy="12" r="1.6" />
+          <Circle cx="18.5" cy="12" r="1.6" />
+        </G>
+      );
+      break;
     case "copy":
       body = (
         <G {...p}>
