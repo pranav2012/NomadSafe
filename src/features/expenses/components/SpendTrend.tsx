@@ -53,7 +53,7 @@ export function SpendTrend({ items, currency }: { items: { amount: number; date:
                 <View
                   style={[
                     styles.bar,
-                    { height: Math.max(3, (month.total / max) * BAR_HEIGHT), backgroundColor: current ? auraStatusAccent.calm : c.surfaceStrong },
+                    { height: Math.max(3, (month.total / max) * BAR_HEIGHT), backgroundColor: current ? auraStatusAccent.calm : `${auraStatusAccent.calm}55` },
                   ]}
                 />
               </View>
