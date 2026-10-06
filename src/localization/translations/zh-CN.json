@@ -1876,7 +1876,10 @@
     "keepAction": "保留为群组",
     "notNow": "暂不",
     "planTrip": "和这个群组计划旅行",
-    "planTripBody": "要一起出行吗？开始一次已包含这些人的旅行。"
+    "planTripBody": "要一起出行吗？开始一次已包含这些人的旅行。",
+    "trendTitle": "最近 6 个月",
+    "trendAverage": "平均 {{amount}}/月",
+    "trendLocked": "用 Plus 按月查看花费"
   },
   "groupShare": {
     "deleteBlocked": "删除此群组前，请先移除所有已加入的人。你也可以归档它，从列表中隐藏。",

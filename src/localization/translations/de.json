@@ -1876,7 +1876,10 @@
     "keepAction": "Als Gruppe behalten",
     "notNow": "Nicht jetzt",
     "planTrip": "Reise mit dieser Gruppe planen",
-    "planTripBody": "Ihr fahrt zusammen weg? Starte eine Reise, in der diese Leute schon dabei sind."
+    "planTripBody": "Ihr fahrt zusammen weg? Starte eine Reise, in der diese Leute schon dabei sind.",
+    "trendTitle": "Letzte 6 Monate",
+    "trendAverage": "Ø {{amount}}/Monat",
+    "trendLocked": "Sieh deine Ausgaben Monat für Monat mit Plus"
   },
   "groupShare": {
     "deleteBlocked": "Entferne alle, die beigetreten sind, bevor du diese Gruppe löschst. Du kannst sie stattdessen archivieren, um sie auszublenden.",

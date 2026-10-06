@@ -1876,7 +1876,10 @@
     "keepAction": "グループとして残す",
     "notNow": "今はしない",
     "planTrip": "このグループで旅行を計画",
-    "planTripBody": "一緒に出かけますか？このメンバー入りで旅行を始めましょう。"
+    "planTripBody": "一緒に出かけますか？このメンバー入りで旅行を始めましょう。",
+    "trendTitle": "過去6か月",
+    "trendAverage": "平均 {{amount}}/月",
+    "trendLocked": "Plusで月ごとの支出を見る"
   },
   "groupShare": {
     "deleteBlocked": "このグループを削除する前に、参加した人をすべて外してください。代わりにアーカイブして一覧から隠すこともできます。",

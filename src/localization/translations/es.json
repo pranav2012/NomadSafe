@@ -1876,7 +1876,10 @@
     "keepAction": "Guardar como grupo",
     "notNow": "Ahora no",
     "planTrip": "Planear un viaje con este grupo",
-    "planTripBody": "¿Vais a viajar juntos? Empieza un viaje con estas personas ya dentro."
+    "planTripBody": "¿Vais a viajar juntos? Empieza un viaje con estas personas ya dentro.",
+    "trendTitle": "Últimos 6 meses",
+    "trendAverage": "media {{amount}}/mes",
+    "trendLocked": "Mira tus gastos mes a mes con Plus"
   },
   "groupShare": {
     "deleteBlocked": "Quita a todos los que se unieron antes de borrar este grupo. También puedes archivarlo para ocultarlo de tu lista.",

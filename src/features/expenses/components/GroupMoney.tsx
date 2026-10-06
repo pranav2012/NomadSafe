@@ -15,6 +15,7 @@ import { GroupActivity } from "@/features/expenses/components/GroupActivity";
 import { RecurringList } from "@/features/expenses/components/RecurringList";
 import { GroupBalances } from "@/features/expenses/components/GroupBalances";
 import { SpendHero } from "@/features/expenses/components/SpendHero";
+import { SpendTrend } from "@/features/expenses/components/SpendTrend";
 
 /** Money for one trip or group: balances first when there are people, your spend, then activity by day. */
 export function GroupMoney({
@@ -91,6 +92,7 @@ export function GroupMoney({
                 : null
             }
           />
+          <SpendTrend items={mine} currency={group.currency} />
         </View>
       ) : null}
 

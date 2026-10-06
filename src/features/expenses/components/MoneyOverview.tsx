@@ -14,6 +14,7 @@ import { GroupActivity } from "@/features/expenses/components/GroupActivity";
 import { RecurringList } from "@/features/expenses/components/RecurringList";
 import { OWED, OWES } from "@/features/expenses/components/GroupBalances";
 import { SpendHero } from "@/features/expenses/components/SpendHero";
+import { SpendTrend } from "@/features/expenses/components/SpendTrend";
 
 const SETTLED_AFTER_MS = 30 * 86_400_000;
 
@@ -46,6 +47,13 @@ export function MoneyOverview({
   const spendConversion = useConvertedExpenses(inPeriod, homeCurrency);
   const mine: Expense[] = spendConversion.convertedExpenses.map(({ expense, amount }) => ({ ...expense, amount, currency: homeCurrency }));
   const spent = sumAmount(mine);
+  const [trendStart] = useState(() => periodRange("month", 5).start.getTime());
+  const trendItems = useMemo(
+    () => expenses.filter((expense) => new Date(expense.date).getTime() >= trendStart).map((expense) => ({ ...expense, amount: myShareOf(expense) })),
+    [expenses, trendStart],
+  );
+  const trendConversion = useConvertedExpenses(trendItems, homeCurrency);
+  const trend = trendConversion.convertedExpenses.map(({ expense, amount }) => ({ amount, date: expense.date }));
 
   const nameOf = (groupId: string | null) => groups.find((group) => group.id === groupId)?.name ?? t("money.notInGroup");
   const bySource = new Map<string, { label: string; amount: number; groupId: string | null }>();
@@ -118,6 +126,8 @@ export function MoneyOverview({
             : null
         }
       />
+
+      <SpendTrend items={trend} currency={homeCurrency} />
 
       {sources.length > 0 ? (
         <AuraCard style={styles.sources}>

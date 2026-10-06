@@ -260,3 +260,19 @@ test("recurring spends: due days after the last one, month ends clamp, catch-up 
   assert.equal(recurring.dueDays("2020-01-01", "weekly", null, "2026-10-07").length, 24);
   assert.equal(recurring.nextDueDay("2026-08-15", "monthly", "2026-10-07"), "2026-10-15");
 });
+
+test("monthly totals cover the last months, oldest first", () => {
+  const now = new Date(2026, 9, 7);
+  const totals = myMoney.monthlyTotals(
+    [
+      { amount: 100, date: new Date(2026, 9, 2).toISOString() },
+      { amount: 50, date: new Date(2026, 8, 30).toISOString() },
+      { amount: 70, date: new Date(2026, 3, 1).toISOString() },
+      { amount: 999, date: new Date(2026, 2, 31).toISOString() },
+    ],
+    6,
+    now,
+  );
+  assert.deepEqual(totals.map((entry) => entry.start.getMonth()), [4, 5, 6, 7, 8, 9]);
+  assert.deepEqual(totals.map((entry) => entry.total), [0, 0, 0, 0, 50, 100]);
+});

@@ -1876,7 +1876,10 @@
     "keepAction": "그룹으로 남기기",
     "notNow": "나중에",
     "planTrip": "이 그룹과 여행 계획하기",
-    "planTripBody": "함께 어디 가나요? 이 사람들이 들어간 여행을 시작하세요."
+    "planTripBody": "함께 어디 가나요? 이 사람들이 들어간 여행을 시작하세요.",
+    "trendTitle": "최근 6개월",
+    "trendAverage": "평균 {{amount}}/월",
+    "trendLocked": "Plus로 월별 지출 보기"
   },
   "groupShare": {
     "deleteBlocked": "이 그룹을 삭제하기 전에 참여한 사람을 모두 내보내세요. 대신 보관하면 목록에서 숨길 수 있어요.",

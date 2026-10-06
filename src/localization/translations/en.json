@@ -1876,7 +1876,10 @@
     "keepAction": "Keep as a group",
     "notNow": "Not now",
     "planTrip": "Plan a trip with this group",
-    "planTripBody": "Going somewhere together? Start a trip with these people already in it."
+    "planTripBody": "Going somewhere together? Start a trip with these people already in it.",
+    "trendTitle": "Last 6 months",
+    "trendAverage": "avg {{amount}}/month",
+    "trendLocked": "See your spending month by month with Plus"
   },
   "groupShare": {
     "deleteBlocked": "Remove everyone who joined before deleting this group. You can archive it to hide it from your list instead.",

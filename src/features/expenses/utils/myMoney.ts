@@ -44,3 +44,13 @@ export function inRange(date: string, range: { start: Date; end: Date }): boolea
   const time = new Date(date).getTime();
   return time >= range.start.getTime() && time < range.end.getTime();
 }
+
+/** Totals per calendar month for the last `months` months (oldest first), from amounts already in one currency. */
+export function monthlyTotals(items: { amount: number; date: string }[], months: number, now: Date = new Date()): { start: Date; total: number }[] {
+  const buckets = Array.from({ length: months }, (_, index) => ({ ...periodRange("month", months - 1 - index, now), total: 0 }));
+  for (const item of items) {
+    const bucket = buckets.find((entry) => inRange(item.date, entry));
+    if (bucket) bucket.total += item.amount;
+  }
+  return buckets.map(({ start, total }) => ({ start, total }));
+}
