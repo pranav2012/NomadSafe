@@ -217,3 +217,83 @@ test("prefers the merchant over alert boilerplate", () => {
     { category: "other", matched: false },
   );
 });
+
+import { readFileSync } from "node:fs";
+
+const formats = loadModule("src/features/expenses/utils/importFormats.ts");
+const fixture = (name) => formats.decodeBytes(new Uint8Array(readFileSync(`tests/fixtures/import/${name}`)));
+
+test("Splitwise export: rows rebuilt from nets, payments, personal rows and the total check", () => {
+  const parsed = formats.parseImport(fixture("splitwise-trip.csv"));
+  assert.equal(parsed.source, "splitwise");
+  assert.equal(parsed.people.length, 7);
+  assert.deepEqual(parsed.former, ["Hari Goyal"]);
+  const kinds = parsed.rows.reduce((acc, row) => ({ ...acc, [row.kind]: (acc[row.kind] ?? 0) + 1 }), {});
+  assert.deepEqual(kinds, { expense: 89, payment: 12, personal: 12 });
+  for (const row of parsed.rows.filter((r) => r.kind === "expense")) {
+    const paid = row.payers.reduce((sum, p) => sum + p.amount, 0);
+    const shared = row.shares.reduce((sum, s) => sum + s.amount, 0);
+    assert.ok(Math.abs(paid - row.amount) < 0.02, row.description);
+    assert.ok(Math.abs(shared - row.amount) < 0.02, row.description);
+  }
+  const multi = parsed.rows.find((r) => r.description === "Lunch at bamboo plantation");
+  assert.equal(multi.payers.length, 3);
+  assert.equal(multi.estimated, true);
+  assert.equal(formats.matchesTotals(parsed.rows, parsed.totals), true);
+  const bus = parsed.rows.find((r) => r.description === "Bus from blr to coorg");
+  assert.equal(bus.category, "travel");
+  assert.deepEqual(bus.payers, [{ person: "Vik Arora", amount: 7500 }]);
+});
+
+test("Settle Up export: UTF-16, several payers exact, transfers, rounding absorbed", () => {
+  const parsed = formats.parseImport(fixture("settleup-group.csv"));
+  assert.equal(parsed.source, "settleup");
+  assert.equal(parsed.rows.filter((r) => r.kind === "payment").length, 4);
+  const auto = parsed.rows.find((r) => r.description === "Auto to Hosteller");
+  assert.deepEqual(auto.payers, [{ person: "Arun", amount: 200 }, { person: "Sunil", amount: 200 }]);
+  for (const row of parsed.rows.filter((r) => r.kind === "expense")) {
+    assert.ok(Math.abs(row.shares.reduce((sum, s) => sum + s.amount, 0) - row.amount) < 0.001, row.description);
+  }
+  const balances = formats.importBalances(parsed.rows);
+  for (const byCurrency of Object.values(balances)) assert.ok(Math.abs(byCurrency.INR) < 0.05);
+  const two = formats.parseImport(fixture("settleup-two.csv"));
+  assert.equal(two.people.length, 2);
+  assert.equal(two.rows.find((r) => r.description.startsWith("Booking.com")).category, "stays");
+});
+
+test("CSV parsing keeps quoted commas and quotes", () => {
+  assert.deepEqual(formats.parseCsv('a,"b, c","d ""e"""\r\n\r\n1,2,3'), [["a", "b, c", 'd "e"'], ["1", "2", "3"]]);
+  assert.equal(formats.parseImport("hello,world\n1,2"), null);
+});
+
+const build = loadModule("src/features/expenses/utils/importBuild.ts");
+const splitUtils = loadModule("src/features/expenses/utils/split.ts");
+
+test("import build: history keeps balances; balances mode carries over the same debts", () => {
+  const parsed = formats.parseImport(fixture("splitwise-small.csv"));
+  const people = { "Alex Doe": splitUtils.SELF_ID, "Priya Lal": "Priya", "Sam Bose": "Sam" };
+  const options = { people, mine: new Set(), categorize: () => "other", carriedOver: "Carried over", today: "2026-10-07" };
+  const history = build.buildImport(parsed, { ...options, mode: "history" });
+  assert.equal(history.settlements.length, 2);
+  const balances = build.buildImport(parsed, { ...options, mode: "balances" });
+  const net = (result) =>
+    splitUtils.computeNetBalances(
+      result.expenses.filter((e) => e.shares).map((e) => ({ ...e })),
+      result.settlements,
+      () => 1,
+    ).net;
+  const a = net(history);
+  const b = net(balances);
+  for (const person of [splitUtils.SELF_ID, "Priya", "Sam"]) assert.ok(Math.abs((a.get(person) ?? 0) - (b.get(person) ?? 0)) < 0.05, person);
+  const personal = history.expenses.find((e) => e.merchant === "Puncture");
+  assert.equal(personal, undefined);
+  const mine = build.buildImport(parsed, { ...options, mode: "history", mine: new Set(parsed.rows.filter((r) => r.kind === "personal").map((r) => r.key)) });
+  assert.equal(mine.expenses.find((e) => e.merchant === "Puncture").shares, undefined);
+});
+
+test("base64 file bytes decode back to the same text, UTF-16 included", () => {
+  const raw = readFileSync("tests/fixtures/import/settleup-two.csv");
+  const viaBase64 = formats.decodeBytes(formats.base64ToBytes(raw.toString("base64")));
+  assert.equal(viaBase64, formats.decodeBytes(new Uint8Array(raw)));
+  assert.equal(formats.decodeBytes(formats.base64ToBytes(Buffer.from("héllo ✓").toString("base64"))), "héllo ✓");
+});

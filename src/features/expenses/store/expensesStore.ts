@@ -73,7 +73,9 @@ export interface Settlement {
   amount: number;
   currency: string;
   date: string;
-  source: "manual" | "voice";
+  source: "manual" | "voice" | "import";
+  /** Set on imported payments, so importing the same file again adds nothing. */
+  externalId?: string;
   createdAt: string;
 }
 

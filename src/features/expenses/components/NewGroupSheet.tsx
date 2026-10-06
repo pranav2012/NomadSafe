@@ -11,16 +11,26 @@ const EMOJIS = ["👥", "🏠", "💑", "🍕", "🎉", "🏢", "⚽", "🛒"];
 const MAX_NAME = 80;
 
 /** Creates a group: name, emoji, currency and the people in it. */
-export function NewGroupSheet({ visible, onClose, onCreated }: { visible: boolean; onClose: () => void; onCreated: (group: Group) => void }) {
+export function NewGroupSheet({
+  visible,
+  onClose,
+  onCreated,
+  onImportFromApp,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onCreated: (group: Group) => void;
+  onImportFromApp: () => void;
+}) {
   const { t } = useLocalization();
   return (
     <AuraSheet visible={visible} onClose={onClose} title={t("money.newGroupTitle")}>
-      {visible ? <NewGroupBody onClose={onClose} onCreated={onCreated} /> : null}
+      {visible ? <NewGroupBody onClose={onClose} onCreated={onCreated} onImportFromApp={onImportFromApp} /> : null}
     </AuraSheet>
   );
 }
 
-function NewGroupBody({ onClose, onCreated }: { onClose: () => void; onCreated: (group: Group) => void }) {
+function NewGroupBody({ onClose, onCreated, onImportFromApp }: { onClose: () => void; onCreated: (group: Group) => void; onImportFromApp: () => void }) {
   const { c, f } = useAura();
   const { t, currency: defaultCurrency } = useLocalization();
   const createGroup = useTripsStore((state) => state.createGroup);
@@ -101,6 +111,7 @@ function NewGroupBody({ onClose, onCreated }: { onClose: () => void; onCreated: 
       </View>
 
       <AuraButton label={t("money.createGroup")} onPress={create} style={styles.create} />
+      <AuraButton label={t("importApp.startFrom")} icon="swap" variant="ghost" size="md" onPress={onImportFromApp} style={styles.fromApp} />
     </ScrollView>
   );
 }
@@ -115,4 +126,5 @@ const styles = StyleSheet.create({
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   hint: { fontSize: 13 },
   create: { marginTop: 4 },
+  fromApp: { alignSelf: "center" },
 });

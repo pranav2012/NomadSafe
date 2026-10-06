@@ -30,6 +30,7 @@ export interface AnalyticsEvents {
   money_exported: { format: "csv" | "pdf"; count: number };
   receipt_scanned: { found_total: boolean; lines: number };
   receipt_items_split: { items: number; people: number };
+  app_import_completed: { source: "splitwise" | "settleup"; mode: "history" | "balances"; expenses: number; payments: number };
   plus_feature_blocked: { feature: "shares" | "presets" | "recurring" | "charts" | "export" | "receiptScan" };
   trip_joined: { deferred: boolean; claimed_member: boolean };
   invite_deferred_found: { source: "install_referrer" | "clipboard" };

@@ -29,6 +29,8 @@ export interface ImportSheetProps {
   trip: Trip | null;
   onClose: () => void;
   onImported: (count: number) => void;
+  /** Opens the Splitwise / Settle Up import for this trip or group. */
+  onFromApp?: () => void;
 }
 
 /** Paste or Gmail import in a full-height sheet: pick a source, review the parsed spends, import. */
@@ -41,7 +43,7 @@ export function ImportSheet({ visible, onClose, ...props }: ImportSheetProps) {
   );
 }
 
-function ImportBody({ groupId, trip, initialTab = "paste", onImported }: Omit<ImportSheetProps, "visible">) {
+function ImportBody({ groupId, trip, initialTab = "paste", onImported, onFromApp }: Omit<ImportSheetProps, "visible">) {
   const { c, f } = useAura();
   const { t, formatCurrency, locale } = useLocalization();
   const addExpenses = useExpensesStore((state) => state.addExpenses);
@@ -163,6 +165,16 @@ function ImportBody({ groupId, trip, initialTab = "paste", onImported }: Omit<Im
     <PrivateView style={styles.root}>
       {candidates === null ? (
         <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+          {onFromApp && groupId ? (
+            <PressableScale onPress={onFromApp} pressedScale={0.98} accessibilityRole="button" style={[styles.fromApp, { backgroundColor: c.surface, borderColor: c.hairline }]}>
+              <Icon name="swap" size={16} color={c.text} />
+              <View style={styles.fromAppText}>
+                <Text style={[styles.fromAppTitle, { color: c.text, fontFamily: f.medium }]}>{t("importApp.entry")}</Text>
+                <Text style={[styles.fromAppDetail, { color: c.textMuted, fontFamily: f.regular }]}>{t("importApp.entryDetail")}</Text>
+              </View>
+              <Icon name="chevronRight" size={14} color={c.textMuted} />
+            </PressableScale>
+          ) : null}
           <Text style={[styles.intro, { color: c.textSoft, fontFamily: f.regular }]}>{t("expenses.importIntro")}</Text>
           <AuraSegmented
             options={[
@@ -317,6 +329,10 @@ function ImportBody({ groupId, trip, initialTab = "paste", onImported }: Omit<Im
 }
 
 const styles = StyleSheet.create({
+  fromApp: { flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, padding: 14 },
+  fromAppText: { flex: 1, gap: 2 },
+  fromAppTitle: { fontSize: 14.5 },
+  fromAppDetail: { fontSize: 12.5 },
   root: { flex: 1 },
   flex: { flex: 1 },
   body: { paddingHorizontal: 20, paddingTop: 4, paddingBottom: 24, gap: 14 },

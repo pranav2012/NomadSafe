@@ -37,6 +37,7 @@ import { ImportSheet } from "@/features/expenses/components/ImportSheet";
 import { MoneyOverview } from "@/features/expenses/components/MoneyOverview";
 import { MoneySwitcher } from "@/features/expenses/components/MoneySwitcher";
 import { NewGroupSheet } from "@/features/expenses/components/NewGroupSheet";
+import { ImportFromAppSheet } from "@/features/expenses/components/ImportFromAppSheet";
 
 /** Money tab: the active trip's money (or the Overview with no trip), a switcher to any group, and a floating capture bar. */
 export default function ExpensesScreen() {
@@ -62,6 +63,7 @@ export default function ExpensesScreen() {
   const [importTab, setImportTab] = useState<"paste" | "gmail" | null>(null);
   const [peopleOpen, setPeopleOpen] = useState(false);
   const [newGroupOpen, setNewGroupOpen] = useState(false);
+  const [appImport, setAppImport] = useState<{ groupId: string | null } | null>(null);
   const [reviewDismissed, setReviewDismissed] = useState(false);
   const viewingActiveTrip = !!activeTrip && group?.id === activeTrip.id;
   const gmailAdded = useTripGmailSyncStatus(viewingActiveTrip ? activeTrip.id : undefined).unseenExpenses;
@@ -201,9 +203,22 @@ export default function ExpensesScreen() {
         initialTab={importTab ?? "paste"}
         onClose={() => setImportTab(null)}
         onImported={() => setImportTab(null)}
+        onFromApp={() => {
+          setImportTab(null);
+          setAppImport({ groupId: group?.id ?? null });
+        }}
       />
+      <ImportFromAppSheet visible={appImport !== null} groupId={appImport?.groupId ?? null} onClose={() => setAppImport(null)} onDone={(id) => select(id)} />
       <GroupPeopleSheet groupId={peopleOpen ? (group?.id ?? null) : null} onClose={() => setPeopleOpen(false)} onDeleted={() => select(OVERVIEW)} />
-      <NewGroupSheet visible={newGroupOpen} onClose={() => setNewGroupOpen(false)} onCreated={(created) => select(created.id)} />
+      <NewGroupSheet
+        visible={newGroupOpen}
+        onClose={() => setNewGroupOpen(false)}
+        onCreated={(created) => select(created.id)}
+        onImportFromApp={() => {
+          setNewGroupOpen(false);
+          setAppImport({ groupId: null });
+        }}
+      />
     </View>
   );
 }
