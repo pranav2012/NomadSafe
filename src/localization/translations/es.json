@@ -90,7 +90,7 @@
       "nightsBooked_other": "{{booked}} de {{count}} noches reservadas",
       "noStays": "Aún no hay alojamiento reservado",
       "gap": "Sin alojamiento para {{range}}",
-      "save": "Guardar"
+      "save": "Guardar",      "mustDos_one": "{{count}} imprescindible en {{place}}",      "mustDos_other": "{{count}} imprescindibles en {{place}}",      "savedTitle": "Guardado en tu lista de deseos",      "savedBody": "{{name}} está en tu itinerario completo, listo para asignarle un día"
     },
     "everyday": {
       "owed_one": "Te deben {{amount}} en {{count}} grupo",

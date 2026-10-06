@@ -44,6 +44,7 @@ import { SpendChart } from "./aura/SpendChart";
 
 // Hero height (below the header) for the horizon strip during the trip.
 const HORIZON_HEIGHT = 150;
+const GLOBE_BUTTON_FILL = "rgba(14,16,24,0.55)";
 
 export interface UserLocation {
   city?: string;
@@ -193,8 +194,10 @@ export function TripHome({
   >({ mode: "globe", entry: null });
   const [heroTouched, setHeroTouched] = useState(false);
   const { scrolling, onScroll } = useScrollActivity();
-  // The header sits over the globe's dark space backdrop in globe mode, even in light mode.
+  // The header sits over the globe's dark space backdrop in globe mode, even in light mode; its
+  // buttons get a darker fill there so white clouds behind them don't wash out the icons.
   const hc = hero.mode === "globe" ? auraDark : c;
+  const headerFill = hero.mode === "globe" ? GLOBE_BUTTON_FILL : hc.surfaceStrong;
 
   const moneyCard =
     !data.hasSpends ? (
@@ -291,14 +294,14 @@ export function TripHome({
       >
         <View style={{ height: headerSpace + heroHeight }}>
         <View style={[styles.heroTop, { top: insets.top + 12 }]}>
-          <Text numberOfLines={1} style={[styles.greeting, { color: hc.textSoft }]}>
+          <Text numberOfLines={1} style={[styles.greeting, hero.mode === "globe" && styles.greetingOnGlobe, { color: hc.textSoft }]}>
             {data.greeting}, {data.userName}
           </Text>
           <PressableScale
             onPress={onSwitchTrip}
             accessibilityRole="button"
             accessibilityLabel={t("home.switchTrip")}
-            style={[styles.round, { backgroundColor: hc.surfaceStrong, borderColor: hc.hairline }]}
+            style={[styles.round, { backgroundColor: headerFill, borderColor: hc.hairline }]}
           >
             <Icon name="swap" size={16} color={hc.text} />
           </PressableScale>
@@ -306,7 +309,7 @@ export function TripHome({
             onPress={onOpenSettings}
             accessibilityRole="button"
             accessibilityLabel={t("settings.title")}
-            style={[styles.round, { backgroundColor: hc.surfaceStrong, borderColor: hc.hairline }]}
+            style={[styles.round, { backgroundColor: headerFill, borderColor: hc.hairline }]}
           >
             <Text style={[styles.avatarText, { color: hc.text }]}>{data.userName.charAt(0).toUpperCase()}</Text>
           </PressableScale>
@@ -332,7 +335,6 @@ export function TripHome({
                   track("today_action", { action: "expand_globe" });
                   setGlobeExpanded(true);
                 }}
-                origin={globe.origin}
                 contacts={globe.contacts}
                 contactColor="#3DDC97"
                 accent={heroAccent}
@@ -496,7 +498,7 @@ export function TripHome({
 
         <View style={styles.body}>
           {liveMode ? null : <TripItinerary trip={trip} accent={accent} now={now} />}
-          <NearbyPlaces userLocation={userLocation} />
+          {stage === "active" ? <NearbyPlaces userLocation={userLocation} /> : null}
         </View>
       </Animated.ScrollView>
       <AuraTopFade />
@@ -536,6 +538,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   greeting: { fontFamily: f.medium, fontSize: 15, flex: 1 },
+  greetingOnGlobe: { textShadowColor: "rgba(0,0,0,0.6)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },
   round: {
     width: 38,
     height: 38,

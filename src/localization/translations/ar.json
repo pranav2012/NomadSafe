@@ -90,7 +90,7 @@
       "nightsBooked_other": "{{booked}} من {{count}} ليالٍ محجوزة",
       "noStays": "لا إقامة محجوزة بعد",
       "gap": "لا إقامة في {{range}}",
-      "save": "حفظ"
+      "save": "حفظ",      "mustDos_one": "{{count}} مكان لا يُفوَّت في {{place}}",      "mustDos_other": "{{count}} أماكن لا تُفوَّت في {{place}}",      "savedTitle": "حُفظ في قائمة رغباتك",      "savedBody": "{{name}} في خط رحلتك الكامل، جاهز لتحديد يوم له"
     },
     "everyday": {
       "owed_one": "لك {{amount}} في مجموعة واحدة",

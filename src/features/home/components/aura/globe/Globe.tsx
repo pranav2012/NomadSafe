@@ -71,6 +71,10 @@ const DEG = Math.PI / 180;
 const HORIZON_RADIUS = 1.15;
 const HORIZON_TILT = 1.2;
 const HORIZON_EDGE = 0.32;
+// Angular margin (radians, ~4.5°) of the night light past the outermost stop.
+const GLOW_MARGIN = 0.08;
+// The focused pin's halo fades in and out over this period.
+const BREATHE_MS = 3200;
 const SMOOTH = { filter: FilterMode.Linear, mipmap: MipmapMode.Linear };
 
 interface GlobeTextures {
@@ -222,6 +226,17 @@ function frameRoute(stops: GlobeStop[]) {
   return { lat: Math.max(-1.3, Math.min(1.3, lat)), lng, zoom };
 }
 
+/** Direction (unit vector) and cosines of the inner/outer edge of the soft night light around the trip's stops. */
+function tripGlow(stops: GlobeStop[]) {
+  if (stops.length === 0) return { dir: [0, 0, 1], cos: [1, 1], on: 0 };
+  const { lat, lng } = frameRoute(stops);
+  const center = { latitude: lat / DEG, longitude: lng / DEG };
+  const reach = Math.max(...stops.map((stop) => distanceKm(center, stop))) / EARTH_RADIUS_KM;
+  const inner = Math.min(0.6, reach + GLOW_MARGIN);
+  const outer = inner + Math.max(GLOW_MARGIN, inner * 0.6);
+  return { dir: [Math.cos(lat) * Math.sin(lng), Math.sin(lat), Math.cos(lat) * Math.cos(lng)], cos: [Math.cos(inner), Math.cos(outer)], on: 1 };
+}
+
 /** Same angle shifted by whole turns to be closest to `from`, so the spin takes the short way round. */
 function nearestTurn(angle: number, from: number) {
   return angle + Math.round((from - angle) / (2 * Math.PI)) * 2 * Math.PI;
@@ -263,6 +278,9 @@ uniform float rotLat;
 uniform float3 sun;
 uniform float time;
 uniform float moon;
+uniform float3 glowDir;
+uniform float2 glowCos;
+uniform float glowOn;
 
 const float PI = 3.14159265;
 const float3 ATMO = float3(0.36, 0.6, 1.0);
@@ -398,6 +416,10 @@ half4 main(float2 p) {
   float warm = (nightTex.r + nightTex.g) * 0.5 - nightTex.b * 0.8;
   float lights = smoothstep(0.02, 0.5, warm) * (0.35 + 0.65 * smoothstep(0.3, 0.9, warm));
   float3 nightCol = min(nightTex, float3(0.35)) * (0.25 + 0.3 * moon) + float3(1.0, 0.74, 0.4) * lights * 1.15;
+  // Around the trip, moonlight the day imagery so coasts and land stay readable after dark.
+  float spot = glowOn * smoothstep(glowCos.y, glowCos.x, dot(w, glowDir));
+  float3 moonLand = mix(float3(dot(dayTex, float3(0.3, 0.59, 0.11))), dayTex, 0.35) * float3(0.62, 0.72, 0.95) * (0.3 + 0.15 * moon);
+  nightCol += moonLand * spot;
   float3 col = mix(nightCol, dayCol, lit);
 
   // Grid cell centres sit at pixel centres; x wraps around the antimeridian.
@@ -409,7 +431,7 @@ half4 main(float2 p) {
   float thresh = mix(0.78, 0.3, cover);
   float density = smoothstep(thresh, thresh + 0.14, n) * smoothstep(0.04, 0.15, cover);
   float cloud = density * 0.95;
-  float3 moonCloud = float3(0.5, 0.58, 0.75) * (0.06 + 0.16 * moon) * (0.7 + 0.3 * density);
+  float3 moonCloud = float3(0.5, 0.58, 0.75) * (0.06 + 0.16 * moon) * (0.7 + 0.3 * density) * (1.0 + 1.2 * spot);
   float3 cloudCol = float3(0.78 + 0.22 * density) * diffuse + moonCloud * (1.0 - lit);
   col = mix(col, cloudCol, cloud);
   // City lights still glow faintly through cloud.
@@ -554,6 +576,7 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
   const spinning = overview && stops.length === 0 && !reduceMotion;
   const restZoom = frame.zoom;
   const imagery = useTripImagery(stops, focusIndex, !overview);
+  const glow = useMemo(() => tripGlow(overview ? [] : stops), [overview, stops]);
   const boxUniform = (d: RegionDetail | null) => (d ? [d.box.west * DEG, d.box.south * DEG, d.box.width * DEG, d.box.height * DEG] : [0, 0, 1, 1]);
   const sizeOf = (d: RegionDetail | null) => (d ? [d.day.width(), d.day.height()] : [1, 1]);
   const routeBox = boxUniform(imagery.route);
@@ -578,7 +601,7 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
   const touching = useSharedValue(false);
   const resumeAt = useSharedValue(0);
 
-  // One clock for clouds, comet, pin pulses and the overview spin, advanced in ~30 fps ticks. It only
+  // One clock for clouds, comet, the pin halo and the overview spin, advanced in ~30 fps ticks. It only
   // runs while the globe is visible and holds still during page scrolls.
   const ticker = useFrameCallback((info) => {
     if (scrolling?.get()) return;
@@ -641,6 +664,9 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
     sun,
     time: shaderTime.get(),
     moon,
+    glowDir: glow.dir,
+    glowCos: glow.cos,
+    glowOn: glow.on,
     routeBox,
     routeSize,
     routeOn: imagery.route ? 1 : 0,
@@ -680,7 +706,7 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
 
   const cometEnd = useDerivedValue(() => (clock.get() % 2600) / 2600);
   const cometStart = useDerivedValue(() => Math.max(0, cometEnd.get() - 0.18));
-  const pulse = useDerivedValue(() => (clock.get() % 1600) / 1600);
+  const breathe = useDerivedValue(() => 0.5 - 0.5 * Math.cos(((clock.get() % BREATHE_MS) / BREATHE_MS) * 2 * Math.PI));
 
   const pins = useMemo(() => stops.map((stop, i) => ({ stop, focused: i === focusIndex })), [focusIndex, stops]);
 
@@ -782,10 +808,10 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
             <Path path={arcs} style="stroke" strokeWidth={7} color={accent} opacity={0.25} start={cometStart} end={cometEnd} strokeCap="round" />
             <Path path={arcs} style="stroke" strokeWidth={2.6} color={accent} start={cometStart} end={cometEnd} strokeCap="round" />
             {origin ? (
-              <GlobePin stop={origin} focused={false} rotLng={rotLng} rotLat={rotLat} cx={cx} cy={cy} radius={radius} accent={isDark ? "#EDEFF5" : "#0E1018"} pulse={pulse} quiet />
+              <GlobePin stop={origin} focused={false} rotLng={rotLng} rotLat={rotLat} cx={cx} cy={cy} radius={radius} accent={isDark ? "#EDEFF5" : "#0E1018"} breathe={breathe} quiet />
             ) : null}
             {contacts.map((contact, i) => (
-              <GlobePin key={`contact-${i}`} stop={contact} focused={false} rotLng={rotLng} rotLat={rotLat} cx={cx} cy={cy} radius={radius} accent={contactColor} pulse={pulse} quiet />
+              <GlobePin key={`contact-${i}`} stop={contact} focused={false} rotLng={rotLng} rotLat={rotLat} cx={cx} cy={cy} radius={radius} accent={contactColor} breathe={breathe} quiet />
             ))}
             {pins.map(({ stop, focused }, i) => (
               <GlobePin
@@ -798,7 +824,7 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
                 cy={cy}
                 radius={radius}
                 accent={accent}
-                pulse={pulse}
+                breathe={breathe}
               />
             ))}
           </Canvas>
@@ -831,7 +857,7 @@ function GlobePin({
   cy,
   radius,
   accent,
-  pulse,
+  breathe,
   quiet = false,
 }: {
   quiet?: boolean;
@@ -843,19 +869,20 @@ function GlobePin({
   cy: number;
   radius: ReturnType<typeof useDerivedValue<number>>;
   accent: string;
-  pulse: ReturnType<typeof useDerivedValue<number>>;
+  breathe: ReturnType<typeof useDerivedValue<number>>;
 }) {
   const point = useDerivedValue(() => project(stop.latitude * DEG, stop.longitude * DEG, rotLng.get(), rotLat.get(), cx, cy, radius.get()));
   const x = useDerivedValue(() => point.get().x);
   const y = useDerivedValue(() => point.get().y);
   const visible = useDerivedValue(() => (point.get().z > 0 ? 1 : 0));
-  const ringR = useDerivedValue(() => 4 + pulse.get() * (focused ? 18 : 10));
-  const ringOpacity = useDerivedValue(() => (quiet ? 0 : visible.get() * (1 - pulse.get()) * 0.7));
+  // Only the focused stop has a halo, softly breathing rather than sending out rings.
+  const haloR = useDerivedValue(() => 8 + breathe.get() * 2.5);
+  const haloOpacity = useDerivedValue(() => (focused && !quiet ? visible.get() * (0.14 + breathe.get() * 0.16) : 0));
 
   // Per-circle opacity rather than a Group opacity, which would need an off-screen layer.
   return (
     <>
-      <Circle cx={x} cy={y} r={ringR} color={accent} style="stroke" strokeWidth={1.4} opacity={ringOpacity} />
+      <Circle cx={x} cy={y} r={haloR} color={accent} opacity={haloOpacity} />
       <Circle cx={x} cy={y} r={focused ? 5.5 : 3.5} color="#FFFFFF" opacity={visible} />
       <Circle cx={x} cy={y} r={focused ? 3.5 : 2.2} color={accent} opacity={visible} />
     </>

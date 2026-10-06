@@ -90,7 +90,7 @@
       "nightsBooked_other": "{{booked}} of {{count}} nights booked",
       "noStays": "No stays booked yet",
       "gap": "No stay for {{range}}",
-      "save": "Save"
+      "save": "Save",      "mustDos_one": "{{count}} must-do in {{place}}",      "mustDos_other": "{{count}} must-dos in {{place}}",      "savedTitle": "Saved to your wishlist",      "savedBody": "{{name}} is in your full itinerary, ready to plan for a day"
     },
     "everyday": {
       "owed_one": "You're owed {{amount}} in {{count}} group",

@@ -90,7 +90,7 @@
       "nightsBooked_other": "{{count}} లో {{booked}} రాత్రులు బుక్ అయ్యాయి",
       "noStays": "ఇంకా బస బుక్ చేయలేదు",
       "gap": "{{range}} కి బస లేదు",
-      "save": "సేవ్ చేయి"
+      "save": "సేవ్ చేయి",      "mustDos_one": "{{place}}లో {{count}} తప్పక చూడాల్సినది",      "mustDos_other": "{{place}}లో {{count}} తప్పక చూడాల్సినవి",      "savedTitle": "విష్‌లిస్ట్‌లో సేవ్ అయింది",      "savedBody": "{{name}} మీ పూర్తి ప్రయాణ ప్రణాళికలో ఉంది, ఏదో ఒక రోజుకు ప్లాన్ చేయండి"
     },
     "everyday": {
       "owed_one": "{{count}} గ్రూప్‌లో మీకు {{amount}} రావాలి",

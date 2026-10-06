@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { Icon, useAura, type IconName } from "@/atoms";
+import { AuraSheet, Icon, PressableScale, showToast, useAura, type IconName } from "@/atoms";
 import { MustDoRow, mustDosNear, useEventsStore, useMustDoStore, type TripEvent } from "@/features/itinerary";
 import { formatters } from "@/features/itinerary/utils/entryText";
 import { localizeEventTitle } from "@/features/itinerary/utils/eventText";
@@ -12,16 +12,16 @@ import { fromDateKey } from "@/features/trips/utils/dates";
 import { useLocalization } from "@/localization";
 import { track } from "@/modules/analytics";
 
-const MUST_DO_PICKS = 3;
 const GAP_ROWS = 2;
 
-/** Before the trip: the first booking, which nights still need a bed, and must-dos to save to the wishlist. */
+/** Before the trip: the first booking, which nights still need a bed, and a must-dos row that opens a sheet to save them to the wishlist. */
 export function TripPrepCard({ trip, events, firstStop }: { trip: Trip; events: TripEvent[]; firstStop?: HomeStop }) {
   const { c, f } = useAura();
   const { t, locale, hour12 } = useLocalization();
   const addEvent = useEventsStore((state) => state.addEvent);
   const dismissed = useMustDoStore((state) => state.dismissed[trip.id]);
   const dismiss = useMustDoStore((state) => state.dismiss);
+  const [mustDosOpen, setMustDosOpen] = useState(false);
   const format = formatters(locale, hour12);
   const prep = tripPrep(events, trip);
   const suggestions = firstStop ? mustDosNear(firstStop, locale, [...events.map((event) => event.title), ...(dismissed ?? [])]) : null;
@@ -59,9 +59,22 @@ export function TripPrepCard({ trip, events, firstStop }: { trip: Trip; events: 
         : null}
       {prep.gaps.slice(0, GAP_ROWS).map((gap) => row("alertTriangle", t("home.prep.gap", { range: range(gap) }), "#FFB547", `gap-${gap[0].getTime()}`))}
       {suggestions && suggestions.items.length > 0 ? (
+        <PressableScale onPress={() => setMustDosOpen(true)} accessibilityRole="button" style={styles.row}>
+          <Icon name="star" size={15} color={c.textSoft} />
+          <Text numberOfLines={1} style={[styles.rowText, { color: c.text, fontFamily: f.medium }]}>
+            {t("home.prep.mustDos", { count: suggestions.items.length, place: suggestions.place })}
+          </Text>
+          <Icon name="chevronRight" size={13} color={c.textMuted} />
+        </PressableScale>
+      ) : null}
+      <AuraSheet
+        visible={mustDosOpen && Boolean(suggestions?.items.length)}
+        onClose={() => setMustDosOpen(false)}
+        title={suggestions ? t("itinerary.mustDo.title", { place: suggestions.place }) : undefined}
+        subtitle={trip.name}
+      >
         <View style={styles.mustDos}>
-          <Text style={[styles.label, { color: c.textSoft, fontFamily: f.semibold }]}>{t("itinerary.mustDo.title", { place: suggestions.place })}</Text>
-          {suggestions.items.slice(0, MUST_DO_PICKS).map((item) => (
+          {suggestions?.items.map((item) => (
             <MustDoRow
               key={item.key}
               item={item}
@@ -69,6 +82,7 @@ export function TripPrepCard({ trip, events, firstStop }: { trip: Trip; events: 
               onAdd={() => {
                 track("must_do_suggestion", { action: "added", where: "trip_prep" });
                 addEvent({ tripId: trip.id, type: item.type, title: item.name, startAt: toWallClock(fromDateKey(trip.startDate)), timing: "wishlist", source: "manual" });
+                showToast(t("home.prep.savedTitle"), t("home.prep.savedBody", { name: item.name }));
               }}
               onDismiss={() => {
                 track("must_do_suggestion", { action: "dismissed", where: "trip_prep" });
@@ -77,7 +91,7 @@ export function TripPrepCard({ trip, events, firstStop }: { trip: Trip; events: 
             />
           ))}
         </View>
-      ) : null}
+      </AuraSheet>
     </View>
   );
 }
@@ -87,6 +101,5 @@ const styles = StyleSheet.create({
   title: { fontSize: 17, letterSpacing: -0.2 },
   row: { flexDirection: "row", alignItems: "center", gap: 10 },
   rowText: { flex: 1, fontSize: 14 },
-  mustDos: { gap: 10, marginTop: 4 },
-  label: { fontSize: 11.5, letterSpacing: 0.8, textTransform: "uppercase" },
+  mustDos: { gap: 12, paddingBottom: 8 },
 });
