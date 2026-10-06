@@ -3,7 +3,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { AuraButton, AuraSection, AuraSheet, Icon, PressableScale, showAlert, showToast, useAura } from "@/atoms";
 import { useLocalization } from "@/localization";
-import { PrivateView } from "@/modules/analytics";
+import { PrivateView, track } from "@/modules/analytics";
 import { aiRuntime, aiService, useAiAvailability } from "@/modules/ai";
 import type { Trip } from "@/features/trips/store/tripsStore";
 import { useEventsStore, type TripEvent } from "@/features/itinerary/store/eventsStore";
@@ -58,6 +58,7 @@ export function TripItinerary({ trip }: { trip: Trip; accent: string }) {
         endAt: values.endAt,
         editedAt: new Date().toISOString(),
       });
+      track("itinerary_event_edited", { source: editing.source });
     } else {
       addEvent({
         tripId: trip.id,
@@ -69,6 +70,7 @@ export function TripItinerary({ trip }: { trip: Trip; accent: string }) {
         endAt: values.endAt,
         source: "manual",
       });
+      track("itinerary_event_added", { source: "manual", count: 1 });
     }
     setEditing(null);
     if (editing === "new") showInterstitial("itinerary_event_added");
@@ -130,7 +132,10 @@ export function TripItinerary({ trip }: { trip: Trip; accent: string }) {
               label={t("itinerary.fullItinerary", { total: ordered.length })}
               variant="ghost"
               size="md"
-              onPress={() => setAllOpen(true)}
+              onPress={() => {
+                setAllOpen(true);
+                track("itinerary_sheet_opened", { events: ordered.length });
+              }}
               style={styles.viewAll}
             />
           ) : null}
@@ -186,6 +191,7 @@ export function TripItinerary({ trip }: { trip: Trip; accent: string }) {
             editing !== "new"
               ? () => {
                   deleteEvent(editing.id);
+                  track("itinerary_event_deleted", { source: editing.source });
                   setEditing(null);
                 }
               : undefined

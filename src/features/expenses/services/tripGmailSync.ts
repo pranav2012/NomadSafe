@@ -123,7 +123,7 @@ async function addNewEvents(messages: RawMessage[], trip: Trip): Promise<EmailMe
   const candidates = await buildEventCandidates(messages, "email", { trip });
   const fresh = candidates.filter((candidate) => !candidate.duplicate);
   if (fresh.length === 0) return { added: 0, removedSourceIds: [] };
-  return useEventsStore.getState().mergeEmailEvents(
+  const result = useEventsStore.getState().mergeEmailEvents(
     fresh.map((candidate) => ({
       tripId: trip.id,
       type: candidate.type,
@@ -140,6 +140,8 @@ async function addNewEvents(messages: RawMessage[], trip: Trip): Promise<EmailMe
       cancelled: candidate.cancelled,
     })),
   );
+  if (result.added > 0) track("itinerary_event_added", { source: "gmail", count: result.added });
+  return result;
 }
 
 /** Split fields for a Gmail spend you paid, from the email's head-count and guest names. */

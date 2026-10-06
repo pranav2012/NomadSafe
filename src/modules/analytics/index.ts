@@ -12,6 +12,8 @@ type PaidTier = "plus" | "pro";
 type BillingPeriod = "monthly" | "annual" | "lifetime";
 type AiProvider = "local" | "cloud" | "byok";
 type AiTask = "chat" | "budget" | "trip_name" | "itinerary" | "voice";
+type HomeStage = "none" | "upcoming" | "eve" | "active" | "ended";
+type EventSource = "manual" | "email";
 
 /** Custom events. Properties are counts, enums and booleans only, never user content. */
 export interface AnalyticsEvents {
@@ -45,6 +47,11 @@ export interface AnalyticsEvents {
   ai_key_saved: { provider: "openai" | "anthropic" | "gemini" | "openai_compatible" };
   ad_shown: { placement: AdPlacement };
   ad_failed: { placement: AdPlacement | "preload"; stage: "load" | "show" };
+  home_viewed: { stage: HomeStage; events_today: number; trip_events: number };
+  itinerary_sheet_opened: { events: number };
+  itinerary_event_added: { source: "manual" | "gmail"; count: number };
+  itinerary_event_edited: { source: EventSource };
+  itinerary_event_deleted: { source: EventSource };
   recap_opened: { source: "home" | "notification" | "trips"; stops: number };
   recap_finished: { stops: number };
   recap_shared: { format: "image" | "video"; spend: boolean };

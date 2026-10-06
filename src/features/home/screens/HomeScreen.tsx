@@ -5,6 +5,7 @@ import { ExpenseForm } from "@/features/expenses/components/ExpenseForm";
 import { ImportSheet } from "@/features/expenses/components/ImportSheet";
 import { TripHome, type UserLocation } from "@/features/home/components/TripHome";
 import { useHomeData } from "@/features/home/hooks/useHomeData";
+import { useHomeViewed } from "@/features/home/hooks/useHomeViewed";
 import { BackgroundLocationDisclosure } from "@/features/location-sharing/components/BackgroundLocationDisclosure";
 import { useBroadcastToggle } from "@/features/location-sharing/hooks/useBroadcastToggle";
 import { cancelCheckInNotifications, useSafetyStore } from "@/features/safety";
@@ -66,6 +67,7 @@ export default function HomeScreen() {
   const tripCount = useTripsStore((state) => state.trips.length);
   const activeTrip = useTripsStore(selectActiveTrip);
   const data = useHomeData();
+  useHomeViewed();
 
   const safetyStatus = useSafetyStore((s) => s.status);
   const checkInDuration = useSafetyStore((s) => s.checkInDuration);
