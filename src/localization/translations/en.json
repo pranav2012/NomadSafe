@@ -1277,7 +1277,8 @@
       "none": "Just me",
       "equal": "Equally",
       "custom": "Custom",
-      "percent": "Percent"
+      "percent": "Percent",
+      "shares": "Shares"
     },
     "eachPays_one": "{{amount}} for {{count}} person",
     "eachPays_other": "{{amount}} each · {{count}} people",
@@ -1322,7 +1323,10 @@
     "owesYou": "owes you {{amount}}",
     "youOweThem": "you owe {{amount}}",
     "settledWith": "settled up",
-    "betweenOthers": "Between others"
+    "betweenOthers": "Between others",
+    "perShare": "{{amount}} per share",
+    "savePreset": "Save this split",
+    "presetSaved": "Saved. Tap it next time to split the same way."
   },
   "voiceExpense": {
     "speakToAdd": "Speak to add expense",
@@ -1495,7 +1499,18 @@
     "renewalTermsIos": "Subscriptions renew automatically until you cancel in App Store. Lifetime is a one-time purchase.",
     "termsOfUse": "Terms of Use",
     "titleGroups": "You've used your {{count}} free groups",
-    "ledeGroups": "Free covers {{count}} groups you own, and joining friends' groups is always free. Upgrade to split with as many groups as you like."
+    "ledeGroups": "Free covers {{count}} groups you own, and joining friends' groups is always free. Upgrade to split with as many groups as you like.",
+    "titlePlus": {
+      "shares": "Split by shares with Plus",
+      "presets": "Save your usual splits with Plus",
+      "recurring": "Add rent and subscriptions automatically with Plus",
+      "charts": "See your spending over time with Plus",
+      "export": "Export your spends with Plus",
+      "receiptScan": "Scan receipts with Plus"
+    },
+    "ledePlus": "Plus adds money tools on top of everything that's free: shares splits and saved splits, recurring spends, charts, export and receipt scanning. Paid plans have no ads.",
+    "featureMoneyTools": "Recurring spends, shares splits, charts, export and receipt scan",
+    "featureReceiptItems": "Split receipts item by item"
   },
   "aiKey": {
     "title": "Your own API key",

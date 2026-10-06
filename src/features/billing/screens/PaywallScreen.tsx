@@ -26,7 +26,7 @@ import {
 import { useSheetTopInset } from "@/hooks/useSheetTopInset";
 
 type PaidTier = Exclude<PlanTier, "free">;
-type Reason = "trips" | "groups" | "ai" | "settings";
+type Reason = "trips" | "groups" | "plus" | "ai" | "settings";
 
 const [INDIGO, TEAL, VIOLET] = auraStatusColors.calm;
 const TIER_RANK: Record<PlanTier, number> = { free: 0, plus: 1, pro: 2 };
@@ -60,7 +60,7 @@ export default function PaywallScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const sheetTop = useSheetTopInset();
-  const { reason = "settings" } = useLocalSearchParams<{ reason?: Reason }>();
+  const { reason = "settings", feature } = useLocalSearchParams<{ reason?: Reason; feature?: string }>();
   const plan = usePlan();
   const [tier, setTier] = useState<PaidTier>(reason === "ai" || plan.tier === "plus" ? "pro" : "plus");
   const [packages, setPackages] = useState<Partial<Record<PackageId, PurchasesPackage>> | null>(null);
@@ -100,17 +100,16 @@ export default function PaywallScreen() {
 
   const features =
     tier === "plus"
-      ? [t("paywall.featureUnlimitedTrips"), t("paywall.featureNoAds"), t("paywall.featureEverything"), t("paywall.featureOfflineAi"), t("paywall.featureOwnKey")]
-      : [t("paywall.featureUnlimitedTrips"), t("paywall.featureNoAds"), t("paywall.featureCloudAi"), t("paywall.featureOfflineFallback"), t("paywall.featureOwnKey")];
+      ? [t("paywall.featureUnlimitedTrips"), t("paywall.featureMoneyTools"), t("paywall.featureNoAds"), t("paywall.featureEverything"), t("paywall.featureOfflineAi"), t("paywall.featureOwnKey")]
+      : [t("paywall.featureUnlimitedTrips"), t("paywall.featureMoneyTools"), t("paywall.featureNoAds"), t("paywall.featureCloudAi"), t("paywall.featureReceiptItems"), t("paywall.featureOfflineFallback"), t("paywall.featureOwnKey")];
 
-  const title =
-    reason === "trips"
-      ? t("paywall.titleTrips", { count: FREE_TRIP_LIMIT })
-      : reason === "groups"
-        ? t("paywall.titleGroups", { count: FREE_GROUP_LIMIT })
-        : reason === "ai"
-          ? t("paywall.titleAi")
-          : t("paywall.title");
+  const titles: Partial<Record<Reason, string>> = {
+    trips: t("paywall.titleTrips", { count: FREE_TRIP_LIMIT }),
+    groups: t("paywall.titleGroups", { count: FREE_GROUP_LIMIT }),
+    plus: feature ? t(`paywall.titlePlus.${feature}`) : undefined,
+    ai: t("paywall.titleAi"),
+  };
+  const title = titles[reason] ?? t("paywall.title");
 
   const handleBuy = async () => {
     if (!pkg || busy) return;
@@ -188,6 +187,8 @@ export default function PaywallScreen() {
             ? t("paywall.ledeTrips", { count: FREE_TRIP_LIMIT })
             : reason === "groups"
               ? t("paywall.ledeGroups", { count: FREE_GROUP_LIMIT })
+              : reason === "plus"
+                ? t("paywall.ledePlus")
               : t("paywall.lede", { count: FREE_TRIP_LIMIT })}
         </Text>
 

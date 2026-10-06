@@ -13,12 +13,14 @@ export interface ExpensePayer {
 }
 
 /** How the split was entered, so editing reopens it the same way; balances only use `shares`. */
-export type SplitMode = "equal" | "percent" | "custom";
+export type SplitMode = "equal" | "percent" | "custom" | "shares";
 
 export interface ExpenseSplit {
   mode: SplitMode;
   /** Percent per person for `percent` splits; adds up to 100. */
   percents?: Record<string, number>;
+  /** Shares per person for `shares` splits (e.g. 2:1). */
+  units?: Record<string, number>;
 }
 
 export interface SplitExpenseLike {
@@ -146,17 +148,14 @@ export type PercentResolution =
   | { ok: false; reason: "no-people" | "not-100" };
 
 /**
- * Splits `amount` by percent in minor units. Rounding leftovers go to the largest remainders, so the
- * shares always add up to the total. Percents must add up to 100.
+ * Splits `amount` in proportion to weights, in minor units. Rounding leftovers go to the largest
+ * remainders, so the shares always add up to the total.
  */
-export function splitByPercent(amount: number, currency: string, percents: Record<string, number>): PercentResolution {
-  const entries = Object.entries(percents).filter(([, percent]) => Number.isFinite(percent) && percent > 0);
-  if (entries.length === 0) return { ok: false, reason: "no-people" };
-  const totalPercent = entries.reduce((sum, [, percent]) => sum + percent, 0);
-  if (Math.abs(totalPercent - 100) > 0.001) return { ok: false, reason: "not-100" };
+function splitByWeights(amount: number, currency: string, entries: [string, number][]): ExpenseShare[] {
+  const weightTotal = entries.reduce((sum, [, weight]) => sum + weight, 0);
   const digits = currencyFractionDigits(currency);
   const total = toMinor(amount, digits);
-  const raw = entries.map(([person, percent]) => ({ person, exact: (total * percent) / 100 }));
+  const raw = entries.map(([person, weight]) => ({ person, exact: (total * weight) / weightTotal }));
   const floors = raw.map((entry) => ({ ...entry, minor: Math.floor(entry.exact) }));
   let left = total - floors.reduce((sum, entry) => sum + entry.minor, 0);
   const byRemainder = [...floors].sort((a, b) => b.exact - b.minor - (a.exact - a.minor));
@@ -165,7 +164,23 @@ export function splitByPercent(amount: number, currency: string, percents: Recor
     entry.minor += 1;
     left -= 1;
   }
-  return { ok: true, shares: floors.map((entry) => ({ person: entry.person, amount: fromMinor(entry.minor, digits) })) };
+  return floors.map((entry) => ({ person: entry.person, amount: fromMinor(entry.minor, digits) }));
+}
+
+/** Splits by percent; the percents must add up to 100. */
+export function splitByPercent(amount: number, currency: string, percents: Record<string, number>): PercentResolution {
+  const entries = Object.entries(percents).filter(([, percent]) => Number.isFinite(percent) && percent > 0);
+  if (entries.length === 0) return { ok: false, reason: "no-people" };
+  const totalPercent = entries.reduce((sum, [, percent]) => sum + percent, 0);
+  if (Math.abs(totalPercent - 100) > 0.001) return { ok: false, reason: "not-100" };
+  return { ok: true, shares: splitByWeights(amount, currency, entries) };
+}
+
+/** Splits by shares (a couple with a kid as 2:1); any positive numbers work. */
+export function splitByUnits(amount: number, currency: string, units: Record<string, number>): { ok: true; shares: ExpenseShare[] } | { ok: false; reason: "no-people" } {
+  const entries = Object.entries(units).filter(([, unit]) => Number.isFinite(unit) && unit > 0);
+  if (entries.length === 0) return { ok: false, reason: "no-people" };
+  return { ok: true, shares: splitByWeights(amount, currency, entries) };
 }
 
 /** The split mode to show: the stored one, else equal when shares are equal, else custom. */

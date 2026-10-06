@@ -25,6 +25,7 @@ export interface AnalyticsEvents {
   ai_context_picked: { kind: "trip" | "group" | "overview" | "general" };
   home_card_opened: { card: "balance" | "get_home_safe" };
   app_landing: { tab: "home" | "money" | "other"; reason: "trip" | "habit" | "link" };
+  plus_feature_blocked: { feature: "shares" | "presets" | "recurring" | "charts" | "export" | "receiptScan" };
   trip_joined: { deferred: boolean; claimed_member: boolean };
   invite_deferred_found: { source: "install_referrer" | "clipboard" };
   expense_added: { source: ExpenseSourceKind; count: number };
@@ -45,7 +46,7 @@ export interface AnalyticsEvents {
   voice_draft_saved: { kind: "expense" | "settlement"; split: boolean; edited: boolean; auto: boolean };
   trip_limit_reached: undefined;
   group_limit_reached: undefined;
-  paywall_viewed: { reason: "trips" | "groups" | "ai" | "settings" };
+  paywall_viewed: { reason: "trips" | "groups" | "plus" | "ai" | "settings" };
   purchase_completed: { tier: PaidTier; period: BillingPeriod; trial: boolean };
   purchases_restored: { tier: "free" | PaidTier };
   ai_provider_used: { provider: AiProvider; task: AiTask; fallback: boolean };

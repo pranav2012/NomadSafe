@@ -1277,7 +1277,8 @@
       "none": "只有我",
       "equal": "平均分摊",
       "custom": "自定义",
-      "percent": "按比例"
+      "percent": "按比例",
+      "shares": "份数"
     },
     "eachPays_one": "{{count}} 人 {{amount}}",
     "eachPays_other": "每人 {{amount}} · {{count}} 人",
@@ -1322,7 +1323,10 @@
     "owesYou": "欠你 {{amount}}",
     "youOweThem": "你欠 {{amount}}",
     "settledWith": "已结清",
-    "betweenOthers": "其他人之间"
+    "betweenOthers": "其他人之间",
+    "perShare": "每份 {{amount}}",
+    "savePreset": "保存此分摊方式",
+    "presetSaved": "已保存。下次点按即可用同样方式分摊。"
   },
   "voiceExpense": {
     "speakToAdd": "语音添加支出",
@@ -1495,7 +1499,18 @@
     "renewalTermsIos": "订阅将自动续订，直到你在 App Store 中取消。终身版为一次性购买。",
     "termsOfUse": "使用条款",
     "titleGroups": "你已用完 {{count}} 个免费群组",
-    "ledeGroups": "免费版包含你创建的 {{count}} 个群组，加入朋友的群组始终免费。升级后可使用任意数量的群组。"
+    "ledeGroups": "免费版包含你创建的 {{count}} 个群组，加入朋友的群组始终免费。升级后可使用任意数量的群组。",
+    "titlePlus": {
+      "shares": "用 Plus 按份数分摊",
+      "presets": "用 Plus 保存常用分摊方式",
+      "recurring": "用 Plus 自动添加房租和订阅",
+      "charts": "用 Plus 查看花费趋势",
+      "export": "用 Plus 导出花费",
+      "receiptScan": "用 Plus 扫描收据"
+    },
+    "ledePlus": "Plus 在免费功能之外增加资金工具：按份数分摊和保存的分摊方式、定期花费、图表、导出和收据扫描。付费方案无广告。",
+    "featureMoneyTools": "定期花费、按份数分摊、图表、导出和收据扫描",
+    "featureReceiptItems": "按项目分摊收据"
   },
   "aiKey": {
     "title": "自己的 API 密钥",

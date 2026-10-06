@@ -1,6 +1,8 @@
 import React from "react";
 import { StyleSheet, Text, TextInput, View } from "react-native";
-import { AuraChip, useAura } from "@/atoms";
+import { AuraButton, AuraChip, showToast, useAura } from "@/atoms";
+import { usePlusGate } from "@/modules/billing";
+import { useSplitPresetsStore, type SplitPreset } from "@/features/expenses/store/splitPresetsStore";
 import { auraStatusAccent } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import type { TranslateParams } from "@/localization/translate";
@@ -12,12 +14,13 @@ import {
   resolveShares,
   SELF_ID,
   splitByPercent,
+  splitByUnits,
   type ExpensePayer,
   type ExpenseShare,
   type ExpenseSplit,
 } from "@/features/expenses/utils/split";
 
-export type SplitChoice = "none" | "equal" | "percent" | "custom";
+export type SplitChoice = "none" | "equal" | "percent" | "shares" | "custom";
 
 export interface SplitValue {
   paidBy: string;
@@ -28,11 +31,15 @@ export interface SplitValue {
   people: string[];
   custom: Record<string, string>;
   percents: Record<string, string>;
+  units: Record<string, string>;
 }
 
 export type SplitResolution =
   | { ok: true; shares: ExpenseShare[] }
   | { ok: false; reason: "no-people" | "over-total" | "under-total" | "not-100" };
+
+const UNIT_DEFAULT = "1";
+const NO_PRESETS: SplitPreset[] = [];
 
 export function personLabel(person: string, t: (key: string, params?: TranslateParams) => string): string {
   return person === SELF_ID ? t("split.you") : person;
@@ -56,10 +63,16 @@ export function initialSplitValue(
     people: everyone,
     custom: {},
     percents: {},
+    units: {},
   };
   if (shares.length === 0) return base;
   const mode = source?.split?.mode ?? (isEqualSplit(shares, source?.currency ?? "USD") ? "equal" : "custom");
   if (mode === "equal") return { ...base, mode, people: shares.map((share) => share.person) };
+  if (mode === "shares" && source?.split?.units) {
+    const units: Record<string, string> = {};
+    for (const [person, unit] of Object.entries(source.split.units)) units[person] = toText(unit, decimalSeparator);
+    return { ...base, mode, units };
+  }
   if (mode === "percent" && source?.split?.percents) {
     const percents: Record<string, string> = {};
     for (const [person, percent] of Object.entries(source.split.percents)) percents[person] = toText(percent, decimalSeparator);
@@ -89,12 +102,24 @@ export function splitValueToShares(
     const percents = Object.fromEntries(parsedEntries(value.percents, decimalSeparator).map((entry) => [entry.person, entry.amount]));
     return splitByPercent(amount, currency, percents);
   }
+  if (value.mode === "shares") return splitByUnits(amount, currency, unitsOf(value, decimalSeparator));
   return resolveShares(amount, currency, [], parsedEntries(value.custom, decimalSeparator));
+}
+
+/** Shares per person; people left blank count as one share. */
+function unitsOf(value: SplitValue, decimalSeparator: string): Record<string, number> {
+  const units: Record<string, number> = {};
+  for (const person of value.people) {
+    const parsed = parseAmountInput(value.units[person] ?? UNIT_DEFAULT, decimalSeparator);
+    if (Number.isFinite(parsed) && parsed > 0) units[person] = parsed;
+  }
+  return units;
 }
 
 /** The split mode and percents to store with the expense, so editing reopens it the same way. */
 export function splitValueToStored(value: SplitValue, decimalSeparator: string): ExpenseSplit | undefined {
   if (value.mode === "none") return undefined;
+  if (value.mode === "shares") return { mode: "shares", units: unitsOf(value, decimalSeparator) };
   if (value.mode !== "percent") return { mode: value.mode };
   const percents = Object.fromEntries(parsedEntries(value.percents, decimalSeparator).map((entry) => [entry.person, entry.amount]));
   return { mode: "percent", percents };
@@ -120,6 +145,7 @@ export function SplitEditor({
   amount,
   currency,
   decimalSeparator,
+  groupId = null,
 }: {
   everyone: string[];
   value: SplitValue;
@@ -127,9 +153,13 @@ export function SplitEditor({
   amount: number;
   currency: string;
   decimalSeparator: string;
+  /** Where saved presets live (none for spends not in a group). */
+  groupId?: string | null;
 }) {
   const { c, f } = useAura();
   const { t, formatCurrency } = useLocalization();
+  const plus = usePlusGate();
+  const presets = useSplitPresetsStore((state) => (groupId ? state.byGroup[groupId] : undefined)) ?? NO_PRESETS;
 
   const hasAmount = Number.isFinite(amount) && amount > 0;
   const resolution = hasAmount ? splitValueToShares(value, amount, currency, decimalSeparator) : null;
@@ -147,14 +177,14 @@ export function SplitEditor({
   const label = (text: string) => <Text style={[styles.label, { color: c.textSoft, fontFamily: f.medium }]}>{text}</Text>;
   const hint = (text: string, bad = false) => <Text style={[styles.hint, { color: bad ? auraStatusAccent.alert : c.textSoft, fontFamily: f.regular }]}>{text}</Text>;
 
-  const amountRows = (field: "payers" | "custom" | "percents", suffix?: string) =>
+  const amountRows = (field: "payers" | "custom" | "percents" | "units", suffix?: string, placeholder = "0") =>
     everyone.map((person) => (
       <View key={person} style={[styles.customRow, { borderColor: c.hairline, backgroundColor: c.surface }]}>
         <Text style={[styles.customName, { color: c.text, fontFamily: f.medium }]}>{personLabel(person, t)}</Text>
         <TextInput
           value={value[field][person] ?? ""}
           onChangeText={(text) => onChange({ ...value, [field]: { ...value[field], [person]: text.replace(/[^0-9.,]/g, "") } })}
-          placeholder="0"
+          placeholder={placeholder}
           placeholderTextColor={c.textMuted}
           keyboardType="decimal-pad"
           accessibilityLabel={personLabel(person, t)}
@@ -166,6 +196,37 @@ export function SplitEditor({
 
   const paid = sumOf(value.payers);
   const percentLeft = 100 - sumOf(value.percents);
+
+  const chooseMode = (mode: SplitChoice) => {
+    const next = { ...value, mode, people: mode === "shares" ? everyone : value.people };
+    if (mode === "shares") plus.run("shares", () => onChange(next));
+    else onChange(next);
+  };
+  const applyPreset = (preset: SplitPreset) =>
+    plus.run("presets", () => {
+      const texts = Object.fromEntries(Object.entries(preset.weights).map(([person, weight]) => [person, toText(weight, decimalSeparator)]));
+      onChange(
+        preset.mode === "percent"
+          ? { ...value, mode: "percent", percents: texts }
+          : { ...value, mode: "shares", people: Object.keys(preset.weights), units: texts },
+      );
+    });
+  const canSave = groupId !== null && (value.mode === "percent" || value.mode === "shares") && resolution?.ok === true;
+  const savePreset = () =>
+    plus.run("presets", () => {
+      if (!groupId || (value.mode !== "percent" && value.mode !== "shares")) return;
+      const stored = splitValueToStored(value, decimalSeparator);
+      const weights = value.mode === "percent" ? stored?.percents : stored?.units;
+      if (!weights) return;
+      useSplitPresetsStore.getState().add(groupId, { mode: value.mode, weights });
+      showToast(t("split.presetSaved"));
+    });
+  const presetLabel = (preset: SplitPreset) => {
+    const entries = Object.entries(preset.weights);
+    const numbers = entries.map(([, weight]) => String(weight)).join(preset.mode === "percent" ? "/" : ":");
+    return `${numbers}${preset.mode === "percent" ? "%" : ""} · ${entries.map(([person]) => personLabel(person, t)).join(", ")}`;
+  };
+  const totalUnits = Object.values(splitValueToStored({ ...value, mode: "shares" }, decimalSeparator)?.units ?? {}).reduce((sum, unit) => sum + unit, 0);
 
   return (
     <View style={styles.root}>
@@ -193,10 +254,23 @@ export function SplitEditor({
       <View style={styles.group}>
         {label(t("split.title"))}
         <View style={styles.row}>
-          {(["none", "equal", "percent", "custom"] as const).map((mode) => (
-            <AuraChip key={mode} label={t(`split.mode.${mode}`)} selected={value.mode === mode} onPress={() => onChange({ ...value, mode })} />
+          {(["none", "equal", "percent", "shares", "custom"] as const).map((mode) => (
+            <AuraChip
+              key={mode}
+              label={t(`split.mode.${mode}`)}
+              icon={mode === "shares" && !plus.isPlus ? "lock" : undefined}
+              selected={value.mode === mode}
+              onPress={() => chooseMode(mode)}
+            />
           ))}
         </View>
+        {presets.length > 0 ? (
+          <View style={styles.row}>
+            {presets.map((preset) => (
+              <AuraChip key={preset.id} label={presetLabel(preset)} icon="sparkle" onPress={() => applyPreset(preset)} />
+            ))}
+          </View>
+        ) : null}
       </View>
 
       {value.mode === "equal" ? (
@@ -227,6 +301,17 @@ export function SplitEditor({
         </View>
       ) : null}
 
+      {value.mode === "shares" ? (
+        <View style={styles.group}>
+          {amountRows("units", "×", UNIT_DEFAULT)}
+          {hasAmount && totalUnits > 0 ? hint(t("split.perShare", { amount: formatMoney(formatCurrency, amount / totalUnits, currency) })) : null}
+        </View>
+      ) : null}
+
+      {canSave ? (
+        <AuraButton label={t("split.savePreset")} icon={plus.isPlus ? "plus" : "lock"} variant="ghost" size="md" onPress={savePreset} style={styles.savePreset} />
+      ) : null}
+
       {value.mode === "custom" ? (
         <View style={styles.group}>
           {amountRows("custom")}
@@ -247,4 +332,5 @@ const styles = StyleSheet.create({
   customName: { flex: 1, fontSize: 14.5 },
   customInput: { minWidth: 90, minHeight: 48, textAlign: "right", fontSize: 16 },
   suffix: { fontSize: 15, marginLeft: 4 },
+  savePreset: { alignSelf: "flex-start" },
 });

@@ -1277,7 +1277,8 @@
       "none": "Nur ich",
       "equal": "Gleichmäßig",
       "custom": "Individuell",
-      "percent": "Prozent"
+      "percent": "Prozent",
+      "shares": "Anteile"
     },
     "eachPays_one": "{{amount}} für {{count}} Person",
     "eachPays_other": "je {{amount}} · {{count}} Personen",
@@ -1322,7 +1323,10 @@
     "owesYou": "schuldet dir {{amount}}",
     "youOweThem": "du schuldest {{amount}}",
     "settledWith": "ausgeglichen",
-    "betweenOthers": "Zwischen anderen"
+    "betweenOthers": "Zwischen anderen",
+    "perShare": "{{amount}} pro Anteil",
+    "savePreset": "Diese Aufteilung speichern",
+    "presetSaved": "Gespeichert. Tippe nächstes Mal darauf, um genauso aufzuteilen."
   },
   "voiceExpense": {
     "speakToAdd": "Ausgabe per Sprache hinzufügen",
@@ -1495,7 +1499,18 @@
     "renewalTermsIos": "Abos verlängern sich automatisch, bis du sie im App Store kündigst. Lebenslang ist ein einmaliger Kauf.",
     "termsOfUse": "Nutzungsbedingungen",
     "titleGroups": "Du hast deine {{count}} kostenlosen Gruppen genutzt",
-    "ledeGroups": "Free umfasst {{count}} eigene Gruppen, und Gruppen von Freunden beizutreten ist immer kostenlos. Mit einem Upgrade teilst du in so vielen Gruppen, wie du willst."
+    "ledeGroups": "Free umfasst {{count}} eigene Gruppen, und Gruppen von Freunden beizutreten ist immer kostenlos. Mit einem Upgrade teilst du in so vielen Gruppen, wie du willst.",
+    "titlePlus": {
+      "shares": "Nach Anteilen teilen mit Plus",
+      "presets": "Speichere deine üblichen Aufteilungen mit Plus",
+      "recurring": "Miete und Abos automatisch eintragen mit Plus",
+      "charts": "Sieh deine Ausgaben im Zeitverlauf mit Plus",
+      "export": "Exportiere deine Ausgaben mit Plus",
+      "receiptScan": "Belege scannen mit Plus"
+    },
+    "ledePlus": "Plus ergänzt alles Kostenlose um Geld-Werkzeuge: Anteile und gespeicherte Aufteilungen, wiederkehrende Ausgaben, Diagramme, Export und Belegscan. Bezahlte Pläne sind werbefrei.",
+    "featureMoneyTools": "Wiederkehrende Ausgaben, Anteile, Diagramme, Export und Belegscan",
+    "featureReceiptItems": "Belege Posten für Posten aufteilen"
   },
   "aiKey": {
     "title": "Eigener API-Schlüssel",

@@ -241,3 +241,11 @@ test("spending periods: Monday-first weeks and calendar months", () => {
   assert.equal(myMoney.inRange(new Date(2026, 9, 11, 23).toISOString(), week), true);
   assert.equal(myMoney.inRange(new Date(2026, 9, 12, 0, 1).toISOString(), week), false);
 });
+
+test("shares split divides by any positive numbers and keeps the total", () => {
+  const result = split.splitByUnits(1000, "INR", { [SELF_ID]: 2, Raj: 1, Priya: 1 });
+  assert.deepEqual(result.shares.map((share) => share.amount), [500, 250, 250]);
+  const odd = split.splitByUnits(100, "USD", { a: 1, b: 1, c: 1 });
+  assert.equal(Math.round(odd.shares.reduce((sum, share) => sum + share.amount, 0) * 100), 10000);
+  assert.deepEqual(split.splitByUnits(100, "USD", { a: 0 }), { ok: false, reason: "no-people" });
+});

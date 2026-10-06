@@ -1277,7 +1277,8 @@
       "none": "Juste moi",
       "equal": "À parts égales",
       "custom": "Personnalisé",
-      "percent": "Pourcentage"
+      "percent": "Pourcentage",
+      "shares": "Parts"
     },
     "eachPays_one": "{{amount}} pour {{count}} personne",
     "eachPays_other": "{{amount}} chacun · {{count}} personnes",
@@ -1322,7 +1323,10 @@
     "owesYou": "te doit {{amount}}",
     "youOweThem": "tu dois {{amount}}",
     "settledWith": "à jour",
-    "betweenOthers": "Entre les autres"
+    "betweenOthers": "Entre les autres",
+    "perShare": "{{amount}} par part",
+    "savePreset": "Enregistrer ce partage",
+    "presetSaved": "Enregistré. Touche-le la prochaine fois pour partager pareil."
   },
   "voiceExpense": {
     "speakToAdd": "Ajouter une dépense à la voix",
@@ -1495,7 +1499,18 @@
     "renewalTermsIos": "Les abonnements se renouvellent automatiquement jusqu'à ce que vous les annuliez dans l'App Store. L'offre À vie est un achat unique.",
     "termsOfUse": "Conditions d'utilisation",
     "titleGroups": "Vous avez utilisé vos {{count}} groupes gratuits",
-    "ledeGroups": "L'offre gratuite couvre {{count}} groupes que vous créez, et rejoindre ceux de vos amis est toujours gratuit. Passez à l'offre supérieure pour partager dans autant de groupes que vous voulez."
+    "ledeGroups": "L'offre gratuite couvre {{count}} groupes que vous créez, et rejoindre ceux de vos amis est toujours gratuit. Passez à l'offre supérieure pour partager dans autant de groupes que vous voulez.",
+    "titlePlus": {
+      "shares": "Partage par parts avec Plus",
+      "presets": "Enregistre tes partages habituels avec Plus",
+      "recurring": "Ajoute loyer et abonnements automatiquement avec Plus",
+      "charts": "Vois tes dépenses dans le temps avec Plus",
+      "export": "Exporte tes dépenses avec Plus",
+      "receiptScan": "Scanne tes reçus avec Plus"
+    },
+    "ledePlus": "Plus ajoute des outils d'argent à tout ce qui est gratuit : partage par parts et partages enregistrés, dépenses récurrentes, graphiques, export et scan de reçus. Les offres payantes sont sans pub.",
+    "featureMoneyTools": "Dépenses récurrentes, partage par parts, graphiques, export et scan de reçus",
+    "featureReceiptItems": "Partage les reçus article par article"
   },
   "aiKey": {
     "title": "Votre propre clé API",

@@ -115,15 +115,23 @@ function mapShares(shares: ExpenseShare[] | undefined, map: Translate): ExpenseS
   return out;
 }
 
-function mapSplit(split: ExpenseSplit | undefined, map: Translate): ExpenseSplit | undefined | null {
-  if (!split?.percents) return split;
-  const percents: Record<string, number> = {};
-  for (const [person, percent] of Object.entries(split.percents)) {
+function mapKeys(values: Record<string, number> | undefined, map: Translate): Record<string, number> | undefined | null {
+  if (!values) return undefined;
+  const out: Record<string, number> = {};
+  for (const [person, value] of Object.entries(values)) {
     const mapped = map(person);
     if (mapped === null) return null;
-    percents[mapped] = percent;
+    out[mapped] = value;
   }
-  return { ...split, percents };
+  return out;
+}
+
+function mapSplit(split: ExpenseSplit | undefined, map: Translate): ExpenseSplit | undefined | null {
+  if (!split) return split;
+  const percents = mapKeys(split.percents, map);
+  const units = mapKeys(split.units, map);
+  if (percents === null || units === null) return null;
+  return { ...split, ...(percents ? { percents } : {}), ...(units ? { units } : {}) };
 }
 
 function mapPeople(people: string[] | undefined, map: Translate): string[] | undefined | null {

@@ -42,3 +42,24 @@ export function useStartNewGroup() {
     [router],
   );
 }
+
+export type PlusFeature = "shares" | "presets" | "recurring" | "charts" | "export" | "receiptScan";
+
+/** Plus extras: `run(feature, action)` runs it on Plus or Pro, else opens the paywall for that feature. */
+export function usePlusGate() {
+  const router = useRouter();
+  const isPlus = usePlanStore((s) => s.unlimitedTrips);
+  const run = useCallback(
+    (feature: PlusFeature, action: () => void) => {
+      if (usePlanStore.getState().unlimitedTrips) {
+        action();
+        return;
+      }
+      track("plus_feature_blocked", { feature });
+      router.push({ pathname: "/paywall", params: { reason: "plus", feature } });
+    },
+    [router],
+  );
+  return { isPlus, run };
+}
+

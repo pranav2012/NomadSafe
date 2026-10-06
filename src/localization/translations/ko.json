@@ -1277,7 +1277,8 @@
       "none": "나만",
       "equal": "균등하게",
       "custom": "직접 설정",
-      "percent": "비율"
+      "percent": "비율",
+      "shares": "몫"
     },
     "eachPays_one": "{{count}}명 · {{amount}}",
     "eachPays_other": "1인당 {{amount}} · {{count}}명",
@@ -1322,7 +1323,10 @@
     "owesYou": "나에게 {{amount}} 갚을 돈",
     "youOweThem": "내가 {{amount}} 갚을 돈",
     "settledWith": "정산 완료",
-    "betweenOthers": "다른 사람들끼리"
+    "betweenOthers": "다른 사람들끼리",
+    "perShare": "1몫당 {{amount}}",
+    "savePreset": "이 분배 저장",
+    "presetSaved": "저장했어요. 다음에 탭하면 같은 방식으로 나눠요."
   },
   "voiceExpense": {
     "speakToAdd": "말로 지출 추가",
@@ -1495,7 +1499,18 @@
     "renewalTermsIos": "구독은 App Store에서 취소할 때까지 자동으로 갱신돼요. 평생 이용권은 1회 구매예요.",
     "termsOfUse": "이용약관",
     "titleGroups": "무료 그룹 {{count}}개를 모두 사용했어요",
-    "ledeGroups": "무료 플랜에는 내가 만든 그룹 {{count}}개가 포함되며, 친구 그룹 참여는 언제나 무료예요. 업그레이드하면 원하는 만큼 그룹을 만들 수 있어요."
+    "ledeGroups": "무료 플랜에는 내가 만든 그룹 {{count}}개가 포함되며, 친구 그룹 참여는 언제나 무료예요. 업그레이드하면 원하는 만큼 그룹을 만들 수 있어요.",
+    "titlePlus": {
+      "shares": "Plus로 몫 나누기",
+      "presets": "Plus로 자주 쓰는 분배 저장",
+      "recurring": "Plus로 월세와 구독을 자동 추가",
+      "charts": "Plus로 기간별 지출 보기",
+      "export": "Plus로 지출 내보내기",
+      "receiptScan": "Plus로 영수증 스캔"
+    },
+    "ledePlus": "Plus는 무료 기능에 더해 몫 나누기와 저장된 분배, 반복 지출, 차트, 내보내기, 영수증 스캔을 제공해요. 유료 플랜은 광고가 없어요.",
+    "featureMoneyTools": "반복 지출, 몫 나누기, 차트, 내보내기, 영수증 스캔",
+    "featureReceiptItems": "영수증을 항목별로 나누기"
   },
   "aiKey": {
     "title": "내 API 키",

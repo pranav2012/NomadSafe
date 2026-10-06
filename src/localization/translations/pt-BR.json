@@ -1277,7 +1277,8 @@
       "none": "Só eu",
       "equal": "Igualmente",
       "custom": "Personalizado",
-      "percent": "Porcentagem"
+      "percent": "Porcentagem",
+      "shares": "Partes"
     },
     "eachPays_one": "{{amount}} para {{count}} pessoa",
     "eachPays_other": "{{amount}} cada · {{count}} pessoas",
@@ -1322,7 +1323,10 @@
     "owesYou": "te deve {{amount}}",
     "youOweThem": "você deve {{amount}}",
     "settledWith": "quitado",
-    "betweenOthers": "Entre outros"
+    "betweenOthers": "Entre outros",
+    "perShare": "{{amount}} por parte",
+    "savePreset": "Salvar esta divisão",
+    "presetSaved": "Salvo. Toque nele na próxima vez para dividir igual."
   },
   "voiceExpense": {
     "speakToAdd": "Adicionar gasto por voz",
@@ -1495,7 +1499,18 @@
     "renewalTermsIos": "As assinaturas são renovadas automaticamente até você cancelar na App Store. O plano Vitalício é uma compra única.",
     "termsOfUse": "Termos de Uso",
     "titleGroups": "Você já usou seus {{count}} grupos grátis",
-    "ledeGroups": "O plano grátis inclui {{count}} grupos seus, e entrar nos grupos dos amigos é sempre grátis. Faça upgrade para dividir em quantos grupos quiser."
+    "ledeGroups": "O plano grátis inclui {{count}} grupos seus, e entrar nos grupos dos amigos é sempre grátis. Faça upgrade para dividir em quantos grupos quiser.",
+    "titlePlus": {
+      "shares": "Divida por partes com o Plus",
+      "presets": "Salve suas divisões de sempre com o Plus",
+      "recurring": "Adicione aluguel e assinaturas automaticamente com o Plus",
+      "charts": "Veja seus gastos ao longo do tempo com o Plus",
+      "export": "Exporte seus gastos com o Plus",
+      "receiptScan": "Escaneie recibos com o Plus"
+    },
+    "ledePlus": "O Plus adiciona ferramentas de dinheiro a tudo que é grátis: divisão por partes e divisões salvas, gastos recorrentes, gráficos, exportação e leitura de recibos. Planos pagos não têm anúncios.",
+    "featureMoneyTools": "Gastos recorrentes, divisão por partes, gráficos, exportação e leitura de recibos",
+    "featureReceiptItems": "Divida recibos item por item"
   },
   "aiKey": {
     "title": "Sua própria chave de API",

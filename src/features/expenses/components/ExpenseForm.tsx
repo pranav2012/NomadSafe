@@ -201,7 +201,7 @@ function ExpenseFormBody({
     if (!prefill) return defaultSplit(everyone);
     return initialSplitValue(everyone, decimalSeparator, { ...prefill });
   });
-  const [splitOpen, setSplitOpen] = useState(split.multiPay || split.mode === "custom" || split.mode === "percent");
+  const [splitOpen, setSplitOpen] = useState(split.multiPay || split.mode === "custom" || split.mode === "percent" || split.mode === "shares");
   const canSplit = everyone.length > 1;
 
   const chooseTarget = (value: string) => {
@@ -359,6 +359,7 @@ function ExpenseFormBody({
               amount={parseAmountInput(amount, decimalSeparator)}
               currency={currency}
               decimalSeparator={decimalSeparator}
+              groupId={targetId}
             />
           </View>
         ) : null}

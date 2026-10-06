@@ -1277,7 +1277,8 @@
       "none": "Solo io",
       "equal": "In parti uguali",
       "custom": "Personalizzata",
-      "percent": "Percentuale"
+      "percent": "Percentuale",
+      "shares": "Quote"
     },
     "eachPays_one": "{{amount}} per {{count}} persona",
     "eachPays_other": "{{amount}} a testa · {{count}} persone",
@@ -1322,7 +1323,10 @@
     "owesYou": "ti deve {{amount}}",
     "youOweThem": "devi {{amount}}",
     "settledWith": "in pari",
-    "betweenOthers": "Tra gli altri"
+    "betweenOthers": "Tra gli altri",
+    "perShare": "{{amount}} per quota",
+    "savePreset": "Salva questa divisione",
+    "presetSaved": "Salvato. Toccalo la prossima volta per dividere allo stesso modo."
   },
   "voiceExpense": {
     "speakToAdd": "Aggiungi spesa a voce",
@@ -1495,7 +1499,18 @@
     "renewalTermsIos": "Gli abbonamenti si rinnovano automaticamente finché non li annulli nell'App Store. A vita è un acquisto unico.",
     "termsOfUse": "Termini di utilizzo",
     "titleGroups": "Hai usato i tuoi {{count}} gruppi gratuiti",
-    "ledeGroups": "Il piano gratuito include {{count}} gruppi tuoi, e unirti ai gruppi degli amici è sempre gratis. Passa a un piano superiore per dividere le spese in tutti i gruppi che vuoi."
+    "ledeGroups": "Il piano gratuito include {{count}} gruppi tuoi, e unirti ai gruppi degli amici è sempre gratis. Passa a un piano superiore per dividere le spese in tutti i gruppi che vuoi.",
+    "titlePlus": {
+      "shares": "Dividi per quote con Plus",
+      "presets": "Salva le tue divisioni abituali con Plus",
+      "recurring": "Aggiungi affitto e abbonamenti in automatico con Plus",
+      "charts": "Guarda le tue spese nel tempo con Plus",
+      "export": "Esporta le tue spese con Plus",
+      "receiptScan": "Scansiona ricevute con Plus"
+    },
+    "ledePlus": "Plus aggiunge strumenti per i soldi a tutto ciò che è gratis: quote e divisioni salvate, spese ricorrenti, grafici, esportazione e scansione ricevute. I piani a pagamento sono senza pubblicità.",
+    "featureMoneyTools": "Spese ricorrenti, divisione per quote, grafici, esportazione e scansione ricevute",
+    "featureReceiptItems": "Dividi le ricevute voce per voce"
   },
   "aiKey": {
     "title": "La tua chiave API",

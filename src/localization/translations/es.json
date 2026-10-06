@@ -1277,7 +1277,8 @@
       "none": "Solo yo",
       "equal": "A partes iguales",
       "custom": "Personalizado",
-      "percent": "Porcentaje"
+      "percent": "Porcentaje",
+      "shares": "Partes"
     },
     "eachPays_one": "{{amount}} para {{count}} persona",
     "eachPays_other": "{{amount}} cada uno · {{count}} personas",
@@ -1322,7 +1323,10 @@
     "owesYou": "te debe {{amount}}",
     "youOweThem": "le debes {{amount}}",
     "settledWith": "sin deudas",
-    "betweenOthers": "Entre otros"
+    "betweenOthers": "Entre otros",
+    "perShare": "{{amount}} por parte",
+    "savePreset": "Guardar este reparto",
+    "presetSaved": "Guardado. Tócalo la próxima vez para repartir igual."
   },
   "voiceExpense": {
     "speakToAdd": "Añadir gasto por voz",
@@ -1495,7 +1499,18 @@
     "renewalTermsIos": "Las suscripciones se renuevan automáticamente hasta que las canceles en el App Store. De por vida es una compra única.",
     "termsOfUse": "Términos de uso",
     "titleGroups": "Ya usaste tus {{count}} grupos gratis",
-    "ledeGroups": "El plan gratis incluye {{count}} grupos tuyos, y unirte a los grupos de tus amigos siempre es gratis. Mejora tu plan para dividir gastos en todos los grupos que quieras."
+    "ledeGroups": "El plan gratis incluye {{count}} grupos tuyos, y unirte a los grupos de tus amigos siempre es gratis. Mejora tu plan para dividir gastos en todos los grupos que quieras.",
+    "titlePlus": {
+      "shares": "Divide por partes con Plus",
+      "presets": "Guarda tus repartos habituales con Plus",
+      "recurring": "Añade alquiler y suscripciones automáticamente con Plus",
+      "charts": "Mira tus gastos a lo largo del tiempo con Plus",
+      "export": "Exporta tus gastos con Plus",
+      "receiptScan": "Escanea recibos con Plus"
+    },
+    "ledePlus": "Plus añade herramientas de dinero a todo lo gratuito: repartos por partes y guardados, gastos recurrentes, gráficos, exportación y escaneo de recibos. Los planes de pago no tienen anuncios.",
+    "featureMoneyTools": "Gastos recurrentes, repartos por partes, gráficos, exportación y escaneo de recibos",
+    "featureReceiptItems": "Divide recibos artículo por artículo"
   },
   "aiKey": {
     "title": "Tu propia clave API",

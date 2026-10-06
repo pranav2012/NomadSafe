@@ -1277,7 +1277,8 @@
       "none": "自分だけ",
       "equal": "均等",
       "custom": "カスタム",
-      "percent": "割合"
+      "percent": "割合",
+      "shares": "口数"
     },
     "eachPays_one": "{{count}}人で{{amount}}",
     "eachPays_other": "1人あたり{{amount}} · {{count}}人",
@@ -1322,7 +1323,10 @@
     "owesYou": "あなたに{{amount}}の借り",
     "youOweThem": "あなたが{{amount}}の借り",
     "settledWith": "精算済み",
-    "betweenOthers": "ほかの人どうし"
+    "betweenOthers": "ほかの人どうし",
+    "perShare": "1口あたり{{amount}}",
+    "savePreset": "この割り方を保存",
+    "presetSaved": "保存しました。次回タップすると同じ割り方になります。"
   },
   "voiceExpense": {
     "speakToAdd": "話して支出を追加",
@@ -1495,7 +1499,18 @@
     "renewalTermsIos": "サブスクリプションは App Store で解約するまで自動更新されます。買い切りは1回限りの購入です。",
     "termsOfUse": "利用規約",
     "titleGroups": "無料のグループ {{count}} 件を使い切りました",
-    "ledeGroups": "無料プランでは自分のグループを {{count}} 件まで作成でき、友達のグループへの参加はいつでも無料です。アップグレードするとグループをいくつでも使えます。"
+    "ledeGroups": "無料プランでは自分のグループを {{count}} 件まで作成でき、友達のグループへの参加はいつでも無料です。アップグレードするとグループをいくつでも使えます。",
+    "titlePlus": {
+      "shares": "Plusで口数割り",
+      "presets": "Plusでいつもの割り方を保存",
+      "recurring": "Plusで家賃やサブスクを自動追加",
+      "charts": "Plusで支出の推移を見る",
+      "export": "Plusで支出を書き出す",
+      "receiptScan": "Plusでレシートを読み取る"
+    },
+    "ledePlus": "Plusは無料の機能に加えて、口数割りと保存した割り方、定期支出、グラフ、書き出し、レシート読み取りを追加します。有料プランは広告なしです。",
+    "featureMoneyTools": "定期支出、口数割り、グラフ、書き出し、レシート読み取り",
+    "featureReceiptItems": "レシートを品目ごとに割り勘"
   },
   "aiKey": {
     "title": "自分のAPIキー",
