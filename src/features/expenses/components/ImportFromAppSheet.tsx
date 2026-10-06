@@ -44,7 +44,7 @@ function ImportBody({ groupId, onClose, onDone }: { groupId: string | null; onCl
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const companions = group?.companions ?? [];
-  const others = parsed ? parsed.people.filter((person) => person !== me) : [];
+  const others = useMemo(() => (parsed ? parsed.people.filter((person) => person !== me) : []), [parsed, me]);
   const appName = parsed?.source === "settleup" ? "Settle Up" : "Splitwise";
 
   const pickFile = async () => {
