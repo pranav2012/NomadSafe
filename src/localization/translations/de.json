@@ -1689,5 +1689,21 @@
     "addSave": "Zum Pass hinzufügen",
     "added": "Zu deinem Pass hinzugefügt",
     "searchCountries": "Länder suchen"
+  },
+  "tickets": {
+    "title": "Tickets",
+    "addFile": "PDF oder Bild hinzufügen",
+    "addPhoto": "Foto hinzufügen",
+    "onlyHere": "Nur auf diesem Handy gespeichert. Nicht gesichert oder geteilt.",
+    "saveFirst": "Speichere diesen Eintrag zuerst, dann füge seine Tickets hinzu.",
+    "show": "Ticket zeigen",
+    "showFor": "Ticket zeigen · {{title}}",
+    "removeTitle": "Dieses Ticket entfernen?",
+    "removeBody": "Es wird von diesem Handy gelöscht.",
+    "remove": "Entfernen",
+    "position": "{{index}} von {{total}}",
+    "openFailed": "Diese Datei ließ sich nicht öffnen.",
+    "previous": "Zurück",
+    "next": "Weiter"
   }
 }

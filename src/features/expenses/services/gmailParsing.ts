@@ -2,7 +2,8 @@ import type { ImportErrorCode } from "@/features/expenses/services/importErrors"
 
 export interface GmailPart {
   mimeType?: string;
-  body?: { data?: string };
+  filename?: string;
+  body?: { data?: string; attachmentId?: string; size?: number };
   parts?: GmailPart[];
 }
 
@@ -177,6 +178,28 @@ export function stripHtml(html: string): string {
 }
 
 // Walk the MIME tree, preferring text/plain and falling back to stripped HTML.
+export interface GmailAttachment {
+  attachmentId: string;
+  name: string;
+  size: number;
+}
+
+/** PDF attachments of a message (booking confirmations, tickets, vouchers). */
+export function pdfAttachments(message: GmailMessage): GmailAttachment[] {
+  const found: GmailAttachment[] = [];
+  const visit = (part?: GmailPart | GmailMessage["payload"]) => {
+    if (!part) return;
+    const filename = "filename" in part ? part.filename : undefined;
+    const attachmentId = part.body && "attachmentId" in part.body ? part.body.attachmentId : undefined;
+    if (attachmentId && filename && (part.mimeType === "application/pdf" || /\.pdf$/i.test(filename))) {
+      found.push({ attachmentId, name: filename, size: (part.body as { size?: number }).size ?? 0 });
+    }
+    part.parts?.forEach(visit);
+  };
+  visit(message.payload);
+  return found;
+}
+
 export function extractBody(message: GmailMessage): string {
   const plain: string[] = [];
   const html: string[] = [];

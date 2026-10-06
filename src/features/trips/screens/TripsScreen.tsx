@@ -17,6 +17,7 @@ import { useChatStore } from "@/features/ai/store/chatStore";
 import { PassportCard } from "@/features/passport";
 import { useRecapStore } from "@/features/recap";
 import { deleteTripPhotos } from "@/features/recap/services/tripPhotos";
+import { pruneTickets } from "@/features/itinerary/services/tickets";
 import { useEventsStore } from "@/features/itinerary/store/eventsStore";
 import { clearTripGmailCoverage } from "@/features/expenses/store/tripGmailCoverageStore";
 import { useExpensesStore } from "@/features/expenses/store/expensesStore";
@@ -152,6 +153,7 @@ export default function TripsScreen() {
     clearTripGmailCoverage(tripId);
     useRecapStore.getState().setWalking(tripId, null);
     void deleteTripPhotos(tripId);
+    void pruneTickets();
     setDeleteTarget(null);
     setConfirmText("");
   };

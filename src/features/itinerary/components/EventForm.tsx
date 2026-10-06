@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { AuraButton, AuraChip, AuraDateField, AuraField, AuraSegmented, AuraSheet, useAura } from "@/atoms";
+import { AuraButton, AuraChip, AuraDateField, AuraField, AuraSegmented, AuraSheet, Icon, PressableScale, useAura } from "@/atoms";
+import { track } from "@/modules/analytics";
+import { attachFiles, attachPhotos } from "@/features/itinerary/services/tickets";
+import { useTicketsStore } from "@/features/itinerary/store/ticketsStore";
 import { auraEventColors } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { SELF_ID } from "@/features/expenses/utils/split";
@@ -48,6 +51,7 @@ export function EventForm({
   defaultStart,
   tripStart,
   companions,
+  onOpenTicket,
   visible,
   onSave,
   onDelete,
@@ -60,6 +64,8 @@ export function EventForm({
   tripStart: Date;
   /** Other travellers; "Who's it for" shows when there are any. */
   companions: string[];
+  /** Opens a saved ticket full screen (the parent closes this sheet first). */
+  onOpenTicket: (ticketId: string) => void;
   visible: boolean;
   onSave: (values: EventFormValues) => void;
   onDelete?: () => void;
@@ -80,6 +86,13 @@ export function EventForm({
   );
   const [pickedWhen, setWhenKind] = useState<When>(event?.timing ?? "time");
   const [people, setPeople] = useState<string[]>(event?.people ?? []);
+  const allTickets = useTicketsStore((state) => state.tickets);
+  const tickets = event ? allTickets.filter((ticket) => ticket.eventId === event.id) : [];
+  const addTickets = async (source: "file" | "photo") => {
+    if (!event) return;
+    const count = source === "file" ? await attachFiles(event.id) : await attachPhotos(event.id);
+    if (count > 0) track("ticket_added", { source, count });
+  };
   const untimedAllowed = canBeUntimed(type);
   const whenKind: When = untimedAllowed ? pickedWhen : "time";
   const everyone = [SELF_ID, ...companions];
@@ -212,6 +225,34 @@ export function EventForm({
             withTime
           />
         ) : null}
+        <View style={styles.people}>
+          <Text style={[styles.peopleLabel, { color: c.textSoft, fontFamily: f.medium }]}>{t("tickets.title")}</Text>
+          {event ? (
+            <>
+              {tickets.map((ticket) => (
+                <PressableScale
+                  key={ticket.id}
+                  onPress={() => onOpenTicket(ticket.id)}
+                  accessibilityRole="button"
+                  style={[styles.ticket, { backgroundColor: c.surface, borderColor: c.hairline }]}
+                >
+                  <Icon name={ticket.kind === "pdf" ? "ticket" : "camera"} size={15} color={c.textSoft} />
+                  <Text numberOfLines={1} style={[styles.ticketName, { color: c.text, fontFamily: f.medium }]}>
+                    {ticket.name}
+                  </Text>
+                  <Icon name="chevronRight" size={13} color={c.textMuted} />
+                </PressableScale>
+              ))}
+              <View style={styles.types}>
+                <AuraChip label={t("tickets.addFile")} icon="ticket" onPress={() => void addTickets("file")} />
+                <AuraChip label={t("tickets.addPhoto")} icon="camera" onPress={() => void addTickets("photo")} />
+              </View>
+              <Text style={[styles.hint, { color: c.textMuted, fontFamily: f.regular }]}>{t("tickets.onlyHere")}</Text>
+            </>
+          ) : (
+            <Text style={[styles.hint, { color: c.textMuted, fontFamily: f.regular }]}>{t("tickets.saveFirst")}</Text>
+          )}
+        </View>
         {companions.length > 0 ? (
           <View style={styles.people}>
             <Text style={[styles.peopleLabel, { color: c.textSoft, fontFamily: f.medium }]}>{t("itinerary.form.whoFor")}</Text>
@@ -238,6 +279,8 @@ const styles = StyleSheet.create({
   types: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   hint: { fontSize: 13.5, lineHeight: 19 },
   people: { gap: 10 },
+  ticket: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, height: 46, borderRadius: 14, borderWidth: StyleSheet.hairlineWidth },
+  ticketName: { flex: 1, fontSize: 14 },
   peopleLabel: { fontSize: 13.5 },
   actions: { flexDirection: "row", gap: 10 },
   delete: { paddingHorizontal: 18 },

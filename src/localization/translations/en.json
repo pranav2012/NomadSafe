@@ -1689,5 +1689,21 @@
     "addSave": "Add to passport",
     "added": "Added to your passport",
     "searchCountries": "Search countries"
+  },
+  "tickets": {
+    "title": "Tickets",
+    "addFile": "Add PDF or image",
+    "addPhoto": "Add photo",
+    "onlyHere": "Kept on this phone only. Not backed up or shared.",
+    "saveFirst": "Save this item first, then add its tickets.",
+    "show": "Show ticket",
+    "showFor": "Show ticket · {{title}}",
+    "removeTitle": "Remove this ticket?",
+    "removeBody": "It's deleted from this phone.",
+    "remove": "Remove",
+    "position": "{{index}} of {{total}}",
+    "openFailed": "Couldn't open this file.",
+    "previous": "Previous",
+    "next": "Next"
   }
 }

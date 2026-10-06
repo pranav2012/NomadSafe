@@ -1689,5 +1689,21 @@
     "addSave": "添加到护照",
     "added": "已添加到你的护照",
     "searchCountries": "搜索国家"
+  },
+  "tickets": {
+    "title": "票据",
+    "addFile": "添加 PDF 或图片",
+    "addPhoto": "添加照片",
+    "onlyHere": "仅保存在本机，不会备份或共享。",
+    "saveFirst": "请先保存此项，再添加票据。",
+    "show": "查看票据",
+    "showFor": "查看票据 · {{title}}",
+    "removeTitle": "删除此票据？",
+    "removeBody": "将从本机删除。",
+    "remove": "删除",
+    "position": "{{index}} / {{total}}",
+    "openFailed": "无法打开此文件。",
+    "previous": "上一个",
+    "next": "下一个"
   }
 }

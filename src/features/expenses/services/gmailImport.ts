@@ -5,6 +5,7 @@ import {
   gmailErrorCode,
   gmailRetryDelayMs,
   headerValue,
+  pdfAttachments,
   type GmailMessage,
 } from "@/features/expenses/services/gmailParsing";
 import { translate } from "@/localization/translate";
@@ -110,7 +111,17 @@ function toRawMessage(message: GmailMessage): RawMessage {
       bodyText,
     ].join("\n"),
     externalId: message.id ? `gmail:${message.id}` : undefined,
+    attachments: pdfAttachments(message),
   };
+}
+
+/** One attachment's bytes as standard base64 (Gmail sends base64url). */
+export async function fetchGmailAttachment(accessToken: string, messageId: string, attachmentId: string): Promise<string> {
+  const { data } = await gmailFetch<{ data?: string }>(
+    `messages/${encodeURIComponent(messageId)}/attachments/${encodeURIComponent(attachmentId)}`,
+    accessToken,
+  );
+  return (data ?? "").replace(/-/g, "+").replace(/_/g, "/");
 }
 
 /**

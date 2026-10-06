@@ -1689,5 +1689,21 @@
     "addSave": "Ajouter au passeport",
     "added": "Ajouté à ton passeport",
     "searchCountries": "Rechercher un pays"
+  },
+  "tickets": {
+    "title": "Billets",
+    "addFile": "Ajouter un PDF ou une image",
+    "addPhoto": "Ajouter une photo",
+    "onlyHere": "Conservé sur ce téléphone uniquement. Ni sauvegardé ni partagé.",
+    "saveFirst": "Enregistrez d'abord cet élément, puis ajoutez ses billets.",
+    "show": "Afficher le billet",
+    "showFor": "Afficher le billet · {{title}}",
+    "removeTitle": "Retirer ce billet ?",
+    "removeBody": "Il sera supprimé de ce téléphone.",
+    "remove": "Retirer",
+    "position": "{{index}} sur {{total}}",
+    "openFailed": "Impossible d'ouvrir ce fichier.",
+    "previous": "Précédent",
+    "next": "Suivant"
   }
 }

@@ -108,5 +108,11 @@ export function useLivePass({ events, now, stage, day, totalDays, city }: LivePa
         .join(" · ")
     : undefined;
 
-  return { heading, top, stub, meanwhile: meanwhile ? t("home.live.meanwhile", { what: meanwhile }) : undefined };
+  return {
+    heading,
+    top,
+    stub,
+    meanwhile: meanwhile ? t("home.live.meanwhile", { what: meanwhile }) : undefined,
+    eventIds: [current?.event.id, next?.event.id].filter((id): id is string => Boolean(id)),
+  };
 }

@@ -13,6 +13,7 @@ import { useRecapStore } from "@/features/recap/store/recapStore";
 import { usePassportStore } from "@/features/passport/store/passportStore";
 import { syncRecapNotifications } from "@/features/recap/services/recapNotifications";
 import { deleteAllTripPhotos } from "@/features/recap/services/tripPhotos";
+import { deleteAllTickets } from "@/features/itinerary/services/tickets";
 import { resetBackgroundDisclosure } from "@/features/location-sharing/components/BackgroundLocationDisclosure";
 import { emergencyContactsStorage } from "@/features/onboarding/services/emergencyContactsStorage";
 import { useSafetyStore } from "@/features/safety/store/safetyStore";
@@ -69,6 +70,7 @@ export async function wipeAllDeviceData({ keepModels = false }: { keepModels?: b
   usePlanStore.getState().reset();
   await attempt(() => syncRecapNotifications([], {}));
   await attempt(deleteAllTripPhotos);
+  await attempt(deleteAllTickets);
 
   storage.clearAll();
   // Rewrites the widgets (and the iOS App Group copy of trip names) from the now-empty trip store.

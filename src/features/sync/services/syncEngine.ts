@@ -4,6 +4,7 @@ import { useExpensesStore, type Expense, type Settlement } from "@/features/expe
 import { useEventsStore, type TripEvent } from "@/features/itinerary/store/eventsStore";
 import { usePassportStore, type PastTravel } from "@/features/passport/store/passportStore";
 import { deleteAllTripPhotos } from "@/features/recap/services/tripPhotos";
+import { deleteAllTickets } from "@/features/itinerary/services/tickets";
 import { pickDefaultActiveTripId, useTripsStore, type Trip } from "@/features/trips/store/tripsStore";
 import { syncWidgets } from "@/features/widget/syncWidgets";
 import { logger } from "@/modules/logger";
@@ -290,6 +291,7 @@ export function clearSyncedLocalData() {
   useEventsStore.getState().reset();
   usePassportStore.getState().reset();
   void deleteAllTripPhotos();
+  void deleteAllTickets();
   if (owner) storage.remove(ledgerKey(owner));
   storage.remove(OWNER_KEY);
   clearGroupLedgers();

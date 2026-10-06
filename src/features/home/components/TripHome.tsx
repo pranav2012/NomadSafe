@@ -13,6 +13,9 @@ import { useHotelPin, useSafetyPlaces } from "@/features/home/hooks/useTripSafet
 import type { HomeData } from "@/features/home/types";
 import { todayStopIndex } from "@/features/home/utils/globeTiles";
 import { TripItinerary, useEventsStore } from "@/features/itinerary";
+import { useTicketsStore } from "@/features/itinerary/store/ticketsStore";
+import { localizeEventTitle } from "@/features/itinerary/utils/eventText";
+import { useRouter } from "expo-router";
 import { useLivePass } from "@/features/home/hooks/useLivePass";
 import { homeStage } from "@/features/home/utils/stage";
 import { addDays, fromDateKey } from "@/features/trips/utils/dates";
@@ -119,6 +122,10 @@ export function TripHome({
   const selectedStop = pickedDay === null ? focusStop : data.stops[todayStopIndex(data.stops, "active", selectedIndex + 1, data.totalDays, null)];
   const live = useLivePass({ events: tripEvents, now, stage, day: data.day, totalDays: data.totalDays, city: focusStop?.name.split(",")[0] });
   const heroHeight = horizon ? HORIZON_HEIGHT : globeHeight;
+  const router = useRouter();
+  const tickets = useTicketsStore((state) => state.tickets);
+  const ticketEventIds = new Set(tickets.map((ticket) => ticket.eventId));
+  const ticketEvent = live ? tripEvents.find((event) => event.id === live.eventIds.find((id) => ticketEventIds.has(id))) : undefined;
 
   const selectDay = (index: number) => {
     setPickedDay(index === todayIndex ? null : index);
@@ -412,6 +419,22 @@ export function TripHome({
           />
         </PrivateView>
 
+        {ticketEvent ? (
+          <View style={[styles.body, styles.ticketWrap]}>
+            <PressableScale
+              onPress={() => router.push({ pathname: "/ticket/[eventId]", params: { eventId: ticketEvent.id } })}
+              accessibilityRole="button"
+              style={[styles.ticketPill, { backgroundColor: c.surfaceStrong, borderColor: c.hairline }]}
+            >
+              <Icon name="ticket" size={15} color={c.text} />
+              <Text numberOfLines={1} style={[styles.ticketText, { color: c.text }]}>
+                {t("tickets.showFor", { title: localizeEventTitle(ticketEvent.title, t) })}
+              </Text>
+              <Icon name="chevronRight" size={13} color={c.textMuted} />
+            </PressableScale>
+          </View>
+        ) : null}
+
         {stage === "upcoming" ? (
           <PrivateView style={[styles.body, styles.prep]}>
             <TripPrepCard trip={trip} events={tripEvents} firstStop={data.stops[0]} />
@@ -550,6 +573,9 @@ const styles = StyleSheet.create({
   backTodayText: { fontFamily: f.semibold, fontSize: 12 },
   dayPlan: { marginTop: 8 },
   prep: { marginBottom: 18 },
+  ticketWrap: { marginTop: -2, marginBottom: 10 },
+  ticketPill: { flexDirection: "row", alignItems: "center", gap: 10, height: 44, paddingHorizontal: 16, borderRadius: 22, borderWidth: StyleSheet.hairlineWidth },
+  ticketText: { flex: 1, fontFamily: f.semibold, fontSize: 14 },
   collapse: { position: "absolute", right: 20, bottom: 14, zIndex: 2 },
   moneyCard: {
     marginTop: 22,

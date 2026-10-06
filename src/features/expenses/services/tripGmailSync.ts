@@ -1,5 +1,6 @@
 import { ensureGmailAccountEmail, withGmailAccess } from "@/features/expenses/services/gmailAuth";
-import { fetchTransactionEmails } from "@/features/expenses/services/gmailImport";
+import { fetchGmailAttachment, fetchTransactionEmails } from "@/features/expenses/services/gmailImport";
+import { MAX_TICKET_BYTES, hasGmailTicket, pruneTickets, saveGmailTicket } from "@/features/itinerary/services/tickets";
 import { buildTripGmailQuery } from "@/features/expenses/services/gmailParsing";
 import { importErrorCode } from "@/features/expenses/services/importErrors";
 import { buildImportCandidates, candidateToInput } from "@/features/expenses/services/importPipeline";
@@ -75,6 +76,9 @@ async function runSync(trip: Trip): Promise<TripGmailSyncResult | null> {
       trip,
     );
     const { added: eventsAdded, removedSourceIds } = await addNewEvents(messages, trip);
+    await attachGmailTickets(messages, trip).catch((error: unknown) => logger.warn("gmail-sync", "tickets failed", error));
+    // A rescan rebuilds unedited bookings under new ids; their old tickets go (the new ones were just saved).
+    if (reparse) await pruneTickets();
     const expensesRemoved =
       removeCancelledExpenses([...removedSourceIds, ...cancelledIds], trip.id) + removeGenericDuplicates(trip.id);
     if (reparse) autoSplitExisting(trip);
@@ -145,6 +149,34 @@ async function addNewEvents(messages: RawMessage[], trip: Trip): Promise<EmailMe
   );
   if (result.added > 0) track("itinerary_event_added", { source: "gmail", count: result.added });
   return result;
+}
+
+/** Saves each booking email's PDFs (tickets, vouchers) on the items it created or merged into; files stay on the phone. */
+async function attachGmailTickets(messages: RawMessage[], trip: Trip): Promise<number> {
+  const events = useEventsStore.getState().events.filter((event) => event.tripId === trip.id && event.source === "email");
+  let saved = 0;
+  for (const message of messages) {
+    const files = (message.attachments ?? []).filter((file) => file.size <= MAX_TICKET_BYTES);
+    if (!message.externalId || files.length === 0) continue;
+    const fromThisEmail = (id: string | undefined) => Boolean(id?.startsWith(`${message.externalId}#`));
+    const targets = events.filter((event) => fromThisEmail(event.externalId) || event.sourceIds?.some(fromThisEmail));
+    if (targets.length === 0) continue;
+    const messageId = message.externalId.slice("gmail:".length);
+    for (const file of files) {
+      const key = `${message.externalId}:${file.name}`;
+      const missing = targets.filter((event) => !hasGmailTicket(event.id, key));
+      if (missing.length === 0) continue;
+      const data = await withGmailAccess((accessToken) => fetchGmailAttachment(accessToken, messageId, file.attachmentId));
+      for (const event of missing) {
+        if (await saveGmailTicket(event.id, key, file.name, data)) saved += 1;
+      }
+    }
+  }
+  if (saved > 0) {
+    logger.info("gmail-sync", "tickets saved", { count: saved });
+    track("ticket_added", { source: "gmail", count: saved });
+  }
+  return saved;
 }
 
 /** Split fields for a Gmail spend you paid, from the email's head-count and guest names. */

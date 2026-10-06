@@ -1689,5 +1689,21 @@
     "addSave": "Adicionar ao passaporte",
     "added": "Adicionado ao seu passaporte",
     "searchCountries": "Buscar países"
+  },
+  "tickets": {
+    "title": "Ingressos",
+    "addFile": "Adicionar PDF ou imagem",
+    "addPhoto": "Adicionar foto",
+    "onlyHere": "Fica só neste celular. Sem backup nem compartilhamento.",
+    "saveFirst": "Salve este item primeiro e depois adicione os ingressos.",
+    "show": "Mostrar ingresso",
+    "showFor": "Mostrar ingresso · {{title}}",
+    "removeTitle": "Remover este ingresso?",
+    "removeBody": "Ele será apagado deste celular.",
+    "remove": "Remover",
+    "position": "{{index}} de {{total}}",
+    "openFailed": "Não foi possível abrir este arquivo.",
+    "previous": "Anterior",
+    "next": "Próximo"
   }
 }

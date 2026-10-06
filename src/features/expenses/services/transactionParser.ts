@@ -430,6 +430,8 @@ export interface RawMessage {
   externalId?: string;
   /** Email "From" value, used to derive a merchant when the body is unclear. */
   sender?: string;
+  /** Gmail only: PDF attachments, saved as tickets on the bookings this email creates. */
+  attachments?: { attachmentId: string; name: string; size: number }[];
   /** Full email context retained as the imported expense note. */
   note?: string;
 }

@@ -1689,5 +1689,21 @@
     "addSave": "여권에 추가",
     "added": "여권에 추가했어요",
     "searchCountries": "국가 검색"
+  },
+  "tickets": {
+    "title": "티켓",
+    "addFile": "PDF 또는 이미지 추가",
+    "addPhoto": "사진 추가",
+    "onlyHere": "이 폰에만 저장돼요. 백업하거나 공유하지 않아요.",
+    "saveFirst": "먼저 이 항목을 저장한 다음 티켓을 추가하세요.",
+    "show": "티켓 보기",
+    "showFor": "티켓 보기 · {{title}}",
+    "removeTitle": "이 티켓을 삭제할까요?",
+    "removeBody": "이 폰에서 삭제돼요.",
+    "remove": "삭제",
+    "position": "{{index}} / {{total}}",
+    "openFailed": "이 파일을 열 수 없어요.",
+    "previous": "이전",
+    "next": "다음"
   }
 }

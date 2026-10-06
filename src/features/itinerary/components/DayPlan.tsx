@@ -62,6 +62,8 @@ export function DayPlan({
   onSchedule,
   onAddMustDo,
   onDismissMustDo,
+  ticketEventIds,
+  onOpenTickets,
 }: {
   events: TripEvent[];
   day: Date;
@@ -70,6 +72,9 @@ export function DayPlan({
   /** Suggestions for this day's place, offered when it's free. */
   mustDos: MustDo[];
   onAddMustDo: (item: MustDo) => void;
+  /** Items with tickets saved on this phone get a ticket button. */
+  ticketEventIds: Set<string>;
+  onOpenTickets: (eventId: string) => void;
   onDismissMustDo: (item: MustDo) => void;
   onPress: (event: TripEvent) => void;
   onAdd: () => void;
@@ -157,6 +162,16 @@ export function DayPlan({
             </Text>
           ) : null}
         </View>
+        {ticketEventIds.has(event.id) ? (
+          <PressableScale
+            onPress={() => onOpenTickets(event.id)}
+            accessibilityRole="button"
+            accessibilityLabel={t("tickets.show")}
+            style={[styles.round, { backgroundColor: c.surfaceStrong }]}
+          >
+            <Icon name="ticket" size={14} color={c.text} />
+          </PressableScale>
+        ) : null}
         {mapsButton(event)}
         {event.type === "stay" ? null : doneCircle(event)}
       </PressableScale>

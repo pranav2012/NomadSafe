@@ -64,4 +64,6 @@ export interface LivePass {
   stub: { time: string; label: string; title: string } | null;
   /** On trips with others: what someone else is doing right now, e.g. "Suhas · teamLab · until 18:00". */
   meanwhile?: string;
+  /** The items behind "now" and "next", in that order, to offer their tickets. */
+  eventIds: string[];
 }

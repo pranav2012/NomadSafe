@@ -1689,5 +1689,21 @@
     "addSave": "Añadir al pasaporte",
     "added": "Añadido a tu pasaporte",
     "searchCountries": "Buscar países"
+  },
+  "tickets": {
+    "title": "Billetes",
+    "addFile": "Añadir PDF o imagen",
+    "addPhoto": "Añadir foto",
+    "onlyHere": "Solo en este teléfono. Sin copia de seguridad ni compartido.",
+    "saveFirst": "Guarda primero este elemento y luego añade sus billetes.",
+    "show": "Ver billete",
+    "showFor": "Ver billete · {{title}}",
+    "removeTitle": "¿Quitar este billete?",
+    "removeBody": "Se borrará de este teléfono.",
+    "remove": "Quitar",
+    "position": "{{index}} de {{total}}",
+    "openFailed": "No se pudo abrir este archivo.",
+    "previous": "Anterior",
+    "next": "Siguiente"
   }
 }

@@ -1,4 +1,5 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "expo-router";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { AuraButton, AuraSection, AuraSheet, Icon, PressableScale, showAlert, showToast, useAura } from "@/atoms";
@@ -14,6 +15,8 @@ import { formatters } from "@/features/itinerary/utils/entryText";
 import { toWallClock } from "@/features/itinerary/utils/wallClock";
 import { mustDosNear, type MustDo } from "@/features/itinerary/utils/mustDos";
 import { useMustDoStore } from "@/features/itinerary/store/mustDoStore";
+import { useTicketsStore } from "@/features/itinerary/store/ticketsStore";
+import { pruneTickets, removeTickets } from "@/features/itinerary/services/tickets";
 import { upNext } from "@/features/itinerary/utils/timeline";
 import { fromDateKey } from "@/features/trips/utils/dates";
 import { logger } from "@/modules/logger";
@@ -79,6 +82,15 @@ export function TripItinerary({
   // Refine only tidies Gmail imports; what the user added is theirs to keep.
   const imported = ordered.filter((event) => event.source === "email");
   const tripStart = fromDateKey(trip.startDate);
+  const router = useRouter();
+  const tickets = useTicketsStore((state) => state.tickets);
+  const ticketEventIds = new Set(tickets.map((ticket) => ticket.eventId));
+  const openTickets = (eventId: string, ticketId?: string) => router.push({ pathname: "/ticket/[eventId]", params: { eventId, ...(ticketId ? { ticketId } : null) } });
+
+  // Items removed elsewhere (sync, another member) leave their files behind; tidy up once per mount.
+  useEffect(() => {
+    void pruneTickets();
+  }, []);
   const dismissed = useMustDoStore((state) => state.dismissed[trip.id]);
   const dismissMustDo = useMustDoStore((state) => state.dismiss);
   const city = place?.name.split(",")[0];
@@ -204,6 +216,8 @@ export function TripItinerary({
               dismissMustDo(trip.id, item.key);
             }}
             onPress={setEditing}
+            ticketEventIds={ticketEventIds}
+            onOpenTickets={openTickets}
             onToggleDone={toggleDone}
             onSchedule={scheduleOn}
             onAdd={() => {
@@ -288,12 +302,19 @@ export function TripItinerary({
           defaultStart={editing === "new" ? defaultStartFor(day, now) : undefined}
           tripStart={tripStart}
           companions={trip.companions}
+          onOpenTicket={(ticketId) => {
+            if (editing === "new") return;
+            const eventId = editing.id;
+            setEditing(null);
+            openTickets(eventId, ticketId);
+          }}
           visible
           onSave={handleSave}
           onDelete={
             editing !== "new"
               ? () => {
                   deleteEvent(editing.id);
+                  void removeTickets(tickets.filter((ticket) => ticket.eventId === editing.id));
                   track("itinerary_event_deleted", { source: editing.source });
                   setEditing(null);
                 }

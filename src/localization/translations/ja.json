@@ -1689,5 +1689,21 @@
     "addSave": "パスポートに追加",
     "added": "パスポートに追加しました",
     "searchCountries": "国を検索"
+  },
+  "tickets": {
+    "title": "チケット",
+    "addFile": "PDFまたは画像を追加",
+    "addPhoto": "写真を追加",
+    "onlyHere": "この端末にのみ保存。バックアップや共有はされません。",
+    "saveFirst": "先にこの予定を保存してから、チケットを追加してください。",
+    "show": "チケットを表示",
+    "showFor": "チケットを表示 · {{title}}",
+    "removeTitle": "このチケットを削除しますか？",
+    "removeBody": "この端末から削除されます。",
+    "remove": "削除",
+    "position": "{{index}} / {{total}}",
+    "openFailed": "このファイルを開けませんでした。",
+    "previous": "前へ",
+    "next": "次へ"
   }
 }

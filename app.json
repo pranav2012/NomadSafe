@@ -81,7 +81,8 @@
         "android.permission.READ_PHONE_STATE",
         "android.permission.READ_MEDIA_IMAGES",
         "android.permission.READ_MEDIA_VIDEO",
-        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED"
+        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+        "android.permission.DOWNLOAD_WITHOUT_NOTIFICATION"
       ]
     },
     "web": {
@@ -153,7 +154,7 @@
             "minSdkVersion": 26,
             "enableMinifyInReleaseBuilds": true,
             "enableShrinkResourcesInReleaseBuilds": true,
-            "extraProguardRules": "-keep class com.rnllama.** { *; }\n-keep class com.margelo.nitro.** { *; }\n-keep class expo.modules.memoryinfo.** { *; }\n-keep class com.reactnative.skia.** { *; }\n-keep class expo.modules.adapters.react.apploader.** { *; }\n-keep class com.google.android.gms.internal.consent_sdk.** { *; }",
+            "extraProguardRules": "-keep class com.shockwave.** { *; }\n-keep class io.legere.pdfiumandroid.** { *; }\n-keep class com.rnllama.** { *; }\n-keep class com.margelo.nitro.** { *; }\n-keep class expo.modules.memoryinfo.** { *; }\n-keep class com.reactnative.skia.** { *; }\n-keep class expo.modules.adapters.react.apploader.** { *; }\n-keep class com.google.android.gms.internal.consent_sdk.** { *; }",
             "buildArchs": [
               "armeabi-v7a",
               "arm64-v8a",
@@ -253,7 +254,8 @@
           "photosPermission": false,
           "cameraPermission": false
         }
-      ]
+      ],
+      "@config-plugins/react-native-pdf"
     ],
     "experiments": {
       "typedRoutes": true,
