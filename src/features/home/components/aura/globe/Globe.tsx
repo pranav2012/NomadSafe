@@ -417,9 +417,9 @@ half4 main(float2 p) {
   float lights = smoothstep(0.02, 0.5, warm) * (0.35 + 0.65 * smoothstep(0.3, 0.9, warm));
   float3 nightCol = min(nightTex, float3(0.35)) * (0.25 + 0.3 * moon) + float3(1.0, 0.74, 0.4) * lights * 1.15;
   // Around the trip, moonlight the day imagery so coasts and land stay readable after dark.
-  float spot = glowOn * smoothstep(glowCos.y, glowCos.x, dot(w, glowDir));
+  float tripLight = glowOn * smoothstep(glowCos.y, glowCos.x, dot(w, glowDir));
   float3 moonLand = mix(float3(dot(dayTex, float3(0.3, 0.59, 0.11))), dayTex, 0.35) * float3(0.62, 0.72, 0.95) * (0.3 + 0.15 * moon);
-  nightCol += moonLand * spot;
+  nightCol += moonLand * tripLight;
   float3 col = mix(nightCol, dayCol, lit);
 
   // Grid cell centres sit at pixel centres; x wraps around the antimeridian.
@@ -431,7 +431,7 @@ half4 main(float2 p) {
   float thresh = mix(0.78, 0.3, cover);
   float density = smoothstep(thresh, thresh + 0.14, n) * smoothstep(0.04, 0.15, cover);
   float cloud = density * 0.95;
-  float3 moonCloud = float3(0.5, 0.58, 0.75) * (0.06 + 0.16 * moon) * (0.7 + 0.3 * density) * (1.0 + 1.2 * spot);
+  float3 moonCloud = float3(0.5, 0.58, 0.75) * (0.06 + 0.16 * moon) * (0.7 + 0.3 * density) * (1.0 + 1.2 * tripLight);
   float3 cloudCol = float3(0.78 + 0.22 * density) * diffuse + moonCloud * (1.0 - lit);
   col = mix(col, cloudCol, cloud);
   // City lights still glow faintly through cloud.
