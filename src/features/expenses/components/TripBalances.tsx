@@ -46,11 +46,11 @@ export function TripBalances({ trip }: { trip: Trip }) {
   const [settling, setSettling] = useState<Transfer | null>(null);
 
   const splitExpenses = useMemo(
-    () => allExpenses.filter((expense) => expense.tripId === trip.id && isSplitExpense(expense)),
+    () => allExpenses.filter((expense) => expense.groupId === trip.id && isSplitExpense(expense)),
     [allExpenses, trip.id],
   );
   const settlements = useMemo(
-    () => allSettlements.filter((settlement) => settlement.tripId === trip.id),
+    () => allSettlements.filter((settlement) => settlement.groupId === trip.id),
     [allSettlements, trip.id],
   );
   const convertedExpenses = useConvertedExpenses(splitExpenses, trip.currency);
@@ -210,7 +210,7 @@ function SettleUpSheet({
       return;
     }
     addSettlement({
-      tripId: trip.id,
+      groupId: trip.id,
       from,
       to,
       amount: value,

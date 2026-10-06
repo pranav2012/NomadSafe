@@ -17,7 +17,8 @@ export interface ExpenseLocation {
 
 export interface Expense {
   id: string;
-  tripId: string | null;
+  /** The trip or group it belongs to; null for spends that aren't in any. */
+  groupId: string | null;
   merchant: string;
   amount: number;
   currency: string;
@@ -40,7 +41,7 @@ export interface Expense {
 }
 
 export interface CreateExpenseInput {
-  tripId: string | null;
+  groupId: string | null;
   merchant: string;
   amount: number;
   currency: string;
@@ -57,10 +58,10 @@ export interface CreateExpenseInput {
   externalId?: string;
 }
 
-/** A repayment between two people on a trip; `from` paid `to`. */
+/** A repayment between two people in a trip or group; `from` paid `to`. */
 export interface Settlement {
   id: string;
-  tripId: string;
+  groupId: string;
   from: string;
   to: string;
   amount: number;
@@ -109,10 +110,18 @@ interface ExpensesState {
   addExpenses: (inputs: CreateExpenseInput[]) => Expense[];
   updateExpense: (id: string, input: UpdateExpenseInput) => Expense | null;
   deleteExpense: (id: string) => void;
-  removeByTripId: (tripId: string) => void;
+  removeByGroupId: (groupId: string) => void;
   addSettlement: (input: CreateSettlementInput) => Settlement;
   deleteSettlement: (id: string) => void;
   reset: () => void;
+}
+
+/** Moves a pre-v2 `tripId` to `groupId` (stored data and old backup records). */
+export function withGroupId<T>(record: T): T {
+  const legacy = record as T & { tripId?: string | null; groupId?: string | null };
+  if (!legacy || typeof legacy !== "object" || !("tripId" in legacy) || "groupId" in legacy) return record;
+  const { tripId, ...rest } = legacy;
+  return { ...rest, groupId: tripId ?? null } as T;
 }
 
 let idCounter = 0;
@@ -170,10 +179,10 @@ export const useExpensesStore = create<ExpensesState>()(
         set((state) => ({
           expenses: state.expenses.filter((expense) => expense.id !== id),
         })),
-      removeByTripId: (tripId) =>
+      removeByGroupId: (groupId) =>
         set((state) => ({
-          expenses: state.expenses.filter((expense) => expense.tripId !== tripId),
-          settlements: state.settlements.filter((settlement) => settlement.tripId !== tripId),
+          expenses: state.expenses.filter((expense) => expense.groupId !== groupId),
+          settlements: state.settlements.filter((settlement) => settlement.groupId !== groupId),
         })),
       addSettlement: (input) => {
         const settlement: Settlement = { ...input, id: nextId(), createdAt: new Date().toISOString() };
@@ -189,7 +198,17 @@ export const useExpensesStore = create<ExpensesState>()(
     {
       name: "expenses-store",
       storage: createJSONStorage(() => mmkvStateStorage),
-      version: 1,
+      version: 2,
+      migrate: (persistedState) => {
+        const state = persistedState as { expenses?: unknown[]; settlements?: unknown[] } | undefined;
+        if (!state) return persistedState;
+        // v2 renamed tripId to groupId (a trip is a kind of group).
+        return {
+          ...state,
+          expenses: (state.expenses ?? []).map(withGroupId),
+          settlements: (state.settlements ?? []).map(withGroupId),
+        };
+      },
     },
   ),
 );

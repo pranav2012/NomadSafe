@@ -3,7 +3,7 @@ import { components, internal } from "./_generated/api";
 import { internalMutation, mutation, type MutationCtx } from "./_generated/server";
 import { POSTHOG_DELETE_DELAY_MS } from "./analytics";
 import { deleteBillingData } from "./billing";
-import { removeUserFromTrips } from "./groupTrips";
+import { removeUserFromGroups } from "./groups";
 import { deleteSafetyAlerts } from "./safetyAlerts";
 import { deleteSyncBatch } from "./sync";
 import { findAuthUserByEmail, normalizeEmail, requireUser } from "./users";
@@ -62,7 +62,7 @@ async function purgeUser(ctx: MutationCtx, userId: string, email: string | null)
     : [];
   for (const invite of [...invitesSent, ...invitesReceived]) await ctx.db.delete(invite._id);
 
-  await removeUserFromTrips(ctx, userId);
+  await removeUserFromGroups(ctx, userId);
   const tokens = await ctx.db
     .query("pushTokens")
     .withIndex("by_user", (q) => q.eq("userId", userId))

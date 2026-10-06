@@ -1,7 +1,7 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
-export const tripRecordKindValidator = v.union(v.literal("expense"), v.literal("settlement"), v.literal("event"));
+export const groupRecordKindValidator = v.union(v.literal("expense"), v.literal("settlement"), v.literal("event"));
 
 export const syncKindValidator = v.union(v.literal("trip"), v.literal("group"), v.literal("expense"), v.literal("settlement"), v.literal("event"), v.literal("passport"));
 
@@ -84,41 +84,41 @@ export default defineSchema({
     records: v.optional(v.number()),
   }).index("by_user", ["userId"]),
 
-  // Group trips shared through an invite link. `data` holds the trip details (no companions;
-  // people are tripMembers). `seq` bumps on every change so members know when to pull.
-  sharedTrips: defineTable({
+  // Groups (trips are groups with travel details) shared through an invite link. `data` holds the
+  // details (no companions; people are groupMembers). `seq` bumps on every change so members know when to pull.
+  sharedGroups: defineTable({
     ownerUserId: v.string(),
     inviteCode: v.string(),
     data: v.any(),
     dataUpdatedAt: v.number(),
     seq: v.number(),
     createdAt: v.number(),
-    // tripRecords rows (tombstones included), for the per-trip cap. Missing on trips from before the cap.
+    // groupRecords rows (tombstones included), for the per-group cap. Missing on groups from before the cap.
     recordCount: v.optional(v.number()),
   }).index("by_code", ["inviteCode"]),
 
-  // People on a shared trip. `memberId` is what expenses and settlements refer to; members without
+  // People in a shared group. `memberId` is what expenses and settlements refer to; members without
   // `userId` are name-only companions that someone can claim when they join.
-  tripMembers: defineTable({
-    tripId: v.id("sharedTrips"),
+  groupMembers: defineTable({
+    groupId: v.id("sharedGroups"),
     memberId: v.string(),
     name: v.string(),
     userId: v.optional(v.string()),
     role: v.union(v.literal("owner"), v.literal("member")),
     status: v.union(v.literal("active"), v.literal("left"), v.literal("removed")),
-    // Per-member preferences: hide the trip from their list, silence its notifications.
+    // Per-member preferences: hide the group from their list, silence its notifications.
     archived: v.boolean(),
     muted: v.boolean(),
     joinedAt: v.number(),
   })
-    .index("by_trip", ["tripId"])
+    .index("by_group", ["groupId"])
     .index("by_user", ["userId"])
-    .index("by_trip_user", ["tripId", "userId"]),
+    .index("by_group_user", ["groupId", "userId"]),
 
-  // Expenses, settlements and itinerary events of a shared trip, last write wins by `updatedAt`.
-  tripRecords: defineTable({
-    tripId: v.id("sharedTrips"),
-    kind: tripRecordKindValidator,
+  // Expenses, settlements and (on trips) itinerary events of a shared group, last write wins by `updatedAt`.
+  groupRecords: defineTable({
+    groupId: v.id("sharedGroups"),
+    kind: groupRecordKindValidator,
     clientId: v.string(),
     data: v.optional(v.any()),
     deleted: v.boolean(),
@@ -127,13 +127,13 @@ export default defineSchema({
     updatedBy: v.optional(v.string()),
     seq: v.number(),
   })
-    .index("by_trip_record", ["tripId", "kind", "clientId"])
-    .index("by_trip_seq", ["tripId", "seq"]),
+    .index("by_group_record", ["groupId", "kind", "clientId"])
+    .index("by_group_seq", ["groupId", "seq"]),
 
-  // Money-change push throttle per member per trip: changes made within a minute of the last push are
+  // Money-change push throttle per member per group: changes made within a minute of the last push are
   // counted here and sent as one summary push when the minute is up.
-  tripNotifyState: defineTable({
-    tripId: v.id("sharedTrips"),
+  groupNotifyState: defineTable({
+    groupId: v.id("sharedGroups"),
     actorMemberId: v.string(),
     lastSentAt: v.number(),
     pendingCount: v.number(),
@@ -147,7 +147,7 @@ export default defineSchema({
       }),
     ),
     flushScheduled: v.boolean(),
-  }).index("by_trip_actor", ["tripId", "actorMemberId"]),
+  }).index("by_group_actor", ["groupId", "actorMemberId"]),
 
   // Server side of SOS and check-in: the check-in deadline (and its scheduled alert) and which
   // alert linked contacts were last sent, so they hear when the user is safe again.

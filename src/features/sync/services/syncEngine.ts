@@ -1,6 +1,6 @@
 import { AppState, type NativeEventSubscription } from "react-native";
 import { api, convex } from "@/modules/backend";
-import { useExpensesStore, type Expense, type Settlement } from "@/features/expenses/store/expensesStore";
+import { useExpensesStore, withGroupId, type Expense, type Settlement } from "@/features/expenses/store/expensesStore";
 import { useEventsStore, type TripEvent } from "@/features/itinerary/store/eventsStore";
 import { usePassportStore, type PastTravel } from "@/features/passport/store/passportStore";
 import { deleteAllTripPhotos } from "@/features/recap/services/tripPhotos";
@@ -183,7 +183,7 @@ async function pullChanges(uid: string): Promise<boolean> {
   // Records that now belong to a shared trip are owned by that trip's sync; never touch them here.
   const scope = makeSharedScope(uid, selectMoneyGroups(useTripsStore.getState()));
   for (const [key, record] of incoming) {
-    const local = { id: record.clientId, ...(record.data as object), tripId: (record.data as { tripId?: string | null } | undefined)?.tripId ?? null };
+    const local = { id: record.clientId, ...(withGroupId(record.data) as { groupId?: string | null; tripId?: string | null }) };
     const ownedByTrip =
       record.kind === "passport"
         ? false
@@ -220,7 +220,7 @@ function merge<T extends { id: string; rawText?: string; note?: string; source?:
       continue;
     }
     const previous = byId.get(record.clientId);
-    byId.set(record.clientId, keepLocalOnly({ ...(record.data as T) }, previous));
+    byId.set(record.clientId, keepLocalOnly({ ...withGroupId(record.data as T) }, previous));
   }
   return [...byId.values()].sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
 }

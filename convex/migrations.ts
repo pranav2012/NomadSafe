@@ -4,7 +4,7 @@ import { internalMutation } from "./_generated/server";
 
 const BATCH = 200;
 
-type Table = "syncRecords" | "tripRecords";
+type Table = "syncRecords" | "groupRecords";
 type Args = { table?: Table; cursor?: string | null; patched?: number };
 
 // Referenced by name so this one-off file works before `_generated/api` is regenerated.
@@ -26,7 +26,7 @@ function withoutEmailNote(data: unknown): Record<string, unknown> | null {
  */
 export const stripEmailNotes = internalMutation({
   args: {
-    table: v.optional(v.union(v.literal("syncRecords"), v.literal("tripRecords"))),
+    table: v.optional(v.union(v.literal("syncRecords"), v.literal("groupRecords"))),
     cursor: v.optional(v.union(v.string(), v.null())),
     patched: v.optional(v.number()),
   },
@@ -43,7 +43,7 @@ export const stripEmailNotes = internalMutation({
     if (!page.isDone) {
       await ctx.scheduler.runAfter(0, self, { table, cursor: page.continueCursor, patched });
     } else if (table === "syncRecords") {
-      await ctx.scheduler.runAfter(0, self, { table: "tripRecords", cursor: null, patched });
+      await ctx.scheduler.runAfter(0, self, { table: "groupRecords", cursor: null, patched });
     } else {
       console.log(`stripEmailNotes done: ${patched} records patched`);
     }

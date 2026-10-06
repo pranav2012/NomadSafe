@@ -16,9 +16,9 @@ export interface MerchantTotal {
   count: number;
 }
 
-export function filterByTrip(expenses: Expense[], tripId: string | null): Expense[] {
-  if (!tripId) return expenses;
-  return expenses.filter((expense) => expense.tripId === tripId);
+export function filterByGroup(expenses: Expense[], groupId: string | null): Expense[] {
+  if (!groupId) return expenses;
+  return expenses.filter((expense) => expense.groupId === groupId);
 }
 
 export function sumAmount(expenses: Expense[]): number {

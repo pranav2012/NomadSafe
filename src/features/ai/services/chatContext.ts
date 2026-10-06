@@ -67,7 +67,7 @@ export async function loadTripMoneySnapshot(
 
   const tripExpenses = useExpensesStore
     .getState()
-    .expenses.filter((expense) => expense.tripId === trip.id);
+    .expenses.filter((expense) => expense.groupId === trip.id);
   const converted = await Promise.all(
     tripExpenses.map(async (expense): Promise<MoneyExpenseInput | null> => {
       const rate = await rateWithin(expense.currency, trip.currency, expense.date);

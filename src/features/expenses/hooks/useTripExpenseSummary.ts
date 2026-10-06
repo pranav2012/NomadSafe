@@ -115,7 +115,7 @@ export function useConvertedExpenses<T extends ConvertibleAmount = Expense>(expe
 export function useTripExpenseSummary(trip: Trip | null) {
   const expenses = useExpensesStore((state) => state.expenses);
   const scopedExpenses = useMemo(
-    () => (trip ? expenses.filter((expense) => expense.tripId === trip.id) : []),
+    () => (trip ? expenses.filter((expense) => expense.groupId === trip.id) : []),
     [expenses, trip],
   );
   const conversion = useConvertedExpenses(scopedExpenses, trip?.currency ?? "");

@@ -146,7 +146,7 @@ export default function HomeScreen() {
 
       <ExpenseForm
         visible={formOpen}
-        tripId={activeTrip.id}
+        groupId={activeTrip.id}
         tripCurrency={activeTrip.currency}
         companions={activeTrip.companions}
         onSave={() => setFormOpen(false)}
@@ -163,7 +163,7 @@ export default function HomeScreen() {
 
       <ImportSheet
         visible={importTab !== null}
-        tripId={activeTrip.id}
+        groupId={activeTrip.id}
         trip={activeTrip}
         initialTab={importTab ?? "paste"}
         onClose={() => setImportTab(null)}

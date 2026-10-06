@@ -24,7 +24,7 @@ import { PrivateView } from "@/modules/analytics";
 import { selectActiveTrip, useTripsStore } from "@/features/trips/store/tripsStore";
 import { daysLeftInTrip } from "@/features/trips/utils/dates";
 import { useExpensesStore, type Expense } from "@/features/expenses/store/expensesStore";
-import { categoryBreakdown, filterByTrip, sumAmount } from "@/features/expenses/utils/aggregate";
+import { categoryBreakdown, filterByGroup, sumAmount } from "@/features/expenses/utils/aggregate";
 import { useConvertedExpenses } from "@/features/expenses/hooks/useTripExpenseSummary";
 import { dismissGmailSyncBanner, useTripGmailSyncStatus } from "@/features/expenses/store/gmailSyncStatusStore";
 import { dismissGmailLostAccess, hasGmailGrant, useGmailConnectionStore } from "@/features/expenses/store/gmailConnectionStore";
@@ -62,7 +62,7 @@ export default function ExpensesScreen() {
   const gmailLostAccess = useGmailConnectionStore((state) => state.lostAccess && !hasGmailGrant(state.tokens));
 
   const currency = activeTrip?.currency ?? deviceCurrency;
-  const scoped = useMemo(() => filterByTrip(expenses, activeTrip?.id ?? null), [expenses, activeTrip?.id]);
+  const scoped = useMemo(() => filterByGroup(expenses, activeTrip?.id ?? null), [expenses, activeTrip?.id]);
   const updateExpense = useExpensesStore((state) => state.updateExpense);
   const [reviewDismissed, setReviewDismissed] = useState(false);
   const reviewable = scoped.filter((expense) => expense.splitHint?.shares);
@@ -84,7 +84,7 @@ export default function ExpensesScreen() {
     !!activeTrip &&
     (activeTrip.companions.length > 0 ||
       scoped.some(isSplitExpense) ||
-      settlements.some((settlement) => settlement.tripId === activeTrip.id));
+      settlements.some((settlement) => settlement.groupId === activeTrip.id));
   const shownView = hasSplits ? view : "spending";
 
   const openAdd = () => {
@@ -220,7 +220,7 @@ export default function ExpensesScreen() {
       <ExpenseForm
         visible={formOpen}
         editingExpense={editing}
-        tripId={activeTrip?.id ?? null}
+        groupId={activeTrip?.id ?? null}
         tripCurrency={currency}
         companions={activeTrip?.companions}
         onSave={() => setFormOpen(false)}
@@ -229,7 +229,7 @@ export default function ExpensesScreen() {
       />
       <ImportSheet
         visible={importTab !== null}
-        tripId={activeTrip?.id ?? null}
+        groupId={activeTrip?.id ?? null}
         trip={activeTrip}
         initialTab={importTab ?? "paste"}
         onClose={() => setImportTab(null)}

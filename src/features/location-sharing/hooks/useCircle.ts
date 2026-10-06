@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Linking, Share } from "react-native";
 import { api, type Id, useMutation, useQuery } from "@/modules/backend";
 import { showAlert } from "@/atoms";
-import { registerTripPush } from "@/features/sync";
+import { registerGroupPush } from "@/features/sync";
 import { useLocalization } from "@/localization";
 import { buildCircle, type Circle, type CirclePerson, type IncomingShareInput } from "../utils/circle";
 
@@ -90,7 +90,7 @@ export function useCircle(): Circle & {
 
   const respond = useCallback(async (linkId: string, accept: boolean) => {
     // Accepting means receiving their SOS alerts, which arrive as push notifications.
-    if (accept) void registerTripPush(true);
+    if (accept) void registerGroupPush(true);
     await respondToContactLink({ linkId: linkId as Id<"contactLinks">, accept }).catch(linkError);
   }, [linkError, respondToContactLink]);
 

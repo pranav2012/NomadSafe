@@ -17,7 +17,7 @@ import {
   hasBackupOwner,
   stopGroupSync,
   stopSync,
-  unregisterTripPush,
+  unregisterGroupPush,
 } from "@/features/sync";
 import { clearServerCheckIn } from "@/features/safety/services/safetyServerAlerts";
 import { clearAiUsageLog, clearByokConfig, clearCloudExhaustion, resetAiPreference } from "@/modules/ai";
@@ -99,7 +99,7 @@ export async function signOutAndCleanup() {
   stopSync();
   clearSharedLocalData(useAuthStore.getState().user?.id ?? null);
   if (backedUp) clearSyncedLocalData();
-  await unregisterTripPush();
+  await unregisterGroupPush();
 
   try {
     await authClient.signOut();

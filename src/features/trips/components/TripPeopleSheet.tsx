@@ -16,8 +16,8 @@ import {
 import { auraStatusColors } from "@/constants/aura";
 import { inviteUrl } from "@/constants/legal";
 import { useAuthStore } from "@/features/auth/store/authStore";
-import { isSettledUp, registerTripPush, shareTrip } from "@/features/sync";
-import { useTripsStore, type Trip, type TripMember } from "@/features/trips/store/tripsStore";
+import { isSettledUp, registerGroupPush, shareGroup } from "@/features/sync";
+import { useTripsStore, type Trip, type GroupMember } from "@/features/trips/store/tripsStore";
 import { useLocalization } from "@/localization";
 import { PrivateView } from "@/modules/analytics";
 
@@ -33,11 +33,11 @@ export function TripPeopleSheet({ tripId, onClose }: { tripId: string | null; on
   const trip = useTripsStore((s) => s.trips.find((item) => item.id === id) ?? null);
   const userName = useAuthStore((s) => s.user?.name ?? "");
   const [busy, setBusy] = useState(false);
-  const setPreferences = useMutation(api.groupTrips.setPreferences);
-  const leaveTrip = useMutation(api.groupTrips.leaveTrip);
-  const removeMember = useMutation(api.groupTrips.removeMember);
-  const resetInviteCode = useMutation(api.groupTrips.resetInviteCode);
-  const deleteSharedTrip = useMutation(api.groupTrips.deleteSharedTrip);
+  const setPreferences = useMutation(api.groups.setPreferences);
+  const leaveTrip = useMutation(api.groups.leaveGroup);
+  const removeMember = useMutation(api.groups.removeMember);
+  const resetInviteCode = useMutation(api.groups.resetInviteCode);
+  const deleteSharedTrip = useMutation(api.groups.deleteSharedGroup);
 
   const close = () => {
     setCurrentId(null);
@@ -56,15 +56,15 @@ export function TripPeopleSheet({ tripId, onClose }: { tripId: string | null; on
   };
 
   const shared = trip?.shared;
-  const serverId = shared?.tripId as Id<"sharedTrips"> | undefined;
+  const serverId = shared?.groupId as Id<"sharedGroups"> | undefined;
   const isOwner = shared?.role === "owner";
   const othersJoined = shared?.members.some((member) => member.linked && member.memberId !== shared.myMemberId && member.status === "active") ?? false;
 
   const startSharing = () =>
     trip &&
     run(async () => {
-      setCurrentId(await shareTrip(trip, userName.split(" ")[0] || userName));
-      void registerTripPush(true);
+      setCurrentId(await shareGroup(trip, userName.split(" ")[0] || userName));
+      void registerGroupPush(true);
     });
 
   const shareLink = () => {
@@ -93,7 +93,7 @@ export function TripPeopleSheet({ tripId, onClose }: { tripId: string | null; on
       showAlert(t("groupTrip.leaveUnsettledTitle"), t("groupTrip.leaveUnsettledBody"));
       return;
     }
-    confirm(t("groupTrip.leaveTitle"), t("groupTrip.leaveBody"), t("groupTrip.leave"), () => leaveTrip({ tripId: serverId }), close);
+    confirm(t("groupTrip.leaveTitle"), t("groupTrip.leaveBody"), t("groupTrip.leave"), () => leaveTrip({ groupId: serverId }), close);
   };
 
   const onDelete = () => {
@@ -102,10 +102,10 @@ export function TripPeopleSheet({ tripId, onClose }: { tripId: string | null; on
       showAlert(t("groupTrip.deleteTrip"), t("groupTrip.deleteBlocked"));
       return;
     }
-    confirm(t("groupTrip.deleteTitle"), t("groupTrip.deleteBody"), t("groupTrip.deleteTrip"), () => deleteSharedTrip({ tripId: serverId }), close);
+    confirm(t("groupTrip.deleteTitle"), t("groupTrip.deleteBody"), t("groupTrip.deleteTrip"), () => deleteSharedTrip({ groupId: serverId }), close);
   };
 
-  const memberDetail = (member: TripMember) => {
+  const memberDetail = (member: GroupMember) => {
     if (member.status === "left" || member.status === "removed") return t("groupTrip.left");
     if (!member.linked) return t("groupTrip.notJoined");
     return member.role === "owner" ? t("groupTrip.owner") : undefined;
@@ -150,7 +150,7 @@ export function TripPeopleSheet({ tripId, onClose }: { tripId: string | null; on
                   icon="swap"
                   label={t("groupTrip.resetLink")}
                   onPress={() =>
-                    confirm(t("groupTrip.resetLinkTitle"), t("groupTrip.resetLinkBody"), t("groupTrip.resetLink"), () => resetInviteCode({ tripId: serverId! }))
+                    confirm(t("groupTrip.resetLinkTitle"), t("groupTrip.resetLinkBody"), t("groupTrip.resetLink"), () => resetInviteCode({ groupId: serverId! }))
                   }
                 />
               ) : null}
@@ -178,7 +178,7 @@ export function TripPeopleSheet({ tripId, onClose }: { tripId: string | null; on
                                 t("groupTrip.removeTitle", { name: member.name }),
                                 t("groupTrip.removeBody"),
                                 t("groupTrip.remove"),
-                                () => removeMember({ tripId: serverId!, memberId: member.memberId }),
+                                () => removeMember({ groupId: serverId!, memberId: member.memberId }),
                               )
                             }
                             hitSlop={10}
@@ -204,8 +204,8 @@ export function TripPeopleSheet({ tripId, onClose }: { tripId: string | null; on
                     value={!shared.muted}
                     onValueChange={(on) =>
                       void run(async () => {
-                        if (on) await registerTripPush(true);
-                        await setPreferences({ tripId: serverId!, muted: !on });
+                        if (on) await registerGroupPush(true);
+                        await setPreferences({ groupId: serverId!, muted: !on });
                       })
                     }
                     accessibilityLabel={t("groupTrip.notifications")}

@@ -101,13 +101,13 @@ export default function TripsScreen() {
   const [peopleFor, setPeopleFor] = useState<string | null>(null);
   const [joinOpen, setJoinOpen] = useState(false);
   const [joinCode, setJoinCode] = useState("");
-  const setPreferences = useMutation(api.groupTrips.setPreferences);
+  const setPreferences = useMutation(api.groups.setPreferences);
 
   // Archiving a shared trip only hides it from this user's list; it stays live for everyone else.
   const toggleArchive = (trip: Trip) => {
     if (!trip.shared) return;
     const archived = !trip.shared.archived;
-    setPreferences({ tripId: trip.shared.tripId as Id<"sharedTrips">, archived }).catch(() =>
+    setPreferences({ groupId: trip.shared.groupId as Id<"sharedGroups">, archived }).catch(() =>
       showAlert(t("groupTrip.actionFailed")),
     );
     if (archived && trip.id === activeTrip?.id) useTripsStore.getState().clearActiveTrip();
@@ -148,7 +148,7 @@ export default function TripsScreen() {
     const tripId = deleteTarget.id;
     deleteTrip(tripId);
     useEventsStore.getState().removeByTripId(tripId);
-    useExpensesStore.getState().removeByTripId(tripId);
+    useExpensesStore.getState().removeByGroupId(tripId);
     useChatStore.getState().removeConversation(tripId);
     clearTripGmailCoverage(tripId);
     useRecapStore.getState().setWalking(tripId, null);

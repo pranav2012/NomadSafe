@@ -204,7 +204,7 @@ export function splitPastedMessages(text: string): RawMessage[] {
 
 export async function candidateToInput(
   candidate: ImportCandidate,
-  tripId: string | null,
+  groupId: string | null,
   tripCurrency?: string,
 ): Promise<CreateExpenseInput> {
   let note = candidate.committedBooking
@@ -222,7 +222,7 @@ export async function candidateToInput(
   }
 
   return {
-    tripId,
+    groupId,
     merchant: candidate.merchant || translate("expenses.unknownMerchant"),
     amount: candidate.amount,
     currency: candidate.currency,

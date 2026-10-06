@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, mutation, type MutationCtx } from "./_generated/server";
-import { sendPushMessages, type PushMessage } from "./tripNotifications";
+import { sendPushMessages, type PushMessage } from "./pushNotifications";
 import { findAuthUserById, requireUser } from "./users";
 
 // Must match SAFETY_ALERT_CHANNEL_ID, SAFETY_NOTIFICATION_SOURCE and SOS_ROUTE in the app.

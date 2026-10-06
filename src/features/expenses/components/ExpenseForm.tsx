@@ -42,7 +42,7 @@ export interface ExpenseFormProps {
   /** Prefills a new spend (e.g. from voice). */
   initialDraft?: ExpenseDraftValues;
   source?: ExpenseSource;
-  tripId: string | null;
+  groupId: string | null;
   tripCurrency: string;
   companions?: string[];
   onSave: () => void;
@@ -141,7 +141,7 @@ function ExpenseFormBody({
   editingExpense,
   initialDraft,
   source = "manual",
-  tripId,
+  groupId,
   tripCurrency,
   companions = [],
   onSave,
@@ -218,7 +218,7 @@ function ExpenseFormBody({
     }
     const shares = resolution?.ok ? resolution.shares.filter((share) => share.amount > 0) : undefined;
     const payload = {
-      tripId,
+      groupId,
       merchant: trimmedMerchant,
       amount: numericAmount,
       currency,

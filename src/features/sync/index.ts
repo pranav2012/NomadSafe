@@ -3,10 +3,10 @@ export {
   clearSharedLocalData,
   flushGroupSync,
   isSettledUp,
-  localTripId,
-  shareTrip,
+  localGroupId,
+  shareGroup,
   startGroupSync,
   stopGroupSync,
 } from "./services/groupSync";
-export { registerTripPush, TRIP_NOTIFICATION_SOURCE, unregisterTripPush } from "./services/tripPush";
-export { useTripNotificationRouting } from "./hooks/useTripNotificationRouting";
+export { registerGroupPush, GROUP_NOTIFICATION_SOURCE, unregisterGroupPush } from "./services/groupPush";
+export { useGroupNotificationRouting } from "./hooks/useGroupNotificationRouting";

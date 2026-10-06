@@ -200,7 +200,7 @@ function autoSplitFields(
 function autoSplitExisting(trip: Trip): void {
   const { expenses, updateExpense } = useExpensesStore.getState();
   for (const expense of expenses) {
-    if (expense.tripId !== trip.id || expense.source !== "email" || expense.shares?.length || expense.splitHint) continue;
+    if (expense.groupId !== trip.id || expense.source !== "email" || expense.shares?.length || expense.splitHint) continue;
     const fields = autoSplitFields(expense.note ?? expense.rawText ?? "", expense, trip);
     if (fields.shares || fields.splitHint) updateExpense(expense.id, fields);
   }
@@ -212,7 +212,7 @@ function autoSplitExisting(trip: Trip): void {
  */
 function removeGenericDuplicates(tripId: string): number {
   const { expenses, deleteExpense } = useExpensesStore.getState();
-  const email = expenses.filter((expense) => expense.tripId === tripId && expense.source === "email");
+  const email = expenses.filter((expense) => expense.groupId === tripId && expense.source === "email");
   const key = (expense: (typeof email)[number]) => `${expense.currency}|${expense.amount.toFixed(2)}|${toLocalDayKey(expense.date)}`;
   const named = new Set(email.filter((expense) => !isGenericTitle(expense.merchant)).map(key));
   const duplicates = email.filter((expense) => isGenericTitle(expense.merchant) && named.has(key(expense)));
@@ -238,7 +238,7 @@ function removeCancelledExpenses(sourceIds: string[], tripId: string): number {
   if (messageIds.size === 0) return 0;
   const { expenses, deleteExpense } = useExpensesStore.getState();
   const cancelled = expenses.filter(
-    (expense) => expense.tripId === tripId && expense.source === "email" && expense.externalId && messageIds.has(expense.externalId),
+    (expense) => expense.groupId === tripId && expense.source === "email" && expense.externalId && messageIds.has(expense.externalId),
   );
   for (const expense of cancelled) deleteExpense(expense.id);
   return cancelled.length;

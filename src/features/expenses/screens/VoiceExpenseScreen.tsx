@@ -175,7 +175,7 @@ export default function VoiceExpenseScreen() {
       if (current.kind === "settlement") {
         if (!trip || current.from === current.to) return;
         addSettlement({
-          tripId: trip.id,
+          groupId: trip.id,
           from: current.from,
           to: current.to,
           amount: current.amount,
@@ -194,7 +194,7 @@ export default function VoiceExpenseScreen() {
         if (resolution && !resolution.ok) return;
         const merchant = current.merchant || t(`expenses.category.${current.category}`);
         addExpense({
-          tripId: trip?.id ?? null,
+          groupId: trip?.id ?? null,
           merchant,
           amount: current.amount,
           currency: current.currency,
@@ -394,7 +394,7 @@ export default function VoiceExpenseScreen() {
             rawText: draft.transcript,
           }}
           source="voice"
-          tripId={trip?.id ?? null}
+          groupId={trip?.id ?? null}
           tripCurrency={tripCurrency}
           companions={companions}
           onCancel={() => setEditing(false)}

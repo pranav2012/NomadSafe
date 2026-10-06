@@ -94,9 +94,9 @@ export function TripItinerary({
     void pruneTickets().then(reconcileTicketHolders);
   }, []);
 
-  const askMutation = useMutation(api.groupTrips.askForTicket);
+  const askMutation = useMutation(api.groups.askForTicket);
   const askForTicket = (event: TripEvent) => {
-    const serverTripId = trip.shared?.tripId;
+    const serverTripId = trip.shared?.groupId;
     if (!serverTripId) return;
     const names = (event.ticketHolders ?? []).filter((person) => person !== SELF_ID).join(", ");
     showAlert(t("tickets.askTitle", { names }), t("tickets.askBody", { names }), [
@@ -105,7 +105,7 @@ export function TripItinerary({
         text: t("tickets.ask"),
         onPress: () => {
           track("today_action", { action: "ask_ticket" });
-          askMutation({ tripId: serverTripId as Id<"sharedTrips">, clientId: event.id })
+          askMutation({ groupId: serverTripId as Id<"sharedGroups">, clientId: event.id })
             .then(({ sent }) => showToast(sent ? t("tickets.asked", { names }) : t("tickets.askedRecently")))
             .catch((error: unknown) => {
               logger.warn("tickets", "ask failed", error);

@@ -4,34 +4,34 @@ import { HOUR, MINUTE, RateLimiter } from "@convex-dev/rate-limiter";
 import { components, internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
-import { tripRecordKindValidator } from "./schema";
+import { groupRecordKindValidator } from "./schema";
 import { MAX_CLIENT_ID } from "./sync";
 import { assertMaxLength, clampClientTime, newInviteCode, normalizeInviteCode, stripEmailNote } from "./securityRules";
-import { NOTIFY_TITLE_CHARS, queueTripNotification } from "./tripNotifications";
+import { NOTIFY_TITLE_CHARS, queueGroupNotification } from "./pushNotifications";
 import { getAuthenticatedUser, requireUser } from "./users";
 
 const MAX_BATCH = 100;
 const MAX_RECORD_BYTES = 64 * 1024;
-const MAX_TRIP_DATA_BYTES = 64 * 1024;
+const MAX_GROUP_DATA_BYTES = 64 * 1024;
 const MAX_MEMBERS = 50;
 const MAX_NAME = 80;
-const MAX_RECORDS_PER_TRIP = 10_000;
-const MAX_OWNED_TRIPS = 50;
-const MAX_JOINED_TRIPS = 200;
+const MAX_RECORDS_PER_GROUP = 10_000;
+const MAX_OWNED_GROUPS = 50;
+const MAX_JOINED_GROUPS = 200;
 const PURGE_BATCH = 500;
 
 const rateLimiter = new RateLimiter(components.rateLimiter, {
-  tripShare: { kind: "token bucket", rate: 20, period: HOUR, capacity: 10 },
-  tripDetails: { kind: "token bucket", rate: 300, period: HOUR, capacity: 60 },
-  tripRecordsPush: { kind: "token bucket", rate: 600, period: HOUR, capacity: 200 },
+  groupShare: { kind: "token bucket", rate: 20, period: HOUR, capacity: 10 },
+  groupDetails: { kind: "token bucket", rate: 300, period: HOUR, capacity: 60 },
+  groupRecordsPush: { kind: "token bucket", rate: 600, period: HOUR, capacity: 200 },
   // Joining is a handful of taps; this stops scripted guessing of invite codes.
-  tripJoin: { kind: "token bucket", rate: 20, period: HOUR, capacity: 10 },
+  groupJoin: { kind: "token bucket", rate: 20, period: HOUR, capacity: 10 },
   // One "can you send me the ticket?" per item per person every half hour.
   ticketAsk: { kind: "fixed window", rate: 1, period: 30 * MINUTE },
 });
 
-function assertTripData(data: unknown) {
-  if (JSON.stringify(data ?? null).length > MAX_TRIP_DATA_BYTES) throw new Error("Trip details too large");
+function assertGroupData(data: unknown) {
+  if (JSON.stringify(data ?? null).length > MAX_GROUP_DATA_BYTES) throw new Error("Group details too large");
 }
 
 function assertNames(names: string[]) {
@@ -43,14 +43,14 @@ async function uniqueInviteCode(ctx: MutationCtx) {
   for (;;) {
     const code = newInviteCode();
     const taken = await ctx.db
-      .query("sharedTrips")
+      .query("sharedGroups")
       .withIndex("by_code", (q) => q.eq("inviteCode", code))
       .unique();
     if (!taken) return code;
   }
 }
 
-/** Member names identify people on every phone, so they must be unique within a trip. */
+/** Member names identify people on every phone, so they must be unique within a group. */
 function uniqueName(desired: string, taken: string[]) {
   const base = desired.trim().slice(0, 80) || "Traveler";
   const lower = new Set(taken.map((name) => name.toLowerCase()));
@@ -61,30 +61,30 @@ function uniqueName(desired: string, taken: string[]) {
   }
 }
 
-async function membersOf(ctx: QueryCtx, tripId: Id<"sharedTrips">) {
+async function membersOf(ctx: QueryCtx, groupId: Id<"sharedGroups">) {
   return ctx.db
-    .query("tripMembers")
-    .withIndex("by_trip", (q) => q.eq("tripId", tripId))
+    .query("groupMembers")
+    .withIndex("by_group", (q) => q.eq("groupId", groupId))
     .collect();
 }
 
-/** The caller's active membership of a trip, or throws. */
-async function requireMember(ctx: QueryCtx, tripId: Id<"sharedTrips">, userId: string) {
+/** The caller's active membership of a group, or throws. */
+async function requireMember(ctx: QueryCtx, groupId: Id<"sharedGroups">, userId: string) {
   const member = await ctx.db
-    .query("tripMembers")
-    .withIndex("by_trip_user", (q) => q.eq("tripId", tripId).eq("userId", userId))
+    .query("groupMembers")
+    .withIndex("by_group_user", (q) => q.eq("groupId", groupId).eq("userId", userId))
     .unique();
-  if (!member || member.status !== "active") throw new Error("Not a member of this trip");
+  if (!member || member.status !== "active") throw new Error("Not a member of this group");
   return member;
 }
 
-async function bumpSeq(ctx: MutationCtx, trip: Doc<"sharedTrips">) {
-  const seq = trip.seq + 1;
-  await ctx.db.patch(trip._id, { seq });
+async function bumpSeq(ctx: MutationCtx, group: Doc<"sharedGroups">) {
+  const seq = group.seq + 1;
+  await ctx.db.patch(group._id, { seq });
   return seq;
 }
 
-function publicMember(member: Doc<"tripMembers">) {
+function publicMember(member: Doc<"groupMembers">) {
   return {
     memberId: member.memberId,
     name: member.name,
@@ -94,25 +94,25 @@ function publicMember(member: Doc<"tripMembers">) {
   };
 }
 
-/** Turns a group trip into a shared one: the caller becomes owner, companions become name-only members. */
-export const shareTrip = mutation({
+/** Turns a group group into a shared one: the caller becomes owner, companions become name-only members. */
+export const shareGroup = mutation({
   args: { data: v.any(), dataUpdatedAt: v.number(), ownerName: v.string(), companions: v.array(v.string()) },
   handler: async (ctx, { data, dataUpdatedAt, ownerName, companions }) => {
     const user = await requireUser(ctx);
     if (companions.length >= MAX_MEMBERS) throw new Error("Too many members");
     assertNames(companions);
     assertMaxLength(ownerName, MAX_NAME, "Name");
-    assertTripData(data);
-    await rateLimiter.limit(ctx, "tripShare", { key: user.id, throws: true });
+    assertGroupData(data);
+    await rateLimiter.limit(ctx, "groupShare", { key: user.id, throws: true });
     const memberships = await ctx.db
-      .query("tripMembers")
+      .query("groupMembers")
       .withIndex("by_user", (q) => q.eq("userId", user.id))
       .collect();
-    if (memberships.filter((member) => member.role === "owner").length >= MAX_OWNED_TRIPS) {
-      throw new Error("Too many shared trips");
+    if (memberships.filter((member) => member.role === "owner").length >= MAX_OWNED_GROUPS) {
+      throw new Error("Too many shared groups");
     }
     const now = Date.now();
-    const tripId = await ctx.db.insert("sharedTrips", {
+    const groupId = await ctx.db.insert("sharedGroups", {
       ownerUserId: user.id,
       inviteCode: await uniqueInviteCode(ctx),
       data,
@@ -127,8 +127,8 @@ export const shareTrip = mutation({
     for (const companion of companions) {
       const name = uniqueName(companion, names);
       names.push(name);
-      await ctx.db.insert("tripMembers", {
-        tripId,
+      await ctx.db.insert("groupMembers", {
+        groupId,
         memberId: crypto.randomUUID(),
         name,
         role: "member",
@@ -138,8 +138,8 @@ export const shareTrip = mutation({
         joinedAt: now,
       });
     }
-    await ctx.db.insert("tripMembers", {
-      tripId,
+    await ctx.db.insert("groupMembers", {
+      groupId,
       memberId: crypto.randomUUID(),
       name: uniqueName(ownerName || user.name, names),
       userId: user.id,
@@ -149,36 +149,36 @@ export const shareTrip = mutation({
       muted: false,
       joinedAt: now,
     });
-    return { tripId };
+    return { groupId };
   },
 });
 
 /**
- * Every shared trip the caller belongs to, with members; reactive so phones learn about changes live.
- * Null (not an empty list, which would read as "left every trip") while the client is between auth
+ * Every shared group the caller belongs to, with members; reactive so phones learn about changes live.
+ * Null (not an empty list, which would read as "left every group") while the client is between auth
  * tokens, e.g. reconnecting after a deploy.
  */
-export const myTrips = query({
+export const myGroups = query({
   args: {},
   handler: async (ctx) => {
     const user = await getAuthenticatedUser(ctx);
     if (!user) return null;
     const memberships = await ctx.db
-      .query("tripMembers")
+      .query("groupMembers")
       .withIndex("by_user", (q) => q.eq("userId", user.id))
       .collect();
-    const trips = [];
+    const groups = [];
     for (const me of memberships) {
       if (me.status !== "active") continue;
-      const trip = await ctx.db.get(me.tripId);
-      if (!trip) continue;
-      const members = await membersOf(ctx, trip._id);
-      trips.push({
-        tripId: trip._id,
-        seq: trip.seq,
-        data: trip.data,
-        dataUpdatedAt: trip.dataUpdatedAt,
-        inviteCode: trip.inviteCode,
+      const group = await ctx.db.get(me.groupId);
+      if (!group) continue;
+      const members = await membersOf(ctx, group._id);
+      groups.push({
+        groupId: group._id,
+        seq: group.seq,
+        data: group.data,
+        dataUpdatedAt: group.dataUpdatedAt,
+        inviteCode: group.inviteCode,
         myMemberId: me.memberId,
         role: me.role,
         archived: me.archived,
@@ -187,7 +187,7 @@ export const myTrips = query({
         members: members.map(publicMember),
       });
     }
-    return trips;
+    return groups;
   },
 });
 
@@ -198,16 +198,18 @@ export const previewInvite = query({
     const user = await requireUser(ctx);
     const inviteCode = normalizeInviteCode(code);
     if (!inviteCode) return null;
-    const trip = await ctx.db
-      .query("sharedTrips")
+    const group = await ctx.db
+      .query("sharedGroups")
       .withIndex("by_code", (q) => q.eq("inviteCode", inviteCode))
       .unique();
-    if (!trip) return null;
-    const members = await membersOf(ctx, trip._id);
+    if (!group) return null;
+    const members = await membersOf(ctx, group._id);
     const owner = members.find((member) => member.role === "owner");
-    const data = trip.data as { name?: string; startDate?: string; endDate?: string; destinations?: string[] };
+    const data = group.data as { kind?: string; emoji?: string; name?: string; startDate?: string; endDate?: string; destinations?: string[] };
     return {
-      tripId: trip._id,
+      groupId: group._id,
+      kind: data.kind === "group" ? ("group" as const) : ("trip" as const),
+      emoji: data.emoji ?? "",
       name: data.name ?? "",
       startDate: data.startDate ?? "",
       endDate: data.endDate ?? "",
@@ -223,31 +225,31 @@ export const previewInvite = query({
 });
 
 /** Joins via invite code, either as one of the name-only companions or as a new member. */
-export const joinTrip = mutation({
+export const joinGroup = mutation({
   args: { code: v.string(), claimMemberId: v.optional(v.string()), name: v.string() },
   handler: async (ctx, { code, claimMemberId, name }) => {
     const user = await requireUser(ctx);
     assertMaxLength(name, MAX_NAME, "Name");
-    await rateLimiter.limit(ctx, "tripJoin", { key: user.id, throws: true });
+    await rateLimiter.limit(ctx, "groupJoin", { key: user.id, throws: true });
     const inviteCode = normalizeInviteCode(code);
-    const trip = inviteCode
+    const group = inviteCode
       ? await ctx.db
-          .query("sharedTrips")
+          .query("sharedGroups")
           .withIndex("by_code", (q) => q.eq("inviteCode", inviteCode))
           .unique()
       : null;
-    if (!trip) throw new Error("Invite not found");
-    const members = await membersOf(ctx, trip._id);
+    if (!group) throw new Error("Invite not found");
+    const members = await membersOf(ctx, group._id);
     const existing = members.find((member) => member.userId === user.id);
-    if (existing?.status === "active") return { tripId: trip._id };
-    if (existing?.status === "removed") throw new Error("Removed from this trip");
-    if (members.filter((member) => member.status === "active").length >= MAX_MEMBERS) throw new Error("Trip is full");
+    if (existing?.status === "active") return { groupId: group._id };
+    if (existing?.status === "removed") throw new Error("Removed from this group");
+    if (members.filter((member) => member.status === "active").length >= MAX_MEMBERS) throw new Error("Group is full");
     if (!existing) {
       const joined = await ctx.db
-        .query("tripMembers")
+        .query("groupMembers")
         .withIndex("by_user", (q) => q.eq("userId", user.id))
         .collect();
-      if (joined.filter((member) => member.status === "active").length >= MAX_JOINED_TRIPS) throw new Error("Too many shared trips");
+      if (joined.filter((member) => member.status === "active").length >= MAX_JOINED_GROUPS) throw new Error("Too many shared groups");
     }
 
     // Someone who left and rejoins always gets their old row back, so they never hold two memberships.
@@ -260,8 +262,8 @@ export const joinTrip = mutation({
       // Rejoining after leaving keeps their old member id, so past splits stay theirs.
       await ctx.db.patch(existing._id, { status: "active", archived: false, joinedAt: Date.now() });
     } else {
-      await ctx.db.insert("tripMembers", {
-        tripId: trip._id,
+      await ctx.db.insert("groupMembers", {
+        groupId: group._id,
         memberId: crypto.randomUUID(),
         name: uniqueName(name || user.name, members.map((member) => member.name)),
         userId: user.id,
@@ -272,36 +274,36 @@ export const joinTrip = mutation({
         joinedAt: Date.now(),
       });
     }
-    await bumpSeq(ctx, trip);
-    return { tripId: trip._id };
+    await bumpSeq(ctx, group);
+    return { groupId: group._id };
   },
 });
 
-/** Trip details edited by any member; last write wins. */
-export const updateTripDetails = mutation({
-  args: { tripId: v.id("sharedTrips"), data: v.any(), dataUpdatedAt: v.number() },
-  handler: async (ctx, { tripId, data, dataUpdatedAt }) => {
+/** Group details edited by any member; last write wins. */
+export const updateGroupDetails = mutation({
+  args: { groupId: v.id("sharedGroups"), data: v.any(), dataUpdatedAt: v.number() },
+  handler: async (ctx, { groupId, data, dataUpdatedAt }) => {
     const user = await requireUser(ctx);
-    assertTripData(data);
-    await requireMember(ctx, tripId, user.id);
-    await rateLimiter.limit(ctx, "tripDetails", { key: user.id, throws: true });
-    const trip = await ctx.db.get(tripId);
+    assertGroupData(data);
+    await requireMember(ctx, groupId, user.id);
+    await rateLimiter.limit(ctx, "groupDetails", { key: user.id, throws: true });
+    const group = await ctx.db.get(groupId);
     const updatedAt = clampClientTime(dataUpdatedAt, Date.now());
-    if (!trip || trip.dataUpdatedAt > updatedAt) return;
-    await ctx.db.patch(tripId, { data, dataUpdatedAt: updatedAt, seq: trip.seq + 1 });
+    if (!group || group.dataUpdatedAt > updatedAt) return;
+    await ctx.db.patch(groupId, { data, dataUpdatedAt: updatedAt, seq: group.seq + 1 });
   },
 });
 
-/** Adds name-only members for companions typed into the trip form. */
+/** Adds name-only members for companions typed into the group form. */
 export const addCompanions = mutation({
-  args: { tripId: v.id("sharedTrips"), names: v.array(v.string()) },
-  handler: async (ctx, { tripId, names }) => {
+  args: { groupId: v.id("sharedGroups"), names: v.array(v.string()) },
+  handler: async (ctx, { groupId, names }) => {
     const user = await requireUser(ctx);
     assertNames(names);
-    await requireMember(ctx, tripId, user.id);
-    const trip = await ctx.db.get(tripId);
-    if (!trip) return;
-    const members = await membersOf(ctx, tripId);
+    await requireMember(ctx, groupId, user.id);
+    const group = await ctx.db.get(groupId);
+    if (!group) return;
+    const members = await membersOf(ctx, groupId);
     const taken = members.map((member) => member.name);
     let added = 0;
     for (const raw of names) {
@@ -317,8 +319,8 @@ export const addCompanions = mutation({
       const name = uniqueName(raw, taken);
       taken.push(name);
       added += 1;
-      await ctx.db.insert("tripMembers", {
-        tripId,
+      await ctx.db.insert("groupMembers", {
+        groupId,
         memberId: crypto.randomUUID(),
         name,
         role: "member",
@@ -328,17 +330,17 @@ export const addCompanions = mutation({
         joinedAt: Date.now(),
       });
     }
-    if (added > 0) await bumpSeq(ctx, trip);
+    if (added > 0) await bumpSeq(ctx, group);
   },
 });
 
-/** Stores a batch of trip records from any member and notifies the others about money changes. */
+/** Stores a batch of group records from any member and notifies the others about money changes. */
 export const pushRecords = mutation({
   args: {
-    tripId: v.id("sharedTrips"),
+    groupId: v.id("sharedGroups"),
     records: v.array(
       v.object({
-        kind: tripRecordKindValidator,
+        kind: groupRecordKindValidator,
         clientId: v.string(),
         data: v.optional(v.any()),
         deleted: v.boolean(),
@@ -346,25 +348,25 @@ export const pushRecords = mutation({
       }),
     ),
   },
-  handler: async (ctx, { tripId, records }) => {
+  handler: async (ctx, { groupId, records }) => {
     const user = await requireUser(ctx);
-    const me = await requireMember(ctx, tripId, user.id);
-    const trip = await ctx.db.get(tripId);
-    if (!trip) throw new Error("Trip not found");
+    const me = await requireMember(ctx, groupId, user.id);
+    const group = await ctx.db.get(groupId);
+    if (!group) throw new Error("Group not found");
     if (records.length > MAX_BATCH) throw new Error("Too many records");
     for (const record of records) assertMaxLength(record.clientId, MAX_CLIENT_ID, "clientId");
-    await rateLimiter.limit(ctx, "tripRecordsPush", { key: user.id, throws: true });
+    await rateLimiter.limit(ctx, "groupRecordsPush", { key: user.id, throws: true });
 
     const now = Date.now();
-    let seq = trip.seq;
-    let recordCount = trip.recordCount ?? 0;
+    let seq = group.seq;
+    let recordCount = group.recordCount ?? 0;
     let rejectedSeq: number | null = null;
     const changes: { kind: "expense" | "settlement"; action: "added" | "updated" | "deleted"; title: string; amount: number; currency: string }[] = [];
     for (const record of records) {
       if (!record.deleted && JSON.stringify(record.data ?? null).length > MAX_RECORD_BYTES) throw new Error("Record too large");
       const existing = await ctx.db
-        .query("tripRecords")
-        .withIndex("by_trip_record", (q) => q.eq("tripId", tripId).eq("kind", record.kind).eq("clientId", record.clientId))
+        .query("groupRecords")
+        .withIndex("by_group_record", (q) => q.eq("groupId", groupId).eq("kind", record.kind).eq("clientId", record.clientId))
         .unique();
       const updatedAt = clampClientTime(record.updatedAt, now);
       if (existing && existing.updatedAt > updatedAt) {
@@ -373,13 +375,13 @@ export const pushRecords = mutation({
       }
       if (existing?.deleted && record.deleted) continue;
       if (!existing) {
-        if (recordCount >= MAX_RECORDS_PER_TRIP) throw new Error("Trip is full");
+        if (recordCount >= MAX_RECORDS_PER_GROUP) throw new Error("Group is full");
         recordCount += 1;
       }
 
       seq += 1;
       const doc = {
-        tripId,
+        groupId,
         kind: record.kind,
         clientId: record.clientId,
         data: record.deleted ? undefined : stripEmailNote(record.data),
@@ -389,7 +391,7 @@ export const pushRecords = mutation({
         seq,
       };
       if (existing) await ctx.db.replace(existing._id, doc);
-      else await ctx.db.insert("tripRecords", doc);
+      else await ctx.db.insert("groupRecords", doc);
 
       if (record.kind !== "event") {
         const source = (record.deleted ? existing?.data : record.data) as { merchant?: unknown; amount?: unknown; currency?: unknown } | undefined;
@@ -402,22 +404,22 @@ export const pushRecords = mutation({
         });
       }
     }
-    if (seq !== trip.seq) await ctx.db.patch(tripId, { seq, recordCount });
-    if (changes.length > 0) await queueTripNotification(ctx, tripId, me.memberId, changes);
+    if (seq !== group.seq) await ctx.db.patch(groupId, { seq, recordCount });
+    if (changes.length > 0) await queueGroupNotification(ctx, groupId, me.memberId, changes);
     // The client re-pulls from just before the oldest rejected record to adopt the newer version.
     return { seq, rejectedSeq };
   },
 });
 
-/** A trip's records written after `after`, oldest first. */
+/** A group's records written after `after`, oldest first. */
 export const pullRecords = query({
-  args: { tripId: v.id("sharedTrips"), after: v.number(), paginationOpts: paginationOptsValidator },
-  handler: async (ctx, { tripId, after, paginationOpts }) => {
+  args: { groupId: v.id("sharedGroups"), after: v.number(), paginationOpts: paginationOptsValidator },
+  handler: async (ctx, { groupId, after, paginationOpts }) => {
     const user = await requireUser(ctx);
-    await requireMember(ctx, tripId, user.id);
+    await requireMember(ctx, groupId, user.id);
     const page = await ctx.db
-      .query("tripRecords")
-      .withIndex("by_trip_seq", (q) => q.eq("tripId", tripId).gt("seq", after))
+      .query("groupRecords")
+      .withIndex("by_group_seq", (q) => q.eq("groupId", groupId).gt("seq", after))
       .paginate(paginationOpts);
     return {
       ...page,
@@ -434,10 +436,10 @@ export const pullRecords = query({
 });
 
 export const setPreferences = mutation({
-  args: { tripId: v.id("sharedTrips"), archived: v.optional(v.boolean()), muted: v.optional(v.boolean()) },
-  handler: async (ctx, { tripId, archived, muted }) => {
+  args: { groupId: v.id("sharedGroups"), archived: v.optional(v.boolean()), muted: v.optional(v.boolean()) },
+  handler: async (ctx, { groupId, archived, muted }) => {
     const user = await requireUser(ctx);
-    const me = await requireMember(ctx, tripId, user.id);
+    const me = await requireMember(ctx, groupId, user.id);
     await ctx.db.patch(me._id, {
       ...(archived === undefined ? {} : { archived }),
       ...(muted === undefined ? {} : { muted }),
@@ -446,127 +448,127 @@ export const setPreferences = mutation({
 });
 
 /** A member leaves; the app only offers this once they're settled up. Owners delete instead. */
-export const leaveTrip = mutation({
-  args: { tripId: v.id("sharedTrips") },
-  handler: async (ctx, { tripId }) => {
+export const leaveGroup = mutation({
+  args: { groupId: v.id("sharedGroups") },
+  handler: async (ctx, { groupId }) => {
     const user = await requireUser(ctx);
-    const me = await requireMember(ctx, tripId, user.id);
+    const me = await requireMember(ctx, groupId, user.id);
     if (me.role === "owner") throw new Error("The owner can't leave");
     await ctx.db.patch(me._id, { status: "left" });
-    const trip = await ctx.db.get(tripId);
-    if (trip) await bumpSeq(ctx, trip);
+    const group = await ctx.db.get(groupId);
+    if (group) await bumpSeq(ctx, group);
   },
 });
 
-/** Owner removes someone; their past expenses stay on the trip under their name. */
+/** Owner removes someone; their past expenses stay on the group under their name. */
 export const removeMember = mutation({
-  args: { tripId: v.id("sharedTrips"), memberId: v.string() },
-  handler: async (ctx, { tripId, memberId }) => {
+  args: { groupId: v.id("sharedGroups"), memberId: v.string() },
+  handler: async (ctx, { groupId, memberId }) => {
     const user = await requireUser(ctx);
-    const me = await requireMember(ctx, tripId, user.id);
+    const me = await requireMember(ctx, groupId, user.id);
     if (me.role !== "owner") throw new Error("Only the owner can remove people");
-    const members = await membersOf(ctx, tripId);
+    const members = await membersOf(ctx, groupId);
     const target = members.find((member) => member.memberId === memberId);
     if (!target || target.role === "owner") throw new Error("Member not found");
     await ctx.db.patch(target._id, { status: "removed" });
-    const trip = await ctx.db.get(tripId);
-    if (trip) await bumpSeq(ctx, trip);
+    const group = await ctx.db.get(groupId);
+    if (group) await bumpSeq(ctx, group);
   },
 });
 
 /** Owner invalidates the current link and gets a new one. */
 export const resetInviteCode = mutation({
-  args: { tripId: v.id("sharedTrips") },
-  handler: async (ctx, { tripId }) => {
+  args: { groupId: v.id("sharedGroups") },
+  handler: async (ctx, { groupId }) => {
     const user = await requireUser(ctx);
-    const me = await requireMember(ctx, tripId, user.id);
+    const me = await requireMember(ctx, groupId, user.id);
     if (me.role !== "owner") throw new Error("Only the owner can reset the link");
-    const trip = await ctx.db.get(tripId);
-    if (!trip) return;
-    await ctx.db.patch(tripId, { inviteCode: await uniqueInviteCode(ctx), seq: trip.seq + 1 });
+    const group = await ctx.db.get(groupId);
+    if (!group) return;
+    await ctx.db.patch(groupId, { inviteCode: await uniqueInviteCode(ctx), seq: group.seq + 1 });
   },
 });
 
-/** Owner deletes the trip; only allowed once no one else who joined is still on it. */
-export const deleteSharedTrip = mutation({
-  args: { tripId: v.id("sharedTrips") },
-  handler: async (ctx, { tripId }) => {
+/** Owner deletes the group; only allowed once no one else who joined is still on it. */
+export const deleteSharedGroup = mutation({
+  args: { groupId: v.id("sharedGroups") },
+  handler: async (ctx, { groupId }) => {
     const user = await requireUser(ctx);
-    const me = await requireMember(ctx, tripId, user.id);
-    if (me.role !== "owner") throw new Error("Only the owner can delete the trip");
-    const members = await membersOf(ctx, tripId);
+    const me = await requireMember(ctx, groupId, user.id);
+    if (me.role !== "owner") throw new Error("Only the owner can delete the group");
+    const members = await membersOf(ctx, groupId);
     if (members.some((member) => member.userId && member.userId !== user.id && member.status === "active")) {
       throw new Error("Remove everyone else first");
     }
-    await purgeTrip(ctx, tripId);
+    await purgeGroup(ctx, groupId);
   },
 });
 
-async function purgeTrip(ctx: MutationCtx, tripId: Id<"sharedTrips">) {
-  for (const member of await membersOf(ctx, tripId)) await ctx.db.delete(member._id);
+async function purgeGroup(ctx: MutationCtx, groupId: Id<"sharedGroups">) {
+  for (const member of await membersOf(ctx, groupId)) await ctx.db.delete(member._id);
   const notifyRows = await ctx.db
-    .query("tripNotifyState")
-    .withIndex("by_trip_actor", (q) => q.eq("tripId", tripId))
+    .query("groupNotifyState")
+    .withIndex("by_group_actor", (q) => q.eq("groupId", groupId))
     .collect();
   for (const row of notifyRows) await ctx.db.delete(row._id);
-  await ctx.db.delete(tripId);
-  await ctx.scheduler.runAfter(0, internal.groupTrips.purgeTripRecords, { tripId });
+  await ctx.db.delete(groupId);
+  await ctx.scheduler.runAfter(0, internal.groups.purgeGroupRecords, { groupId });
 }
 
-export const purgeTripRecords = internalMutation({
-  args: { tripId: v.id("sharedTrips") },
-  handler: async (ctx, { tripId }) => {
+export const purgeGroupRecords = internalMutation({
+  args: { groupId: v.id("sharedGroups") },
+  handler: async (ctx, { groupId }) => {
     const batch = await ctx.db
-      .query("tripRecords")
-      .withIndex("by_trip_seq", (q) => q.eq("tripId", tripId))
+      .query("groupRecords")
+      .withIndex("by_group_seq", (q) => q.eq("groupId", groupId))
       .take(PURGE_BATCH);
     for (const doc of batch) await ctx.db.delete(doc._id);
-    if (batch.length === PURGE_BATCH) await ctx.scheduler.runAfter(0, internal.groupTrips.purgeTripRecords, { tripId });
+    if (batch.length === PURGE_BATCH) await ctx.scheduler.runAfter(0, internal.groups.purgeGroupRecords, { groupId });
   },
 });
 
 /**
- * Account deletion: the user leaves every shared trip. Trips they own pass to the longest-standing
- * member who joined; trips with no one else left are deleted.
+ * Account deletion: the user leaves every shared group. Groups they own pass to the longest-standing
+ * member who joined; groups with no one else left are deleted.
  */
-export async function removeUserFromTrips(ctx: MutationCtx, userId: string) {
+export async function removeUserFromGroups(ctx: MutationCtx, userId: string) {
   const memberships = await ctx.db
-    .query("tripMembers")
+    .query("groupMembers")
     .withIndex("by_user", (q) => q.eq("userId", userId))
     .collect();
   for (const me of memberships) {
-    const trip = await ctx.db.get(me.tripId);
-    if (!trip) continue;
-    const others = (await membersOf(ctx, me.tripId))
+    const group = await ctx.db.get(me.groupId);
+    if (!group) continue;
+    const others = (await membersOf(ctx, me.groupId))
       .filter((member) => member.userId && member.userId !== userId && member.status === "active")
       .sort((a, b) => a.joinedAt - b.joinedAt);
     if (me.role === "owner") {
       if (others.length === 0) {
-        await purgeTrip(ctx, me.tripId);
+        await purgeGroup(ctx, me.groupId);
         continue;
       }
       await ctx.db.patch(others[0]._id, { role: "owner" });
-      await ctx.db.patch(trip._id, { ownerUserId: others[0].userId! });
+      await ctx.db.patch(group._id, { ownerUserId: others[0].userId! });
     }
     await ctx.db.patch(me._id, { userId: undefined, role: "member", status: "left" });
-    await bumpSeq(ctx, trip);
-    await ctx.scheduler.runAfter(0, internal.groupTrips.clearRecordAuthor, { tripId: me.tripId, userId, cursor: null });
+    await bumpSeq(ctx, group);
+    await ctx.scheduler.runAfter(0, internal.groups.clearRecordAuthor, { groupId: me.groupId, userId, cursor: null });
   }
 }
 
-/** Account deletion: drops the deleted user's id from the records they last edited on a trip that lives on. */
+/** Account deletion: drops the deleted user's id from the records they last edited on a group that lives on. */
 export const clearRecordAuthor = internalMutation({
-  args: { tripId: v.id("sharedTrips"), userId: v.string(), cursor: v.union(v.string(), v.null()) },
-  handler: async (ctx, { tripId, userId, cursor }) => {
+  args: { groupId: v.id("sharedGroups"), userId: v.string(), cursor: v.union(v.string(), v.null()) },
+  handler: async (ctx, { groupId, userId, cursor }) => {
     const page = await ctx.db
-      .query("tripRecords")
-      .withIndex("by_trip_seq", (q) => q.eq("tripId", tripId))
+      .query("groupRecords")
+      .withIndex("by_group_seq", (q) => q.eq("groupId", groupId))
       .paginate({ cursor, numItems: PURGE_BATCH });
     for (const doc of page.page) {
       if (doc.updatedBy === userId) await ctx.db.patch(doc._id, { updatedBy: undefined });
     }
     if (!page.isDone) {
-      await ctx.scheduler.runAfter(0, internal.groupTrips.clearRecordAuthor, { tripId, userId, cursor: page.continueCursor });
+      await ctx.scheduler.runAfter(0, internal.groups.clearRecordAuthor, { groupId, userId, cursor: page.continueCursor });
     }
   },
 });
@@ -576,24 +578,24 @@ export const clearRecordAuthor = internalMutation({
  * names (other than the caller). Tickets themselves never touch the server.
  */
 export const askForTicket = mutation({
-  args: { tripId: v.id("sharedTrips"), clientId: v.string() },
-  handler: async (ctx, { tripId, clientId }) => {
+  args: { groupId: v.id("sharedGroups"), clientId: v.string() },
+  handler: async (ctx, { groupId, clientId }) => {
     assertMaxLength(clientId, MAX_CLIENT_ID, "Item id");
     const user = await requireUser(ctx);
-    const me = await requireMember(ctx, tripId, user.id);
+    const me = await requireMember(ctx, groupId, user.id);
     const record = await ctx.db
-      .query("tripRecords")
-      .withIndex("by_trip_record", (q) => q.eq("tripId", tripId).eq("kind", "event").eq("clientId", clientId))
+      .query("groupRecords")
+      .withIndex("by_group_record", (q) => q.eq("groupId", groupId).eq("kind", "event").eq("clientId", clientId))
       .unique();
     const data = record && !record.deleted ? (record.data as { title?: unknown; ticketHolders?: unknown } | null) : null;
     const holders = Array.isArray(data?.ticketHolders)
       ? data.ticketHolders.filter((id): id is string => typeof id === "string" && id !== me.memberId)
       : [];
     if (holders.length === 0) throw new Error("No one has shared this ticket");
-    const { ok } = await rateLimiter.limit(ctx, "ticketAsk", { key: `${user.id}:${tripId}:${clientId}` });
+    const { ok } = await rateLimiter.limit(ctx, "ticketAsk", { key: `${user.id}:${groupId}:${clientId}` });
     if (!ok) return { sent: false };
-    await ctx.scheduler.runAfter(0, internal.tripNotifications.notifyTicketAsk, {
-      tripId,
+    await ctx.scheduler.runAfter(0, internal.pushNotifications.notifyTicketAsk, {
+      groupId,
       askerMemberId: me.memberId,
       holderMemberIds: holders,
       clientId,
@@ -603,13 +605,13 @@ export const askForTicket = mutation({
   },
 });
 
-/** Push tokens of specific members (a direct ask, so a muted trip still gets it). */
+/** Push tokens of specific members (a direct ask, so a muted group still gets it). */
 export const memberPushTargets = internalQuery({
-  args: { tripId: v.id("sharedTrips"), memberIds: v.array(v.string()), actorMemberId: v.string() },
-  handler: async (ctx, { tripId, memberIds, actorMemberId }) => {
-    const trip = await ctx.db.get(tripId);
-    if (!trip) return null;
-    const members = await membersOf(ctx, tripId);
+  args: { groupId: v.id("sharedGroups"), memberIds: v.array(v.string()), actorMemberId: v.string() },
+  handler: async (ctx, { groupId, memberIds, actorMemberId }) => {
+    const group = await ctx.db.get(groupId);
+    if (!group) return null;
+    const members = await membersOf(ctx, groupId);
     const actor = members.find((member) => member.memberId === actorMemberId);
     const targets: { token: string; locale: string }[] = [];
     for (const member of members) {
@@ -620,18 +622,18 @@ export const memberPushTargets = internalQuery({
         .collect();
       targets.push(...tokens.map((token) => ({ token: token.token, locale: token.locale })));
     }
-    const tripName = (trip.data as { name?: unknown } | null)?.name;
-    return { tripName: typeof tripName === "string" ? tripName : "", actorName: actor?.name ?? "", targets };
+    const groupName = (group.data as { name?: unknown } | null)?.name;
+    return { groupName: typeof groupName === "string" ? groupName : "", actorName: actor?.name ?? "", targets };
   },
 });
 
 /** Who to notify about a change, with their tokens; used by the push action. */
 export const notificationTargets = internalQuery({
-  args: { tripId: v.id("sharedTrips"), actorMemberId: v.string() },
-  handler: async (ctx, { tripId, actorMemberId }) => {
-    const trip = await ctx.db.get(tripId);
-    if (!trip) return null;
-    const members = await membersOf(ctx, tripId);
+  args: { groupId: v.id("sharedGroups"), actorMemberId: v.string() },
+  handler: async (ctx, { groupId, actorMemberId }) => {
+    const group = await ctx.db.get(groupId);
+    if (!group) return null;
+    const members = await membersOf(ctx, groupId);
     const actor = members.find((member) => member.memberId === actorMemberId);
     const targets: { token: string; locale: string }[] = [];
     for (const member of members) {
@@ -642,7 +644,7 @@ export const notificationTargets = internalQuery({
         .collect();
       targets.push(...tokens.map((token) => ({ token: token.token, locale: token.locale })));
     }
-    const tripName = (trip.data as { name?: unknown } | null)?.name;
-    return { tripName: typeof tripName === "string" ? tripName : "", actorName: actor?.name ?? "", targets };
+    const groupName = (group.data as { name?: unknown } | null)?.name;
+    return { groupName: typeof groupName === "string" ? groupName : "", actorName: actor?.name ?? "", targets };
   },
 });

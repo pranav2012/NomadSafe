@@ -24,7 +24,7 @@ type Tab = "paste" | "gmail";
 
 export interface ImportSheetProps {
   visible: boolean;
-  tripId: string | null;
+  groupId: string | null;
   initialTab?: Tab;
   trip: Trip | null;
   onClose: () => void;
@@ -41,7 +41,7 @@ export function ImportSheet({ visible, onClose, ...props }: ImportSheetProps) {
   );
 }
 
-function ImportBody({ tripId, trip, initialTab = "paste", onImported }: Omit<ImportSheetProps, "visible">) {
+function ImportBody({ groupId, trip, initialTab = "paste", onImported }: Omit<ImportSheetProps, "visible">) {
   const { c, f } = useAura();
   const { t, formatCurrency, locale } = useLocalization();
   const addExpenses = useExpensesStore((state) => state.addExpenses);
@@ -143,7 +143,7 @@ function ImportBody({ tripId, trip, initialTab = "paste", onImported }: Omit<Imp
     setError(null);
     try {
       const inputs = await Promise.all(
-        selected.map((item) => candidateToInput(item, tripId, trip?.currency)),
+        selected.map((item) => candidateToInput(item, groupId, trip?.currency)),
       );
       const added = addExpenses(inputs);
       track("expense_added", { source: "paste", count: added.length });

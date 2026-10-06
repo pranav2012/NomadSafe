@@ -5,7 +5,7 @@ import { api, useMutation, useQuery } from "@/modules/backend";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AuraButton, AuraCard, AuraChip, AuraField, AuraLoader, Icon, PressableScale, useAura } from "@/atoms";
 import { useAuthStore } from "@/features/auth/store/authStore";
-import { registerTripPush } from "@/features/sync";
+import { registerGroupPush } from "@/features/sync";
 import { isTrip, selectMoneyGroups, useTripsStore, type MoneyGroup } from "@/features/trips/store/tripsStore";
 import { track, PrivateView } from "@/modules/analytics";
 import { fromDateKey } from "@/features/trips/utils/dates";
@@ -17,7 +17,7 @@ const ARRIVAL_TIMEOUT_MS = 8000;
 
 /** Waits for the joined trip or group to arrive through live sync; a trip becomes the active trip. */
 function openWhenSynced(serverTripId: string): Promise<MoneyGroup | null> {
-  const select = () => selectMoneyGroups(useTripsStore.getState()).find((item) => item.shared?.tripId === serverTripId);
+  const select = () => selectMoneyGroups(useTripsStore.getState()).find((item) => item.shared?.groupId === serverTripId);
   return new Promise((resolve) => {
     const activate = () => {
       const item = select();
@@ -49,8 +49,8 @@ export default function JoinTripScreen() {
   const insets = useSafeAreaInsets();
   const sheetTop = useSheetTopInset();
   const { code, deferred } = useLocalSearchParams<{ code: string; deferred?: string }>();
-  const preview = useQuery(api.groupTrips.previewInvite, code ? { code } : "skip");
-  const join = useMutation(api.groupTrips.joinTrip);
+  const preview = useQuery(api.groups.previewInvite, code ? { code } : "skip");
+  const join = useMutation(api.groups.joinGroup);
   const userName = useAuthStore((s) => s.user?.name?.split(" ")[0] ?? "");
   const [choice, setChoice] = useState<string | null>(null);
   const [name, setName] = useState(userName);
@@ -74,14 +74,14 @@ export default function JoinTripScreen() {
     setBusy(true);
     setError(null);
     try {
-      const { tripId } = await join({
+      const { groupId } = await join({
         code,
         claimMemberId: selected === NEW_MEMBER ? undefined : selected,
         name: name.trim(),
       });
       track("trip_joined", { deferred: deferred === "1", claimed_member: selected !== NEW_MEMBER });
-      void registerTripPush(true);
-      await finish(tripId);
+      void registerGroupPush(true);
+      await finish(groupId);
     } catch {
       setError(t("groupTrip.actionFailed"));
       setBusy(false);
@@ -122,7 +122,7 @@ export default function JoinTripScreen() {
             {preview.alreadyMember ? (
               <>
                 <Text style={[styles.body, styles.section, { color: c.textSoft, fontFamily: f.regular }]}>{t("groupTrip.joinAlready")}</Text>
-                <AuraButton label={t("groupTrip.openTrip")} onPress={() => void finish(preview.tripId)} style={styles.section} />
+                <AuraButton label={t("groupTrip.openTrip")} onPress={() => void finish(preview.groupId)} style={styles.section} />
               </>
             ) : (
               <>

@@ -46,7 +46,7 @@ export function keepLocalOnly<T extends LocalOnly>(next: T, previous: LocalOnly 
  * expense, but it still is one for everyone else.
  */
 export function makeSharedScope(uid: string | null, trips: readonly Pick<GroupBase, "id" | "shared">[]) {
-  const sharedById = new Map(trips.filter((trip) => trip.shared).map((trip) => [trip.id, trip.shared!.tripId]));
+  const sharedById = new Map(trips.filter((trip) => trip.shared).map((trip) => [trip.id, trip.shared!.groupId]));
   const ledgerKeys = new Map<string, Set<string>>();
   const syncedKeys = (serverTripId: string) => {
     let keys = ledgerKeys.get(serverTripId);
@@ -61,9 +61,11 @@ export function makeSharedScope(uid: string | null, trips: readonly Pick<GroupBa
     return keys;
   };
   return {
-    isSharedTrip: (tripId: string | null) => tripId !== null && sharedById.has(tripId),
-    has: (kind: SharedKind, record: { id: string; tripId: string | null } & Partial<Pick<Expense, "shares" | "paidBy">>) => {
-      const serverTripId = record.tripId === null ? undefined : sharedById.get(record.tripId);
+    isSharedTrip: (groupId: string | null) => groupId !== null && sharedById.has(groupId),
+    /** Expenses and settlements carry `groupId`; itinerary events carry `tripId`. */
+    has: (kind: SharedKind, record: { id: string; groupId?: string | null; tripId?: string | null } & Partial<Pick<Expense, "shares" | "paidBy">>) => {
+      const owner = record.groupId ?? record.tripId ?? null;
+      const serverTripId = owner === null ? undefined : sharedById.get(owner);
       if (!serverTripId) return false;
       if (kind !== "expense") return true;
       return isGroupExpense(record) || syncedKeys(serverTripId).has(`expense:${record.id}`);

@@ -11,7 +11,7 @@ export interface LatLng {
   longitude: number;
 }
 
-export interface TripMember {
+export interface GroupMember {
   memberId: string;
   name: string;
   role: "owner" | "member";
@@ -20,16 +20,17 @@ export interface TripMember {
   linked: boolean;
 }
 
-/** Present when the trip is shared through an invite link; kept in sync with the server. */
-export interface SharedTripInfo {
-  tripId: string;
+/** Present when the trip or group is shared through an invite link; kept in sync with the server. */
+export interface SharedGroupInfo {
+  /** Server id (`sharedGroups`). */
+  groupId: string;
   /** Empty until the server's member list first arrives after sharing. */
   myMemberId: string;
   role: "owner" | "member";
   inviteCode: string;
   archived: boolean;
   muted: boolean;
-  members: TripMember[];
+  members: GroupMember[];
 }
 
 /** What every money group has: people, a currency and optional sharing. Trips add travel details. */
@@ -41,7 +42,7 @@ export interface GroupBase {
   currency: string;
   companions: string[];
   createdAt: string;
-  shared?: SharedTripInfo;
+  shared?: SharedGroupInfo;
 }
 
 /** A money group without travel details (flatmates, office lunches). Never the active trip. */

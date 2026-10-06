@@ -14,7 +14,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { api, BackendProvider, useConvexAuth, useMutation } from "@/modules/backend";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
-import { registerTripPush, startGroupSync, startSync, stopGroupSync, stopSync, useTripNotificationRouting } from "@/features/sync";
+import { registerGroupPush, startGroupSync, startSync, stopGroupSync, stopSync, useGroupNotificationRouting } from "@/features/sync";
 import { AURA_FONT_FILES, auraDark, auraLight } from "@/constants/aura";
 import { PrivacyCover, useAuthStore, usePrivacyShield, useSyncAuthSession } from "@/features/auth";
 import LockScreen from "@/features/auth/screens/LockScreen";
@@ -219,7 +219,7 @@ function BackupEffects() {
       return;
     }
     startGroupSync(userId);
-    void registerTripPush(false);
+    void registerGroupPush(false);
   }, [isAuthenticated, userId]);
 
   return null;
@@ -232,7 +232,7 @@ function SessionEffects() {
 
   useSafetyNotificationRouting();
   useSafetyServerSync();
-  useTripNotificationRouting();
+  useGroupNotificationRouting();
   useRecapEffects();
   useBoundaryViewSync();
 

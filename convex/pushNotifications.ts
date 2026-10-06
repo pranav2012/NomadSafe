@@ -17,7 +17,7 @@ const rateLimiter = new RateLimiter(components.rateLimiter, {
   pushTokenClaim: { kind: "token bucket", rate: 6, period: HOUR, capacity: 3 },
 });
 const PUSH_CHUNK = 100;
-// Must match the Android channel and `data.source` the app registers for trip updates.
+// Must match the Android channel and `data.source` the app registers for group updates.
 const CHANNEL_ID = "trip-updates";
 const SOURCE = "nomadsafe-trip";
 
@@ -194,7 +194,7 @@ export async function sendPushMessages(ctx: ActionCtx, messages: PushMessage[]) 
       else console.error("Expo push ticket error", ticket.details?.error ?? "unknown");
     });
   }
-  if (gone.length > 0) await ctx.runMutation(internal.tripNotifications.deleteTokens, { tokens: gone });
+  if (gone.length > 0) await ctx.runMutation(internal.pushNotifications.deleteTokens, { tokens: gone });
 }
 
 const changeValidator = v.object({
@@ -208,24 +208,24 @@ const changeValidator = v.object({
 type Change = Infer<typeof changeValidator>;
 
 /**
- * Sends a member's money changes right away, or, within a minute of their last push on this trip,
+ * Sends a member's money changes right away, or, within a minute of their last push on this group,
  * counts them and sends one summary when the minute is up, so a burst of edits is one notification.
  */
-export async function queueTripNotification(ctx: MutationCtx, tripId: Id<"sharedTrips">, actorMemberId: string, changes: Change[]) {
+export async function queueGroupNotification(ctx: MutationCtx, groupId: Id<"sharedGroups">, actorMemberId: string, changes: Change[]) {
   const now = Date.now();
   const state = await ctx.db
-    .query("tripNotifyState")
-    .withIndex("by_trip_actor", (q) => q.eq("tripId", tripId).eq("actorMemberId", actorMemberId))
+    .query("groupNotifyState")
+    .withIndex("by_group_actor", (q) => q.eq("groupId", groupId).eq("actorMemberId", actorMemberId))
     .unique();
   if (!state || (!state.flushScheduled && now - state.lastSentAt >= NOTIFY_INTERVAL_MS)) {
-    await ctx.scheduler.runAfter(0, internal.tripNotifications.notifyTrip, {
-      tripId,
+    await ctx.scheduler.runAfter(0, internal.pushNotifications.notifyGroup, {
+      groupId,
       actorMemberId,
       changes: changes.slice(0, 1),
       count: changes.length,
     });
     if (state) await ctx.db.patch(state._id, { lastSentAt: now, pendingCount: 0, pendingFirst: undefined });
-    else await ctx.db.insert("tripNotifyState", { tripId, actorMemberId, lastSentAt: now, pendingCount: 0, flushScheduled: false });
+    else await ctx.db.insert("groupNotifyState", { groupId, actorMemberId, lastSentAt: now, pendingCount: 0, flushScheduled: false });
     return;
   }
   await ctx.db.patch(state._id, {
@@ -234,20 +234,20 @@ export async function queueTripNotification(ctx: MutationCtx, tripId: Id<"shared
     flushScheduled: true,
   });
   if (!state.flushScheduled) {
-    await ctx.scheduler.runAt(state.lastSentAt + NOTIFY_INTERVAL_MS, internal.tripNotifications.flushTripNotification, {
+    await ctx.scheduler.runAt(state.lastSentAt + NOTIFY_INTERVAL_MS, internal.pushNotifications.flushGroupNotification, {
       stateId: state._id,
     });
   }
 }
 
-export const flushTripNotification = internalMutation({
-  args: { stateId: v.id("tripNotifyState") },
+export const flushGroupNotification = internalMutation({
+  args: { stateId: v.id("groupNotifyState") },
   handler: async (ctx, { stateId }) => {
     const state = await ctx.db.get(stateId);
     if (!state) return;
     if (state.pendingCount > 0 && state.pendingFirst) {
-      await ctx.scheduler.runAfter(0, internal.tripNotifications.notifyTrip, {
-        tripId: state.tripId,
+      await ctx.scheduler.runAfter(0, internal.pushNotifications.notifyGroup, {
+        groupId: state.groupId,
         actorMemberId: state.actorMemberId,
         changes: [state.pendingFirst],
         count: state.pendingCount,
@@ -258,11 +258,11 @@ export const flushTripNotification = internalMutation({
 });
 
 /** Sends one notification per device about a member's money changes; drops tokens Expo reports as gone. */
-export const notifyTrip = internalAction({
+export const notifyGroup = internalAction({
   // `count` is how many changes `changes[0]` stands for; older scheduled jobs pass every change instead.
-  args: { tripId: v.id("sharedTrips"), actorMemberId: v.string(), changes: v.array(changeValidator), count: v.optional(v.number()) },
-  handler: async (ctx, { tripId, actorMemberId, changes, count }) => {
-    const info = await ctx.runQuery(internal.groupTrips.notificationTargets, { tripId, actorMemberId });
+  args: { groupId: v.id("sharedGroups"), actorMemberId: v.string(), changes: v.array(changeValidator), count: v.optional(v.number()) },
+  handler: async (ctx, { groupId, actorMemberId, changes, count }) => {
+    const info = await ctx.runQuery(internal.groups.notificationTargets, { groupId, actorMemberId });
     if (!info || info.targets.length === 0 || changes.length === 0) return;
     const total = count ?? changes.length;
 
@@ -285,11 +285,11 @@ export const notifyTrip = internalAction({
             : t[change.action];
       return {
         to: token,
-        title: truncate(info.tripName, NOTIFY_TITLE_CHARS),
+        title: truncate(info.groupName, NOTIFY_TITLE_CHARS),
         body: fill(template, values),
         sound: "default" as const,
         channelId: CHANNEL_ID,
-        data: { source: SOURCE, tripId: String(tripId) },
+        data: { source: SOURCE, groupId: String(groupId) },
       };
     });
 
@@ -299,20 +299,20 @@ export const notifyTrip = internalAction({
 
 /** Asks the members holding an item's ticket to send it; tapping opens the ticket with Send ready. */
 export const notifyTicketAsk = internalAction({
-  args: { tripId: v.id("sharedTrips"), askerMemberId: v.string(), holderMemberIds: v.array(v.string()), clientId: v.string(), title: v.string() },
-  handler: async (ctx, { tripId, askerMemberId, holderMemberIds, clientId, title }) => {
-    const info = await ctx.runQuery(internal.groupTrips.memberPushTargets, { tripId, memberIds: holderMemberIds, actorMemberId: askerMemberId });
+  args: { groupId: v.id("sharedGroups"), askerMemberId: v.string(), holderMemberIds: v.array(v.string()), clientId: v.string(), title: v.string() },
+  handler: async (ctx, { groupId, askerMemberId, holderMemberIds, clientId, title }) => {
+    const info = await ctx.runQuery(internal.groups.memberPushTargets, { groupId, memberIds: holderMemberIds, actorMemberId: askerMemberId });
     if (!info || info.targets.length === 0) return;
     const messages = info.targets.map(({ token, locale }) => ({
       to: token,
-      title: truncate(info.tripName, NOTIFY_TITLE_CHARS),
+      title: truncate(info.groupName, NOTIFY_TITLE_CHARS),
       body: fill(TICKET_ASK[locale] ?? TICKET_ASK[locale.split("-")[0]] ?? TICKET_ASK.en, {
         actor: truncate(info.actorName, NOTIFY_TITLE_CHARS),
         title: truncate(title, NOTIFY_TITLE_CHARS),
       }),
       sound: "default" as const,
       channelId: CHANNEL_ID,
-      data: { source: SOURCE, tripId: String(tripId), type: "ticket_ask", eventId: clientId },
+      data: { source: SOURCE, groupId: String(groupId), type: "ticket_ask", eventId: clientId },
     }));
     await sendPushMessages(ctx, messages);
   },

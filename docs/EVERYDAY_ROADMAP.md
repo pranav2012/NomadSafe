@@ -43,7 +43,7 @@ The basic thing is a **group**: people, a currency, expenses, payments, and opti
 - **Trips tab:** shows trips only. Groups live in Money.
 - **Groups are never the active trip.** `pickDefaultActiveTripId` and every `setActiveTrip` caller take only trips.
 - **Free count:** owned trips and owned groups are counted separately.
-- **Notification taps:** `useTripNotificationRouting` makes the tapped trip active before opening Money. For a group it must open that group's money screen and leave the active trip alone.
+- **Notification taps:** `useGroupNotificationRouting` makes a tapped trip active before opening Money; a tapped group opens its money screen and leaves the active trip alone.
 - **Names follow the model:** backend tables and functions are named for groups (`sharedGroups`, `groupMembers`, `groupRecords`, `api.groups.*`), and expenses and payments point to a `groupId`. Personal backup uses sync kind `"trip"` for trips and `"group"` for groups. `/join/<code>` links and invite codes don't change.
 - **Joining a group:** the invite preview (`previewInvite`) and `JoinTripScreen` show a group with no dates.
 
@@ -86,7 +86,7 @@ The Money tab has an **Overview** (Money home), plus one money screen per trip o
   1. **Your spending:** a Week / Month switch with arrows for earlier periods, and the total of everything you spent, in the home currency (see Personal spending). Under it, "where it went": one row per trip, group and "Not in a group", each opening that trip or group. Then the category bar.
   2. **Balance:** "You're owed ₹3,450 overall" (or "You owe…"), hidden when everything is settled.
   3. **Trips and groups:** mixed together, sorted by most recent activity, with a badge on trips and your balance in each. Anything settled for 30+ days folds into a collapsed "Settled" section.
-  4. **Your spends:** activity for spends that aren't in any trip or group (`tripId: null`, which is today's data model). Adding from the Overview puts the spend here by default.
+  4. **Your spends:** activity for spends that aren't in any trip or group (`groupId: null`). Adding from the Overview puts the spend here by default.
 - The **Trip mode** switch in Settings is removed (`tripModeEnabled`, `defaultTripMode`). Trip focus turns on by itself while a trip is active.
 
 ### Where the app opens

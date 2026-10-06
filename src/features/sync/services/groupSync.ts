@@ -3,7 +3,7 @@ import { useChatStore } from "@/features/ai/store/chatStore";
 import { useExpensesStore, type Expense, type Settlement } from "@/features/expenses/store/expensesStore";
 import { SELF_ID, type ExpenseShare } from "@/features/expenses/utils/split";
 import { useEventsStore, type TripEvent } from "@/features/itinerary/store/eventsStore";
-import { isTrip, selectMoneyGroups, setMoneyGroups, useTripsStore, type GroupBase, type MoneyGroup, type SharedTripInfo } from "@/features/trips/store/tripsStore";
+import { isTrip, selectMoneyGroups, setMoneyGroups, useTripsStore, type GroupBase, type MoneyGroup, type SharedGroupInfo } from "@/features/trips/store/tripsStore";
 import { syncWidgets } from "@/features/widget/syncWidgets";
 import { logger } from "@/modules/logger";
 import { storage } from "@/modules/storage";
@@ -12,8 +12,8 @@ import { clearGroupLedgers, groupLedgerKey, keepLocalOnly, makeSharedScope, stri
 
 type LocalRecord = Expense | Settlement | TripEvent;
 
-interface ServerTrip {
-  tripId: Id<"sharedTrips">;
+interface ServerGroup {
+  groupId: Id<"sharedGroups">;
   seq: number;
   data: unknown;
   dataUpdatedAt: number;
@@ -22,7 +22,7 @@ interface ServerTrip {
   role: "owner" | "member";
   archived: boolean;
   muted: boolean;
-  members: SharedTripInfo["members"];
+  members: SharedGroupInfo["members"];
 }
 
 interface RemoteRecord {
@@ -52,15 +52,15 @@ const MAX_MEMBER_NAME = 80;
 const MAX_NEW_MEMBERS = 50;
 
 /** Local id for a shared trip, the same on every member's phones. */
-export function localTripId(serverTripId: string) {
-  return `g-${serverTripId}`;
+export function localGroupId(serverGroupId: string) {
+  return `g-${serverGroupId}`;
 }
 
 /** All trips and groups on this phone. */
 const allGroups = () => selectMoneyGroups(useTripsStore.getState());
 
 /** The fields everyone shares; people are members, and ids differ per phone. Groups say `kind: "group"`. */
-function tripDetails(trip: MoneyGroup) {
+function groupDetails(trip: MoneyGroup) {
   if (!isTrip(trip)) {
     return { kind: "group" as const, name: trip.name, emoji: trip.emoji, budget: trip.budget, currency: trip.currency, createdAt: trip.createdAt };
   }
@@ -76,23 +76,23 @@ function tripDetails(trip: MoneyGroup) {
   };
 }
 
-function readLedger(uid: string, tripId: string): GroupLedger {
+function readLedger(uid: string, groupId: string): GroupLedger {
   try {
-    const raw = storage.getString(groupLedgerKey(uid, tripId));
+    const raw = storage.getString(groupLedgerKey(uid, groupId));
     if (raw) return JSON.parse(raw) as GroupLedger;
   } catch {}
   return { ...EMPTY_LEDGER, entries: {} };
 }
 
-function writeLedger(uid: string, tripId: string, ledger: GroupLedger) {
-  storage.set(groupLedgerKey(uid, tripId), JSON.stringify(ledger));
+function writeLedger(uid: string, groupId: string, ledger: GroupLedger) {
+  storage.set(groupLedgerKey(uid, groupId), JSON.stringify(ledger));
 }
 
 /**
  * Person ids differ per phone: locally "you" is SELF_ID and others are names; on the server
  * everyone is a memberId. Each direction returns null for someone it doesn't know yet.
  */
-function makeTranslator(info: SharedTripInfo) {
+function makeTranslator(info: SharedGroupInfo) {
   const byName = new Map(info.members.map((member) => [member.name.trim().toLowerCase(), member.memberId]));
   const byId = new Map(info.members.map((member) => [member.memberId, member.name]));
   const toServer = (person: string): string | null =>
@@ -135,12 +135,12 @@ function toServerRecord(kind: SharedKind, record: LocalRecord, map: Translate): 
     return people === null || ticketHolders === null ? null : { ...rest, people, ticketHolders };
   }
   if (kind === "settlement") {
-    const { tripId: _trip, ...rest } = record as Settlement;
+    const { groupId: _group, ...rest } = record as Settlement;
     const from = map(rest.from);
     const to = map(rest.to);
     return from === null || to === null ? null : { ...rest, from, to };
   }
-  const { tripId: _trip, externalId: _external, ...rest } = stripRaw(record as Expense);
+  const { groupId: _group, externalId: _external, ...rest } = stripRaw(record as Expense);
   const paidBy = map(rest.paidBy ?? SELF_ID);
   const shares = mapShares(rest.shares, map);
   if (paidBy === null || shares === null) return null;
@@ -148,34 +148,33 @@ function toServerRecord(kind: SharedKind, record: LocalRecord, map: Translate): 
 }
 
 /** The server form back in this phone's terms, or null if it mentions a member this phone doesn't know yet. */
-function toLocalRecord(kind: SharedKind, data: unknown, tripId: string, map: Translate): LocalRecord | null {
+function toLocalRecord(kind: SharedKind, data: unknown, localId: string, map: Translate): LocalRecord | null {
   if (kind === "event") {
     const event = data as TripEvent;
     const people = mapPeople(event.people, map);
     const ticketHolders = mapPeople(event.ticketHolders, map);
-    return people === null || ticketHolders === null ? null : { ...event, tripId, people, ticketHolders };
+    return people === null || ticketHolders === null ? null : { ...event, tripId: localId, people, ticketHolders };
   }
   if (kind === "settlement") {
     const settlement = data as Settlement;
     const from = map(settlement.from);
     const to = map(settlement.to);
-    return from === null || to === null ? null : { ...settlement, tripId, from, to };
+    return from === null || to === null ? null : { ...settlement, groupId: localId, from, to };
   }
   const expense = data as Expense;
   const paidBy = expense.paidBy === undefined ? SELF_ID : map(expense.paidBy);
   const shares = mapShares(expense.shares, map);
   if (paidBy === null || shares === null) return null;
-  return { ...expense, tripId, paidBy: paidBy === SELF_ID ? undefined : paidBy, shares };
+  return { ...expense, groupId: localId, paidBy: paidBy === SELF_ID ? undefined : paidBy, shares };
 }
 
 function groupRecordsOf(owner: string, trip: GroupBase): { kind: SharedKind; record: LocalRecord }[] {
   const scope = makeSharedScope(owner, allGroups());
   const { expenses, settlements } = useExpensesStore.getState();
-  const mine = <T extends { tripId: string | null }>(items: T[]) => items.filter((item) => item.tripId === trip.id);
   return [
-    ...mine(expenses).filter((expense) => scope.has("expense", expense)).map((record) => ({ kind: "expense" as const, record })),
-    ...mine(settlements).map((record) => ({ kind: "settlement" as const, record })),
-    ...mine(useEventsStore.getState().events).map((record) => ({ kind: "event" as const, record })),
+    ...expenses.filter((item) => item.groupId === trip.id && scope.has("expense", item)).map((record) => ({ kind: "expense" as const, record })),
+    ...settlements.filter((item) => item.groupId === trip.id).map((record) => ({ kind: "settlement" as const, record })),
+    ...useEventsStore.getState().events.filter((item) => item.tripId === trip.id).map((record) => ({ kind: "event" as const, record })),
   ];
 }
 
@@ -183,55 +182,55 @@ let uid: string | null = null;
 let watchUnsubscribe: (() => void) | null = null;
 let storeUnsubscribers: (() => void)[] = [];
 let pushTimer: ReturnType<typeof setTimeout> | null = null;
-let latest: ServerTrip[] | null = null;
+let latest: ServerGroup[] | null = null;
 let running: Promise<boolean> | null = null;
 let runningUid: string | null = null;
 let rerun = false;
-// The trip list can update before shareTrip re-keys the local trip; don't create a duplicate meanwhile.
+// The trip list can update before shareGroup re-keys the local trip; don't create a duplicate meanwhile.
 let sharingInFlight = 0;
 // Trips shared this session that the server list hasn't included yet; they mustn't be dropped as "gone".
 const awaitingList = new Set<string>();
-// Trips whose local data was checked against the ledger this session (see pushTrip).
+// Trips whose local data was checked against the ledger this session (see pushGroup).
 const verified = new Set<string>();
 
 /**
  * Removes a shared trip from this phone. Leaving or losing access removes everything on it; on
  * sign-out (`keepPersonal`) the user's own unsplit expenses stay and reattach when they sign back in.
  */
-function dropLocalTrip(localId: string, serverTripId: string, owner: string, keepPersonal = false) {
+function dropLocalGroup(localId: string, serverGroupId: string, owner: string, keepPersonal = false) {
   const scope = makeSharedScope(owner, allGroups());
   const remaining = allGroups().filter((trip) => trip.id !== localId);
   if (keepPersonal) {
     const money = useExpensesStore.getState();
     useExpensesStore.setState({
-      expenses: money.expenses.filter((expense) => expense.tripId !== localId || !scope.has("expense", expense)),
-      settlements: money.settlements.filter((settlement) => settlement.tripId !== localId),
+      expenses: money.expenses.filter((expense) => expense.groupId !== localId || !scope.has("expense", expense)),
+      settlements: money.settlements.filter((settlement) => settlement.groupId !== localId),
     });
   } else {
-    useExpensesStore.getState().removeByTripId(localId);
+    useExpensesStore.getState().removeByGroupId(localId);
     useChatStore.getState().removeConversation(localId);
   }
   useEventsStore.getState().removeByTripId(localId);
   setMoneyGroups(remaining);
-  storage.remove(groupLedgerKey(owner, serverTripId));
-  verified.delete(serverTripId);
+  storage.remove(groupLedgerKey(owner, serverGroupId));
+  verified.delete(serverGroupId);
 }
 
 /** Mirrors the server's trip list into the trips store (trips and groups): new ones, details, members, preferences. */
-function applyTripList(owner: string, list: ServerTrip[]) {
-  const byServerId = new Map(list.map((trip) => [trip.tripId as string, trip]));
+function applyGroupList(owner: string, list: ServerGroup[]) {
+  const byServerId = new Map(list.map((trip) => [trip.groupId as string, trip]));
   for (const id of byServerId.keys()) awaitingList.delete(id);
 
   for (const local of allGroups()) {
-    if (!local.shared || byServerId.has(local.shared.tripId) || awaitingList.has(local.shared.tripId)) continue;
-    dropLocalTrip(local.id, local.shared.tripId, owner);
+    if (!local.shared || byServerId.has(local.shared.groupId) || awaitingList.has(local.shared.groupId)) continue;
+    dropLocalGroup(local.id, local.shared.groupId, owner);
   }
   const before = allGroups();
   let trips: MoneyGroup[] = [...before];
 
   for (const server of list) {
-    const info: SharedTripInfo = {
-      tripId: server.tripId,
+    const info: SharedGroupInfo = {
+      groupId: server.groupId,
       myMemberId: server.myMemberId,
       role: server.role,
       inviteCode: server.inviteCode,
@@ -242,27 +241,27 @@ function applyTripList(owner: string, list: ServerTrip[]) {
     const memberCompanions = server.members
       .filter((member) => member.memberId !== server.myMemberId && (member.linked || member.status !== "removed"))
       .map((member) => member.name);
-    const details = server.data as ReturnType<typeof tripDetails>;
-    const index = trips.findIndex((trip) => trip.shared?.tripId === server.tripId);
+    const details = server.data as ReturnType<typeof groupDetails>;
+    const index = trips.findIndex((trip) => trip.shared?.groupId === server.groupId);
 
     if (index === -1) {
       if (sharingInFlight > 0) continue;
-      const base = { id: localTripId(server.tripId), companions: memberCompanions, shared: info };
+      const base = { id: localGroupId(server.groupId), companions: memberCompanions, shared: info };
       const created: MoneyGroup = details.kind === "group" ? { ...details, ...base } : { ...details, ...base, mode: "group" };
       trips = [created, ...trips];
       // A fresh local copy starts from nothing, so a leftover ledger can't turn into deletions.
-      writeLedger(owner, server.tripId, { ...EMPTY_LEDGER, entries: {}, detailsHash: hashOf(details), detailsUpdatedAt: server.dataUpdatedAt });
+      writeLedger(owner, server.groupId, { ...EMPTY_LEDGER, entries: {}, detailsHash: hashOf(details), detailsUpdatedAt: server.dataUpdatedAt });
       continue;
     }
     const local = trips[index];
-    // Names typed locally that aren't members yet stay until pushTrip adds them on the server.
+    // Names typed locally that aren't members yet stay until pushGroup adds them on the server.
     const known = new Set(server.members.map((member) => member.name.trim().toLowerCase()));
     const pending = local.companions.filter((name) => !known.has(name.trim().toLowerCase()));
-    const ledger = readLedger(owner, server.tripId);
-    const remoteNewer = server.dataUpdatedAt > ledger.detailsUpdatedAt && hashOf(details) !== hashOf(tripDetails(local));
+    const ledger = readLedger(owner, server.groupId);
+    const remoteNewer = server.dataUpdatedAt > ledger.detailsUpdatedAt && hashOf(details) !== hashOf(groupDetails(local));
     const merged = { ...local, ...(remoteNewer ? details : {}), companions: [...memberCompanions, ...pending], shared: info } as MoneyGroup;
     trips[index] = isTrip(merged) ? { ...merged, mode: "group" } : merged;
-    if (remoteNewer) writeLedger(owner, server.tripId, { ...ledger, detailsHash: hashOf(details), detailsUpdatedAt: server.dataUpdatedAt });
+    if (remoteNewer) writeLedger(owner, server.groupId, { ...ledger, detailsHash: hashOf(details), detailsUpdatedAt: server.dataUpdatedAt });
   }
 
   if (hashOf(trips) !== hashOf(before)) {
@@ -272,14 +271,14 @@ function applyTripList(owner: string, list: ServerTrip[]) {
 }
 
 /** Pulls a trip's records written since the last pull and merges them into the stores. */
-async function pullTrip(owner: string, server: ServerTrip, local: MoneyGroup): Promise<boolean> {
-  const ledger = readLedger(owner, server.tripId);
+async function pullGroup(owner: string, server: ServerGroup, local: MoneyGroup): Promise<boolean> {
+  const ledger = readLedger(owner, server.groupId);
   const remote: RemoteRecord[] = [];
   let cursor: string | null = null;
   try {
     for (;;) {
-      const page: { page: RemoteRecord[]; isDone: boolean; continueCursor: string } = await convex.query(api.groupTrips.pullRecords, {
-        tripId: server.tripId,
+      const page: { page: RemoteRecord[]; isDone: boolean; continueCursor: string } = await convex.query(api.groups.pullRecords, {
+        groupId: server.groupId,
         after: ledger.cursor,
         paginationOpts: { cursor, numItems: PULL_PAGE },
       });
@@ -342,26 +341,26 @@ async function pullTrip(owner: string, server: ServerTrip, local: MoneyGroup): P
   const maxSeq = Math.max(ledger.cursor, ...remote.map((record) => record.seq));
   ledger.cursor = blockedSeq === null ? maxSeq : Math.min(maxSeq, blockedSeq - 1);
   if (blockedSeq === null) ledger.seenSeq = server.seq;
-  writeLedger(owner, server.tripId, ledger);
+  writeLedger(owner, server.groupId, ledger);
   return true;
 }
 
 /** Sends a trip's local changes: details, new companions, and records the ledger hasn't seen. */
-async function pushTrip(owner: string, local: MoneyGroup): Promise<boolean> {
+async function pushGroup(owner: string, local: MoneyGroup): Promise<boolean> {
   const info = local.shared!;
   if (!info.myMemberId) return true;
-  const serverTripId = info.tripId as Id<"sharedTrips">;
-  const ledger = readLedger(owner, info.tripId);
+  const serverGroupId = info.groupId as Id<"sharedGroups">;
+  const ledger = readLedger(owner, info.groupId);
   const now = Date.now();
   const records = groupRecordsOf(owner, local);
   const stillHere = () => uid === owner && allGroups().some((trip) => trip.id === local.id && trip.shared);
 
   // At startup, no local records but a non-empty ledger means local data was lost rather than
   // deleted: re-download the trip instead of pushing every record as a deletion.
-  if (!verified.has(info.tripId)) {
-    verified.add(info.tripId);
+  if (!verified.has(info.groupId)) {
+    verified.add(info.groupId);
     if (records.length === 0 && Object.keys(ledger.entries).length > 0) {
-      writeLedger(owner, info.tripId, { ...EMPTY_LEDGER, entries: {}, detailsHash: ledger.detailsHash, detailsUpdatedAt: ledger.detailsUpdatedAt });
+      writeLedger(owner, info.groupId, { ...EMPTY_LEDGER, entries: {}, detailsHash: ledger.detailsHash, detailsUpdatedAt: ledger.detailsUpdatedAt });
       rerun = true;
       return true;
     }
@@ -370,14 +369,14 @@ async function pushTrip(owner: string, local: MoneyGroup): Promise<boolean> {
   // A failed details or companions push is retried later but doesn't hold back the records.
   let detailsOk = true;
   try {
-    const details = tripDetails(local);
+    const details = groupDetails(local);
     const detailsHash = hashOf(details);
     if (detailsHash !== ledger.detailsHash) {
-      await convex.mutation(api.groupTrips.updateTripDetails, { tripId: serverTripId, data: details, dataUpdatedAt: now });
+      await convex.mutation(api.groups.updateGroupDetails, { groupId: serverGroupId, data: details, dataUpdatedAt: now });
       if (!stillHere()) return false;
       ledger.detailsHash = detailsHash;
       ledger.detailsUpdatedAt = now;
-      writeLedger(owner, info.tripId, ledger);
+      writeLedger(owner, info.groupId, ledger);
     }
   } catch (err) {
     logger.warn("group-sync", "details push failed", err);
@@ -389,7 +388,7 @@ async function pushTrip(owner: string, local: MoneyGroup): Promise<boolean> {
     const newNames = local.companions
       .filter((name) => name.trim() && name.length <= MAX_MEMBER_NAME && !memberNames.has(name.trim().toLowerCase()))
       .slice(0, MAX_NEW_MEMBERS);
-    if (newNames.length > 0) await convex.mutation(api.groupTrips.addCompanions, { tripId: serverTripId, names: newNames });
+    if (newNames.length > 0) await convex.mutation(api.groups.addCompanions, { groupId: serverGroupId, names: newNames });
   } catch (err) {
     logger.warn("group-sync", "companions push failed", err);
     detailsOk = false;
@@ -418,7 +417,7 @@ async function pushTrip(owner: string, local: MoneyGroup): Promise<boolean> {
     const batch = changes.slice(i, i + PUSH_BATCH);
     let rejectedSeq: number | null = null;
     try {
-      ({ rejectedSeq } = await convex.mutation(api.groupTrips.pushRecords, { tripId: serverTripId, records: batch.map((change) => change.record) }));
+      ({ rejectedSeq } = await convex.mutation(api.groups.pushRecords, { groupId: serverGroupId, records: batch.map((change) => change.record) }));
     } catch (err) {
       logger.warn("group-sync", "push failed", err, { records: batch.length });
       return false;
@@ -435,7 +434,7 @@ async function pushTrip(owner: string, local: MoneyGroup): Promise<boolean> {
       for (const change of batch) ledger.entries[change.key] = { hash: "", updatedAt: 0 };
       rerun = true;
     }
-    writeLedger(owner, info.tripId, ledger);
+    writeLedger(owner, info.groupId, ledger);
   }
   return detailsOk;
 }
@@ -456,11 +455,11 @@ function syncNow(): Promise<boolean> {
       rerun = false;
       ok = true;
       for (const server of latest ?? []) {
-        const local = allGroups().find((trip) => trip.shared?.tripId === server.tripId);
+        const local = allGroups().find((trip) => trip.shared?.groupId === server.groupId);
         if (!local?.shared?.myMemberId) continue;
-        if (server.seq > readLedger(owner, server.tripId).seenSeq) ok = (await pullTrip(owner, server, local)) && ok;
+        if (server.seq > readLedger(owner, server.groupId).seenSeq) ok = (await pullGroup(owner, server, local)) && ok;
         const fresh = allGroups().find((trip) => trip.id === local.id);
-        if (fresh?.shared) ok = (await pushTrip(owner, fresh)) && ok;
+        if (fresh?.shared) ok = (await pushGroup(owner, fresh)) && ok;
       }
     } while (rerun && uid === owner);
     return ok;
@@ -484,18 +483,18 @@ export function startGroupSync(userId: string) {
   if (uid === userId) return;
   stopGroupSync();
   uid = userId;
-  const watch = convex.watchQuery(api.groupTrips.myTrips, {});
+  const watch = convex.watchQuery(api.groups.myGroups, {});
   const onList = () => {
-    let list: ServerTrip[] | undefined;
+    let list: ServerGroup[] | undefined;
     try {
-      list = (watch.localQueryResult() as ServerTrip[] | null | undefined) ?? undefined;
+      list = (watch.localQueryResult() as ServerGroup[] | null | undefined) ?? undefined;
     } catch (err) {
       logger.warn("group-sync", "trip list failed", err);
       return;
     }
     if (!list || uid !== userId) return;
     latest = list;
-    applyTripList(userId, list);
+    applyGroupList(userId, list);
     void syncNow();
   };
   watchUnsubscribe = watch.onUpdate(onList);
@@ -534,22 +533,22 @@ export async function flushGroupSync(): Promise<boolean> {
 /** Removes every shared trip from this phone (sign-out); they live on the server. */
 export function clearSharedLocalData(owner: string | null) {
   for (const trip of allGroups()) {
-    if (trip.shared) dropLocalTrip(trip.id, trip.shared.tripId, owner ?? "", true);
+    if (trip.shared) dropLocalGroup(trip.id, trip.shared.groupId, owner ?? "", true);
   }
   clearGroupLedgers();
   awaitingList.clear();
 }
 
 /**
- * Shares a trip: creates it on the server, then re-keys it locally to the shared id so every phone
- * (including the owner's others) agrees on the trip id its expenses point to.
+ * Shares a trip or group: creates it on the server, then re-keys it locally to the shared id so every
+ * phone (including the owner's others) agrees on the id its expenses point to.
  */
-export async function shareTrip(trip: MoneyGroup, ownerName: string): Promise<string> {
+export async function shareGroup(trip: MoneyGroup, ownerName: string): Promise<string> {
   sharingInFlight += 1;
-  let tripId: Id<"sharedTrips">;
+  let serverId: Id<"sharedGroups">;
   try {
-    ({ tripId } = await convex.mutation(api.groupTrips.shareTrip, {
-      data: tripDetails(trip),
+    ({ groupId: serverId } = await convex.mutation(api.groups.shareGroup, {
+      data: groupDetails(trip),
       dataUpdatedAt: Date.now(),
       ownerName,
       companions: trip.companions,
@@ -557,13 +556,13 @@ export async function shareTrip(trip: MoneyGroup, ownerName: string): Promise<st
   } finally {
     sharingInFlight -= 1;
   }
-  const newId = localTripId(tripId);
+  const newId = localGroupId(serverId);
   const owner = uid;
-  awaitingList.add(tripId);
-  if (owner) writeLedger(owner, tripId, { ...EMPTY_LEDGER, entries: {}, detailsHash: hashOf(tripDetails(trip)), detailsUpdatedAt: Date.now() });
+  awaitingList.add(serverId);
+  if (owner) writeLedger(owner, serverId, { ...EMPTY_LEDGER, entries: {}, detailsHash: hashOf(groupDetails(trip)), detailsUpdatedAt: Date.now() });
 
   const wasActive = useTripsStore.getState().activeTripId === trip.id;
-  const shared: SharedTripInfo = { tripId, myMemberId: "", role: "owner", inviteCode: "", archived: false, muted: false, members: [] };
+  const shared: SharedGroupInfo = { groupId: serverId, myMemberId: "", role: "owner", inviteCode: "", archived: false, muted: false, members: [] };
   setMoneyGroups(
     allGroups().map((item) => {
       if (item.id !== trip.id) return item;
@@ -571,12 +570,14 @@ export async function shareTrip(trip: MoneyGroup, ownerName: string): Promise<st
     }),
   );
   if (wasActive) useTripsStore.setState({ activeTripId: newId });
-  const retag = <T extends { tripId: string | null }>(items: T[]) => items.map((item) => (item.tripId === trip.id ? { ...item, tripId: newId } : item));
+  const retag = <T extends { groupId: string | null }>(items: T[]) => items.map((item) => (item.groupId === trip.id ? { ...item, groupId: newId } : item));
   const money = useExpensesStore.getState();
   useExpensesStore.setState({ expenses: retag(money.expenses), settlements: retag(money.settlements) });
-  useEventsStore.setState({ events: retag(useEventsStore.getState().events) });
+  useEventsStore.setState({
+    events: useEventsStore.getState().events.map((item) => (item.tripId === trip.id ? { ...item, tripId: newId } : item)),
+  });
   if (owner && latest) {
-    applyTripList(owner, latest);
+    applyGroupList(owner, latest);
     void syncNow();
   }
   return newId;
@@ -587,12 +588,12 @@ export function isSettledUp(trip: Pick<GroupBase, "id">): boolean {
   const totals = new Map<string, number>();
   const add = (currency: string, value: number) => totals.set(currency, (totals.get(currency) ?? 0) + value);
   for (const expense of useExpensesStore.getState().expenses) {
-    if (expense.tripId !== trip.id || !expense.shares?.length) continue;
+    if (expense.groupId !== trip.id || !expense.shares?.length) continue;
     if ((expense.paidBy ?? SELF_ID) === SELF_ID) add(expense.currency, expense.amount);
     for (const share of expense.shares) if (share.person === SELF_ID) add(expense.currency, -share.amount);
   }
   for (const settlement of useExpensesStore.getState().settlements) {
-    if (settlement.tripId !== trip.id) continue;
+    if (settlement.groupId !== trip.id) continue;
     if (settlement.from === SELF_ID) add(settlement.currency, settlement.amount);
     if (settlement.to === SELF_ID) add(settlement.currency, -settlement.amount);
   }
