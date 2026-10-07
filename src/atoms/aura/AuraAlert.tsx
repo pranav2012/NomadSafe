@@ -173,12 +173,12 @@ function ToastOverlay({ toast }: { toast: Toast | null }) {
           exiting={FadeOutUp.duration(180)}
           accessibilityLiveRegion="polite"
           pointerEvents={toast.action ? "auto" : "none"}
-          style={[styles.toast, { backgroundColor: c.card, borderColor: c.hairline }]}
+          style={[styles.toast, toast.action && styles.toastWide, { backgroundColor: c.card, borderColor: c.hairline }]}
         >
           <View style={styles.toastIcon}>
             <Icon name="check" size={14} color="#FFFFFF" strokeWidth={2.6} />
           </View>
-          <View style={styles.toastText}>
+          <View style={[styles.toastText, toast.action && styles.flex]}>
             <Text numberOfLines={2} style={[styles.toastTitle, { color: c.text, fontFamily: f.semibold }]}>
               {toast.title}
             </Text>
@@ -252,7 +252,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "#22C7B8",
   },
+  // With a button the text would otherwise push the toast past the screen edges.
+  toastWide: { alignSelf: "stretch", paddingRight: 10 },
   toastText: { flexShrink: 1 },
+  flex: { flex: 1 },
   toastTitle: { fontSize: 14.5 },
   toastMessage: { fontSize: 13, lineHeight: 18, marginTop: 1 },
 });

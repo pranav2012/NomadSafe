@@ -205,3 +205,66 @@ export function nearestCityCountry(latitude: number, longitude: number): string 
 export function countryDisplayName(code: string, locale: string): string {
   return countryNamer(locale)(code);
 }
+
+export interface PlaceInText {
+  /** As destination search labels it: "Kyoto, Japan", "Bali, Indonesia" or "Japan". */
+  label: string;
+  kind: "place" | "city" | "country";
+  /** ISO country code. */
+  country: string;
+  /** Cities and popular places only; a country is too broad to pin. */
+  coordinates?: LatLng;
+}
+
+const MAX_PLACE_WORDS = 4;
+const MIN_PLACE_KEY = 3;
+const KIND_RANK: Record<PlaceInText["kind"], number> = { place: 0, city: 1, country: 2 };
+
+let placeKeys: { locale: string; byKey: Map<string, PlaceInText> } | null = null;
+
+function getPlaceKeys(locale: string): Map<string, PlaceInText> {
+  if (placeKeys?.locale === locale) return placeKeys.byKey;
+  const nameOf = countryNamer(locale);
+  const byKey = new Map<string, PlaceInText>();
+  // Rows are ordered popular places first, then by population, so the first city with a name wins.
+  for (const city of getCities()) {
+    const countryName = nameOf(city.country);
+    const label = foldSearchText(countryName) === city.keys[0] ? city.name : `${city.name}, ${countryName}`;
+    const place: PlaceInText = { label, kind: city.popular ? "place" : "city", country: city.country, coordinates: city.coordinates };
+    for (const key of city.keys) if (key.length >= MIN_PLACE_KEY && !byKey.has(key)) byKey.set(key, place);
+  }
+  for (const [code, english] of getEnglishCountryNames()) {
+    const place: PlaceInText = { label: nameOf(code), kind: "country", country: code };
+    for (const key of [foldSearchText(english), foldSearchText(nameOf(code))]) if (!byKey.has(key)) byKey.set(key, place);
+  }
+  placeKeys = { locale, byKey };
+  return byKey;
+}
+
+/**
+ * The most specific known place named in free text (a reel caption, a page title), or null:
+ * popular places beat cities, cities beat countries, longer names beat shorter ones. Single-word
+ * names must be capitalized or a hashtag, so everyday words ("nice", "split") don't count.
+ */
+export function findPlaceInText(text: string, locale = "en"): PlaceInText | null {
+  const byKey = getPlaceKeys(locale);
+  const words = [...text.matchAll(/#?[\p{L}\p{M}'’.-]+/gu)].map((match) => match[0]);
+  let best: { place: PlaceInText; length: number } | null = null;
+  for (let start = 0; start < words.length; start += 1) {
+    for (let size = Math.min(MAX_PLACE_WORDS, words.length - start); size >= 1; size -= 1) {
+      const raw = words.slice(start, start + size).join(" ");
+      const tagged = raw.startsWith("#");
+      const first = raw.replace(/^#/, "");
+      if (size === 1 && !tagged && /^\p{Ll}/u.test(first)) continue;
+      const place = byKey.get(foldSearchText(first.replace(/[.'’]+$/, "")));
+      if (!place) continue;
+      const better =
+        !best ||
+        KIND_RANK[place.kind] < KIND_RANK[best.place.kind] ||
+        (KIND_RANK[place.kind] === KIND_RANK[best.place.kind] && size > best.length);
+      if (better) best = { place, length: size };
+      break;
+    }
+  }
+  return best?.place ?? null;
+}

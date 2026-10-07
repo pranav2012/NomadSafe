@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { GlassTabBar, type GlassTabItem, TAB_BAR_GAP, TAB_BAR_HEIGHT, useKeyboardVisible } from "@/atoms";
 import { AURA_FONT_FILES, auraDark, auraLight } from "@/constants/aura";
 import { usePendingJoinStore } from "@/features/trips/store/pendingJoinStore";
+import { useIncomingShareStore } from "@/features/itinerary/store/incomingShareStore";
 import { useTripGmailSync } from "@/features/expenses/hooks/useTripGmailSync";
 import { useLandingTab } from "@/features/home/hooks/useLandingTab";
 import { useRecurringRunner } from "@/features/expenses/hooks/useRecurringRunner";
@@ -24,6 +25,7 @@ const TABS = [
 
 export default function TabsLayout() {
   usePendingInvite();
+  usePendingShare();
   useTripGmailSync();
   useLandingTab();
   useRecurringRunner();
@@ -40,6 +42,15 @@ function usePendingInvite() {
     usePendingJoinStore.getState().setCode(null);
     router.push({ pathname: "/join/[code]", params: deferred ? { code, deferred: "1" } : { code } });
   }, [code, router]);
+}
+
+/** Opens "Save idea" for a link shared from another app once the user is in the app. */
+function usePendingShare() {
+  const router = useRouter();
+  const text = useIncomingShareStore((s) => s.text);
+  useEffect(() => {
+    if (text) router.push("/save-link");
+  }, [text, router]);
 }
 
 /** The system UITabBar (Liquid Glass on iOS 26), minimizing while scrolling down. */

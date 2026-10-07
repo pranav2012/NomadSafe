@@ -5,7 +5,10 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": ["nomadsafe", "com.pranav.nomadsafe"],
+    "scheme": [
+      "nomadsafe",
+      "com.pranav.nomadsafe"
+    ],
     "userInterfaceStyle": "automatic",
     "runtimeVersion": {
       "policy": "fingerprint"
@@ -290,7 +293,8 @@
           "cameraPermission": false
         }
       ],
-      "@config-plugins/react-native-pdf"
+      "@config-plugins/react-native-pdf",
+      ["expo-share-intent", { "disableIOS": true, "androidIntentFilters": ["text/*"] }]
     ],
     "experiments": {
       "typedRoutes": true,

@@ -1,4 +1,6 @@
 import { secureStorage } from "@/features/auth/services/secureStorage";
+import { deleteAllIdeaThumbs } from "@/features/itinerary/services/ideaThumbs";
+import { useIncomingShareStore } from "@/features/itinerary/store/incomingShareStore";
 import { pinAttempts } from "@/features/auth/services/pinAttempts";
 import { useAuthStore } from "@/features/auth/store/authStore";
 import { aiRuntime, aiService, clearAiUsageLog, clearByokConfig, clearCloudExhaustion, resetAiPreference } from "@/modules/ai";
@@ -58,6 +60,7 @@ export async function wipeAllDeviceData({ keepModels = false }: { keepModels?: b
   useRecurringStore.getState().reset();
   useEventsStore.getState().reset();
   useMustDoStore.getState().reset();
+  useIncomingShareStore.getState().clear();
   useTravelInfoStore.getState().reset();
   useSafetyStore.getState().reset();
   useSharingStore.getState().reset();
@@ -79,6 +82,7 @@ export async function wipeAllDeviceData({ keepModels = false }: { keepModels?: b
   await attempt(() => syncRecapNotifications([], {}));
   await attempt(deleteAllTripPhotos);
   await attempt(deleteAllTickets);
+  await attempt(deleteAllIdeaThumbs);
 
   storage.clearAll();
   // Rewrites the widgets (and the iOS App Group copy of trip names) from the now-empty trip store.

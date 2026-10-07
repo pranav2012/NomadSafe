@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image } from "expo-image";
 import Animated, { FadeIn, FadeOut, LinearTransition } from "react-native-reanimated";
 import { AuraButton, AuraChip, AuraSheet, Icon, PressableScale, useAura } from "@/atoms";
 import { auraEventColors } from "@/constants/aura";
@@ -9,6 +10,9 @@ import { SELF_ID } from "@/features/expenses/utils/split";
 import { getEventTypeMeta } from "@/features/itinerary/constants/eventTypes";
 import { MustDoRow } from "@/features/itinerary/components/MustDoRow";
 import { useSaveMustDo } from "@/features/itinerary/hooks/useSaveMustDo";
+import { useOpenIdea } from "@/features/itinerary/hooks/useOpenIdea";
+import { pruneIdeaThumbs } from "@/features/itinerary/services/ideaThumbs";
+import { useIdeaThumbsStore } from "@/features/itinerary/store/ideaThumbsStore";
 import { useEventsStore, type TripEvent } from "@/features/itinerary/store/eventsStore";
 import { useMustDoStore } from "@/features/itinerary/store/mustDoStore";
 import { useSavedSheetStore } from "@/features/itinerary/store/savedSheetStore";
@@ -24,6 +28,16 @@ interface Stop {
   name: string;
   latitude: number;
   longitude: number;
+}
+
+const PROVIDER_NAME = { instagram: "Instagram", tiktok: "TikTok", youtube: "YouTube" } as const;
+
+function hostOf(url: string) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
 }
 
 type PlaceFilter = "all" | number | "none";
@@ -70,6 +84,12 @@ function SheetBody({ trip, stops }: { trip: Trip | PlannedTrip; stops: Stop[] })
   const dismissed = useMustDoStore((state) => state.dismissed[trip.id]);
   const dismiss = useMustDoStore((state) => state.dismiss);
   const saveMustDo = useSaveMustDo();
+  const openIdea = useOpenIdea();
+  const thumbs = useIdeaThumbsStore((state) => state.thumbs);
+
+  useEffect(() => {
+    void pruneIdeaThumbs();
+  }, []);
   const [filter, setFilter] = useState<PlaceFilter>("all");
   const [acting, setActing] = useState<TripEvent | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -184,21 +204,51 @@ function SheetBody({ trip, stops }: { trip: Trip | PlannedTrip; stops: Stop[] })
                   <Animated.View key={idea.id} layout={LinearTransition.duration(220)} exiting={FadeOut.duration(160)} style={styles.cell}>
                     <PressableScale
                       onPress={() => {
+                        if (openIdea(idea)) return;
+                        setNotice(null);
+                        setActing(idea);
+                      }}
+                      onLongPress={() => {
                         setNotice(null);
                         setActing(idea);
                       }}
                       pressedScale={0.97}
                       accessibilityRole="button"
-                      accessibilityHint={t("ideas.cardHint")}
+                      accessibilityHint={idea.link ? t("ideas.cardHintLink") : t("ideas.cardHint")}
                       style={[styles.card, { borderColor: c.textMuted }]}
                     >
-                      <View style={[styles.tile, { backgroundColor: `${auraEventColors[idea.type]}22` }]}>
-                        <Icon name={getEventTypeMeta(idea.type).icon} size={22} color={auraEventColors[idea.type]} />
-                      </View>
+                      {idea.link ? (
+                        <View style={[styles.media, { backgroundColor: c.surfaceStrong }]}>
+                          {thumbs[idea.id] || idea.link.thumbnail ? (
+                            <Image source={{ uri: thumbs[idea.id] ?? idea.link.thumbnail }} style={StyleSheet.absoluteFill} contentFit="cover" />
+                          ) : (
+                            <Icon name={idea.link.provider === "web" ? "globe" : "play"} size={26} color={c.textSoft} />
+                          )}
+                          <View style={styles.badge}>
+                            <Text numberOfLines={1} style={[styles.badgeText, { fontFamily: f.semibold }]}>
+                              {idea.link.provider === "web" ? hostOf(idea.link.url) : PROVIDER_NAME[idea.link.provider]}
+                            </Text>
+                          </View>
+                          {idea.link.provider !== "web" ? (
+                            <View style={styles.play}>
+                              <Icon name="play" size={12} color="#FFFFFF" />
+                            </View>
+                          ) : null}
+                        </View>
+                      ) : (
+                        <View style={[styles.tile, { backgroundColor: `${auraEventColors[idea.type]}22` }]}>
+                          <Icon name={getEventTypeMeta(idea.type).icon} size={22} color={auraEventColors[idea.type]} />
+                        </View>
+                      )}
                       <View style={styles.cardText}>
                         <Text numberOfLines={2} style={[styles.cardTitle, { color: c.text, fontFamily: f.semibold }]}>
                           {localizeEventTitle(idea.title, t)}
                         </Text>
+                        {idea.note ? (
+                          <Text numberOfLines={2} style={[styles.cardMeta, { color: c.textSoft, fontFamily: f.regular }]}>
+                            “{idea.note}”
+                          </Text>
+                        ) : null}
                         {meta ? (
                           <Text numberOfLines={1} style={[styles.cardMeta, { color: c.textMuted, fontFamily: f.regular }]}>
                             {meta}
@@ -256,6 +306,10 @@ const styles = StyleSheet.create({
   cell: { width: "50%", padding: 5 },
   card: { borderRadius: 16, borderWidth: 1.2, borderStyle: "dashed", overflow: "hidden" },
   tile: { height: 72, alignItems: "center", justifyContent: "center" },
+  media: { height: 132, alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  badge: { position: "absolute", top: 6, left: 6, maxWidth: "80%", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8, backgroundColor: "rgba(0,0,0,0.55)" },
+  badgeText: { color: "#FFFFFF", fontSize: 10 },
+  play: { position: "absolute", right: 6, bottom: 6, width: 22, height: 22, borderRadius: 11, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.55)" },
   cardText: { padding: 10, gap: 3 },
   cardTitle: { fontSize: 14, lineHeight: 18 },
   cardMeta: { fontSize: 12 },

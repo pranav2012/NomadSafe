@@ -2083,7 +2083,11 @@
     "seeAll_other": "عرض كل الأفكار المحفوظة ({{count}})",
     "savedBy": "حفظها {{name}}",
     "savedByYou": "حفظتها أنت",
-    "popularHere": "شائع هنا"
+    "popularHere": "شائع هنا",
+    "cardHintLink": "يُشغَّل هنا؛ اضغط مطولًا لتخطيطه في يوم أو إزالته",
+    "openIn": "فتح في {{app}}",
+    "cantPlay": "لا يمكن تشغيل هذا داخل NomadSafe.",
+    "openLink": "فتح الرابط"
   },
   "planned": {
     "anyTime": "في أي وقت",
@@ -2126,5 +2130,21 @@
     "discardForEveryone": "ستُحذف لدى كل المشاركين.",
     "withPeople": "مع {{names}}",
     "shareIntro": "أنشئ رابط دعوة لهذه الرحلة قيد التخطيط. يمكن لمن يفتحه الانضمام وحفظ الأفكار معك. تأتي النفقات والحجوزات بعد تأكيدها بتواريخ."
+  },
+  "saveLink": {
+    "title": "حفظ الفكرة",
+    "loading": "جارٍ جلب المعاينة…",
+    "noLink": "نص مُشارك",
+    "noteLabel": "ملاحظة",
+    "notePlaceholder": "اختياري: ما الذي لفت انتباهك",
+    "saveTo": "حفظ في",
+    "detected": "يبدو أنه عن {{place}}",
+    "currentTrip": "الرحلة الحالية",
+    "newPlanned": "رحلة جديدة قيد التخطيط",
+    "newPlannedAt": "رحلة جديدة قيد التخطيط · {{place}}",
+    "newPlannedDetail": "الأفكار الآن، والتواريخ لاحقًا",
+    "whereIsThis": "أين هذا؟",
+    "save": "حفظ الفكرة",
+    "alreadySaved": "موجودة بالفعل في أفكار {{trip}}"
   }
 }

@@ -14,6 +14,14 @@ export interface EventPlace {
   longitude: number;
 }
 
+/** A reel, video or page saved as an idea. `thumbnail` is a remote preview image when one was found. */
+export interface EventLink {
+  url: string;
+  provider: "instagram" | "tiktok" | "youtube" | "web";
+  author?: string;
+  thumbnail?: string;
+}
+
 export interface TripEvent {
   id: string;
   tripId: string | null;
@@ -45,6 +53,7 @@ export interface TripEvent {
   /** Saved ideas: who saved it (SELF_ID or a companion name; a member id on the server). */
   savedBy?: string;
   place?: EventPlace;
+  link?: EventLink;
   /** Set when the user edits the event, so Gmail re-imports leave it alone. */
   editedAt?: string;
   createdAt: string;
@@ -68,6 +77,7 @@ export interface CreateEventInput {
   bookingRef?: string;
   savedBy?: string;
   place?: EventPlace;
+  link?: EventLink;
 }
 
 export interface EmailEventInput extends CreateEventInput {

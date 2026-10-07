@@ -1,4 +1,6 @@
 import { AppState, type NativeEventSubscription } from "react-native";
+import { deleteAllIdeaThumbs } from "@/features/itinerary/services/ideaThumbs";
+import { useIncomingShareStore } from "@/features/itinerary/store/incomingShareStore";
 import { api, convex } from "@/modules/backend";
 import { useExpensesStore, withGroupId, type Expense, type Settlement } from "@/features/expenses/store/expensesStore";
 import { useEventsStore, type TripEvent } from "@/features/itinerary/store/eventsStore";
@@ -302,8 +304,10 @@ export function clearSyncedLocalData() {
   useEventsStore.getState().reset();
   usePassportStore.getState().reset();
   useRecurringStore.getState().reset();
+  useIncomingShareStore.getState().clear();
   void deleteAllTripPhotos();
   void deleteAllTickets();
+  void deleteAllIdeaThumbs();
   useTravelInfoStore.getState().reset();
   if (owner) storage.remove(ledgerKey(owner));
   storage.remove(OWNER_KEY);

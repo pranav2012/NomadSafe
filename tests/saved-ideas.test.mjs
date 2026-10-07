@@ -42,3 +42,27 @@ test("an idea belongs to the nearest stop within range", () => {
   assert.equal(ideas.stopIndexOf(idea("Hiroshima", { latitude: 34.39, longitude: 132.46 }), stops), null);
   assert.equal(ideas.stopIndexOf(idea("No place"), stops), null);
 });
+
+const targets = loadModule("src/features/itinerary/utils/saveTargets.ts");
+const trip = (id, name, destinations, coordinates, startDate) => ({ id, name, kind: "trip", destinations, coordinates, startDate });
+const planned = (id, name, destinations, coordinates) => ({ id, name, kind: "planned", destinations, coordinates });
+
+test("a shared link goes to the trip already headed there", () => {
+  const list = [trip("t1", "Tokyo", ["Tokyo, Japan"], [TOKYO], "2026-10-18"), planned("p1", "Bali someday", ["Bali, Indonesia"], [{ latitude: -8.41, longitude: 115.19 }])];
+  const bali = { label: "Bali, Indonesia", kind: "place", coordinates: { latitude: -8.4, longitude: 115.2 } };
+  const out = targets.saveTargets(list, "t1", bali);
+  assert.deepEqual(out.choice, { kind: "existing", id: "p1" });
+  assert.equal(out.ordered[0].id, "p1");
+});
+
+test("a new place suggests a new planned trip; nothing detected falls back to the active trip", () => {
+  const list = [trip("t1", "Tokyo", ["Tokyo, Japan"], [TOKYO], "2026-10-18")];
+  assert.deepEqual(targets.saveTargets(list, "t1", { label: "Lisbon, Portugal", kind: "city", coordinates: { latitude: 38.72, longitude: -9.14 } }).choice, { kind: "new" });
+  assert.deepEqual(targets.saveTargets(list, "t1", null).choice, { kind: "existing", id: "t1" });
+  assert.equal(targets.saveTargets([], null, null).choice, null);
+});
+
+test("a country matches a trip to one of its cities", () => {
+  const list = [trip("t1", "Tokyo", ["Tokyo, Japan"], [TOKYO], "2026-10-18")];
+  assert.deepEqual(targets.saveTargets(list, null, { label: "Japan", kind: "country" }).choice, { kind: "existing", id: "t1" });
+});

@@ -109,6 +109,7 @@ npx eas-cli submit -p android --profile production --path <aab or latest>
 | Account deletion | In-app: Settings → Delete account. Web: the account deletion URL. |
 
 ### Data safety answers
+- Saved links: previews (YouTube/TikTok oEmbed, page titles) and in-app playback load straight from those sites at the user's request. Like opening a link in a browser, this isn't collected or shared by NomadSafe, so it isn't a data type in the form, but the privacy policy lists it under "Services that receive limited data".
 - Collects or shares data: **Yes**. Encrypted in transit: **Yes**. Users can request deletion: **Yes**.
 
 | Data type | Collected | Shared | Processed ephemerally | Required? | Purposes |
@@ -119,7 +120,7 @@ npx eas-cli submit -p android --profile production --path <aab or latest>
 | Contacts | Yes (name + email of people invited to sharing) | No | No | Optional | App functionality |
 | Messages → Emails | No (email text is read on the device and never uploaded; expenses and bookings created from emails are covered by the trip backup rows) | No | n/a | n/a | n/a |
 | Financial info → Other financial info (trip budgets, expenses, splits and settlements in the trip backup and shared trips) | Yes | No (shown to a shared trip's members only when the user adds them there) | No | Optional (Settings → Back up to my account) | App functionality |
-| App activity → Other user-generated content (trips, destinations, itinerary, companion names) | Yes | No (same as above) | No | Optional (Settings → Back up to my account) | App functionality |
+| App activity → Other user-generated content (trips, planned trips, destinations, itinerary, saved ideas with their links and notes, companion names) | Yes | No (same as above) | No | Optional (Settings → Back up to my account) | App functionality |
 | Device or other IDs (push notification token) | Yes | No | No | Optional (notifications) | App functionality |
 | App info and performance → Crash logs, Diagnostics | Yes, if PostHog is enabled | No | No | Optional (Settings → Share usage analytics) | Analytics |
 | App activity → App interactions, Other user-generated content (masked session recordings) | Yes, if PostHog is enabled | No | No | Optional (Settings → Share usage analytics) | Analytics |

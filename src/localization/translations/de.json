@@ -2083,7 +2083,11 @@
     "seeAll_other": "Alle {{count}} gespeicherten Ideen ansehen",
     "savedBy": "Gespeichert von {{name}}",
     "savedByYou": "Von dir gespeichert",
-    "popularHere": "Beliebt hier"
+    "popularHere": "Beliebt hier",
+    "cardHintLink": "Spielt es hier ab; lange drücken, um es einzuplanen oder zu entfernen",
+    "openIn": "In {{app}} öffnen",
+    "cantPlay": "Das lässt sich nicht in NomadSafe abspielen.",
+    "openLink": "Link öffnen"
   },
   "planned": {
     "anyTime": "Jederzeit",
@@ -2126,5 +2130,21 @@
     "discardForEveryone": "Sie wird für alle Beteiligten entfernt.",
     "withPeople": "mit {{names}}",
     "shareIntro": "Erstelle einen Einladungslink für diese geplante Reise. Wer ihn öffnet, kann beitreten und mit dir Ideen sammeln. Ausgaben und Buchungen kommen, sobald du sie mit Daten bestätigst."
+  },
+  "saveLink": {
+    "title": "Idee speichern",
+    "loading": "Vorschau wird geladen…",
+    "noLink": "Geteilter Text",
+    "noteLabel": "Notiz",
+    "notePlaceholder": "Optional: was dir aufgefallen ist",
+    "saveTo": "Speichern in",
+    "detected": "Scheint um {{place}} zu gehen",
+    "currentTrip": "Aktuelle Reise",
+    "newPlanned": "Neue geplante Reise",
+    "newPlannedAt": "Neue geplante Reise · {{place}}",
+    "newPlannedDetail": "Jetzt Ideen, Daten später",
+    "whereIsThis": "Wo ist das?",
+    "save": "Idee speichern",
+    "alreadySaved": "Schon in den Ideen für {{trip}}"
   }
 }

@@ -56,6 +56,8 @@ export interface AnalyticsEvents {
   trip_limit_reached: undefined;
   group_limit_reached: undefined;
   planned_trip_limit_reached: undefined;
+  idea_played: { provider: "instagram" | "tiktok" | "youtube" | "web" };
+  link_saved: { provider: "instagram" | "tiktok" | "youtube" | "web" | "text"; detected: boolean; target: "trip" | "planned" | "new_planned"; duplicate: boolean };
   paywall_viewed: { reason: "trips" | "groups" | "planned" | "plus" | "ai" | "settings" };
   purchase_completed: { tier: PaidTier; period: BillingPeriod; trial: boolean };
   purchases_restored: { tier: "free" | PaidTier };

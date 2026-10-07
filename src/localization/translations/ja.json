@@ -2083,7 +2083,11 @@
     "seeAll_other": "保存したアイデア{{count}}件をすべて見る",
     "savedBy": "{{name}}が保存",
     "savedByYou": "あなたが保存",
-    "popularHere": "この辺りの人気スポット"
+    "popularHere": "この辺りの人気スポット",
+    "cardHintLink": "ここで再生。長押しで日に予定するか削除",
+    "openIn": "{{app}}で開く",
+    "cantPlay": "NomadSafe内では再生できません。",
+    "openLink": "リンクを開く"
   },
   "planned": {
     "anyTime": "いつでも",
@@ -2126,5 +2130,21 @@
     "discardForEveryone": "参加している全員から削除されます。",
     "withPeople": "{{names}}と",
     "shareIntro": "この計画中の旅行の招待リンクを作成します。開いた人は参加して一緒にアイデアを保存できます。費用や予約は日程を決めて確定してからです。"
+  },
+  "saveLink": {
+    "title": "アイデアを保存",
+    "loading": "プレビューを取得中…",
+    "noLink": "共有されたテキスト",
+    "noteLabel": "メモ",
+    "notePlaceholder": "任意：気になったポイント",
+    "saveTo": "保存先",
+    "detected": "{{place}}のことのようです",
+    "currentTrip": "現在の旅行",
+    "newPlanned": "新しい計画中の旅行",
+    "newPlannedAt": "新しい計画中の旅行 · {{place}}",
+    "newPlannedDetail": "アイデアは今、日程はあとで",
+    "whereIsThis": "どこのこと？",
+    "save": "アイデアを保存",
+    "alreadySaved": "すでに{{trip}}のアイデアにあります"
   }
 }

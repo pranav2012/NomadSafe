@@ -2083,7 +2083,11 @@
     "seeAll_other": "Vedi tutte le {{count}} idee salvate",
     "savedBy": "Salvato da {{name}}",
     "savedByYou": "Salvato da te",
-    "popularHere": "Popolari qui"
+    "popularHere": "Popolari qui",
+    "cardHintLink": "Si riproduce qui; tieni premuto per programmarlo o rimuoverlo",
+    "openIn": "Apri in {{app}}",
+    "cantPlay": "Questo non si può riprodurre in NomadSafe.",
+    "openLink": "Apri link"
   },
   "planned": {
     "anyTime": "Quando vuoi",
@@ -2126,5 +2130,21 @@
     "discardForEveryone": "Viene eliminato per tutti i partecipanti.",
     "withPeople": "con {{names}}",
     "shareIntro": "Crea un link di invito per questo viaggio in programma. Chi lo apre può unirsi e salvare idee con te. Spese e prenotazioni arrivano quando lo confermi con le date."
+  },
+  "saveLink": {
+    "title": "Salva idea",
+    "loading": "Caricamento anteprima…",
+    "noLink": "Testo condiviso",
+    "noteLabel": "Nota",
+    "notePlaceholder": "Facoltativa: cosa ti ha colpito",
+    "saveTo": "Salva in",
+    "detected": "Sembra che parli di {{place}}",
+    "currentTrip": "Viaggio attuale",
+    "newPlanned": "Nuovo viaggio in programma",
+    "newPlannedAt": "Nuovo viaggio in programma · {{place}}",
+    "newPlannedDetail": "Idee ora, date dopo",
+    "whereIsThis": "Dov'è?",
+    "save": "Salva idea",
+    "alreadySaved": "Già nelle idee di {{trip}}"
   }
 }

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { AppState, Modal, Pressable, StyleSheet, Text, View, type AppStateStatus } from "react-native";
+import { AppState, Modal, Platform, Pressable, StyleSheet, Text, View, type AppStateStatus } from "react-native";
 import {
   DarkTheme,
   DefaultTheme,
@@ -32,6 +32,7 @@ import { WidgetSync } from "@/features/widget/WidgetSync";
 import { BillingEffects } from "@/modules/billing";
 import { useRecapEffects } from "@/features/recap";
 import { SavedIdeasSheet } from "@/features/itinerary";
+import { AndroidShareIntake } from "@/features/itinerary/components/AndroidShareIntake";
 import { useBoundaryViewSync } from "@/features/passport";
 import { AdsEffects } from "@/modules/ads";
 import { ThemeProvider } from "@/providers/ThemeProvider";
@@ -319,6 +320,8 @@ function AppStack() {
           <Stack.Screen name="trip-recap/[id]" options={{ presentation: "fullScreenModal", animation: "fade" }} />
           <Stack.Screen name="ticket/[eventId]" options={{ presentation: "fullScreenModal", animation: "fade" }} />
           <Stack.Screen name="receive-ticket" options={{ presentation: "modal" }} />
+          <Stack.Screen name="save-link" options={{ presentation: "modal" }} />
+          <Stack.Screen name="idea/[eventId]" options={{ presentation: "fullScreenModal", animation: "fade" }} />
           <Stack.Screen
             name="voice-expense"
             options={{ presentation: "fullScreenModal", animation: "slide_from_bottom" }}
@@ -326,6 +329,7 @@ function AppStack() {
         </Stack.Protected>
       </Stack>
       {inApp ? <SavedIdeasSheet /> : null}
+      {Platform.OS === "android" ? <AndroidShareIntake /> : null}
     </NavigationThemeProvider>
   );
 }

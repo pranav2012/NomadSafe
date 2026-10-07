@@ -2083,7 +2083,11 @@
     "seeAll_other": "저장한 아이디어 {{count}}개 모두 보기",
     "savedBy": "{{name}}님이 저장",
     "savedByYou": "내가 저장",
-    "popularHere": "이 근처 인기 코스"
+    "popularHere": "이 근처 인기 코스",
+    "cardHintLink": "여기서 재생돼요. 길게 눌러 날짜를 정하거나 삭제하세요",
+    "openIn": "{{app}}에서 열기",
+    "cantPlay": "NomadSafe 안에서는 재생할 수 없어요.",
+    "openLink": "링크 열기"
   },
   "planned": {
     "anyTime": "언제든",
@@ -2126,5 +2130,21 @@
     "discardForEveryone": "참여한 모든 사람에게서 삭제돼요.",
     "withPeople": "{{names}}님과",
     "shareIntro": "이 계획 중인 여행의 초대 링크를 만들어요. 링크를 연 사람은 참여해서 함께 아이디어를 저장할 수 있어요. 지출과 예약은 날짜를 정해 확정한 뒤에 시작돼요."
+  },
+  "saveLink": {
+    "title": "아이디어 저장",
+    "loading": "미리보기를 불러오는 중…",
+    "noLink": "공유된 텍스트",
+    "noteLabel": "메모",
+    "notePlaceholder": "선택: 눈에 띈 점",
+    "saveTo": "저장할 곳",
+    "detected": "{{place}}에 관한 것 같아요",
+    "currentTrip": "현재 여행",
+    "newPlanned": "새 계획 중인 여행",
+    "newPlannedAt": "새 계획 중인 여행 · {{place}}",
+    "newPlannedDetail": "아이디어는 지금, 날짜는 나중에",
+    "whereIsThis": "여기가 어디인가요?",
+    "save": "아이디어 저장",
+    "alreadySaved": "이미 {{trip}} 아이디어에 있어요"
   }
 }

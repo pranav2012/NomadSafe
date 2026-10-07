@@ -2083,7 +2083,11 @@
     "seeAll_other": "查看全部 {{count}} 个已存想法",
     "savedBy": "{{name}} 保存",
     "savedByYou": "你保存的",
-    "popularHere": "附近热门"
+    "popularHere": "附近热门",
+    "cardHintLink": "在这里播放；长按可安排到某天或移除",
+    "openIn": "在 {{app}} 中打开",
+    "cantPlay": "无法在 NomadSafe 内播放。",
+    "openLink": "打开链接"
   },
   "planned": {
     "anyTime": "随时",
@@ -2126,5 +2130,21 @@
     "discardForEveryone": "将为所有参与者删除。",
     "withPeople": "与 {{names}}",
     "shareIntro": "为这个计划中的旅行创建邀请链接。打开链接的人可以加入并和你一起保存想法。确定日期确认旅行后，才会有开销和预订。"
+  },
+  "saveLink": {
+    "title": "保存想法",
+    "loading": "正在获取预览…",
+    "noLink": "分享的文字",
+    "noteLabel": "备注",
+    "notePlaceholder": "可选：哪里吸引了你",
+    "saveTo": "保存到",
+    "detected": "看起来是关于{{place}}的",
+    "currentTrip": "当前旅行",
+    "newPlanned": "新的计划中旅行",
+    "newPlannedAt": "新的计划中旅行 · {{place}}",
+    "newPlannedDetail": "先存想法，日期以后定",
+    "whereIsThis": "这是哪里？",
+    "save": "保存想法",
+    "alreadySaved": "已在{{trip}}的想法中"
   }
 }

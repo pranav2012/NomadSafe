@@ -1,7 +1,10 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Animated, { FadeOut, LinearTransition } from "react-native-reanimated";
-import { AuraButton, AuraSection, Icon, useAura } from "@/atoms";
+import { Image } from "expo-image";
+import { AuraButton, AuraSection, Icon, PressableScale, useAura } from "@/atoms";
+import { useOpenIdea } from "@/features/itinerary/hooks/useOpenIdea";
+import { useIdeaThumbsStore } from "@/features/itinerary/store/ideaThumbsStore";
 import { auraEventColors } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { SELF_ID } from "@/features/expenses/utils/split";
@@ -36,6 +39,8 @@ export function DayIdeas({
 }) {
   const { c, f } = useAura();
   const { t } = useLocalization();
+  const openIdea = useOpenIdea();
+  const thumbs = useIdeaThumbsStore((state) => state.thumbs);
   if (ideas.length === 0 && mustDos.length === 0 && totalIdeas === 0) return null;
   const saver = (idea: TripEvent) => (idea.savedBy === undefined ? null : idea.savedBy === SELF_ID ? t("ideas.savedByYou") : t("ideas.savedBy", { name: idea.savedBy }));
 
@@ -47,8 +52,13 @@ export function DayIdeas({
           <View style={styles.list}>
             {ideas.slice(0, IDEA_ROWS).map((idea) => (
               <Animated.View key={idea.id} layout={LinearTransition.duration(220)} exiting={FadeOut.duration(160)} style={[styles.idea, { borderColor: c.textMuted }]}>
+                <PressableScale onPress={() => openIdea(idea)} disabled={!idea.link} accessibilityRole={idea.link ? "button" : undefined} style={styles.open}>
                 <View style={[styles.tile, { backgroundColor: `${auraEventColors[idea.type]}22` }]}>
-                  <Icon name={getEventTypeMeta(idea.type).icon} size={16} color={auraEventColors[idea.type]} />
+                  {idea.link && (thumbs[idea.id] || idea.link.thumbnail) ? (
+                    <Image source={{ uri: thumbs[idea.id] ?? idea.link.thumbnail }} style={StyleSheet.absoluteFill} contentFit="cover" />
+                  ) : (
+                    <Icon name={idea.link ? "play" : getEventTypeMeta(idea.type).icon} size={16} color={auraEventColors[idea.type]} />
+                  )}
                 </View>
                 <View style={styles.text}>
                   <Text numberOfLines={1} style={[styles.title, { color: c.text, fontFamily: f.semibold }]}>
@@ -60,6 +70,7 @@ export function DayIdeas({
                     </Text>
                   ) : null}
                 </View>
+                </PressableScale>
                 <AuraButton size="md" variant="secondary" label={t("itinerary.day.addToDay")} onPress={() => onAddToDay(idea)} />
               </Animated.View>
             ))}
@@ -89,7 +100,8 @@ const styles = StyleSheet.create({
   section: { marginTop: 24, marginBottom: 12 },
   list: { gap: 10 },
   idea: { flexDirection: "row", alignItems: "center", gap: 10, padding: 10, borderRadius: 16, borderWidth: 1.2, borderStyle: "dashed" },
-  tile: { width: 36, height: 36, borderRadius: 11, alignItems: "center", justifyContent: "center" },
+  open: { flex: 1, flexDirection: "row", alignItems: "center", gap: 10 },
+  tile: { width: 36, height: 36, borderRadius: 11, alignItems: "center", justifyContent: "center", overflow: "hidden" },
   text: { flex: 1, gap: 2 },
   title: { fontSize: 14.5 },
   meta: { fontSize: 12.5 },
