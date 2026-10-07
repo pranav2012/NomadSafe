@@ -105,7 +105,8 @@
       "getHomeSafeDetail": "Lance un minuteur d'arrivée ; ton cercle est prévenu si tu ne confirmes pas",
       "timerRunning": "Confirme avant {{time}}",
       "timerDetail": "Ton minuteur d'arrivée tourne. Touche pour confirmer ou prolonger"
-    }
+    },
+    "spendTopShare": "{{category}} {{pct}} %"
   },
   "settings": {
     "title": "Paramètres",

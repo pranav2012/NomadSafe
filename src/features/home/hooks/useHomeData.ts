@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useAuthStore } from "@/features/auth";
+import { EXPENSE_CATEGORY_IDS, type ExpenseCategory } from "@/features/expenses/constants/categories";
 import { useTripExpenseSummary } from "@/features/expenses/hooks/useTripExpenseSummary";
 import { toLocalDayKey } from "@/features/expenses/utils/dateKey";
 import { formatMoney } from "@/features/expenses/utils/money";
@@ -8,7 +9,7 @@ import { useSharingStore } from "@/features/location-sharing";
 import { getDestinationCoordinates, selectActiveTrip, useTripsStore } from "@/features/trips/store/tripsStore";
 import { addDays, countInclusiveDays, daysLeftInTrip, fromDateKey, getTripStatus, startOfLocalDay } from "@/features/trips/utils/dates";
 import { useLocalization } from "@/localization";
-import type { HomeData, HomeEvent } from "@/features/home/types";
+import type { HomeData, HomeEvent, HomeSpendDay } from "@/features/home/types";
 
 function greetingKeyFor(hour: number) {
   if (hour >= 5 && hour < 12) return "trip.goodMorning";
@@ -52,11 +53,35 @@ export function useHomeData(): HomeData | null {
     status === "upcoming" ? 0 : status === "complete" ? totalDays : Math.min(countInclusiveDays(start, startOfLocalDay(now)), totalDays);
   const dayDates = Array.from({ length: totalDays }, (_, i) => shortDate.format(addDays(start, i)));
 
-  const totalsByDay = new Map(summary.dailyTotals.map((entry) => [entry.date, entry.amount]));
-  const spendDays = Array.from({ length: Math.max(1, day) }, (_, i) => {
-    const amount = totalsByDay.get(toLocalDayKey(addDays(start, i))) ?? 0;
-    return { label: dayDates[i] ?? "", amount, amountLabel: formatMoney(formatCurrency, amount, trip.currency) };
+  const byDay = new Map<string, Map<ExpenseCategory, number>>();
+  for (const { expense, amount } of summary.convertedExpenses) {
+    const key = toLocalDayKey(expense.date);
+    const categories = byDay.get(key) ?? new Map<ExpenseCategory, number>();
+    categories.set(expense.category, (categories.get(expense.category) ?? 0) + amount);
+    byDay.set(key, categories);
+  }
+  const spendDays: HomeSpendDay[] = Array.from({ length: totalDays }, (_, i) => {
+    const categories = byDay.get(toLocalDayKey(addDays(start, i)));
+    const parts = EXPENSE_CATEGORY_IDS.flatMap((category) => {
+      const amount = categories?.get(category) ?? 0;
+      return amount > 0 ? [{ category, amount }] : [];
+    });
+    return { amount: parts.reduce((sum, part) => sum + part.amount, 0), parts, upcoming: i >= day };
   });
+  const tripDaysSpent = spendDays.reduce((sum, entry) => sum + (entry.upcoming ? 0 : entry.amount), 0);
+  const topCategory = summary.categoryTotals[0];
+  const spendSummary =
+    topCategory && summary.total > 0
+      ? [
+          t("home.spendTopShare", {
+            category: t(`expenses.category.${topCategory.category}`),
+            pct: Math.round((topCategory.amount / summary.total) * 100),
+          }),
+          ...(day > 0 && tripDaysSpent > 0
+            ? [t("money.pace.perDay", { amount: formatMoney(formatCurrency, tripDaysSpent / day, trip.currency) })]
+            : []),
+        ].join(" · ")
+      : null;
 
   const events: HomeEvent[] = allEvents
     .filter((event) => event.tripId === trip.id && new Date(event.startAt).getTime() >= now.getTime() - 3_600_000)
@@ -92,6 +117,7 @@ export function useHomeData(): HomeData | null {
     moneyLabel: t("trip.spent"),
     moneyValue: formatMoney(formatCurrency, summary.total, trip.currency),
     spendDays,
+    spendSummary,
     hasSpends: summary.convertedExpenses.length > 0 || summary.unavailableExpenses.length > 0,
     isSharing,
     sharingLabel,

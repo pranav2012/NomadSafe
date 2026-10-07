@@ -24,7 +24,7 @@ export interface AnalyticsEvents {
   planned_trip: { action: "created" | "confirmed" | "discarded"; destinations?: number; had_month?: boolean; ideas?: number; at_trip_limit?: boolean };
   group_created: { people: number };
   ai_context_picked: { kind: "trip" | "group" | "overview" | "general" };
-  home_card_opened: { card: "balance" | "get_home_safe" };
+  home_card_opened: { card: "balance" | "get_home_safe" | "trip_spend" };
   app_landing: { tab: "home" | "money" | "other"; reason: "trip" | "habit" | "link" };
   recurring_added: { count: number };
   recurring_created: { frequency: "weekly" | "monthly" | "yearly" };

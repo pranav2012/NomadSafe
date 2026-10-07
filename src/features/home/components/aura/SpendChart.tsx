@@ -1,147 +1,85 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
-import {
-  BlurMask,
-  Canvas,
-  Circle,
-  Group,
-  Line,
-  LinearGradient,
-  Path,
-  Skia,
-  usePathValue,
-  vec,
-} from "react-native-skia";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import { Easing, useDerivedValue, useSharedValue, withDelay, withSpring, withTiming } from "react-native-reanimated";
-import { scheduleOnRN } from "react-native-worklets";
-import { springs } from "@/atoms";
-import { selectionChanged } from "@/utils/haptics";
+import { Canvas, Group, RoundedRect, Skia, rect, vec } from "react-native-skia";
+import { Easing, useDerivedValue, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
+import { auraCategoryColors } from "@/constants/aura";
+import type { HomeSpendDay } from "@/features/home/types";
 
 interface SpendChartProps {
-  values: number[];
-  accent: string;
+  days: HomeSpendDay[];
+  /** Today's bar is drawn at full strength; null when no day is today. */
+  todayIndex: number | null;
   guide: string;
-  onScrub: (index: number | null) => void;
   height?: number;
 }
 
-const PAD_X = 6;
-const PAD_TOP = 14;
-const PAD_BOTTOM = 6;
+const PAD_TOP = 4;
+const TICK_H = 3;
+const BAR_FILL = 0.62;
+const MAX_BAR_W = 14;
+const SEG_GAP = 1.5;
 
 /**
- * Daily spend as a smooth area chart that wipes in from the left. Dragging snaps a
- * glowing cursor to each day (with a haptic tick) and reports the day under the finger.
+ * Each trip day as a bar stacked by category, with faint ticks for the days ahead.
+ * Display only: the bars rise once on mount and never respond to touch.
  */
-export function SpendChart({ values, accent, guide, onScrub, height = 120 }: SpendChartProps) {
+export function SpendChart({ days, todayIndex, guide, height = 84 }: SpendChartProps) {
   const [width, setWidth] = useState(0);
-  const series = useMemo(() => (values.length > 0 ? values : [0]), [values]);
-  const max = Math.max(1, ...series) * 1.15;
-  const plotH = height - PAD_TOP - PAD_BOTTOM;
-  const stepX = series.length > 1 ? (width - PAD_X * 2) / (series.length - 1) : 0;
-  const points = useMemo(
+  const max = Math.max(1, ...days.map((day) => (day.upcoming ? 0 : day.amount)));
+  const slot = days.length > 0 ? width / days.length : 0;
+  const barW = Math.min(MAX_BAR_W, Math.max(2, slot * BAR_FILL));
+  const radius = Math.min(3, barW / 2);
+  const plotH = height - PAD_TOP;
+
+  // Segments stack bottom-up; each bar is clipped to one rounded rect so only its top is rounded.
+  const bars = useMemo(
     () =>
-      series.map((value, i) => ({
-        x: series.length > 1 ? PAD_X + i * stepX : width / 2,
-        y: PAD_TOP + (1 - value / max) * plotH,
-      })),
-    [max, plotH, series, stepX, width],
+      days.map((day, i) => {
+        const x = i * slot + (slot - barW) / 2;
+        if (day.upcoming || day.amount <= 0) return { x, upcoming: true, clip: null, segments: [] };
+        const barH = Math.max(TICK_H, (day.amount / max) * plotH);
+        let top = height;
+        const segments = day.parts.map((part) => {
+          const h = (part.amount / day.amount) * barH;
+          top -= h;
+          return { key: part.category, y: top, h: Math.max(0, h - SEG_GAP), color: auraCategoryColors[part.category] };
+        });
+        const clip = Skia.RRectXY(rect(x, height - barH, barW, barH + radius), radius, radius);
+        return { x, upcoming: false, clip, segments };
+      }),
+    [barW, days, height, max, plotH, radius, slot],
   );
 
-  // Catmull-Rom through the points, converted to cubic Béziers for a smooth line.
-  const { line, area } = useMemo(() => {
-    const builder = Skia.PathBuilder.Make();
-    points.forEach((p, i) => {
-      if (i === 0) return builder.moveTo(p.x, p.y);
-      const p0 = points[i - 2] ?? points[i - 1];
-      const p1 = points[i - 1];
-      const p3 = points[i + 1] ?? p;
-      builder.cubicTo(
-        p1.x + (p.x - p0.x) / 6,
-        p1.y + (p.y - p0.y) / 6,
-        p.x - (p3.x - p1.x) / 6,
-        p.y - (p3.y - p1.y) / 6,
-        p.x,
-        p.y,
-      );
-    });
-    const linePath = builder.build();
-    const last = points[points.length - 1];
-    builder.lineTo(last.x, height).lineTo(points[0].x, height).close();
-    return { line: linePath, area: builder.detach() };
-  }, [height, points]);
-
   const reveal = useSharedValue(0);
-  const cursorX = useSharedValue(0);
-  const cursorOn = useSharedValue(0);
-  const lastIndex = useSharedValue(-1);
-
   useEffect(() => {
     if (width === 0) return;
     reveal.set(0);
-    reveal.set(withDelay(250, withTiming(1, { duration: 1100, easing: Easing.inOut(Easing.cubic) })));
+    reveal.set(withDelay(250, withTiming(1, { duration: 700, easing: Easing.out(Easing.cubic) })));
   }, [reveal, width]);
-
-  const clip = usePathValue((builder) => {
-    "worklet";
-    const w = width * reveal.get();
-    builder.moveTo(0, 0).lineTo(w, 0).lineTo(w, height).lineTo(0, height).close();
-  });
-  const cursorY = useDerivedValue(() => {
-    if (points.length === 1) return points[0].y;
-    const f = Math.min(points.length - 1, Math.max(0, (cursorX.get() - PAD_X) / Math.max(1, stepX)));
-    const i = Math.floor(f);
-    const next = points[Math.min(points.length - 1, i + 1)];
-    return points[i].y + (next.y - points[i].y) * (f - i);
-  });
-  const cursorTop = useDerivedValue(() => vec(cursorX.get(), PAD_TOP - 6));
-  const cursorBottom = useDerivedValue(() => vec(cursorX.get(), height));
-  const cursorOpacity = useDerivedValue(() => cursorOn.get());
-
-  const pan = Gesture.Pan()
-    .activeOffsetX([-4, 4])
-    .onBegin((event) => {
-      cursorX.set(event.x);
-      cursorOn.set(withTiming(1, { duration: 140 }));
-    })
-    .onChange((event) => {
-      const index =
-        points.length > 1 ? Math.min(points.length - 1, Math.max(0, Math.round((event.x - PAD_X) / stepX))) : 0;
-      if (index !== lastIndex.get()) {
-        lastIndex.set(index);
-        cursorX.set(withSpring(points[index].x, springs.press));
-        scheduleOnRN(selectionChanged);
-        scheduleOnRN(onScrub, index);
-      }
-    })
-    .onFinalize(() => {
-      cursorOn.set(withTiming(0, { duration: 220 }));
-      lastIndex.set(-1);
-      scheduleOnRN(onScrub, null);
-    });
+  const grow = useDerivedValue(() => [{ scaleY: reveal.get() }]);
 
   return (
-    <GestureDetector gesture={pan}>
-      <View style={{ height }} onLayout={(event) => setWidth(event.nativeEvent.layout.width)}>
-        {width > 0 ? (
-          <Canvas style={StyleSheet.absoluteFill}>
-            <Group clip={clip}>
-              <Path path={area}>
-                <LinearGradient start={vec(0, PAD_TOP)} end={vec(0, height)} colors={[`${accent}55`, `${accent}00`]} />
-              </Path>
-              <Path path={line} style="stroke" strokeWidth={2.5} color={accent} strokeCap="round" strokeJoin="round">
-                <BlurMask blur={8} style="solid" />
-              </Path>
-            </Group>
-            <Group opacity={cursorOpacity}>
-              <Line p1={cursorTop} p2={cursorBottom} color={guide} strokeWidth={1} />
-              <Circle cx={cursorX} cy={cursorY} r={10} color={`${accent}40`} />
-              <Circle cx={cursorX} cy={cursorY} r={4.5} color={accent} />
-            </Group>
-          </Canvas>
-        ) : null}
-      </View>
-    </GestureDetector>
+    <View style={{ height }} pointerEvents="none" onLayout={(event) => setWidth(event.nativeEvent.layout.width)}>
+      {width > 0 ? (
+        <Canvas style={StyleSheet.absoluteFill}>
+          {bars.map((bar, i) =>
+            bar.upcoming ? (
+              <RoundedRect key={i} x={bar.x} y={height - TICK_H} width={barW} height={TICK_H} r={TICK_H / 2} color={guide} />
+            ) : null,
+          )}
+          <Group transform={grow} origin={vec(0, height)}>
+            {bars.map((bar, i) =>
+              bar.clip ? (
+                <Group key={i} clip={bar.clip} opacity={todayIndex === null || i === todayIndex ? 1 : 0.7}>
+                  {bar.segments.map((segment) => (
+                    <RoundedRect key={segment.key} x={bar.x} y={segment.y} width={barW} height={segment.h} r={0} color={segment.color} />
+                  ))}
+                </Group>
+              ) : null,
+            )}
+          </Group>
+        </Canvas>
+      ) : null}
+    </View>
   );
 }

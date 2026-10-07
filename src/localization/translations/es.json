@@ -105,7 +105,8 @@
       "getHomeSafeDetail": "Pon un temporizador de llegada; tu círculo se entera si no confirmas",
       "timerRunning": "Confirma antes de las {{time}}",
       "timerDetail": "Tu temporizador de llegada está en marcha. Toca para confirmar o ampliar"
-    }
+    },
+    "spendTopShare": "{{category}} {{pct}} %"
   },
   "settings": {
     "title": "Ajustes",

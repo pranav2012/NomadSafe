@@ -105,7 +105,8 @@
       "getHomeSafeDetail": "Defina um timer de chegada; seu círculo é avisado se você não confirmar",
       "timerRunning": "Confirme até {{time}}",
       "timerDetail": "Seu timer de chegada está ativo. Toque para confirmar ou estender"
-    }
+    },
+    "spendTopShare": "{{category}} {{pct}}%"
   },
   "settings": {
     "title": "Configurações",

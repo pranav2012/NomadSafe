@@ -1,4 +1,5 @@
 import type { IconName } from "@/atoms";
+import type { ExpenseCategory } from "@/features/expenses/constants/categories";
 import type { EventType } from "@/features/itinerary";
 import type { TripStatus } from "@/features/trips/utils/dates";
 
@@ -16,10 +17,11 @@ export interface HomeStop {
   longitude: number;
 }
 
+/** One trip day's spend, split by category in `EXPENSE_CATEGORIES` order; days still ahead are `upcoming`. */
 export interface HomeSpendDay {
-  label: string;
   amount: number;
-  amountLabel: string;
+  parts: { category: ExpenseCategory; amount: number }[];
+  upcoming: boolean;
 }
 
 export interface HomeData {
@@ -41,7 +43,10 @@ export interface HomeData {
   daysLeftLabel: string;
   moneyLabel: string;
   moneyValue: string;
+  /** One entry per trip day, so the chart keeps the trip's length. */
   spendDays: HomeSpendDay[];
+  /** "Food 45% · ₹6,900/day" under the total; null with nothing spent on trip days yet. */
+  spendSummary: string | null;
   /** False until the trip has its first spend; Home shows the setup card instead of the total. */
   hasSpends: boolean;
   isSharing: boolean;

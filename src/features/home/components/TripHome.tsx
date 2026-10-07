@@ -34,6 +34,7 @@ import { useTripForecast } from "@/features/trips/hooks/useTripForecast";
 import { describeWeather } from "@/features/trips/services/weatherService";
 import { WeatherSheet } from "./WeatherSheet";
 import { TripPrepCard } from "./TripPrepCard";
+import { useMoneyViewStore } from "@/features/expenses/store/moneyViewStore";
 import type { Trip } from "@/features/trips/store/tripsStore";
 import { useLocalization } from "@/localization";
 import { ActionButton } from "./aura/ActionButton";
@@ -108,7 +109,6 @@ export function TripHome({
   const forecast = useTripForecast(trip, userLocation);
   const [weatherOpen, setWeatherOpen] = useState(false);
   const [railDay, setRailDay] = useState<number | null>(null);
-  const [spendDay, setSpendDay] = useState<number | null>(null);
   const replayOpen = useRecapStore((state) => state.replayOpen);
   const allEvents = useEventsStore((state) => state.events);
   const tripEvents = allEvents.filter((event) => event.tripId === trip.id);
@@ -191,9 +191,12 @@ export function TripHome({
 
   const upcoming = data.countdown !== null;
   const railCaption = railDay !== null ? data.dayDates[railDay] : upcoming ? data.dayLabel : data.daysLeftLabel;
-  const scrubbedSpend = spendDay !== null ? data.spendDays[spendDay] : null;
-  const nothingSpent = data.spendDays.every((d) => d.amount === 0);
-  const showChart = !nothingSpent;
+  const showChart = data.spendDays.some((d) => !d.upcoming && d.amount > 0);
+  const openTripMoney = () => {
+    useMoneyViewStore.getState().select(trip.id);
+    track("home_card_opened", { card: "trip_spend" });
+    router.navigate("/(tabs)/expenses");
+  };
   const [hero, setHero] = useState<
     | { mode: "globe"; entry: { latitude: number; longitude: number } | null }
     | {
@@ -249,28 +252,33 @@ export function TripHome({
         </View>
       </View>
     ) : (
-      <View style={[styles.moneyCard, { backgroundColor: c.surface, borderColor: c.hairline }]}>
+      <PressableScale
+        onPress={openTripMoney}
+        accessibilityRole="button"
+        accessibilityLabel={`${data.moneyLabel} ${data.moneyValue}`}
+        style={[styles.moneyCard, { backgroundColor: c.surface, borderColor: c.hairline }]}
+      >
         <View style={[styles.cardHighlight, { backgroundColor: c.highlight }]} />
         <View style={styles.moneyText}>
-          <Text style={[styles.moneyLabel, { color: c.textMuted }]}>{scrubbedSpend ? scrubbedSpend.label : data.moneyLabel}</Text>
-          <RollingNumber
-            value={scrubbedSpend ? scrubbedSpend.amountLabel : data.moneyValue}
-            lineHeight={42}
-            style={[styles.moneyValue, { color: c.text }]}
-          />
+          <Text style={[styles.moneyLabel, { color: c.textMuted }]}>{data.moneyLabel}</Text>
+          <RollingNumber value={data.moneyValue} lineHeight={42} style={[styles.moneyValue, { color: c.text }]} />
+          {data.spendSummary ? (
+            <Text style={[styles.moneySummary, { color: c.textSoft }]} numberOfLines={1}>
+              {data.spendSummary}
+            </Text>
+          ) : null}
         </View>
         {showChart ? (
           <View style={styles.chart}>
             <SpendChart
-              values={data.spendDays.map((d) => d.amount)}
-              accent={accent}
-              guide={isDark ? "rgba(255,255,255,0.2)" : "rgba(14,16,24,0.16)"}
-              onScrub={setSpendDay}
+              days={data.spendDays}
+              todayIndex={stage === "active" ? todayIndex : null}
+              guide={isDark ? "rgba(255,255,255,0.18)" : "rgba(14,16,24,0.14)"}
               height={84}
             />
           </View>
         ) : null}
-      </View>
+      </PressableScale>
     );
 
   const quickActions = (
@@ -637,6 +645,7 @@ const styles = StyleSheet.create({
   moneyText: { flexShrink: 1, gap: 2 },
   moneyLabel: { fontFamily: f.medium, fontSize: 13 },
   moneyValue: { fontFamily: f.semibold, fontSize: 36, letterSpacing: -1.2 },
+  moneySummary: { fontFamily: f.medium, fontSize: 12.5 },
   chart: { flex: 1 },
   actions: { flexDirection: "row", marginTop: 26, marginHorizontal: -6 },
   sectionTitle: {

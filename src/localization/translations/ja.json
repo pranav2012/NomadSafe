@@ -105,7 +105,8 @@
       "getHomeSafeDetail": "到着タイマーを設定。チェックインしないとサークルに通知されます",
       "timerRunning": "{{time}}までにチェックイン",
       "timerDetail": "到着タイマー作動中。タップしてチェックインまたは延長"
-    }
+    },
+    "spendTopShare": "{{category}} {{pct}}%"
   },
   "settings": {
     "title": "設定",

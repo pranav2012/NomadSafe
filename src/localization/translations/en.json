@@ -105,7 +105,8 @@
       "getHomeSafeDetail": "Set a safe-arrival timer; your circle hears if you don't check in",
       "timerRunning": "Check in by {{time}}",
       "timerDetail": "Your safe-arrival timer is running. Tap to check in or extend"
-    }
+    },
+    "spendTopShare": "{{category}} {{pct}}%"
   },
   "trip": {
     "createEyebrow": "New trip",

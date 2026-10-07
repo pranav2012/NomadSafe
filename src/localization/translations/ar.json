@@ -105,7 +105,8 @@
       "getHomeSafeDetail": "اضبط مؤقت الوصول الآمن؛ يُبلَّغ مقرّبوك إن لم تسجّل وصولك",
       "timerRunning": "سجّل وصولك قبل {{time}}",
       "timerDetail": "مؤقت الوصول الآمن يعمل. اضغط لتسجيل الوصول أو التمديد"
-    }
+    },
+    "spendTopShare": "{{category}} {{pct}}٪"
   },
   "settings": {
     "title": "الإعدادات",

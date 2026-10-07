@@ -105,7 +105,8 @@
       "getHomeSafeDetail": "안전 도착 타이머를 설정하세요. 체크인하지 않으면 서클에 알려요",
       "timerRunning": "{{time}}까지 체크인",
       "timerDetail": "안전 도착 타이머가 작동 중이에요. 탭해서 체크인하거나 연장하세요"
-    }
+    },
+    "spendTopShare": "{{category}} {{pct}}%"
   },
   "settings": {
     "title": "설정",

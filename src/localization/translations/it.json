@@ -105,7 +105,8 @@
       "getHomeSafeDetail": "Imposta un timer di arrivo; la tua cerchia viene avvisata se non confermi",
       "timerRunning": "Conferma entro le {{time}}",
       "timerDetail": "Il timer di arrivo è attivo. Tocca per confermare o prolungare"
-    }
+    },
+    "spendTopShare": "{{category}} {{pct}}%"
   },
   "settings": {
     "title": "Impostazioni",

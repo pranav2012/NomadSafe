@@ -105,7 +105,8 @@
       "getHomeSafeDetail": "Stell einen Ankunfts-Timer; dein Kreis erfährt es, wenn du dich nicht meldest",
       "timerRunning": "Melde dich bis {{time}}",
       "timerDetail": "Dein Ankunfts-Timer läuft. Tippe, um dich zu melden oder zu verlängern"
-    }
+    },
+    "spendTopShare": "{{category}} {{pct}} %"
   },
   "settings": {
     "title": "Einstellungen",
