@@ -964,8 +964,12 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
   const labelOrder = useMemo(() => stops.map((_, i) => i).sort((a, b) => Number(b === focusIndex) - Number(a === focusIndex)), [focusIndex, stops]);
   const hasBadge = Boolean(stopWeather[0]);
   const stopLayout = useDerivedValue(() => {
-    const pinOn = stops.map(() => 1);
-    const labels = stops.map(() => [0, 0, 0]);
+    const pinOn: number[] = [];
+    const labels: number[][] = [];
+    for (let i = 0; i < stops.length; i++) {
+      pinOn.push(1);
+      labels.push([0, 0, 0]);
+    }
     const v = view.get();
     const points = stops.map((stop) => project(stop.latitude * DEG, stop.longitude * DEG, rotLng.get(), rotLat.get(), v.x, v.y, v.r));
     const kept: number[] = [];
@@ -979,7 +983,6 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
       kept.push(i);
     }
     if (!labelStops) return { pinOn, labels };
-    const overlaps = (a: number[], b: number[]) => a[0] < b[0] + b[2] && a[0] + a[2] > b[0] && a[1] < b[1] + b[3] && a[1] + a[3] > b[1];
     const pinBoxes = kept.map((j) => ({ j, box: [points[j].x - 6, points[j].y - 6, 12, 12] }));
     const placed: number[][] = [];
     const fp = points[focusIndex];
@@ -1010,7 +1013,7 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
       let pick: number[] | null = null;
       for (const side of sides) {
         const box = [pt.x + side[2] - 3, pt.y + side[3] - 2, w + 6, h + 4];
-        if (placed.some((o) => overlaps(box, o)) || pinBoxes.some((o) => o.j !== i && overlaps(box, o.box))) continue;
+        if (placed.some((o) => boxesOverlap(box, o)) || pinBoxes.some((o) => o.j !== i && boxesOverlap(box, o.box))) continue;
         pick = side;
         break;
       }
@@ -1386,6 +1389,11 @@ function WeatherBadge({
 function labelGap(focused: boolean) {
   "worklet";
   return focused ? 13 : 9;
+}
+
+function boxesOverlap(a: number[], b: number[]) {
+  "worklet";
+  return a[0] < b[0] + b[2] && a[0] + a[2] > b[0] && a[1] < b[1] + b[3] && a[1] + a[3] > b[1];
 }
 
 function labelHeight(focused: boolean) {
