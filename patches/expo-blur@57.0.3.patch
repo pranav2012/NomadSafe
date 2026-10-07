@@ -1,0 +1,190 @@
+diff --git a/android/src/main/java/eightbitlab/com/blurview/CroppedBlurController.java b/android/src/main/java/eightbitlab/com/blurview/CroppedBlurController.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..29bf361de7443fc0951c09facd5831baa567f7e5
+--- /dev/null
++++ b/android/src/main/java/eightbitlab/com/blurview/CroppedBlurController.java
+@@ -0,0 +1,160 @@
++package eightbitlab.com.blurview;
++
++import android.graphics.Canvas;
++import android.graphics.RecordingCanvas;
++import android.graphics.RenderEffect;
++import android.graphics.RenderNode;
++import android.graphics.Shader;
++import android.graphics.drawable.Drawable;
++import android.view.ViewTreeObserver;
++
++import androidx.annotation.NonNull;
++import androidx.annotation.Nullable;
++import androidx.annotation.RequiresApi;
++
++/**
++ * NomadSafe patch: the stock RenderNode controller blurs the whole target (the full screen) at full
++ * resolution every frame. This one records only the area behind the BlurView (plus a margin for the
++ * blur's reach) at 1/SCALE size and blurs that, which looks the same and costs a tiny fraction.
++ * Lives in Dimezis' package to reach BlurTarget.renderNode and BlurView.blurController.
++ */
++@RequiresApi(31)
++public class CroppedBlurController implements BlurController {
++    private static final float SCALE = 4f;
++
++    private final BlurView blurView;
++    private final BlurTarget target;
++    private final RenderNode node = new RenderNode("CroppedBlur");
++    private final int[] targetLocation = new int[2];
++    private final int[] viewLocation = new int[2];
++    private int lastLeft = Integer.MIN_VALUE;
++    private int lastTop = Integer.MIN_VALUE;
++    @Nullable private Drawable frameClearDrawable;
++    private int overlayColor;
++    private float blurRadius = DEFAULT_BLUR_RADIUS;
++    private float appliedRadius = -1f;
++    private boolean enabled = true;
++    private boolean autoUpdate = true;
++
++    // Content behind the view updates through the target's RenderNode on its own; only a move of the
++    // view itself (scroll, transforms on a parent) needs a re-record.
++    private final ViewTreeObserver.OnPreDrawListener drawListener;
++
++    public static BlurViewFacade install(@NonNull BlurView view, @NonNull BlurTarget target) {
++        if (view.blurController != null) view.blurController.destroy();
++        CroppedBlurController controller = new CroppedBlurController(view, target);
++        view.blurController = controller;
++        return controller;
++    }
++
++    private CroppedBlurController(BlurView blurView, BlurTarget target) {
++        this.blurView = blurView;
++        this.target = target;
++        drawListener = () -> {
++            if (locate()) blurView.invalidate();
++            return true;
++        };
++        blurView.setWillNotDraw(false);
++        blurView.getViewTreeObserver().addOnPreDrawListener(drawListener);
++    }
++
++    // Returns true when the view's offset within the target changed since the last call.
++    private boolean locate() {
++        target.getLocationOnScreen(targetLocation);
++        blurView.getLocationOnScreen(viewLocation);
++        int left = viewLocation[0] - targetLocation[0];
++        int top = viewLocation[1] - targetLocation[1];
++        boolean moved = left != lastLeft || top != lastTop;
++        lastLeft = left;
++        lastTop = top;
++        return moved;
++    }
++
++    @Override
++    public boolean draw(Canvas canvas) {
++        if (!enabled || !canvas.isHardwareAccelerated()) return true;
++        int width = blurView.getWidth();
++        int height = blurView.getHeight();
++        if (width == 0 || height == 0) return true;
++        locate();
++
++        // The stock controller blurs at full size with radius * DEFAULT_SCALE_FACTOR; keep that reach.
++        float fullRadius = blurRadius * DEFAULT_SCALE_FACTOR;
++        float pad = fullRadius * 2f;
++        int smallWidth = (int) Math.ceil((width + pad * 2f) / SCALE);
++        int smallHeight = (int) Math.ceil((height + pad * 2f) / SCALE);
++        node.setPosition(0, 0, smallWidth, smallHeight);
++        RecordingCanvas recording = node.beginRecording(smallWidth, smallHeight);
++        recording.scale(1f / SCALE, 1f / SCALE);
++        recording.translate(pad - lastLeft, pad - lastTop);
++        if (frameClearDrawable != null) frameClearDrawable.draw(recording);
++        recording.drawRenderNode(target.renderNode);
++        node.endRecording();
++        float smallRadius = fullRadius / SCALE;
++        if (smallRadius != appliedRadius) {
++            appliedRadius = smallRadius;
++            node.setRenderEffect(smallRadius > 0f
++                    ? RenderEffect.createBlurEffect(smallRadius, smallRadius, Shader.TileMode.CLAMP)
++                    : null);
++        }
++
++        canvas.save();
++        canvas.translate(-pad, -pad);
++        canvas.scale(SCALE, SCALE);
++        canvas.drawRenderNode(node);
++        canvas.restore();
++        Noise.apply(canvas, blurView.getContext(), width, height);
++        if (overlayColor != 0) canvas.drawColor(overlayColor);
++        return true;
++    }
++
++    @Override
++    public void updateBlurViewSize() {
++        blurView.invalidate();
++    }
++
++    @Override
++    public void destroy() {
++        blurView.getViewTreeObserver().removeOnPreDrawListener(drawListener);
++        node.discardDisplayList();
++    }
++
++    @Override
++    public BlurViewFacade setBlurEnabled(boolean enabled) {
++        this.enabled = enabled;
++        blurView.invalidate();
++        return this;
++    }
++
++    @Override
++    public BlurViewFacade setBlurAutoUpdate(boolean enabled) {
++        if (enabled == autoUpdate) return this;
++        autoUpdate = enabled;
++        ViewTreeObserver observer = blurView.getViewTreeObserver();
++        observer.removeOnPreDrawListener(drawListener);
++        if (enabled) observer.addOnPreDrawListener(drawListener);
++        return this;
++    }
++
++    @Override
++    public BlurViewFacade setFrameClearDrawable(@Nullable Drawable frameClearDrawable) {
++        this.frameClearDrawable = frameClearDrawable;
++        return this;
++    }
++
++    @Override
++    public BlurViewFacade setBlurRadius(float radius) {
++        this.blurRadius = radius;
++        blurView.invalidate();
++        return this;
++    }
++
++    @Override
++    public BlurViewFacade setOverlayColor(int overlayColor) {
++        if (this.overlayColor != overlayColor) {
++            this.overlayColor = overlayColor;
++            blurView.invalidate();
++        }
++        return this;
++    }
++}
+diff --git a/android/src/main/java/expo/modules/blur/ExpoBlurView.kt b/android/src/main/java/expo/modules/blur/ExpoBlurView.kt
+index 71344c8df533c25facea5fe7f5ed91528d15c1ed..a49454d74de8aca436e49350435778ff534dcbe0 100644
+--- a/android/src/main/java/expo/modules/blur/ExpoBlurView.kt
++++ b/android/src/main/java/expo/modules/blur/ExpoBlurView.kt
+@@ -5,6 +5,7 @@ import android.content.Context
+ import android.graphics.Color
+ import android.os.Build
+ import eightbitlab.com.blurview.BlurView
++import eightbitlab.com.blurview.CroppedBlurController
+ import expo.modules.blur.enums.BlurMethod
+ import expo.modules.blur.enums.TintStyle
+ import expo.modules.kotlin.AppContext
+@@ -159,7 +160,10 @@ class ExpoBlurView(context: Context, appContext: AppContext) : ExpoView(context,
+     val dimezisBlurTarget = blurTarget?.blurTargetView
+       ?: throw BlurViewConfigurationException("The BlurView targeting blur target with id: $blurTargetId couldn't find the target")
+ 
+-    blurView.setupWith(dimezisBlurTarget)
++    val facade = blurView.setupWith(dimezisBlurTarget)
++    // NomadSafe patch: blur only the area behind the view, downscaled (see CroppedBlurController).
++    val controller = if (Build.VERSION.SDK_INT >= 31) CroppedBlurController.install(blurView, dimezisBlurTarget) else facade
++    controller
+       .setFrameClearDrawable(decorView.background)
+       .setBlurRadius(blurRadius / blurReduction)
+ 

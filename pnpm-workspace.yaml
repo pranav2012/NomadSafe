@@ -17,5 +17,6 @@ allowBuilds:
   prisma: true
   unrs-resolver: true
 patchedDependencies:
+  expo-blur@57.0.3: patches/expo-blur@57.0.3.patch
   react-native-android-widget@0.22.1: patches/react-native-android-widget@0.22.1.patch
   react-native-skia@3.0.1: patches/react-native-skia@3.0.1.patch

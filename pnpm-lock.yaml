@@ -5,6 +5,7 @@ settings:
   excludeLinksFromLockfile: false
 
 patchedDependencies:
+  expo-blur@57.0.3: 64fbf8bae34f0606752573c265bc65fd9114282cd9c91d013d08cad54fcc3653
   react-native-android-widget@0.22.1: 90efa1c388a6fe733287fe8827004d2f53b4b20905891ba7198330f2c98c167b
   react-native-skia@3.0.1: a9749e1875437b90b207add166e18d8b6e844b1bb8b5663ccfb75cddf7eb9b79
 
@@ -83,7 +84,7 @@ importers:
         version: 57.0.3(expo@57.0.26)(react@19.2.3)
       expo-blur:
         specifier: ^57.0.3
-        version: 57.0.3(expo@57.0.26)(react-native@0.86.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.3(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.17)(react@19.2.3)(supports-color@8.1.1))(react@19.2.3)
+        version: 57.0.3(patch_hash=64fbf8bae34f0606752573c265bc65fd9114282cd9c91d013d08cad54fcc3653)(expo@57.0.26)(react-native@0.86.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.3(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.17)(react@19.2.3)(supports-color@8.1.1))(react@19.2.3)
       expo-brightness:
         specifier: ~57.0.2
         version: 57.0.2(expo@57.0.26)(react-native@0.86.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.3(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.17)(react@19.2.3)(supports-color@8.1.1))
@@ -9442,7 +9443,7 @@ snapshots:
       expo: 57.0.26(18a5d0c19f579b85d81f5db928f49b7b)
       react: 19.2.3
 
-  expo-blur@57.0.3(expo@57.0.26)(react-native@0.86.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.3(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.17)(react@19.2.3)(supports-color@8.1.1))(react@19.2.3):
+  expo-blur@57.0.3(patch_hash=64fbf8bae34f0606752573c265bc65fd9114282cd9c91d013d08cad54fcc3653)(expo@57.0.26)(react-native@0.86.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.3(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.17)(react@19.2.3)(supports-color@8.1.1))(react@19.2.3):
     dependencies:
       expo: 57.0.26(18a5d0c19f579b85d81f5db928f49b7b)
       react: 19.2.3

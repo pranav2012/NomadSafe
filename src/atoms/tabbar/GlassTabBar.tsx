@@ -28,7 +28,8 @@ import Animated, {
   withSpring,
   type WithSpringConfig,
 } from "react-native-reanimated";
-import { scheduleOnRN } from "react-native-worklets";
+import { runOnUISync, scheduleOnRN } from "react-native-worklets";
+import { setHighFrameRate } from "@/modules/display";
 import { TAB_ICONS, type TabIconName } from "./tabIcons";
 import { TAB_BAR_HEIGHT, tabBarScale } from "./tabBarInset";
 import { GlassSurface } from "./GlassSurface";
@@ -55,14 +56,18 @@ interface GlassTabBarProps {
 
 // Room around the bar for the droplet to swell, stretch and overshoot past it.
 const BLEED = 48;
-// Lifted droplet, matched to iOS 26 recordings: ~1.35x a tab wide and ~1.13x the (pressed) bar tall.
+// Lifted droplet, matched to iOS 26 recordings: ~1.35x a tab wide and ~1.2x the (pressed) bar tall.
 // Bar metrics below are at the 402 dp reference width; tabBarScale() shrinks them on narrower screens.
 const GROW_X = 0.36;
-const GROW_Y = 0.32;
+const GROW_Y = 0.36;
 // As on iOS 26, the whole bar swells ~5% and brightens a little while it's held.
 const PRESS_SCALE = 0.05;
 const PRESS_IN: WithSpringConfig = { stiffness: 1000, damping: 58, mass: 1 };
 const PRESS_OUT: WithSpringConfig = { stiffness: 700, damping: 45, mass: 1 };
+// As on iOS, the drop pops up tall at once but widens more slowly, and stays wide for a moment
+// while it sinks back to the bar, so a landing spreads into the pill instead of shrinking.
+const WIDEN_IN: WithSpringConfig = { stiffness: 220, damping: 30, mass: 1 };
+const WIDEN_OUT_DELAY = 60;
 // The drop follows its goal (the finger's travel, or a tab) through an underdamped spring
 // (units: dp and ms). It trails a moving finger by ~2*ZETA/OMEGA (~52 ms), catches up quickly when
 // the finger stops and swings a few dp past the bar's ends after a fast flick.
@@ -76,33 +81,27 @@ const END_OMEGA = 0.08;
 const END_ZETA = 0.5;
 // While dragging into an end, the goal is carried past it by the drop's momentum (ms of travel).
 const END_CARRY_MS = 6;
-// Speed shaping, matched to iOS 26, driven by the drop's own speed (dp/ms): it stays fully lifted
-// below FLATTEN_FROM, is squashed to exactly the bar's height by FLATTEN_TO and stretches a little
-// wider when very fast. The flatten amount follows an underdamped spring, so when the drop slows
-// down or lands it springs back taller than at rest and wobbles once (~0.45 s per cycle).
-const FLATTEN_FROM = 0.18;
-const FLATTEN_TO = 0.55;
-const FLAT_OMEGA = 0.014;
-const FLAT_ZETA = 0.3;
-// Slowing down also kicks the flatten spring toward tall (per dp/ms of speed lost), so a stop
-// rebounds visibly even from a speed that barely flattened the drop. The rebound is capped so a
-// hard landing can't balloon it.
-const DECEL_KICK = 0.024;
-const TALL_MAX = 0.5;
-// Taller than at rest also makes it a little narrower, and flattened a little wider.
-const WOBBLE_X = 0.12;
-const STRETCH_FROM = 0.8;
-const STRETCH_TO = 1.6;
-const STRETCH = 0.06;
-const MORPH_OMEGA = 0.04;
-// At full speed the trailing end lags this far (dp) behind, so the drop reads longer behind itself.
-const TRAIL = 10;
+// Jelly, measured from iOS 26 recordings (speeds in dp/ms, springs in 1/ms). While a finger drags it,
+// the drop squashes to the bar's height and ~9% wider as it speeds up (FLAT_FROM..FLAT_TO, ~80 ms).
+// Slowing down kicks a soft spring that makes it ~12% taller and ~7% narrower, peaking ~0.22 s after
+// the stop and back to its resting shape by ~0.65 s, barely dipping below it (fitted to the recording).
+const FLAT_FROM = 0.06;
+const FLAT_TO = 0.3;
+const FLAT_WIDEN = 0.09;
+const MORPH_OMEGA = 0.05;
+const JELLY_OMEGA = 0.005;
+const JELLY_ZETA = 0.7;
+const DECEL_KICK = 0.025;
+const TALL_MAX = 1.3;
+const TALL_GROW = 0.16;
+const TALL_NARROW = 0.09;
 const FULL_SPEED = 2.2;
-const LIFT_IN: WithSpringConfig = { stiffness: 600, damping: 42, mass: 1 };
+const LIFT_IN: WithSpringConfig = { stiffness: 900, damping: 54, mass: 1 };
 const LIFT_OUT: WithSpringConfig = { stiffness: 1600, damping: 80, mass: 1 };
-// A quick tap keeps the drop up for at least this long (ms from the press), so it visibly travels
-// and lands before it settles back into the pill, as on iOS.
-const MIN_LIFT_MS = 300;
+// A released drop sinks into the pill once it is this close (dp) to its tab, and never sooner than
+// MIN_LIFT_MS after the press, so a tap visibly travels and lands (~0.25 s in all, as on iOS).
+const LAND_NEAR = 6;
+const MIN_LIFT_MS = 160;
 const REST_HANDOFF = 0.35;
 // Finger travel (dp) before a press turns into a drag, so a tap's jitter doesn't nudge the drop.
 const DRAG_SLOP = 6;
@@ -114,13 +113,15 @@ const BASE_LABEL = 10.5;
 const BASE_ICON_Y = 11;
 const BASE_LABEL_Y = 38;
 // Only the outer rim of the drop bends light; how far (dp) it pushes at the very edge.
-const RIM_BEND = 16;
+const RIM_BEND = 9;
+// As on iOS 26, the lifted drop magnifies what's under it (~1.2x, on top of the bar's swell).
+const MAGNIFY = 0.18;
 const PD = PixelRatio.get();
 // Aura page backgrounds (premultiplied RGBA), shown inside the drop where it looks past the bar.
 const PAGE_DARK = premultiplied("#0B0D12", 1);
 const PAGE_LIGHT = premultiplied("#F3F4F7", 1);
 // The selected tab's pill tint at rest (premultiplied RGBA).
-const PILL_DARK = premultiplied("#FFFFFF", 0.12);
+const PILL_DARK = premultiplied("#FFFFFF", 0.15);
 const PILL_LIGHT = premultiplied("#0E1018", 0.06);
 
 function smoothstep(from: number, to: number, value: number): number {
@@ -134,6 +135,9 @@ function premultiplied(hex: string, alpha: number): number[] {
   return [channel(1), channel(3), channel(5), alpha];
 }
 const RIM_DARK = ["rgba(255,255,255,0.3)", "rgba(255,255,255,0.05)", "rgba(255,255,255,0.05)", "rgba(255,255,255,0.18)"];
+// Clear glass catches a little light, so the lifted drop reads slightly brighter than the bar.
+const BODY_DARK = premultiplied("#FFFFFF", 0.06);
+const BODY_LIGHT = premultiplied("#FFFFFF", 0.16);
 const RIM_LIGHT = ["rgba(255,255,255,0.95)", "rgba(255,255,255,0.3)", "rgba(255,255,255,0.3)", "rgba(255,255,255,0.8)"];
 
 
@@ -150,6 +154,7 @@ uniform float2 halfSize;
 uniform float lift;
 uniform float band;
 uniform float distortion;
+uniform float magnify;
 uniform float chroma;
 uniform float4 body;
 uniform float rim;
@@ -192,13 +197,14 @@ half4 main(float2 xy) {
     sdCapsule(rel + float2(e, 0.0), halfSize) - sdCapsule(rel - float2(e, 0.0), halfSize),
     sdCapsule(rel + float2(0.0, e), halfSize) - sdCapsule(rel - float2(0.0, e), halfSize)) + 0.00001);
 
-  // Only the rim bends: the middle of the drop shows the bar exactly as it is. As in the iOS 26
+  // The middle of the drop magnifies evenly around its centre. On top of that, as in the iOS 26
   // tab bar, the flat top and bottom look outward (pulling the bar's own edges in, so the bar reads
-  // thinner through the drop), while the rounded ends look inward and magnify, smearing whatever
-  // sits under them into a bright blob around the curve with strong colour fringes.
+  // thinner through the drop), while the rounded ends look inward and magnify more, smearing
+  // whatever sits under them into a bright blob around the curve with strong colour fringes.
+  float2 q = center + rel / (1.0 + magnify * lift);
   float edge = 1.0 - clamp(-d / band, 0.0, 1.0);
   float bend = edge * edge;
-  float2 src = p + n * bend * (distortion + motion * 6.0) * lift;
+  float2 src = q + n * bend * (distortion + motion * 6.0) * lift;
 
   // Each rounded end is a radial lens around its cap centre: the pull toward the centre grows with
   // the radius, so magnification is smooth and round and strongest at the tip.
@@ -207,9 +213,9 @@ half4 main(float2 xy) {
   float2 fromCap = p - cap;
   float capDist = length(fromCap);
   float ends = smoothstep(0.0, 0.7, abs(fromCap.x) / capR) * step(0.0, abs(rel.x) - (halfSize.x - capR));
-  float2 lensSrc = cap + fromCap * (1.0 - 0.32 * clamp(capDist / capR, 0.0, 1.0) * lift);
+  float2 lensSrc = cap + (q - cap) * (1.0 - 0.32 * clamp(capDist / capR, 0.0, 1.0) * lift);
   src = mix(src, lensSrc, ends);
-  // Flattened, the flat top and bottom only see the bar (a page-coloured lip would read as inset).
+  // Squashed, the flat top and bottom only see the bar (a page-coloured lip would read as inset).
   float barEdge = barHalf.y - 1.0;
   src.y = mix(src.y, clamp(src.y, barCenter.y - barEdge, barCenter.y + barEdge), flatten);
 
@@ -227,8 +233,8 @@ half4 main(float2 xy) {
   half4 glass = seen + half4(page) * half(pastBar) * (1.0 - seen.a);
   glass = glass + half4(body) * (1.0 - glass.a);
 
-  // Clear glass reads through its light: a thin key-lit line on the rim and a hairline Fresnel
-  // glow just inside it. Nothing brightens the body, so the drop never looks like a second pill.
+  // Clear glass reads through its light: a faint key-lit line on the rim and a hairline Fresnel
+  // glow just inside it.
   float2 keyDir = normalize(float2(0.55, 0.85));
   float light = 0.25 + 0.9 * max(0.0, dot(-n, keyDir)) + 0.45 * max(0.0, dot(n, keyDir));
   float rimLine = smoothstep(1.3, 0.0, abs(d)) * rim * light;
@@ -278,6 +284,10 @@ export function GlassTabBar({
   const xv = useSharedValue(0);
   const goal = useSharedValue(0);
   const lift = useSharedValue(0);
+  // How far the drop has widened (0..1); it lags `lift` on the way up and on the way down.
+  const widen = useSharedValue(0);
+  // Set on release until the drop has reached its tab and starts sinking into the pill.
+  const landing = useSharedValue(false);
   // 0..1 while the bar is held: it swells and brightens.
   const press = useSharedValue(0);
   // ms since the last press, counted by the frame callback.
@@ -290,13 +300,12 @@ export function GlassTabBar({
   const moved = useSharedValue(false);
   // The tab drawn selected at rest; moved on release so the new tab lights up before navigation.
   const restIndex = useSharedValue(activeIndex);
-  // Flatten amount (1 = squashed to the bar, negative = rebounding taller) and stretch, with their
-  // spring velocities, and the smoothed signed speed that shifts the trailing end.
+  // How squashed the drop is by drag speed (0..1) and how much taller it bulges after slowing down,
+  // with their spring velocities.
   const flat = useSharedValue(0);
   const flatV = useSharedValue(0);
-  const stretch = useSharedValue(0);
-  const stretchV = useSharedValue(0);
-  const trail = useSharedValue(0);
+  const tall = useSharedValue(0);
+  const tallV = useSharedValue(0);
   const liquidRunning = useSharedValue(false);
   // Read by the lens uniforms so bumping it forces a repaint without moving anything.
   const repaint = useSharedValue(0);
@@ -305,7 +314,9 @@ export function GlassTabBar({
   // Set once the frame callback exists; the callback stops itself through this on the JS thread.
   const liquidRef = useRef<{ setActive: (active: boolean) => void } | null>(null);
   const stopLiquid = () => {
-    if (!liquidRunning.get()) liquidRef.current?.setActive(false);
+    if (liquidRunning.get()) return;
+    liquidRef.current?.setActive(false);
+    setHighFrameRate(false);
   };
 
   // The liquid simulation only runs while the droplet moves (drag, tap, settle) and stops itself
@@ -329,9 +340,9 @@ export function GlassTabBar({
     let v = xv.get();
     let f = flat.get();
     let fv = flatV.get();
-    let st = stretch.get();
-    let sv = stretchV.get();
-    const fZeta = reduceMotion ? 1 : FLAT_ZETA;
+    let tl = tall.get();
+    let tv = tallV.get();
+    const jelly = held && moved.get() && !reduceMotion;
     for (let i = 0; i < steps; i++) {
       const before = g - p;
       const lastSpeed = Math.abs(v);
@@ -341,64 +352,70 @@ export function GlassTabBar({
       v += (omega * omega * before - 2 * zeta * omega * v) * h;
       p += v * h;
       if (!held && before * (g - p) < 0) {
-        // Landings never swing past the tab (so a tap to the last tab can't leave the bar); the
-        // flatten spring supplies the jiggle as the drop stops.
+        // Landings never swing past the tab, so a tap to the last tab can't leave the bar.
         p = g;
         v = 0;
       } else if (p < min - give || p > max + give) {
         p = Math.min(max + give, Math.max(min - give, p));
         v = 0;
       }
-      const speed = reduceMotion ? 0 : Math.abs(v);
-      if (!reduceMotion && speed < lastSpeed) fv -= (lastSpeed - speed) * DECEL_KICK;
-      const flatTarget = smoothstep(FLATTEN_FROM, FLATTEN_TO, speed);
-      fv += (FLAT_OMEGA * FLAT_OMEGA * (flatTarget - f) - 2 * fZeta * FLAT_OMEGA * fv) * h;
+      const speed = Math.abs(v);
+      if (jelly && speed < lastSpeed) tv += (lastSpeed - speed) * DECEL_KICK;
+      const flatTarget = jelly ? smoothstep(FLAT_FROM, FLAT_TO, speed) : 0;
+      fv += (MORPH_OMEGA * MORPH_OMEGA * (flatTarget - f) - 2 * MORPH_OMEGA * fv) * h;
       f += fv * h;
-      const stretchTarget = smoothstep(STRETCH_FROM, STRETCH_TO, speed);
-      sv += (MORPH_OMEGA * MORPH_OMEGA * (stretchTarget - st) - 2 * MORPH_OMEGA * sv) * h;
-      st += sv * h;
+      tv += (-JELLY_OMEGA * JELLY_OMEGA * tl - 2 * JELLY_ZETA * JELLY_OMEGA * tv) * h;
+      tl += tv * h;
     }
-    if (f < -TALL_MAX) {
-      f = -TALL_MAX;
-      fv = Math.max(0, fv);
+    if (tl > TALL_MAX) {
+      tl = TALL_MAX;
+      tv = Math.min(0, tv);
     }
     x.set(p);
     xv.set(v);
-    flat.set(Math.min(1, f));
+    flat.set(Math.min(1, Math.max(0, f)));
     flatV.set(fv);
-    stretch.set(Math.min(1, Math.max(0, st)));
-    stretchV.set(sv);
-    const signed = reduceMotion ? 0 : Math.max(-1, Math.min(1, v / FULL_SPEED));
-    trail.set(trail.get() + (signed - trail.get()) * Math.min(1, dt / 40));
+    tall.set(tl);
+    tallV.set(tv);
+
+    if (landing.get() && sincePress.get() >= MIN_LIFT_MS && Math.abs(g - p) < LAND_NEAR * k) {
+      landing.set(false);
+      lift.set(withSpring(0, LIFT_OUT));
+      widen.set(withDelay(WIDEN_OUT_DELAY, withSpring(0, LIFT_OUT)));
+      press.set(withSpring(0, PRESS_OUT));
+    }
 
     const atRest =
       !held &&
+      !landing.get() &&
       lift.get() < 0.001 &&
+      widen.get() < 0.001 &&
       Math.abs(g - p) < 0.01 &&
       Math.abs(v) < 0.00002 &&
       Math.abs(f) < 0.002 &&
-      Math.abs(fv) < 0.00002 &&
-      Math.abs(st) < 0.002 &&
-      Math.abs(trail.get()) < 0.002;
+      Math.abs(tl) < 0.002 &&
+      Math.abs(tv) < 0.00002;
     if (atRest && liquidRunning.get()) {
       liquidRunning.set(false);
       x.set(g);
       xv.set(0);
       flat.set(0);
       flatV.set(0);
-      stretch.set(0);
-      stretchV.set(0);
-      trail.set(0);
+      tall.set(0);
+      tallV.set(0);
       scheduleOnRN(stopLiquid);
     }
   }, false);
   useEffect(() => {
     liquidRef.current = liquid;
   }, [liquid]);
+  // Callers flag `liquidRunning` on the UI thread first, so a stop already queued sees it and backs off.
+  // The drop moves at the screen's top refresh rate (120 Hz on adaptive screens), as on iOS.
   const startLiquid = () => {
-    liquidRunning.set(true);
     liquid.setActive(true);
+    setHighFrameRate(true);
   };
+  useEffect(() => () => setHighFrameRate(false), []);
 
   // Moves the drop when the tab changes from outside (links, first layout). A release already
   // sent it there, so that case doesn't restart it mid-flight.
@@ -410,14 +427,19 @@ export function GlassTabBar({
     const first = Number.isNaN(settledOn.get());
     lastIndex.set(activeIndex);
     settledOn.set(target);
-    goal.set(target);
     if (first) {
+      goal.set(target);
       x.set(target);
       return;
     }
+    runOnUISync(() => {
+      "worklet";
+      goal.set(target);
+      liquidRunning.set(true);
+    });
     startLiquid();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- startLiquid only touches stable refs
-  }, [activeIndex, dragging, goal, lastIndex, restIndex, settledOn, slot, x]);
+  }, [activeIndex, dragging, goal, lastIndex, liquidRunning, restIndex, settledOn, slot, x]);
 
   const indexAt = (px: number) => {
     "worklet";
@@ -430,12 +452,12 @@ export function GlassTabBar({
     .minDistance(0)
     .onBegin((event) => {
       dragging.set(true);
-      if (!liquidRunning.get()) {
-        liquidRunning.set(true);
-        scheduleOnRN(startLiquid);
-      }
+      landing.set(false);
+      liquidRunning.set(true);
+      scheduleOnRN(startLiquid);
       sincePress.set(0);
       lift.set(withSpring(1, LIFT_IN));
+      widen.set(withSpring(1, WIDEN_IN));
       press.set(withSpring(1, PRESS_IN));
       const index = indexAt(event.x);
       const home = INSET + index * slot;
@@ -465,44 +487,30 @@ export function GlassTabBar({
       restIndex.set(index);
       settledOn.set(target);
       goal.set(target);
-      const wait = Math.max(0, MIN_LIFT_MS - sincePress.get());
-      lift.set(withDelay(wait, withSpring(0, LIFT_OUT)));
-      press.set(withDelay(wait, withSpring(0, PRESS_OUT)));
+      landing.set(true);
       if (index !== activeIndex) scheduleOnRN(onChange, index);
     });
-
-  // Liquid shape: flattened to the bar (then stretched) at speed, rebounding taller and narrower as
-  // it slows, and longer behind its direction of travel.
-  const shape = useDerivedValue(() => {
-    const f = flat.get();
-    return {
-      flatten: Math.max(0, f),
-      tall: Math.max(0, -f),
-      scaleX: (1 + STRETCH * stretch.get()) * (1 - WOBBLE_X * Math.max(0, -f) + 0.03 * Math.max(0, f)),
-      trail: trail.get() * TRAIL * k,
-      motion: Math.min(1, Math.abs(xv.get()) / FULL_SPEED),
-    };
-  });
 
   const uniforms = useDerivedValue(() => {
     repaint.get();
     const l = lift.get();
-    const { flatten, tall, scaleX, trail: lag, motion } = shape.get();
-    const lifted = (PILL_H / 2) * (1 + l * GROW_Y);
-    // Flat, the drop's rim lies on the bar's rim (drawn half a dp inside its edge); a lifted drop is
+    const w = Math.max(0, widen.get());
+    const motion = Math.min(1, Math.abs(xv.get()) / FULL_SPEED);
+    const f = flat.get();
+    const tl = tall.get() * l;
+    // Squashed, the drop's rim lies on the bar's rim (half a dp inside its edge); a lifted drop is
     // never shorter than the bar.
+    const lifted = (PILL_H / 2) * (1 + l * GROW_Y) * (1 + TALL_GROW * tl);
     const barHalf = HEIGHT / 2 - 0.5;
     const flatHalf = Math.min(lifted, barHalf);
     const floor = PILL_H / 2 + (barHalf - PILL_H / 2) * Math.min(1, Math.max(0, l));
-    const halfY = Math.max(floor, lifted + (flatHalf - lifted) * flatten + (lifted - flatHalf) * tall);
-    // The stretched drop squashes against the bar's ends instead of poking past them; only the
-    // lifted drop may grow beyond the bar.
-    const give = l * (slot / 2) * GROW_X;
+    const halfY = Math.max(floor, lifted + (flatHalf - lifted) * f);
+    // The drop may grow past the bar's ends only as far as it has widened.
+    const give = w * (slot / 2) * GROW_X;
     const cx = BLEED + x.get() + slot / 2;
-    const hx = (slot / 2) * (1 + l * GROW_X) * scaleX;
-    // The trailing end hangs back (lag is signed with the direction of travel).
-    const left = Math.max(cx - hx - Math.max(0, lag), BLEED + INSET - give);
-    const right = Math.min(cx + hx - Math.min(0, lag), BLEED + width - INSET + give);
+    const hx = (slot / 2) * (1 + w * GROW_X) * (1 + FLAT_WIDEN * f - TALL_NARROW * tl);
+    const left = Math.max(cx - hx, BLEED + INSET - give);
+    const right = Math.min(cx + hx, BLEED + width - INSET + give);
     return {
       pd: PD,
       center: [(left + right) / 2, BLEED + HEIGHT / 2],
@@ -510,14 +518,15 @@ export function GlassTabBar({
       lift: l,
       band: halfY * 0.6,
       distortion: RIM_BEND * k,
+      magnify: MAGNIFY,
       chroma: 1.4,
-      body: [0, 0, 0, 0],
-      rim: isDark ? 0.9 : 1,
+      body: isDark ? BODY_DARK : BODY_LIGHT,
+      rim: isDark ? 0.45 : 0.7,
       motion,
       barCenter: [BLEED + width / 2, BLEED + HEIGHT / 2],
       barHalf: [width / 2, HEIGHT / 2],
       page: isDark ? PAGE_DARK : PAGE_LIGHT,
-      flatten,
+      flatten: f,
       // The rest tab stays lit until the drop has lifted enough to take over (and lights again as
       // it lands), so a press never shows the active icon plain for a frame.
       restCell: l > REST_HANDOFF ? [0, -1] : [BLEED + INSET + slot * restIndex.get(), BLEED + INSET + slot * (restIndex.get() + 1)],
@@ -633,7 +642,7 @@ export function GlassTabBar({
       style={[styles.bar, { height: HEIGHT, borderRadius: HEIGHT / 2 }, style, barStyle]}
       onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
     >
-      <GlassSurface isDark={isDark} radius={HEIGHT / 2} blurTarget={blurTarget} clarity="clear" />
+      <GlassSurface isDark={isDark} radius={HEIGHT / 2} blurTarget={blurTarget} clarity="clear" clearing={press} />
 
       {canvasReady ? (
         <Canvas style={[styles.canvas, { width: canvasW, height: canvasH }]} pointerEvents="none">
