@@ -44,7 +44,7 @@ export const secureStore = {
   },
 };
 
-/** One credential per service in the platform keychain (the PIN hash lives here). Only read in the foreground. */
+/** One credential per service in the platform keychain. Only read in the foreground. */
 export const credentials = {
   async get(service: string): Promise<string | null> {
     const result = await Keychain.getGenericPassword({ service });

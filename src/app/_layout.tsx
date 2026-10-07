@@ -125,7 +125,7 @@ function AppStateLock() {
         const auth = useAuthStore.getState();
         const since = backgroundedAt.current;
         backgroundedAt.current = null;
-        if (!since || !auth.isSignedIn || !auth.isPinSet) return;
+        if (!since || !auth.isSignedIn || !auth.lockEnabled) return;
         // The wall clock can be moved back; the monotonic clock may pause while the phone sleeps.
         const wallElapsed = Date.now() - since;
         const monoElapsed = performance.now() - backgroundedAtMono.current;
@@ -156,9 +156,9 @@ function useLockRequired() {
   const sosOnScreen = isSosRoute(pathname) && (sosStatus === "emergency" || sosArming);
   const onboardingCompleted = useSettingsStore((s) => s.onboardingCompleted);
   const isSignedIn = useAuthStore((s) => s.isSignedIn);
-  const isPinSet = useAuthStore((s) => s.isPinSet);
+  const lockEnabled = useAuthStore((s) => s.lockEnabled);
   const isUnlocked = useAuthStore((s) => s.isUnlocked);
-  return onboardingCompleted && isSignedIn && isPinSet && !isUnlocked && !isVoiceCaptureRoute(pathname) && !sosOnScreen;
+  return onboardingCompleted && isSignedIn && lockEnabled && !isUnlocked && !isVoiceCaptureRoute(pathname) && !sosOnScreen;
 }
 
 /**
@@ -188,14 +188,14 @@ function AdsGate() {
   const pathname = usePathname();
   const onboardingCompleted = useSettingsStore((s) => s.onboardingCompleted);
   const isSignedIn = useAuthStore((s) => s.isSignedIn);
-  const isPinSet = useAuthStore((s) => s.isPinSet);
+  const lockEnabled = useAuthStore((s) => s.lockEnabled);
   const isUnlocked = useAuthStore((s) => s.isUnlocked);
   const sosActive = useSafetyStore((s) => s.status === "emergency");
   const sosArming = useQuickSosStore((s) => s.arming || s.requestedAt !== null);
   const ready =
     onboardingCompleted &&
     isSignedIn &&
-    (!isPinSet || isUnlocked) &&
+    (!lockEnabled || isUnlocked) &&
     !sosActive &&
     !sosArming &&
     !isSosRoute(pathname) &&
@@ -258,18 +258,18 @@ function SessionEffects() {
   return null;
 }
 
-/** Screen tracking by route pattern (no IDs), the analytics opt-out, and pausing replay during PIN entry. */
+/** Screen tracking by route pattern (no IDs), the analytics opt-out, and pausing replay while locked. */
 function AnalyticsEffects() {
   const segments = useSegments();
   const route = "/" + segments.join("/");
   const analyticsEnabled = useSettingsStore((s) => s.analyticsEnabled);
   const onboardingCompleted = useSettingsStore((s) => s.onboardingCompleted);
   const isSignedIn = useAuthStore((s) => s.isSignedIn);
-  const isPinSet = useAuthStore((s) => s.isPinSet);
+  const lockEnabled = useAuthStore((s) => s.lockEnabled);
   const isUnlocked = useAuthStore((s) => s.isUnlocked);
-  const locked = onboardingCompleted && isSignedIn && isPinSet && !isUnlocked;
-  // Replay stays off while locked, during PIN setup and on voice capture (spoken content).
-  const pinScreen = locked || route.endsWith("/setup-pin") || isVoiceCaptureRoute(route);
+  const locked = onboardingCompleted && isSignedIn && lockEnabled && !isUnlocked;
+  // Replay stays off while locked and on voice capture (spoken content).
+  const pinScreen = locked || isVoiceCaptureRoute(route);
 
   useEffect(() => {
     setAnalyticsEnabled(analyticsEnabled);

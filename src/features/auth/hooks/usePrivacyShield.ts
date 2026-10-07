@@ -4,13 +4,13 @@ import { isSystemPromptOpen } from "@/utils/systemPrompt";
 import { useAuthStore } from "../store/authStore";
 
 /**
- * iOS: true while the app is inactive or in the background with a PIN set, so the app switcher
+ * iOS: true while the app is inactive or in the background with the app lock on, so the app switcher
  * snapshot shows a cover instead of the screen. Android hides recents in MainActivity
  * (plugins/withRecentsPrivacy.js) instead.
  */
 export function usePrivacyShield() {
   const isSignedIn = useAuthStore((s) => s.isSignedIn);
-  const isPinSet = useAuthStore((s) => s.isPinSet);
+  const lockEnabled = useAuthStore((s) => s.lockEnabled);
   const [away, setAway] = useState(false);
 
   useEffect(() => {
@@ -22,5 +22,5 @@ export function usePrivacyShield() {
     return () => subscription.remove();
   }, []);
 
-  return away && isSignedIn && isPinSet;
+  return away && isSignedIn && lockEnabled;
 }

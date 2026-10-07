@@ -61,7 +61,7 @@ export default function VoiceExpenseScreen() {
   const updateGroup = useTripsStore((state) => state.updateGroup);
   const addExpense = useExpensesStore((state) => state.addExpense);
   const addSettlement = useExpensesStore((state) => state.addSettlement);
-  const locked = useAuthStore((state) => state.isSignedIn && state.isPinSet && !state.isUnlocked);
+  const locked = useAuthStore((state) => state.isSignedIn && state.lockEnabled && !state.isUnlocked);
   const localAiEnabled = useSettingsStore((state) => state.localAiEnabled);
   const ai = useAiAvailability("voiceExpense");
 

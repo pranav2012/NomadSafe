@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
@@ -24,7 +24,7 @@ import { currencyCodes, currencyDisplayName } from "@/utils/currency";
 import type { TimeFormat, UnitPrefs, UnitSystem } from "@/utils/units";
 import { confirmDeviceOwner, disconnectGmail, signOutAndCleanup } from "@/features/auth/services/session";
 import { disableBackup, flushGroupSync, flushSync, hasBackupOwner } from "@/features/sync";
-import { localAuth, useAuthStore, useBiometricPresentation, useOwnerConfirm } from "@/features/auth";
+import { localAuth, useAuthStore, useBiometricPresentation } from "@/features/auth";
 import { AiKeySheet, AiUsageSheet } from "@/features/ai";
 import { byokProviderName, useAiAvailability, useAiSources, useAiUsageLog, useByokStore, useProvisioningStore } from "@/modules/ai";
 import { FREE_TRIP_LIMIT, manageSubscriptions, ownedTripCount, restorePurchases, usePlan } from "@/modules/billing";
@@ -85,14 +85,11 @@ export default function SettingsScreen() {
   const { t, locale, deviceLocale, deviceCurrency, deviceUnits, deviceHour12 } = useLocalization();
 
   const user = useAuthStore((s) => s.user);
-  const isPinSet = useAuthStore((s) => s.isPinSet);
-  const biometricEnabled = useAuthStore((s) => s.biometricEnabled);
-  const setBiometricEnabled = useAuthStore((s) => s.setBiometricEnabled);
+  const lockEnabled = useAuthStore((s) => s.lockEnabled);
   const autoLockTimeout = useAuthStore((s) => s.autoLockTimeout);
   const setAutoLockTimeout = useAuthStore((s) => s.setAutoLockTimeout);
   const deleteAccount = useMutation(api.account.deleteAccount);
   const biometric = useBiometricPresentation();
-  const { confirmOwner, sheet: ownerConfirmSheet } = useOwnerConfirm();
 
   const themeMode = useSettingsStore((s) => s.themeMode);
   const setThemeMode = useSettingsStore((s) => s.setThemeMode);
@@ -129,7 +126,6 @@ export default function SettingsScreen() {
   const gmailEmail = gmailTokens?.email;
 
   const circle = useCircle();
-  const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [wiping, setWiping] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -141,21 +137,6 @@ export default function SettingsScreen() {
   // Remounts the key sheet on each open so it starts from what's saved.
   const [keySheetSession, setKeySheetSession] = useState(0);
   const closeSheet = () => setSheet(null);
-
-  useEffect(() => {
-    let mounted = true;
-    localAuth
-      .checkBiometricAvailability()
-      .then(({ available }) => {
-        if (mounted) setBiometricAvailable(available);
-      })
-      .catch(() => {
-        if (mounted) setBiometricAvailable(false);
-      });
-    return () => {
-      mounted = false;
-    };
-  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -219,24 +200,21 @@ export default function SettingsScreen() {
   ];
   const timeFormatValue = timeFormatOptions.find((option) => option.value === timeFormat)?.label;
 
-  const toggleBiometric = async (value: boolean) => {
-    const subtitle = t("auth.confirmOwnerSub");
-    if (!value) {
-      if (await confirmOwner({ subtitle, allowBiometric: true })) setBiometricEnabled(false);
+  // Both directions ask for the phone's unlock: turning it on proves it works, turning it off proves it's the owner.
+  const toggleAppLock = async (value: boolean) => {
+    if (value && !(await localAuth.hasScreenLock().catch(() => false))) {
+      showAlert(t("settings.screenLockNeededTitle"), t("settings.screenLockNeededBody"));
       return;
     }
-    if (!biometricAvailable) {
-      showAlert(t("settings.biometricNotSetUpTitle"), t("settings.biometricNotSetUpBody"));
+    const result = await localAuth.authenticate(t(value ? "settings.appLockOnPrompt" : "settings.appLockOffPrompt")).catch(() => "failed" as const);
+    if (result === "noScreenLock") {
+      useAuthStore.getState().setLockEnabled(false);
+      if (value) showAlert(t("settings.screenLockNeededTitle"), t("settings.screenLockNeededBody"));
       return;
     }
-    if (!isPinSet) {
-      showAlert(t("settings.setPinFirstTitle"), t("settings.setPinFirstBody"), [
-        { text: t("common.cancel"), style: "cancel" },
-        { text: t("common.continue"), onPress: () => router.push("/(auth)/setup-pin?from=settings") },
-      ]);
-      return;
-    }
-    if (await confirmOwner({ subtitle, allowBiometric: false })) setBiometricEnabled(true);
+    if (result !== "ok") return;
+    if (value) useAuthStore.getState().setUnlocked(true);
+    useAuthStore.getState().setLockEnabled(value);
   };
 
   const handleExport = () => {
@@ -495,18 +473,17 @@ export default function SettingsScreen() {
           <AuraListRow
             icon="faceId"
             tone={TEAL}
-            label={t("settings.biometricUnlock", { name: biometric.name })}
-            detail={t("settings.biometricUnlockSub", { name: biometric.name })}
+            label={t("settings.appLock")}
+            detail={t("settings.appLockSub", { name: biometric.name })}
             trailing={
               <AuraSwitch
-                value={biometricEnabled}
-                onValueChange={(value) => void toggleBiometric(value)}
-                disabled={!biometricAvailable && !biometricEnabled}
-                accessibilityLabel={t("settings.biometricUnlock", { name: biometric.name })}
+                value={lockEnabled}
+                onValueChange={(value) => void toggleAppLock(value)}
+                accessibilityLabel={t("settings.appLock")}
               />
             }
           />
-          {isPinSet ? (
+          {lockEnabled ? (
             <AuraListRow
               icon="lock"
               tone={INDIGO}
@@ -514,14 +491,6 @@ export default function SettingsScreen() {
               detail={t("settings.autoLockSub")}
               value={formatAutoLock(autoLockTimeout, t)}
               onPress={() => setSheet("autoLock")}
-            />
-          ) : null}
-          {isPinSet ? (
-            <AuraListRow
-              icon="edit"
-              label={t("settings.changePin")}
-              detail={t("settings.changePinSub")}
-              onPress={() => router.push("/(auth)/setup-pin?from=settings")}
             />
           ) : null}
           {gmailConnected ? (
@@ -732,7 +701,6 @@ export default function SettingsScreen() {
       </ScrollView>
       <AuraTopFade sheet />
 
-      {ownerConfirmSheet}
       <AuraOptionSheet
         visible={sheet === "autoLock"}
         onClose={closeSheet}

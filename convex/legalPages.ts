@@ -87,7 +87,6 @@ export const privacyPolicy = httpAction(async () => {
 <li>Emergency contacts you pick, SMS templates and safety check-in history.</li>
 <li>Receipt photos you scan. They are read on your phone with the system's on-device text recognition (Google ML Kit on Android, Apple Vision on iOS) and are never uploaded; only the amount, shop and date you keep become an expense.</li>
 <li>AI chat history. With the on-device AI model, prompts and replies never leave your phone. When you use online AI (below), each question is sent to answer it, but the chat history is still stored only on your phone.</li>
-<li>Your app PIN (stored in the Android Keystore / iOS Keychain).</li>
 <li>Photos you add to a trip replay: small copies of only the photos you pick, with the time and place they were taken. They are never uploaded or backed up.</li>
 <li>Step counts and walking distance read from Health Connect or Apple Health for a trip's dates, if you turn this on.</li>
 </ul>
@@ -150,7 +149,7 @@ export const privacyPolicy = httpAction(async () => {
 <ul>
 <li>Which screens you open and actions you take, such as creating a trip, adding an expense, starting live sharing or triggering SOS, with counts and types only (for example "3 expenses imported from Gmail").</li>
 <li>Device model, OS, app version, language and an approximate country and city derived from your IP address. Your precise location is never sent.</li>
-<li>Session recordings: screenshots of the app with all text, input fields, images and maps masked. Recording pauses while the lock screen or PIN setup is showing.</li>
+<li>Session recordings: screenshots of the app with all text, input fields, images and maps masked. Recording pauses while the lock screen is showing.</li>
 <li>Crash reports and diagnostic logs: device model, OS, app version, technical details of the error, and counts (for example "12 emails scanned, 3 expenses found").</li>
 </ul>
 <p>Analytics never include your trip names or destinations, expense amounts or merchants, notes, chats, emails, contacts or location. You can turn analytics, crash reports and logs off at any time in <em>Settings → Share usage analytics</em>. Analytics and crash reports are kept for up to 12 months, diagnostic logs for 14 days and session recordings for up to 30 days.</p>

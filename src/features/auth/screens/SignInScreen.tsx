@@ -47,7 +47,7 @@ export default function SignInScreen() {
   const { t } = useLocalization();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
-  const { isSignedIn, isPinSet } = useAuthStore();
+  const isSignedIn = useAuthStore((s) => s.isSignedIn);
   const onboardingCompleted = useSettingsStore((s) => s.onboardingCompleted);
 
   const [loading, setLoading] = useState<string | null>(null);
@@ -63,15 +63,9 @@ export default function SignInScreen() {
   // Once the session listener confirms we are signed in, route forward: first-time setup, then the app.
   useEffect(() => {
     if (!isSignedIn) return;
-    if (!onboardingCompleted) {
-      router.replace("/(onboarding)/welcome");
-    } else if (!isPinSet) {
-      router.replace("/(auth)/setup-pin");
-    } else {
-      // The PIN on this phone still guards it: LockGate asks for it after signing in.
-      router.replace("/(tabs)");
-    }
-  }, [isSignedIn, isPinSet, onboardingCompleted, router]);
+    // With the app lock on, LockGate asks for the phone's unlock after signing in.
+    router.replace(onboardingCompleted ? "/(tabs)" : "/(onboarding)/welcome");
+  }, [isSignedIn, onboardingCompleted, router]);
 
   const handleGoogleSignIn = async () => {
     if (loading) return;

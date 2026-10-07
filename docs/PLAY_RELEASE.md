@@ -97,7 +97,7 @@ npx eas-cli submit -p android --profile production --path <aab or latest>
 | Form | Answer |
 |---|---|
 | Privacy policy | `https://gregarious-crocodile-599.convex.site/privacy` |
-| App access | Restricted. Add a Google test account (email + password) for reviewers. Note: "Sign in with Google, create any 6-digit PIN." |
+| App access | Restricted. Add a Google test account (email + password) for reviewers. Note: "Sign in with Google." (The app lock is off by default.) |
 | Ads | **Yes, the app contains ads** (Free plan only; AdMob interstitials after finished actions) |
 | Content rating | Complete the IARC questionnaire. It's a utility app with no user-generated public content; location sharing is only with contacts the user chose. Expect Everyone / PEGI 3. |
 | Target audience | 18 and over (or 13+). Not designed for children. |
@@ -228,10 +228,10 @@ The certificate changes the runtime fingerprint, so builds made before it can't 
 
 ## Device test checklist (internal-test build, real Android phone)
 
-- [ ] Fresh install → onboarding → Google sign-in → PIN → tabs.
+- [ ] Fresh install → Google sign-in → onboarding → tabs (no lock).
 - [ ] Kill and reopen → lock screen. Back button and a deep link (`nomadsafe:///settings`) don't bypass it.
 - [ ] 5 wrong PINs → lockout survives an app restart, and moving the phone's clock forward doesn't end it.
-- [ ] Settings → Change PIN asks for the current PIN first; turning biometric unlock on or off asks for the PIN.
+- [ ] Settings → App lock: turning it on or off shows the phone's unlock prompt; with it on, the app locks after the auto-lock time and unlocks with biometrics or the phone's passcode.
 - [ ] The recents screen shows a blank card for NomadSafe (Android 13+); screenshots inside the app still work.
 - [ ] Live sharing: disclosure → "Allow all the time" → notification → a second account sees updates with the screen off.
 - [ ] Pause one contact → their updates stop. Stop sharing → both sides show "not sharing".

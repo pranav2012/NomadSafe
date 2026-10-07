@@ -7,8 +7,7 @@ import { authClient, useAuthStore } from "@/features/auth";
 export function useAuth() {
   const user = useAuthStore((s) => s.user);
   const isSignedIn = useAuthStore((s) => s.isSignedIn);
-  const isPinSet = useAuthStore((s) => s.isPinSet);
-  const biometricEnabled = useAuthStore((s) => s.biometricEnabled);
+  const lockEnabled = useAuthStore((s) => s.lockEnabled);
   const isUnlocked = useAuthStore((s) => s.isUnlocked);
   const autoLockTimeout = useAuthStore((s) => s.autoLockTimeout);
 
@@ -17,8 +16,7 @@ export function useAuth() {
   return {
     user,
     isSignedIn,
-    isPinSet,
-    biometricEnabled,
+    lockEnabled,
     isUnlocked,
     autoLockTimeout,
     session,

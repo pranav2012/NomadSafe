@@ -16,13 +16,11 @@ import Animated, {
 import { AuraButton, Icon, PressableScale, showAlert, springs, useAura } from "@/atoms";
 import { LEGAL_URLS, openLegalPage } from "@/constants/legal";
 import { aiRuntime, useProvisioningStore } from "@/modules/ai";
-import { useAuthStore, useBiometricPresentation } from "@/features/auth";
 import { useSettingsStore } from "@/features/settings";
 import { useCircle } from "@/features/location-sharing/hooks/useCircle";
-import { ONBOARDING_LOCK_STEP, ONBOARDING_STEPS, type OnboardingStepId } from "@/features/onboarding/steps";
+import { ONBOARDING_STEPS, type OnboardingStepId } from "@/features/onboarding/steps";
 import { SafetyStep } from "@/features/onboarding/components/SafetyStep";
 import { OnDeviceStep } from "@/features/onboarding/components/OnDeviceStep";
-import { LockStep } from "@/features/onboarding/components/LockStep";
 import { useLocalization } from "@/localization";
 import { track } from "@/modules/analytics";
 
@@ -30,10 +28,9 @@ const LAST_STEP = ONBOARDING_STEPS.length - 1;
 const TOTAL = ONBOARDING_STEPS.length;
 const BACKGROUND_PHASES = new Set(["queued", "downloading", "verifying", "waitingForWifi"]);
 
-/** Maps a persisted step into range; indices past the end come from older, longer flows and resume at the lock step. */
+/** Maps a persisted step into range; indices past the end come from older, longer flows. */
 function clampStep(value: number) {
-  if (value > LAST_STEP) return ONBOARDING_LOCK_STEP;
-  return Math.max(0, value);
+  return Math.min(Math.max(0, value), LAST_STEP);
 }
 
 export default function OnboardingWelcomeScreen() {
@@ -44,9 +41,6 @@ export default function OnboardingWelcomeScreen() {
   const setOnboardingCompleted = useSettingsStore((s) => s.setOnboardingCompleted);
   const persistedStep = useSettingsStore((s) => s.onboardingStep);
   const setOnboardingStep = useSettingsStore((s) => s.setOnboardingStep);
-  const biometric = useBiometricPresentation();
-  const isPinSet = useAuthStore((s) => s.isPinSet);
-  const setUnlocked = useAuthStore((s) => s.setUnlocked);
   const aiPhase = useProvisioningStore((s) => s.phase);
 
   const [step, setStep] = useState(() => clampStep(persistedStep));
@@ -69,14 +63,6 @@ export default function OnboardingWelcomeScreen() {
     progress.set(withSpring(step + 1, springs.snappy));
   }, [step, setOnboardingStep, progress]);
 
-  // SetupPin writes the lock step to the store; pick it up when we regain focus.
-  useFocusEffect(
-    useCallback(() => {
-      setDirection(1);
-      setStep(clampStep(useSettingsStore.getState().onboardingStep));
-    }, []),
-  );
-
   const goTo = useCallback((next: number, dir: 1 | -1) => {
     setDirection(dir);
     setStep(Math.min(Math.max(next, 0), LAST_STEP));
@@ -98,9 +84,8 @@ export default function OnboardingWelcomeScreen() {
   const advance = () => goTo(step + 1, 1);
   const back = () => goTo(step - 1, -1);
 
-  // Onboarding runs after sign-in, so finishing it opens the app; unlock first so the PIN gate doesn't appear.
+  // Onboarding runs after sign-in, so finishing it opens the app.
   const onDone = () => {
-    setUnlocked(true);
     setOnboardingCompleted(true);
     track("onboarding_completed");
     router.replace("/(tabs)");
@@ -126,12 +111,9 @@ export default function OnboardingWelcomeScreen() {
       case "safety":
         confirmSafetyContinue();
         return;
-      case "lock":
-        if (isPinSet) onDone();
-        else router.push("/(auth)/setup-pin?from=onboarding");
-        return;
       default:
-        advance();
+        if (last) onDone();
+        else advance();
     }
   };
 
@@ -140,9 +122,8 @@ export default function OnboardingWelcomeScreen() {
       case "safety":
         return circle.people.length > 0 ? t("common.continue") : t("onboarding.skipForNow");
       case "onDevice":
-        return BACKGROUND_PHASES.has(aiPhase) ? t("onboarding.continueInBackground") : t("common.continue");
-      case "lock":
-        return isPinSet ? t("onboarding.startMyTrip") : t("onboarding.setBackupPin");
+        if (BACKGROUND_PHASES.has(aiPhase)) return t("onboarding.continueInBackground");
+        return last ? t("onboarding.startMyTrip") : t("common.continue");
     }
   })();
 
@@ -165,13 +146,7 @@ export default function OnboardingWelcomeScreen() {
         contentContainerStyle={{ paddingTop: insets.top + 58, paddingBottom: insets.bottom + 170 }}
       >
         <Animated.View key={step} entering={entering}>
-          {stepId === "safety" ? (
-            <SafetyStep />
-          ) : stepId === "onDevice" ? (
-            <OnDeviceStep />
-          ) : (
-            <LockStep biometric={biometric} />
-          )}
+          {stepId === "safety" ? <SafetyStep /> : <OnDeviceStep />}
         </Animated.View>
       </ScrollView>
 
@@ -205,7 +180,7 @@ export default function OnboardingWelcomeScreen() {
       <View pointerEvents="box-none" style={styles.ctaWrap}>
         <LinearGradient pointerEvents="none" colors={[`${c.bg}00`, c.bg]} locations={[0, 0.3]} style={StyleSheet.absoluteFill} />
         <View style={[styles.ctaInner, { paddingBottom: insets.bottom + 14 }]}>
-          <AuraButton label={ctaLabel} onPress={handleCta} icon={last && isPinSet ? "check" : undefined} />
+          <AuraButton label={ctaLabel} onPress={handleCta} icon={last ? "check" : undefined} />
           <View style={styles.footerRow}>
             <Icon name="lock" size={12} color={c.textMuted} />
             <Text style={[styles.hint, { color: c.textMuted, fontFamily: f.regular }]}>{t("onboarding.footerLocal")}</Text>

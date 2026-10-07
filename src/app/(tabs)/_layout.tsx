@@ -53,7 +53,7 @@ const SHARE_OPEN_DELAY_MS = 450;
 function usePendingShare() {
   const router = useRouter();
   const text = useIncomingShareStore((s) => s.text);
-  const unlocked = useAuthStore((s) => !s.isPinSet || s.isUnlocked);
+  const unlocked = useAuthStore((s) => !s.lockEnabled || s.isUnlocked);
   const [active, setActive] = useState(AppState.currentState === "active");
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (state) => setActive(state === "active"));

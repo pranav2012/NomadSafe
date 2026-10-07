@@ -52,7 +52,7 @@ Agreed 2026-10-07. Saved ideas are a trip's ideas, never its plans.
 
 - Android share target and iOS Share Extension. Accepts Instagram reels and posts, TikTok, YouTube Shorts and any link.
 - The "Save to" sheet lists the active trip, then upcoming trips, then planned trips, then "+ New planned trip". You can add an optional note.
-- A shared link waits behind the PIN lock, the same way incoming tickets do.
+- A shared link waits behind the app lock, the same way incoming tickets do.
 - Detecting the place, on the phone with no AI: take the link's title (YouTube and TikTok oEmbed, the page title for links, any caption text that comes with the share) and match it against the bundled city and country names.
 - The save sheet is always shown first, pre-filled, and saving takes one tap:
   - a place is found and a planned or upcoming trip there exists → "Save to: <trip>"

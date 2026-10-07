@@ -578,7 +578,7 @@ export default function SafetyScreen() {
         text: t("safety.cancelConfirm"),
         style: "destructive",
         onPress: async () => {
-          if (!(await authorizeSosCancel(t("auth.nativeUnlockPrompt"), t("auth.nativeCancelLabel")))) return;
+          if (!(await authorizeSosCancel(t("auth.nativeUnlockPrompt")))) return;
           if (useSafetyStore.getState().status !== "emergency") return;
           const { previousBroadcast } = useSafetyStore.getState();
           cancelSos();

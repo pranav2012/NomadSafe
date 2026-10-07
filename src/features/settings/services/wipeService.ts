@@ -1,8 +1,6 @@
-import { secureStorage } from "@/features/auth/services/secureStorage";
 import { deleteAllIdeaThumbs } from "@/features/itinerary/services/ideaThumbs";
 import { useIncomingShareStore } from "@/features/itinerary/store/incomingShareStore";
-import { pinAttempts } from "@/features/auth/services/pinAttempts";
-import { useAuthStore } from "@/features/auth/store/authStore";
+import { removeLegacyPin, useAuthStore } from "@/features/auth/store/authStore";
 import { aiRuntime, aiService, clearAiUsageLog, clearByokConfig, clearCloudExhaustion, resetAiPreference } from "@/modules/ai";
 import { usePlanStore } from "@/modules/billing";
 import { useChatStore } from "@/features/ai/store/chatStore";
@@ -50,8 +48,7 @@ export async function wipeAllDeviceData({ keepModels = false }: { keepModels?: b
   await attempt(() => aiRuntime.release());
   if (!keepModels) await attempt(aiRuntime.wipeModels);
 
-  useAuthStore.getState().setPinSet(false);
-  useAuthStore.getState().setBiometricEnabled(false);
+  useAuthStore.getState().setLockEnabled(false);
   useSettingsStore.getState().reset();
   useTripsStore.getState().reset();
   useExpensesStore.getState().reset();
@@ -72,8 +69,7 @@ export async function wipeAllDeviceData({ keepModels = false }: { keepModels?: b
   resetBackgroundDisclosure();
   await attempt(clearLegacyGmailCheckpoints);
   await attempt(clearGlobeImagery);
-  await attempt(() => secureStorage.resetPin());
-  await attempt(() => pinAttempts.reset());
+  await attempt(removeLegacyPin);
   await attempt(clearByokConfig);
   clearCloudExhaustion();
   resetAiPreference();

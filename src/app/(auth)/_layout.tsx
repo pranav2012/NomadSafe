@@ -9,7 +9,6 @@ export default function AuthLayout() {
       <Stack.Protected guard={!isSignedIn}>
         <Stack.Screen name="sign-in" />
       </Stack.Protected>
-      <Stack.Screen name="setup-pin" />
     </Stack>
   );
 }

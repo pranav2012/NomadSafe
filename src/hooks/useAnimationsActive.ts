@@ -17,6 +17,6 @@ export function useAppActive() {
 export function useAnimationsActive() {
   const focused = useIsFocused();
   const appActive = useAppActive();
-  const lockCovering = useAuthStore((s) => s.isSignedIn && s.isPinSet && !s.isUnlocked);
+  const lockCovering = useAuthStore((s) => s.isSignedIn && s.lockEnabled && !s.isUnlocked);
   return focused && appActive && !lockCovering;
 }
