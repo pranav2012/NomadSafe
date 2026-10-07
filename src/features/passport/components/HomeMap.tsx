@@ -5,7 +5,7 @@ import { frameRoute } from "@/features/recap/utils/recapMap";
 import { countryRegions, mainlandBox, regionRings } from "../utils/regions";
 
 /** The home country's mainland states, with the visited ones filled in aurora. */
-export function HomeMap({ country, visited, width, height }: { country: string; visited: Set<string>; width: number; height: number }) {
+export function HomeMap({ country, visited, width, height, paper = false }: { country: string; visited: Set<string>; width: number; height: number; paper?: boolean }) {
   const view = useBoundaryStore((state) => state.view);
   const shapes = useMemo(() => {
     const box = mainlandBox(country);
@@ -46,7 +46,14 @@ export function HomeMap({ country, visited, width, height }: { country: string; 
         visited.has(shape.key) ? (
           <Path key={shape.key} d={shape.d} fill="url(#visited)" fillOpacity={0.88} stroke="rgba(255,255,255,0.55)" strokeWidth={0.8} strokeLinejoin="round" />
         ) : (
-          <Path key={shape.key} d={shape.d} fill="rgba(255,255,255,0.045)" stroke="rgba(255,255,255,0.16)" strokeWidth={0.7} strokeLinejoin="round" />
+          <Path
+            key={shape.key}
+            d={shape.d}
+            fill={paper ? "rgba(29,34,48,0.05)" : "rgba(255,255,255,0.045)"}
+            stroke={paper ? "rgba(29,34,48,0.3)" : "rgba(255,255,255,0.16)"}
+            strokeWidth={0.7}
+            strokeLinejoin="round"
+          />
         ),
       )}
     </Svg>
