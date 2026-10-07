@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { Linking, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -111,12 +111,12 @@ export default function VoiceExpenseScreen() {
   const modelReady = ai.available;
   const onlineName = ai.remote ? remoteLabel(ai.remote, ai.byok, t("aiTab.cloudName")) : null;
 
-  useEffect(() => {
+  const onOpened = useEffectEvent(() => {
     track("voice_capture_opened", { from_widget: fromWidget, locked });
     // Warming the on-device model costs memory and battery; skip it when online AI will answer.
     if (!ai.configured) void aiRuntime.preload();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  });
+  useEffect(() => onOpened(), []);
 
   const autostarted = useRef(false);
   useEffect(() => {

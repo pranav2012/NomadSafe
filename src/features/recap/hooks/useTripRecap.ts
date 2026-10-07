@@ -71,11 +71,10 @@ export function useTripRecap(tripId: string | undefined) {
             coordinates: getDestinationCoordinates(trip),
             events,
             locate: locateRouteEnd,
-            countryOf: placeCountry,
+            // The border view changes which country a stop falls in.
+            countryOf: (point) => placeCountry(point, view),
           })
         : null,
-    // `view` changes which country a stop falls in.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [trip, events, view],
   );
 

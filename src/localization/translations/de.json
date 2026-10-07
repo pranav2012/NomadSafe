@@ -580,6 +580,7 @@
     "disabledBody": "Die lokale KI ist in den Einstellungen deaktiviert. Aktiviere sie, um zu chatten, Modelle zu verwalten und geräteinterne Erkenntnisse anzuzeigen.",
     "disabledAction": "Einstellungen öffnen",
     "yesterday": "Gestern",
+    "showEarlier": "Ältere Nachrichten anzeigen",
     "assistantName": "Nomad",
     "chatBusyElsewhere": "Beendet gerade eine Antwort in einem anderen Reise-Chat…",
     "stopReply": "Antwort stoppen",

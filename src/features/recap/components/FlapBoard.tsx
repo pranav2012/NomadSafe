@@ -4,6 +4,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withSequence, withTiming } from "react-native-reanimated";
 import { Icon, useAura } from "@/atoms";
 import { selectionChanged } from "@/utils/haptics";
+import { usePerfTier } from "@/hooks/usePerfTier";
 import { AURORA } from "./recapGeometry";
 
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -13,13 +14,16 @@ const STAGGER_MS = 70;
 
 function FlapTile({ char, index, width, height }: { char: string; index: number; width: number; height: number }) {
   const { f } = useAura();
+  // Low-tier phones skip the clatter: each step re-renders the tile from JS.
   const reduceMotion = useReducedMotion();
+  const tier = usePerfTier();
+  const still = reduceMotion || tier === "low";
   const [shown, setShown] = useState(" ");
   const squash = useSharedValue(1);
 
   // Clatters through random letters before landing on `char`, like a departure board.
   useEffect(() => {
-    if (reduceMotion) return;
+    if (still) return;
     let step = 0;
     let interval: ReturnType<typeof setInterval> | undefined;
     const start = setTimeout(() => {
@@ -39,14 +43,14 @@ function FlapTile({ char, index, width, height }: { char: string; index: number;
       clearTimeout(start);
       if (interval) clearInterval(interval);
     };
-  }, [char, index, reduceMotion, squash]);
+  }, [char, index, still, squash]);
 
   const letterStyle = useAnimatedStyle(() => ({ transform: [{ scaleY: squash.get() }] }));
 
   return (
     <View style={[styles.tile, { width, height, borderRadius: width * 0.16 }]}>
       <LinearGradient colors={["#1C202B", "#12151D"]} style={StyleSheet.absoluteFill} />
-      <Animated.Text style={[styles.letter, { fontFamily: f.semibold, fontSize: width * 0.98, lineHeight: height }, letterStyle]}>{reduceMotion ? char : shown}</Animated.Text>
+      <Animated.Text style={[styles.letter, { fontFamily: f.semibold, fontSize: width * 0.98, lineHeight: height }, letterStyle]}>{still ? char : shown}</Animated.Text>
       <View style={[styles.seam, { top: height / 2 - 1 }]} />
     </View>
   );

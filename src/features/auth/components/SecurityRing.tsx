@@ -1,6 +1,6 @@
 import React, { useEffect, type ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
-import { Canvas, Rect, Shader, Skia } from "react-native-skia";
+import { Canvas, Rect, Shader, Skia, type SkRuntimeEffect } from "react-native-skia";
 import Animated, {
   useAnimatedStyle,
   useDerivedValue,
@@ -11,16 +11,18 @@ import Animated, {
   withSpring,
   withTiming,
 } from "react-native-reanimated";
-import { auraStatusColors } from "@/constants/aura";
+import { auraSignal, auraStatusColors } from "@/constants/aura";
 import { useAppActive } from "@/hooks/useAnimationsActive";
 
 export type SecurityRingState = "idle" | "scanning" | "success";
 
-const SUCCESS = "#3DDC97";
-const DANGER = "#FF4D5E";
+const SUCCESS = auraSignal.ready;
+const DANGER = auraSignal.danger;
 const RING_RADIUS = 0.36;
 const PHASE_WRAP = 1000;
 const NO_BURST = 99;
+// The ring redraws at ~30 fps rather than the display rate.
+const TICK_S = 0.033;
 
 function rgb(hex: string): [number, number, number] {
   const value = parseInt(hex.slice(1), 16);
@@ -35,7 +37,7 @@ const RED = rgb(DANGER);
 // rest and breathe slowly; `progress` lights them clockwise from the top (PIN digits); `scan` runs a
 // comet that sweeps round leaving a fading trail; `success` closes the gaps into a solid green ring
 // and `burstAge` sends one ring of light outward; `error` flashes everything red.
-const RING = Skia.RuntimeEffect.Make(`
+const RING_SKSL = `
 uniform float2 center;
 uniform float radius;
 uniform float phase;
@@ -93,7 +95,13 @@ half4 main(float2 xy) {
   float a = clamp(alpha + glow * (dark > 0.5 ? 1.0 : 0.7), 0.0, 1.0);
   return half4(half3(col * a), half(a));
 }
-`)!;
+`;
+
+let ringEffect: SkRuntimeEffect | null = null;
+// Compiled on first use, not at import.
+function ringShader() {
+  return (ringEffect ??= Skia.RuntimeEffect.Make(RING_SKSL)!);
+}
 
 /**
  * Segmented security ring for the lock and PIN setup screens, framing `children` (the avatar or
@@ -125,6 +133,7 @@ export function SecurityRing({
   const fill = useSharedValue(progress);
   const burstStart = useSharedValue(-NO_BURST);
   const shake = useSharedValue(0);
+  const pending = useSharedValue(0);
 
   useEffect(() => {
     scan.set(withTiming(state === "scanning" ? 1 : 0, { duration: 280 }));
@@ -152,7 +161,13 @@ export function SecurityRing({
   }, [error, errorKey, reduceMotion, shake]);
 
   const clock = useFrameCallback((frame) => {
-    const dt = (frame.timeSincePreviousFrame ?? 16) / 1000;
+    const elapsed = pending.get() + (frame.timeSincePreviousFrame ?? 16) / 1000;
+    if (elapsed < TICK_S) {
+      pending.set(elapsed);
+      return;
+    }
+    pending.set(0);
+    const dt = Math.min(elapsed, 0.1);
     phase.set((phase.get() + dt) % PHASE_WRAP);
     now.set(now.get() + dt);
   }, false);
@@ -190,7 +205,7 @@ export function SecurityRing({
     <Animated.View style={[{ width: size, height: size }, shakeStyle]}>
       <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
         <Rect x={0} y={0} width={size} height={size}>
-          <Shader source={RING} uniforms={uniforms} />
+          <Shader source={ringShader()} uniforms={uniforms} />
         </Rect>
       </Canvas>
       <View style={styles.center} pointerEvents="none">

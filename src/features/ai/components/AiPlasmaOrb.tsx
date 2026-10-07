@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { View } from "react-native";
-import { Canvas, Rect, Shader, Skia } from "react-native-skia";
+import { Canvas, Rect, Shader, Skia, type SkRuntimeEffect } from "react-native-skia";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import {
   useDerivedValue,
@@ -34,6 +34,12 @@ const TAP_SLOP = 0.12;
 const CHARGE_MS = 1400;
 const WOBBLE = { damping: 5, stiffness: 190, mass: 0.7 };
 const NO_SPLASH: [number, number, number] = [0, 0, 99];
+const NO_RIPPLE = [0, 0, 99, 0];
+const NO_TRAIL = [0, 0, 0, 0];
+const NO_TRAIL_AGES_A = [99, 99, 99, 99];
+const NO_TRAIL_AGES_B = [99, 99];
+// The plasma drifts slowly, so its clock ticks at ~30 fps; touches still animate at the display rate.
+const TICK_S = 0.033;
 
 type Ripple = [x: number, y: number, start: number, amp: number];
 type TrailPoint = [x: number, y: number, vx: number, vy: number, start: number];
@@ -52,7 +58,7 @@ const [C1, C2, C3] = auraStatusColors.calm.map(hexToRgb);
 // swirls the flow around `touch`; six stroke samples stir the colours like ink; `squeeze` (signed,
 // springs past zero) gives the jelly squish; `splash` (x, y, age) is a tap: a ring of light shoots
 // out while the colours scatter and reform.
-const PLASMA = Skia.RuntimeEffect.Make(`
+const PLASMA_SKSL = `
 uniform float2 center;
 uniform float radius;
 uniform float limit;
@@ -245,7 +251,13 @@ half4 main(float2 xy) {
   half4 sphere = half4(half3(clamp(col, 0.0, 1.0)), 1.0);
   return mix(outside, sphere, half(edge));
 }
-`)!;
+`;
+
+let plasma: SkRuntimeEffect | null = null;
+// Compiled on first use, not at import.
+function plasmaEffect() {
+  return (plasma ??= Skia.RuntimeEffect.Make(PLASMA_SKSL)!);
+}
 
 /**
  * The AI tab's orb: a GPU-shaded plasma sphere that breathes when idle and swells with a sun-like corona while
@@ -292,6 +304,7 @@ export function AiPlasmaOrb({
   const wake = useSharedValue<[number, number]>([0, 0]);
   const down = useSharedValue<[number, number, number]>([0, 0, 0]);
   const moved = useSharedValue(false);
+  const pending = useSharedValue(0);
 
   useEffect(() => {
     energy.set(withTiming(mode === "thinking" ? 1 : 0, { duration: 700 }));
@@ -304,7 +317,13 @@ export function AiPlasmaOrb({
   // Flow and corona phases advance faster while boosted; integrating them (instead of scaling
   // time) keeps speed changes smooth, and wrapping keeps the shader's inputs small.
   const clock = useFrameCallback((frame) => {
-    const dt = (frame.timeSincePreviousFrame ?? 16) / 1000;
+    const elapsed = pending.get() + (frame.timeSincePreviousFrame ?? 16) / 1000;
+    if (elapsed < TICK_S) {
+      pending.set(elapsed);
+      return;
+    }
+    pending.set(0);
+    const dt = Math.min(elapsed, 0.1);
     const boost = Math.max(charge.get(), energy.get());
     time.set(time.get() + dt);
     flow.set((flow.get() + dt * (0.25 + boost * 0.2)) % FLOW_WRAP);
@@ -396,25 +415,27 @@ export function AiPlasmaOrb({
       squeeze.set(withSpring(0, WOBBLE));
     });
 
+  const centerVec = [center, center];
+  // Idle frames reuse constant arrays for the touch uniforms instead of allocating ~16 per frame.
   const uniforms = useDerivedValue(() => {
     const now = time.get();
     const list = ripples.get();
     const rip = (i: number) => {
       const item = list[i];
-      return item ? [item[0], item[1], now - item[2], item[3]] : [0, 0, 99, 0];
+      return item ? [item[0], item[1], now - item[2], item[3]] : NO_RIPPLE;
     };
     const [sx, sy, start] = splash.get();
     const strokes = trail.get();
     const tr = (i: number) => {
       const item = strokes[i];
-      return item ? [item[0], item[1], item[2], item[3]] : [0, 0, 0, 0];
+      return item ? [item[0], item[1], item[2], item[3]] : NO_TRAIL;
     };
     const trAge = (i: number) => {
       const item = strokes[i];
       return item ? now - item[4] : 99;
     };
     return {
-      center: [center, center],
+      center: centerVec,
       radius,
       limit: center / radius,
       breath: Math.sin(now * 1.3),
@@ -444,8 +465,8 @@ export function AiPlasmaOrb({
       tr3: tr(3),
       tr4: tr(4),
       tr5: tr(5),
-      trAgeA: [trAge(0), trAge(1), trAge(2), trAge(3)],
-      trAgeB: [trAge(4), trAge(5)],
+      trAgeA: strokes.length ? [trAge(0), trAge(1), trAge(2), trAge(3)] : NO_TRAIL_AGES_A,
+      trAgeB: strokes.length > 4 ? [trAge(4), trAge(5)] : NO_TRAIL_AGES_B,
       splash: start < 0 ? NO_SPLASH : [sx, sy, now - start],
     };
   });
@@ -459,7 +480,7 @@ export function AiPlasmaOrb({
     <View style={{ width: box, height: box }} pointerEvents={interactive ? "auto" : "none"}>
       <Canvas style={canvasStyle} pointerEvents="none">
         <Rect x={0} y={0} width={canvas} height={canvas}>
-          <Shader source={PLASMA} uniforms={uniforms} />
+          <Shader source={plasmaEffect()} uniforms={uniforms} />
         </Rect>
       </Canvas>
     </View>

@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
@@ -105,10 +105,10 @@ function RecapFlow({ recap, source }: { recap: TripRecap; source: RecapSource })
   const walking = useTripWalking(recap.trip);
   const extras = useRecapExtras(curation, walking);
 
-  useEffect(() => {
+  const onOpened = useEffectEvent(() => {
     track("recap_opened", { source, stops: recap.facts.stops.length });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  });
+  useEffect(() => onOpened(), []);
 
   const play = (skipped: boolean) => {
     useRecapStore.getState().markPrepped(tripId);

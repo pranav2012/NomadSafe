@@ -49,13 +49,13 @@ export default function PassportScreen() {
   const [page, setPage] = useState(0);
   const [pagerHeight, setPagerHeight] = useState(0);
 
-  React.useEffect(() => {
+  const onOpened = React.useEffectEvent(() => {
     track("passport_opened", {
       source: source ?? "trips",
       stamps: passport.stamps.length,
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  });
+  React.useEffect(() => onOpened(), []);
 
   const pages = useMemo<Page[]>(() => {
     const visa = chunk(passport.stamps, STAMPS_PER_PAGE);

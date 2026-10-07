@@ -6,6 +6,8 @@ import { BlurView } from "expo-blur";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 
 const IOS_NATIVE_GLASS = Platform.OS === "ios" && isLiquidGlassAvailable();
+// Android before 12 gets no blur, only the tint, so it needs to be denser to keep text readable.
+const ANDROID_NO_BLUR = Platform.OS === "android" && (Platform.Version as number) < 31;
 
 /**
  * Frosted backdrop for floating chrome: native glass on iOS 26, system material blur on older
@@ -32,9 +34,13 @@ export function GlassSurface({
   const shape = [StyleSheet.absoluteFill, { borderRadius: radius, overflow: "hidden" as const }, style];
   if (Platform.OS === "android") {
     const clear = clarity === "clear";
-    const tint = isDark
-      ? `rgba(10,12,18,${clear ? 0.14 : 0.3})`
-      : `rgba(255,255,255,${clear ? 0.2 : 0.42})`;
+    const tint = ANDROID_NO_BLUR
+      ? isDark
+        ? "rgba(10,12,18,0.6)"
+        : "rgba(255,255,255,0.6)"
+      : isDark
+        ? `rgba(10,12,18,${clear ? 0.14 : 0.3})`
+        : `rgba(255,255,255,${clear ? 0.2 : 0.42})`;
     return (
       <>
         <BlurView

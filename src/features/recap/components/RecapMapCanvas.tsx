@@ -3,6 +3,7 @@ import { StyleSheet } from "react-native";
 import { BlurMask, Canvas, Circle, DashPathEffect, Fill, Group, LinearGradient, Path, RadialGradient, RoundedRect, Skia, vec } from "react-native-skia";
 import { useDerivedValue, type DerivedValue, type SharedValue } from "react-native-reanimated";
 import { auraDark } from "@/constants/aura";
+import { usePerfTier } from "@/hooks/usePerfTier";
 import { useBoundaryStore } from "../utils/boundaries";
 import type { GeoBox } from "../utils/countryShapes";
 import type { Camera, MapFrame, Point, Rect } from "../utils/recapMap";
@@ -30,6 +31,7 @@ interface Props {
 }
 
 const INSET_RADIUS = 22;
+const ZOOM_STEP = Math.pow(2, 1 / 8);
 const lerp = (a: number, b: number, k: number) => {
   "worklet";
   return a + (b - a) * k;
@@ -42,17 +44,19 @@ function grow(box: GeoBox, factor: number): GeoBox {
   return { west: box.west - lon, east: box.east + lon, south: Math.max(-85, box.south - lat), north: Math.min(85, box.north + lat) };
 }
 
-function Leg({ path, mode, index, reveal, zoom, gradient }: { path: RecapGeometryLeg["path"]; mode: RecapLeg["mode"]; index: number; reveal: SharedValue<number>; zoom: SharedValue<number>; gradient: React.ReactNode }) {
+function Leg({ path, mode, index, reveal, zoom, gradient, glow }: { path: RecapGeometryLeg["path"]; mode: RecapLeg["mode"]; index: number; reveal: SharedValue<number>; zoom: SharedValue<number>; gradient: React.ReactNode; glow: boolean }) {
   const end = useDerivedValue(() => Math.max(0, Math.min(1, reveal.get() - index)));
   const width = useDerivedValue(() => 4 / zoom.get());
   const glowWidth = useDerivedValue(() => 12 / zoom.get());
   const dashes = legDashes(mode);
   return (
     <Group>
-      <Path path={path} style="stroke" strokeWidth={glowWidth} end={end} opacity={0.45}>
-        {gradient}
-        <BlurMask blur={6} style="normal" />
-      </Path>
+      {glow ? (
+        <Path path={path} style="stroke" strokeWidth={glowWidth} end={end} opacity={0.45}>
+          {gradient}
+          <BlurMask blur={6} style="normal" />
+        </Path>
+      ) : null}
       <Path path={path} style="stroke" strokeWidth={width} strokeCap="round" end={end}>
         {gradient}
         {dashes ? <DashPathEffect intervals={dashes.map((d) => d * 0.6)} /> : null}
@@ -66,9 +70,14 @@ type RecapGeometryLeg = ReturnType<typeof buildRecapGeometry>["legs"][number];
 /** The replay's map: aurora sky, country outlines and the route, panned and zoomed by `camera`. */
 export function RecapMapCanvas({ width, height, frame, stops, legs, countries, camera, reveal, current, opacity, inset, insetRect, focus }: Props) {
   const view = useBoundaryStore((state) => state.view);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const geometry = useMemo(() => buildRecapGeometry(frame, stops, legs, countries, grow(frame.box, 3)), [frame, stops, legs, countries, view]);
-  const zoom = useDerivedValue(() => camera.get().zoom);
+  const geometry = useMemo(() => buildRecapGeometry(frame, stops, legs, countries, grow(frame.box, 3), view), [frame, stops, legs, countries, view]);
+  const tier = usePerfTier();
+  const lowTier = tier === "low";
+  // Low-tier phones change line widths in ~9% zoom steps rather than every frame.
+  const zoom = useDerivedValue(() => {
+    const z = camera.get().zoom;
+    return lowTier ? Math.pow(ZOOM_STEP, Math.round(Math.log(z) / Math.log(ZOOM_STEP))) : z;
+  });
   const transform = useDerivedValue(() => {
     const { x, y, zoom: z } = camera.get();
     const k = inset?.get() ?? 0;
@@ -122,7 +131,7 @@ export function RecapMapCanvas({ width, height, frame, stops, legs, countries, c
         <Path path={geometry.home} color="rgba(255,255,255,0.045)" />
         <Path path={geometry.home} style="stroke" strokeWidth={outline} color="rgba(255,255,255,0.24)" strokeJoin="round" />
         {geometry.legs.map((leg, i) => (
-          <Leg key={i} path={leg.path} mode={leg.mode} index={i} reveal={reveal} zoom={zoom} gradient={gradient} />
+          <Leg key={i} path={leg.path} mode={leg.mode} index={i} reveal={reveal} zoom={zoom} gradient={gradient} glow={!lowTier} />
         ))}
         {geometry.points.map((p, i) => (
           <StopDot key={i} x={p.x} y={p.y} index={i} current={current} reveal={reveal} dot={dot} bigDot={bigDot} halo={halo} />

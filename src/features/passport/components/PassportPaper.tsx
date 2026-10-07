@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Canvas, Fill, Path, Shader, Skia } from "react-native-skia";
 import { auraFonts as f } from "@/constants/aura";
-import { markPaths } from "./PassportCover";
+import { HOSKINS_HASH, lazyEffect, markPaths } from "./PassportCover";
 
 /** Ink colours for text on the light passport paper. */
 export const INK = {
@@ -16,9 +16,10 @@ export const INK = {
 export const PAPER_RGB = [0.95, 0.937, 0.9];
 
 // Security paper: cream, fine wavy lines and a guilloché rosette (two interfering sets of wavy rings).
-const PAPER = Skia.RuntimeEffect.Make(`
+const PAPER = lazyEffect(`
 uniform float2 res;
 uniform float2 rosette;
+${HOSKINS_HASH}
 
 float lines(float v, float period) {
   float d = abs(fract(v / period) - 0.5) * period;
@@ -45,10 +46,10 @@ half4 main(float2 xy) {
   float3 indigo = float3(0.3, 0.33, 0.68);
   col = mix(col, teal, w1 * 0.08 + ra * ring * 0.15);
   col = mix(col, indigo, w2 * 0.06 + rb * ring * 0.12);
-  col += (fract(sin(dot(floor(xy * 1.3), float2(12.9898, 78.233))) * 43758.5453) - 0.5) * 0.018;
+  col += (hash(floor(xy * 1.3)) - 0.5) * 0.018;
   return half4(half3(col), 1.0);
 }
-`)!;
+`);
 
 // 5×7 dot digits for the perforated serial number.
 const DIGITS = [
@@ -97,7 +98,7 @@ export function PassportPaper({ width, height, page, serial, children }: Props) 
     <View style={styles.flex}>
       <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
         <Fill>
-          <Shader source={PAPER} uniforms={uniforms} />
+          <Shader source={PAPER()} uniforms={uniforms} />
         </Fill>
         <Path path={mark.n} style="stroke" strokeWidth={46 * mark.scale} strokeCap="round" strokeJoin="round" color="rgba(76,84,170,0.07)" />
         <Path path={holes} color="rgba(95,82,58,0.42)" />

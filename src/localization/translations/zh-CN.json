@@ -580,6 +580,7 @@
     "disabledBody": "已在设置中关闭本地 AI。开启它即可进行聊天、管理模型并查看设备端洞察。",
     "disabledAction": "打开设置",
     "yesterday": "昨天",
+    "showEarlier": "显示更早的消息",
     "assistantName": "Nomad",
     "chatBusyElsewhere": "正在另一个行程对话中完成回复…",
     "stopReply": "停止回复",

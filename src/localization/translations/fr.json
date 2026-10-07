@@ -580,6 +580,7 @@
     "disabledBody": "L'IA locale est désactivée dans les paramètres. Activez-la pour discuter, gérer les modèles et afficher les analyses sur l'appareil.",
     "disabledAction": "Ouvrir les paramètres",
     "yesterday": "Hier",
+    "showEarlier": "Afficher les messages précédents",
     "assistantName": "Nomad",
     "chatBusyElsewhere": "Termine une réponse dans une autre conversation de voyage…",
     "stopReply": "Arrêter la réponse",

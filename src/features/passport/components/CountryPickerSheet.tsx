@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { FlatList, StyleSheet, Text, View } from "react-native";
 import { AuraField, AuraSheet, Icon, PressableScale, useAura } from "@/atoms";
-import { COUNTRY_SHAPES } from "@/features/recap/data/countryShapes";
+import { countryCodes } from "@/features/recap/utils/countryShapes";
 import { countryDisplayName, foldSearchText } from "@/features/trips/data/destinations";
 import { useLocalization } from "@/localization";
 import { selectionChanged } from "@/utils/haptics";
@@ -23,7 +23,7 @@ export function CountryPickerSheet({ visible, onClose, title, automaticLabel, se
   const [query, setQuery] = useState("");
   const countries = useMemo(
     () =>
-      Object.keys(COUNTRY_SHAPES)
+      countryCodes()
         .map((code) => ({ code, name: countryDisplayName(code, locale) }))
         .sort((a, b) => a.name.localeCompare(b.name, locale)),
     [locale],

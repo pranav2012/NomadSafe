@@ -1,7 +1,8 @@
 import React, { useEffect } from "react";
 import { StyleSheet, View } from "react-native";
-import { Canvas, Fill, Shader, Skia } from "react-native-skia";
+import { Canvas, Fill, Shader, Skia, type SkRuntimeEffect } from "react-native-skia";
 import { useAnimationsActive } from "@/hooks/useAnimationsActive";
+import { usePerfTier, type PerfTier } from "@/hooks/usePerfTier";
 import {
   Easing,
   SensorType,
@@ -11,6 +12,7 @@ import {
   useReducedMotion,
   useSharedValue,
   withTiming,
+  type SharedValue,
 } from "react-native-reanimated";
 
 export const SKY_INTRO_MS = 2800;
@@ -27,7 +29,7 @@ export function consumeSkyIntro() {
 // Northern-lights landscape mirrored in a lake. Coordinates are in sky-height units
 // (p.y 0 = top of sky, 1 = bottom of the hero); `tilt` shifts each depth layer for parallax
 // and `intro` (0..1) fades the sky up from black and sweeps the aurora up from the horizon.
-const SKY = Skia.RuntimeEffect.Make(`
+const SKY_SKSL = `
 uniform float2 res;
 uniform float top;
 uniform float time;
@@ -242,43 +244,35 @@ half4 main(float2 xy) {
   col = mix(col, mix(float3(0.45, 0.42, 0.55), float3(0.07, 0.12, 0.14), dark), mist);
   return half4(half3(1.0 - exp(-col * 1.25)), 1.0);
 }
-`)!;
+`;
+
+let sky: SkRuntimeEffect | null = null;
+// Compiled on first use, not at import, so screens that never show the hero don't pay for it.
+function skyEffect() {
+  return (sky ??= Skia.RuntimeEffect.Make(SKY_SKSL)!);
+}
 
 const TILT_RANGE = 0.25;
 // The aurora moves slowly; redrawing the full-screen shader at ~30 fps instead of 60–120 halves its cost.
-const SKY_TICK_S = 0.033;
+const SKY_TICK_S: Record<PerfTier, number> = { high: 0.033, mid: 0.033, low: 0.066 };
+// The sky is soft, so weaker phones draw it smaller and let the view scale it up.
+const SKY_SCALE: Record<PerfTier, number> = { high: 1, mid: 2 / 3, low: 0.5 };
 
-/** Sign-in/onboarding hero: an animated northern-lights landscape with tilt parallax and an optional intro. */
-export function AuraSkyHero({
-  width,
-  height,
-  topInset = 0,
-  isDark,
-  intro = false,
-}: {
-  width: number;
-  height: number;
-  topInset?: number;
-  isDark: boolean;
-  intro?: boolean;
-}) {
-  const reduceMotion = useReducedMotion();
-  const clock = useSharedValue(reduceMotion ? 14 : 0);
-  const reveal = useSharedValue(intro && !reduceMotion ? 0 : 1);
-  const tiltX = useSharedValue(0);
-  const tiltY = useSharedValue(0);
-  const base = useSharedValue<{ x: number; y: number } | null>(null);
+type SkyMotion = {
+  clock: SharedValue<number>;
+  tiltX: SharedValue<number>;
+  tiltY: SharedValue<number>;
+  tickS: number;
+};
+
+/** Advances the sky clock and tilt; mounted only while animating, so the gravity sensor stops with it. */
+function SkyTicker({ clock, tiltX, tiltY, tickS }: SkyMotion) {
   const gravity = useAnimatedSensor(SensorType.GRAVITY, { interval: 33 });
-  const animating = useAnimationsActive();
+  const base = useSharedValue<{ x: number; y: number } | null>(null);
   const elapsed = useSharedValue(0);
-
-  useEffect(() => {
-    if (reveal.get() < 1) reveal.set(withTiming(1, { duration: SKY_INTRO_MS, easing: Easing.inOut(Easing.cubic) }));
-  }, [reveal]);
-
-  const ticker = useFrameCallback((frame) => {
+  useFrameCallback((frame) => {
     elapsed.set(elapsed.get() + (frame.timeSincePreviousFrame ?? 16) / 1000);
-    if (elapsed.get() < SKY_TICK_S) return;
+    if (elapsed.get() < tickS) return;
     const dt = Math.min(elapsed.get(), 0.1);
     elapsed.set(0);
     clock.set(clock.get() + dt);
@@ -295,14 +289,42 @@ export function AuraSkyHero({
     const k = Math.min(1, dt * 4);
     tiltX.set(tiltX.get() + (tx - tiltX.get()) * k);
     tiltY.set(tiltY.get() + (ty - tiltY.get()) * k);
-  }, false);
+  });
+  return null;
+}
+
+/** Sign-in/onboarding hero: an animated northern-lights landscape with tilt parallax and an optional intro. */
+export function AuraSkyHero({
+  width,
+  height,
+  topInset = 0,
+  isDark,
+  intro = false,
+}: {
+  width: number;
+  height: number;
+  topInset?: number;
+  isDark: boolean;
+  intro?: boolean;
+}) {
+  const reduceMotion = useReducedMotion();
+  const tier = usePerfTier();
+  const clock = useSharedValue(reduceMotion ? 14 : 0);
+  const reveal = useSharedValue(intro && !reduceMotion ? 0 : 1);
+  const tiltX = useSharedValue(0);
+  const tiltY = useSharedValue(0);
+  const animating = useAnimationsActive();
+  const scale = SKY_SCALE[tier];
+  const drawW = Math.round(width * scale);
+  const drawH = Math.round(height * scale);
+
   useEffect(() => {
-    ticker.setActive(animating && !reduceMotion);
-  }, [animating, reduceMotion, ticker]);
+    if (reveal.get() < 1) reveal.set(withTiming(1, { duration: SKY_INTRO_MS, easing: Easing.inOut(Easing.cubic) }));
+  }, [reveal]);
 
   const uniforms = useDerivedValue(() => ({
-    res: [width, height],
-    top: topInset,
+    res: [drawW, drawH],
+    top: topInset * scale,
     time: clock.get(),
     dark: isDark ? 1 : 0,
     intro: reveal.get(),
@@ -310,10 +332,17 @@ export function AuraSkyHero({
   }));
 
   return (
-    <View style={{ width, height }} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-      <Canvas style={StyleSheet.absoluteFill}>
+    <View style={{ width, height, overflow: "hidden" }} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+      {animating && !reduceMotion ? <SkyTicker clock={clock} tiltX={tiltX} tiltY={tiltY} tickS={SKY_TICK_S[tier]} /> : null}
+      <Canvas
+        style={
+          scale === 1
+            ? StyleSheet.absoluteFill
+            : { position: "absolute", left: 0, top: 0, width: drawW, height: drawH, transformOrigin: "top left", transform: [{ scaleX: width / drawW }, { scaleY: height / drawH }] }
+        }
+      >
         <Fill>
-          <Shader source={SKY} uniforms={uniforms} />
+          <Shader source={skyEffect()} uniforms={uniforms} />
         </Fill>
       </Canvas>
     </View>

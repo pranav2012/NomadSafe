@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
 import {
   AlphaType,
   Canvas,
   DashPathEffect,
   Circle,
+  Group,
   ColorType,
   FilterMode,
   Fill,
@@ -16,6 +17,7 @@ import {
   usePathValue,
   type SkImage,
   type SkPathBuilder,
+  type SkRuntimeEffect,
 } from "react-native-skia";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
@@ -33,6 +35,7 @@ import Animated, {
 import { scheduleOnRN, scheduleOnUI } from "react-native-worklets";
 import { springs, useAura } from "@/atoms";
 import { useAnimationsActive } from "@/hooks/useAnimationsActive";
+import { getPerfTier, usePerfGovernor, usePerfTier, type PerfTier } from "@/hooks/usePerfTier";
 import { useGlobeWeather } from "@/features/home/hooks/useGlobeWeather";
 import { GLOBE_MAX_TILES, getRegionImagery, prefetchRegionImagery } from "@/features/home/services/globeImagery";
 import { tileBoxFor, tileBoxKey, type DetailBox, type TileBox } from "@/features/home/utils/globeTiles";
@@ -66,7 +69,9 @@ const SPIN_RESUME_MS = 2000;
 // The globe redraws at ~30 fps rather than the display rate: clouds drift slowly and the comet and pin
 // pulses still read smoothly. It's one canvas on purpose: two full-size Skia surfaces created together
 // crash the Adreno Vulkan driver under Graphite (Snapdragon phones).
-const SHADER_TICK_MS = 33;
+const SHADER_TICK_MS: Record<PerfTier, number> = { high: 33, mid: 33, low: 66 };
+// Low-tier phones draw the globe at 2/3 size and the view scales it up; pins are native views there so they stay crisp.
+const LOW_TIER_SCALE = 2 / 3;
 const EARTH_RADIUS_KM = 6371;
 const MIN_HANDOFF_ZOOM = 3.2;
 const TEX_W = 2048;
@@ -185,7 +190,7 @@ function useTripImagery(stops: GlobeStop[], focusIndex: number, enabled: boolean
   const focusKey = focus ? tileBoxKey(focus) : null;
   const [regions, setRegions] = useState<Record<string, RegionDetail>>(() => Object.fromEntries(regionCache));
 
-  useEffect(() => {
+  const loadWanted = useEffectEvent(() => {
     const wanted = [focus, route].filter((box): box is TileBox => box !== null);
     if (!wanted.length) return;
     const wantedKeys = wanted.map(tileBoxKey);
@@ -202,13 +207,16 @@ function useTripImagery(stops: GlobeStop[], focusIndex: number, enabled: boolean
           }));
         }
       }
-      void prefetchRegionImagery(stopBoxes.filter((box, i): box is TileBox => box !== null && i !== focusIndex));
+      // Low-tier phones fetch only the next stop ahead, sparing storage, data and decode work.
+      const ahead = getPerfTier() === "low";
+      void prefetchRegionImagery(stopBoxes.filter((box, i): box is TileBox => box !== null && (ahead ? i === focusIndex + 1 : i !== focusIndex)));
     })();
     return () => {
       mounted = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [routeKey, focusKey]);
+  });
+  // Reload only when the boxes themselves change, not on every new `stops` array.
+  useEffect(() => loadWanted(), [routeKey, focusKey]);
 
   return {
     route: routeKey ? (regions[routeKey] ?? null) : null,
@@ -293,12 +301,15 @@ function nearestTurn(angle: number, from: number) {
   return angle + Math.round((from - angle) / (2 * Math.PI)) * 2 * Math.PI;
 }
 
-// Clear skies until the live cloud grid loads.
-const NO_CLOUDS = Skia.Image.MakeImage(
-  { width: 1, height: 1, alphaType: AlphaType.Opaque, colorType: ColorType.RGBA_8888 },
-  Skia.Data.fromBytes(new Uint8Array([0, 0, 0, 255])),
-  4,
-)!;
+let noClouds: SkImage | null = null;
+// Clear skies until the live cloud grid loads; made on first use, not at import.
+function clearSky() {
+  return (noClouds ??= Skia.Image.MakeImage(
+    { width: 1, height: 1, alphaType: AlphaType.Opaque, colorType: ColorType.RGBA_8888 },
+    Skia.Data.fromBytes(new Uint8Array([0, 0, 0, 255])),
+    4,
+  )!);
+}
 
 // Orthographic globe: per pixel, find the point on the sphere, rotate it back to world space and
 // sample equirectangular NASA imagery: Blue Marble on the day side, Black Marble (moonlit land and
@@ -306,7 +317,7 @@ const NO_CLOUDS = Skia.Image.MakeImage(
 // coarse grid; noise only adds the fine structure inside each cell and drifts with the planet's
 // wind bands. At night clouds are lit by the real moon phase and live thunderstorm cells flash.
 // Outside the disc: a thin sunlit atmosphere over a real photograph of the Milky Way.
-const GLOBE = Skia.RuntimeEffect.Make(`
+const GLOBE_SKSL = `
 uniform shader day;
 uniform shader night;
 uniform shader clouds;
@@ -333,6 +344,7 @@ uniform float moon;
 uniform float3 glowDir;
 uniform float2 glowCos;
 uniform float glowOn;
+uniform float clipBottom;
 
 const float PI = 3.14159265;
 const float3 ATMO = float3(0.36, 0.6, 1.0);
@@ -407,7 +419,33 @@ float3 boxUv(float lng, float lat, float4 box, float on) {
   return float3(du, dv, smoothstep(0.0, 0.08, min(min(du, 1.0 - du), min(dv, 1.0 - dv))) * inBox * on);
 }
 
+// Outside the disc: the atmosphere's halo over space (the Milky Way photo, or deep blue on the strip).
+float3 backdrop(float2 p, float2 q, float r, float3 sunV) {
+  float facing = dot(normalize(float2(q.x, -q.y) + 0.0001), normalize(sunV.xy + 0.0001));
+  float haloLight = 0.25 + 0.75 * smoothstep(-0.5, 0.7, facing);
+  float halo = (exp(-(r - 1.0) * 30.0) * 0.55 + exp(-(r - 1.0) * 9.0) * 0.12) * haloLight;
+  // The horizon strip has no stars, like a daylight orbital photo: deep blue at the limb into black.
+  float3 space = mix(float3(0.03, 0.055, 0.12), float3(0.008, 0.01, 0.022), smoothstep(1.0, 1.3, r));
+  if (skyPhoto > 0.0) {
+    // Sky: a ray behind the globe, drifting at a quarter of the globe's spin for depth, then tilted so
+    // the Milky Way crosses diagonally behind Earth.
+    float2 sp = (p - center) / skyScale;
+    float3 d = rotY(normalize(float3(sp.x, -sp.y, -1.8)), rotLng * 0.25 + 0.5);
+    float pt = rotLat * 0.25 - 0.3;
+    d = float3(d.x, d.y * cos(pt) - d.z * sin(pt), d.y * sin(pt) + d.z * cos(pt));
+    d = float3(d.x * 0.85 - d.y * 0.53, d.x * 0.53 + d.y * 0.85, d.z);
+    float glon = atan(d.x, -d.z);
+    float glat = asin(clamp(d.y, -1.0, 1.0));
+    float2 suv = float2((glon / (2.0 * PI) + 0.5) * ${SKY_W}.0, (0.5 - glat / PI) * ${SKY_H}.0);
+    float3 photo = pow(float3(sky.eval(suv).rgb), float3(1.15)) * 0.9;
+    space = mix(space, photo, skyPhoto);
+  }
+  return mix(space, ATMO, clamp(halo, 0.0, 1.0));
+}
+
 half4 main(float2 p) {
+  // Below the strip's visible edge (the page clips it): nothing to draw.
+  if (p.y > clipBottom) return half4(0.0, 0.0, 0.0, 1.0);
   float2 q = (p - center) / radius;
   float r = length(q);
 
@@ -417,24 +455,9 @@ half4 main(float2 p) {
   float3 sa = float3(sun.x * cg - sun.z * sg, sun.y, sun.x * sg + sun.z * cg);
   float3 sunV = float3(sa.x, sa.y * cl - sa.z * sl, sa.y * sl + sa.z * cl);
 
-  float facing = dot(normalize(float2(q.x, -q.y) + 0.0001), normalize(sunV.xy + 0.0001));
-  float haloLight = 0.25 + 0.75 * smoothstep(-0.5, 0.7, facing);
-  float halo = (exp(-(r - 1.0) * 30.0) * 0.55 + exp(-(r - 1.0) * 9.0) * 0.12) * haloLight;
-  // Sky: a ray behind the globe, drifting at a quarter of the globe's spin for depth, then tilted so
-  // the Milky Way crosses diagonally behind Earth.
-  float2 sp = (p - center) / skyScale;
-  float3 d = rotY(normalize(float3(sp.x, -sp.y, -1.8)), rotLng * 0.25 + 0.5);
-  float pt = rotLat * 0.25 - 0.3;
-  d = float3(d.x, d.y * cos(pt) - d.z * sin(pt), d.y * sin(pt) + d.z * cos(pt));
-  d = float3(d.x * 0.85 - d.y * 0.53, d.x * 0.53 + d.y * 0.85, d.z);
-  float glon = atan(d.x, -d.z);
-  float glat = asin(clamp(d.y, -1.0, 1.0));
-  float2 suv = float2((glon / (2.0 * PI) + 0.5) * ${SKY_W}.0, (0.5 - glat / PI) * ${SKY_H}.0);
-  float3 photo = pow(float3(sky.eval(suv).rgb), float3(1.15)) * 0.9;
-  // The horizon strip has no stars, like a daylight orbital photo: deep blue at the limb into black.
-  float3 deep = mix(float3(0.03, 0.055, 0.12), float3(0.008, 0.01, 0.022), smoothstep(1.0, 1.3, r));
-  float3 space = mix(deep, photo, skyPhoto);
-  float3 back = mix(space, ATMO, clamp(halo, 0.0, 1.0));
+  // The backdrop only shows outside the disc and in its anti-aliased rim, so the inside skips it.
+  float rim = 1.0 - 1.5 / radius;
+  float3 back = r > rim ? backdrop(p, q, r, sunV) : float3(0.0);
   if (r > 1.0) return half4(half3(back), 1.0);
 
   float z = sqrt(max(0.0, 1.0 - r * r));
@@ -514,10 +537,16 @@ half4 main(float2 p) {
   float fresnel = pow(1.0 - z, 3.0);
   col += ATMO * fresnel * 0.75 * smoothstep(-0.25, 0.4, sunDot);
 
-  float edge = smoothstep(1.0, 1.0 - 1.5 / radius, r);
+  float edge = smoothstep(1.0, rim, r);
   return half4(half3(mix(back, col, edge)), 1.0);
 }
-`)!;
+`;
+
+let globeEffect: SkRuntimeEffect | null = null;
+// Compiled on first use rather than at import, so launch doesn't pay for it.
+function globeShader() {
+  return (globeEffect ??= Skia.RuntimeEffect.Make(GLOBE_SKSL)!);
+}
 
 export interface GlobeStop {
   name: string;
@@ -665,12 +694,19 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
   const moon = 0.2 + 0.8 * moonIllumination(now);
   const reduceMotion = useReducedMotion();
   const animating = useAnimationsActive();
+  const tier = usePerfTier();
+  usePerfGovernor(animating);
+  const tickMs = SHADER_TICK_MS[tier];
+  const drawScale = tier === "low" ? LOW_TIER_SCALE : 1;
+  const nativePins = drawScale !== 1;
   const clock = useSharedValue(0);
   const shaderTime = useSharedValue(0);
   const shaderTickAt = useSharedValue(0);
   const baseRadius = Math.min(width, height - topInset) * 0.45;
   const stripRadius = width * HORIZON_RADIUS;
   const focus = stops[focusIndex] ?? { name: "", latitude: 20, longitude: 0 };
+  const focusLatDeg = focus.latitude;
+  const focusLngDeg = focus.longitude;
   const focusLat = focus.latitude * DEG;
   const focusLng = focus.longitude * DEG;
   // The clear window: below the overlaid header, above the page's bottom fade (and the lowest name).
@@ -680,12 +716,11 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
   const frame = useMemo(
     () =>
       overview
-        ? { lat: Math.max(-0.6, Math.min(0.6, focus.latitude * DEG * 0.8)), lng: focus.longitude * DEG, zoom: MIN_ZOOM }
+        ? { lat: Math.max(-0.6, Math.min(0.6, focusLatDeg * DEG * 0.8)), lng: focusLngDeg * DEG, zoom: MIN_ZOOM }
         : showRoute && stops.length > 0
           ? frameRoute(stops, baseRadius, width / 2, clearHalfH, frameLift)
-          : frameFocus(focus, baseRadius, frameLift),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [overview, showRoute, stops, focus.latitude, focus.longitude, baseRadius, width, clearHalfH, frameLift],
+          : frameFocus({ name: "", latitude: focusLatDeg, longitude: focusLngDeg }, baseRadius, frameLift),
+    [overview, showRoute, stops, focusLatDeg, focusLngDeg, baseRadius, width, clearHalfH, frameLift],
   );
   const stripLat = Math.max(-1.3, Math.min(1.3, focusLat)) - HORIZON_TILT;
   const spinning = overview && stops.length === 0 && !reduceMotion;
@@ -747,7 +782,7 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
   const ticker = useFrameCallback((info) => {
     if (scrolling?.get()) return;
     const elapsed = shaderTickAt.get() + (info.timeSincePreviousFrame ?? 16);
-    if (elapsed < SHADER_TICK_MS) {
+    if (elapsed < tickMs) {
       shaderTickAt.set(elapsed);
       return;
     }
@@ -774,7 +809,7 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
 
   const wasStrip = useRef(horizon);
   const framed = useRef(false);
-  useEffect(() => {
+  const applyFrame = useEffectEvent(() => {
     const ease = Easing.bezier(0.2, 0.8, 0.2, 1);
     const lng = nearestTurn(targetLng, rotLng.get());
     if (wasStrip.current !== horizon) {
@@ -823,8 +858,9 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
     zoom.set(withTiming(restZoom, { duration, easing: ease }));
     rotLng.set(withTiming(lng, { duration, easing: ease }));
     rotLat.set(withTiming(targetLat, { duration, easing: ease }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entry, horizon, reduceMotion, restZoom, spinning, targetLat, targetLng]);
+  });
+  // Re-aim only when the target view changes; the morph reads the rest at that moment.
+  useEffect(() => applyFrame(), [entry, horizon, reduceMotion, restZoom, spinning, targetLat, targetLng]);
 
   const uniforms = useDerivedValue(() => ({
     center: [view.get().x, view.get().y],
@@ -845,6 +881,7 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
     focusBox,
     focusSize,
     focusOn: imagery.focus ? 1 : 0,
+    clipBottom: strip.get() === 1 && morph.get() >= 1 ? (stripHeight ?? height) + 2 : height + 1000,
   }));
 
   // Leg i stops short of both pins, so lines never run into them; a leg too short to clear them is skipped.
@@ -1050,6 +1087,14 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
   });
 
   const fadeStyle = useAnimatedStyle(() => ({ opacity: fade.get() }));
+  const drawW = Math.round(width * drawScale);
+  const drawH = Math.round(height * drawScale);
+  const canvasStyle =
+    drawScale === 1
+      ? StyleSheet.absoluteFill
+      : { position: "absolute" as const, left: 0, top: 0, width: drawW, height: drawH, transformOrigin: "top left", transform: [{ scaleX: width / drawW }, { scaleY: height / drawH }] };
+  const drawTransform = drawScale === 1 ? undefined : [{ scaleX: drawW / width }, { scaleY: drawH / height }];
+  const pinColor = isDark ? "#EDEFF5" : "#0E1018";
 
   // No Skia layers here (group opacity, blur): under Graphite the off-screen render pass they need
   // crashes the Adreno Vulkan driver, so the fade is a native opacity and glows are plain strokes.
@@ -1058,13 +1103,14 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
       <View style={{ width, height }}>
         {textures && dayImage && nightImage ? (
           <Animated.View style={[StyleSheet.absoluteFill, fadeStyle]}>
-          <Canvas style={StyleSheet.absoluteFill}>
+          <Canvas style={canvasStyle}>
+            <Group transform={drawTransform}>
             <Fill>
-              <Shader source={GLOBE} uniforms={uniforms}>
+              <Shader source={globeShader()} uniforms={uniforms}>
                 <ImageShader image={dayImage} fit="fill" x={0} y={0} width={TEX_W} height={TEX_H} sampling={SMOOTH} />
                 <ImageShader image={nightImage} fit="fill" x={0} y={0} width={TEX_W} height={TEX_H} sampling={SMOOTH} />
                 <ImageShader
-                  image={clouds ?? NO_CLOUDS}
+                  image={clouds ?? clearSky()}
                   fit="fill"
                   x={0}
                   y={0}
@@ -1074,14 +1120,14 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
                   ty="clamp"
                   sampling={{ filter: FilterMode.Linear, mipmap: MipmapMode.None }}
                 />
-                <ImageShader image={imagery.route?.day ?? NO_CLOUDS} fit="fill" x={0} y={0} width={routeSize[0]} height={routeSize[1]} sampling={SMOOTH} />
-                <ImageShader image={imagery.route?.night ?? NO_CLOUDS} fit="fill" x={0} y={0} width={routeSize[0]} height={routeSize[1]} sampling={SMOOTH} />
-                <ImageShader image={imagery.focus?.day ?? NO_CLOUDS} fit="fill" x={0} y={0} width={focusSize[0]} height={focusSize[1]} sampling={SMOOTH} />
-                <ImageShader image={imagery.focus?.night ?? NO_CLOUDS} fit="fill" x={0} y={0} width={focusSize[0]} height={focusSize[1]} sampling={SMOOTH} />
+                <ImageShader image={imagery.route?.day ?? clearSky()} fit="fill" x={0} y={0} width={routeSize[0]} height={routeSize[1]} sampling={SMOOTH} />
+                <ImageShader image={imagery.route?.night ?? clearSky()} fit="fill" x={0} y={0} width={routeSize[0]} height={routeSize[1]} sampling={SMOOTH} />
+                <ImageShader image={imagery.focus?.day ?? clearSky()} fit="fill" x={0} y={0} width={focusSize[0]} height={focusSize[1]} sampling={SMOOTH} />
+                <ImageShader image={imagery.focus?.night ?? clearSky()} fit="fill" x={0} y={0} width={focusSize[0]} height={focusSize[1]} sampling={SMOOTH} />
                 <ImageShader image={textures.sky} fit="fill" x={0} y={0} width={SKY_W} height={SKY_H} tx="repeat" ty="clamp" sampling={SMOOTH} />
               </Shader>
             </Fill>
-            <Path path={homeArc} style="stroke" strokeWidth={1.4} color={isDark ? "#EDEFF5" : "#0E1018"} opacity={0.55} strokeCap="round">
+            <Path path={homeArc} style="stroke" strokeWidth={1.4} color={pinColor} opacity={0.55} strokeCap="round">
               <DashPathEffect intervals={[3, 5]} />
             </Path>
             <Path path={brightLegs} style="stroke" strokeWidth={4} color="#000000" opacity={0.22} strokeCap="round" />
@@ -1096,15 +1142,17 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
             <Path path={nextPath} style="stroke" strokeWidth={2.2} color="#FFFFFF" strokeCap="round">
               <DashPathEffect intervals={DASH} phase={march} />
             </Path>
-            {origin ? (
-              <GlobePin stop={origin} focused={false} rotLng={rotLng} rotLat={rotLat} view={view} accent={isDark ? "#EDEFF5" : "#0E1018"} pulse={pulse} quiet />
+            {origin && !nativePins ? (
+              <GlobePin stop={origin} focused={false} rotLng={rotLng} rotLat={rotLat} view={view} accent={pinColor} pulse={pulse} quiet />
             ) : null}
             {plannedPins.map((pin, i) => (
-              <PlannedPin key={`planned-${i}`} stop={pin} rotLng={rotLng} rotLat={rotLat} view={view} color={isDark ? "#EDEFF5" : "#0E1018"} />
+              <PlannedPin key={`planned-${i}`} stop={pin} rotLng={rotLng} rotLat={rotLat} view={view} color={pinColor} />
             ))}
-            {contacts.map((contact, i) => (
-              <GlobePin key={`contact-${i}`} stop={contact} focused={false} rotLng={rotLng} rotLat={rotLat} view={view} accent={contactColor} pulse={pulse} quiet />
-            ))}
+            {nativePins
+              ? null
+              : contacts.map((contact, i) => (
+                  <GlobePin key={`contact-${i}`} stop={contact} focused={false} rotLng={rotLng} rotLat={rotLat} view={view} accent={contactColor} pulse={pulse} quiet />
+                ))}
             {pins.map(({ stop, focused, visited }, i) => (
               <GlobePin
                 key={`${stop.name}-${i}`}
@@ -1118,9 +1166,33 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
                 view={view}
                 accent={accent}
                 pulse={pulse}
+                ringOnly={nativePins}
               />
             ))}
+            </Group>
           </Canvas>
+          {nativePins ? (
+            <>
+              {origin ? <NativePin stop={origin} focused={false} rotLng={rotLng} rotLat={rotLat} view={view} accent={pinColor} quiet /> : null}
+              {contacts.map((contact, i) => (
+                <NativePin key={`contact-${i}`} stop={contact} focused={false} rotLng={rotLng} rotLat={rotLat} view={view} accent={contactColor} quiet />
+              ))}
+              {pins.map(({ stop, focused, visited }, i) => (
+                <NativePin
+                  key={`${stop.name}-${i}`}
+                  index={i}
+                  layout={stopLayout}
+                  stop={stop}
+                  focused={focused}
+                  visited={visited}
+                  rotLng={rotLng}
+                  rotLat={rotLat}
+                  view={view}
+                  accent={accent}
+                />
+              ))}
+            </>
+          ) : null}
           </Animated.View>
         ) : null}
         {dayImage && nightImage && focusOnly[0] && stopWeather[0] ? (
@@ -1169,8 +1241,11 @@ function GlobePin({
   accent,
   pulse,
   quiet = false,
+  ringOnly = false,
 }: {
   index?: number;
+  /** Only the focused pulse ring; the discs are drawn by `NativePin`. */
+  ringOnly?: boolean;
   /** Trip stops only: whether this pin survived the overlap check. */
   layout?: ReturnType<typeof useDerivedValue<StopLayout>>;
   quiet?: boolean;
@@ -1197,10 +1272,56 @@ function GlobePin({
   return (
     <>
       <Circle cx={x} cy={y} r={ringR} color="#FFFFFF" style="stroke" strokeWidth={1.5} opacity={ringOpacity} />
-      <Circle cx={x} cy={y} r={lead ? 9.5 : 5} color="rgba(0,0,0,0.4)" opacity={visible} />
-      <Circle cx={x} cy={y} r={lead ? 8 : 4} color="#FFFFFF" opacity={visible} />
-      <Circle cx={x} cy={y} r={lead ? 5 : 1.8} color={lead || quiet ? accent : "#3B3F52"} opacity={visible} />
+      {ringOnly ? null : (
+        <>
+          <Circle cx={x} cy={y} r={lead ? 9.5 : 5} color="rgba(0,0,0,0.4)" opacity={visible} />
+          <Circle cx={x} cy={y} r={lead ? 8 : 4} color="#FFFFFF" opacity={visible} />
+          <Circle cx={x} cy={y} r={lead ? 5 : 1.8} color={lead || quiet ? accent : "#3B3F52"} opacity={visible} />
+        </>
+      )}
     </>
+  );
+}
+
+/** `GlobePin`'s discs as native views, for low-tier phones where the canvas is drawn smaller and scaled up. */
+function NativePin({
+  index = 0,
+  layout,
+  stop,
+  focused,
+  visited = false,
+  rotLng,
+  rotLat,
+  view,
+  accent,
+  quiet = false,
+}: {
+  index?: number;
+  layout?: ReturnType<typeof useDerivedValue<StopLayout>>;
+  quiet?: boolean;
+  stop: GlobeStop;
+  focused: boolean;
+  visited?: boolean;
+  rotLng: ReturnType<typeof useSharedValue<number>>;
+  rotLat: ReturnType<typeof useSharedValue<number>>;
+  view: ViewValue;
+  accent: string;
+}) {
+  const lead = focused && !quiet;
+  const rim = lead ? 9.5 : 5;
+  const disc = lead ? 8 : 4;
+  const dot = lead ? 5 : 1.8;
+  const style = useAnimatedStyle(() => {
+    const point = project(stop.latitude * DEG, stop.longitude * DEG, rotLng.get(), rotLat.get(), view.get().x, view.get().y, view.get().r);
+    const shown = point.z > 0 ? (layout ? (layout.get().pinOn[index] ?? 1) : 1) * (visited ? 0.6 : 1) : 0;
+    return { opacity: shown, transform: [{ translateX: point.x - rim }, { translateY: point.y - rim }] };
+  });
+  return (
+    <Animated.View pointerEvents="none" style={[styles.pin, { width: rim * 2, height: rim * 2, borderRadius: rim }, style]}>
+      <View style={[styles.pinDisc, { width: disc * 2, height: disc * 2, borderRadius: disc }]}>
+        <View style={{ width: dot * 2, height: dot * 2, borderRadius: dot, backgroundColor: lead || quiet ? accent : "#3B3F52" }} />
+      </View>
+    </Animated.View>
   );
 }
 
@@ -1324,6 +1445,8 @@ function StopLabel({
 
 const styles = StyleSheet.create({
   labelWrap: { position: "absolute", left: 0, top: 0 },
+  pin: { position: "absolute", left: 0, top: 0, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.4)" },
+  pinDisc: { alignItems: "center", justifyContent: "center", backgroundColor: "#FFFFFF" },
   label: {
     maxWidth: LABEL_WIDTH,
     height: 18,

@@ -3,13 +3,17 @@ import { Platform, StyleSheet, Text, View } from "react-native";
 import { useAura } from "@/atoms";
 import { PrivateView } from "@/modules/analytics";
 import { auraStatusColors } from "@/constants/aura";
+import { useAnimationsActive } from "@/hooks/useAnimationsActive";
+import { usePerfTier } from "@/hooks/usePerfTier";
 import type { ChatMessage } from "../store/chatStore";
 import { AiPlasmaOrb } from "./AiPlasmaOrb";
 import { AiThinking } from "./AiThinking";
 
 const MONO = Platform.select({ ios: "Menlo", default: "monospace" });
-const REVEAL_FRAME_MS = 32;
-const REVEAL_FRAMES = 6;
+// Each step re-parses the markdown, so text lands in ~15 steps a second (~10 on low-tier phones);
+// the fading tail keeps it reading as smooth typing. Catch-up stays ~200 ms either way.
+const REVEAL_FRAME_MS = { high: 64, mid: 64, low: 96 } as const;
+const REVEAL_FRAMES = { high: 3, mid: 3, low: 2 } as const;
 const TAIL_CHARS = 10;
 const CURSOR_MS = 420;
 
@@ -24,14 +28,16 @@ function withAlpha(hex: string, alpha: number): string {
  */
 function useRevealedText(text: string, live: boolean): string {
   const [shown, setShown] = useState(() => (live ? 0 : text.length));
+  const tier = usePerfTier();
   const target = text.length;
   useEffect(() => {
     if (shown >= target) return;
+    const frames = REVEAL_FRAMES[tier];
     const id = setTimeout(() => {
-      setShown((value) => Math.min(target, value + Math.max(2, Math.ceil((target - value) / REVEAL_FRAMES))));
-    }, REVEAL_FRAME_MS);
+      setShown((value) => Math.min(target, value + Math.max(2, Math.ceil((target - value) / frames))));
+    }, REVEAL_FRAME_MS[tier]);
     return () => clearTimeout(id);
-  }, [shown, target]);
+  }, [shown, target, tier]);
   return shown >= target ? text : text.slice(0, shown);
 }
 
@@ -135,6 +141,12 @@ function MarkdownText({ text, streaming = false }: { text: string; streaming?: b
   );
 }
 
+/** The little thinking orb beside a streaming reply; paused when the screen is hidden. */
+function StreamingOrb({ isDark }: { isDark: boolean }) {
+  const animating = useAnimationsActive();
+  return <AiPlasmaOrb size={16} mode="thinking" isDark={isDark} paused={!animating} contained />;
+}
+
 /** One chat turn: user text in an inverse bubble, assistant markdown flush left under a name row. */
 export function AiMessage({ msg, label, streamingText }: { msg: ChatMessage; label: string; streamingText?: string }) {
   const { c, f, isDark, accent } = useAura();
@@ -156,7 +168,7 @@ export function AiMessage({ msg, label, streamingText }: { msg: ChatMessage; lab
       <View style={styles.nameRow}>
         {streaming ? (
           <View style={styles.dotWrap}>
-            <AiPlasmaOrb size={16} mode="thinking" isDark={isDark} contained />
+            <StreamingOrb isDark={isDark} />
           </View>
         ) : (
           <View style={styles.dotWrap}>

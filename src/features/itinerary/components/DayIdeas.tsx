@@ -51,7 +51,7 @@ export function DayIdeas({
                 <PressableScale onPress={() => openIdea(idea)} disabled={!idea.link} accessibilityRole={idea.link ? "button" : undefined} style={styles.open}>
                 <View style={[styles.tile, { backgroundColor: `${auraEventColors[idea.type]}22` }]}>
                   {idea.link && (thumbs[idea.id] || idea.link.thumbnail) ? (
-                    <Image source={{ uri: thumbs[idea.id] ?? idea.link.thumbnail }} style={StyleSheet.absoluteFill} contentFit="cover" />
+                    <Image source={{ uri: thumbs[idea.id] ?? idea.link.thumbnail }} style={StyleSheet.absoluteFill} contentFit="cover" recyclingKey={idea.id} cachePolicy="memory-disk" />
                   ) : (
                     <Icon name={idea.link ? "play" : getEventTypeMeta(idea.type).icon} size={16} color={auraEventColors[idea.type]} />
                   )}

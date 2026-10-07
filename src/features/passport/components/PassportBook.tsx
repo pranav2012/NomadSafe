@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
@@ -11,7 +11,7 @@ import { logger } from "@/modules/logger";
 import { selectionChanged } from "@/utils/haptics";
 import { usePageTurnSound } from "../hooks/usePageTurnSound";
 import { PAGE_CURL_SKSL, foldGeometry } from "../utils/pageCurl";
-import { PassportCover, PassportEndpaper } from "./PassportCover";
+import { PassportCover, PassportEndpaper, lazyEffect } from "./PassportCover";
 import { PAPER_RGB } from "./PassportPaper";
 
 const MAX_ANGLE = 105;
@@ -25,8 +25,12 @@ const BLEED_X = 0.18;
 const BLEED_Y = 0.09;
 // Within this of a whole page the book counts as at rest: live pages show and the curl is off.
 const EPS = 0.0005;
-const CURL = Skia.RuntimeEffect.Make(PAGE_CURL_SKSL)!;
-const BLANK = Skia.Image.MakeImage({ width: 1, height: 1, alphaType: AlphaType.Premul, colorType: ColorType.RGBA_8888 }, Skia.Data.fromBytes(new Uint8Array([0, 0, 0, 0])), 4)!;
+const CURL = lazyEffect(PAGE_CURL_SKSL);
+let blank: SkImage | null = null;
+// A transparent 1×1 image for empty snapshot slots, made on first use.
+function blankImage() {
+  return (blank ??= Skia.Image.MakeImage({ width: 1, height: 1, alphaType: AlphaType.Premul, colorType: ColorType.RGBA_8888 }, Skia.Data.fromBytes(new Uint8Array([0, 0, 0, 0])), 4)!);
+}
 
 type Snap = { index: number; image: SkImage } | null;
 type Slots = [number, number, number];
@@ -131,17 +135,17 @@ export function PassportBook({ pages, width, height, contentKey, turn: externalT
     setTimeout(() => evicted.forEach(([, image]) => image.dispose()), 500);
   };
 
-  useEffect(() => {
+  const onLanded = useEffectEvent(() => {
     const first = landed.current === landedIndex;
     if (!first) selectionChanged();
     landed.current = landedIndex;
     if (reduceMotion) return;
     const id = setTimeout(() => void prefetch(landedIndex), first ? 400 : SNAPSHOT_DELAY_MS);
     return () => clearTimeout(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [landedIndex, reduceMotion]);
+  });
+  useEffect(() => onLanded(), [landedIndex, reduceMotion]);
 
-  useEffect(() => {
+  const onContentChanged = useEffectEvent(() => {
     if (keyRef.current === contentKey) return;
     keyRef.current = contentKey;
     const stale = [...cache.current.values()];
@@ -154,8 +158,8 @@ export function PassportBook({ pages, width, height, contentKey, turn: externalT
     // Not cancelled on cleanup: these left the cache, so nothing else would free them.
     setTimeout(() => stale.forEach((image) => image.dispose()), 1000);
     return () => clearTimeout(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contentKey]);
+  });
+  useEffect(() => onContentChanged(), [contentKey]);
 
   useEffect(() => {
     const images = cache.current;
@@ -353,9 +357,9 @@ function Curl({
     <View pointerEvents="none" style={[styles.bleed, { zIndex, left: -bleedX, top: -bleedY, width: width + bleedX * 2, height: height + bleedY * 2 }]}>
       <Canvas style={StyleSheet.absoluteFill}>
         <Fill>
-          <Shader source={CURL} uniforms={uniforms}>
+          <Shader source={CURL()} uniforms={uniforms}>
             {snaps.map((snap, i) => (
-              <ImageShader key={i} image={snap?.image ?? BLANK} fit="fill" x={0} y={0} width={width} height={height} />
+              <ImageShader key={i} image={snap?.image ?? blankImage()} fit="fill" x={0} y={0} width={width} height={height} />
             ))}
           </Shader>
         </Fill>

@@ -18,7 +18,7 @@ import { registerGroupPush, startGroupSync, startSync, stopGroupSync, stopSync, 
 import { AURA_FONT_FILES, auraDark, auraLight } from "@/constants/aura";
 import { PrivacyCover, useAuthStore, usePrivacyShield, useSyncAuthSession } from "@/features/auth";
 import LockScreen from "@/features/auth/screens/LockScreen";
-import { useChatStore } from "@/features/ai";
+import { useChatStore } from "@/features/ai/store/chatStore";
 import { aiRuntime, modelNotifications } from "@/modules/ai";
 import { enforceBroadcastLimits, isLocationBroadcastRunning, readBroadcastState, useSharingStore } from "@/features/location-sharing";
 import { isSosRoute, useQuickSosStore, useSafetyNotificationRouting, useSafetyServerSync, useSafetyStore } from "@/features/safety";
@@ -30,10 +30,10 @@ import {
 import { checkDeferredInvite } from "@/features/trips/services/deferredInvite";
 import { WidgetSync } from "@/features/widget/WidgetSync";
 import { BillingEffects } from "@/modules/billing";
-import { useRecapEffects } from "@/features/recap";
-import { SavedIdeasSheet } from "@/features/itinerary";
+import { useRecapEffects } from "@/features/recap/hooks/useRecapEffects";
+import { SavedIdeasSheet } from "@/features/itinerary/components/SavedIdeasSheet";
 import { AndroidShareIntake } from "@/features/itinerary/components/AndroidShareIntake";
-import { useBoundaryViewSync } from "@/features/passport";
+import { useBoundaryViewSync } from "@/features/passport/hooks/usePassport";
 import { AdsEffects } from "@/modules/ads";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { useTheme } from "@/hooks/useTheme";

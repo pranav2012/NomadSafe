@@ -33,7 +33,7 @@ import { lightImpact } from "@/utils/haptics";
 import { useAnimationsActive } from "@/hooks/useAnimationsActive";
 import type { HomeData, LivePass } from "@/features/home/types";
 import { useLocalization } from "@/localization";
-import { auraFonts as f, type AuraPalette } from "@/constants/aura";
+import { auraFonts as f, auraHitSlop, type AuraPalette } from "@/constants/aura";
 
 // Holographic foil: rainbow bands and fine diagonal ridges whose phase follows the card's tilt,
 // plus a soft specular streak that slides across as it turns. Static when the phone is still.
@@ -87,6 +87,7 @@ const STUB_Y = 130;
 // The aura pools drift slowly, so ~15 fps is indistinguishable from full rate; tilt samples at ~30 Hz.
 const AURA_TICK_MS = 66;
 const SENSOR_INTERVAL_MS = 33;
+const TILT_DEAD_BAND = 0.003;
 // Gravity for a phone held at a normal reading angle, so the card rests flat before the first sample.
 const REST_GRAVITY = { x: 0, y: -0.6, z: -0.8 };
 
@@ -232,7 +233,7 @@ export function BoardingPass({ data, palette: c, accent, gradient, isDark, backT
             <Line p1={vec(20, STUB_Y)} p2={vec(width - 20, STUB_Y)} color={c.hairline} strokeWidth={1.5}>
               <DashPathEffect intervals={[4, 6]} />
             </Line>
-            <RoundedRect x={0.5} y={0.5} width={width - 1} height={HEIGHT - 1} r={RADIUS} style="stroke" strokeWidth={1} color={c.highlight} />
+            <RoundedRect x={0.5} y={0.5} width={width - 1} height={HEIGHT - 1} r={RADIUS} style="stroke" strokeWidth={1} color={c.hairline} />
           </Canvas>
           <View style={[styles.notch, { left: -11, top: STUB_Y - 11, backgroundColor: c.bg }]} />
           <View style={[styles.notch, { right: -11, top: STUB_Y - 11, backgroundColor: c.bg }]} />
@@ -310,7 +311,7 @@ export function BoardingPass({ data, palette: c, accent, gradient, isDark, backT
 
         <Animated.View
           pointerEvents={isBack ? "auto" : "none"}
-          style={[StyleSheet.absoluteFill, styles.back, { backgroundColor: isDark ? "#151924" : "#FFFFFF", borderColor: c.highlight }, backStyle]}
+          style={[StyleSheet.absoluteFill, styles.back, { backgroundColor: c.card, borderColor: c.hairline }, backStyle]}
         >
           <View style={styles.backHeader}>
             <Text numberOfLines={1} style={[styles.backTitle, { color: c.text }]}>
@@ -325,6 +326,7 @@ export function BoardingPass({ data, palette: c, accent, gradient, isDark, backT
               onPress={() => setSide(false)}
               accessibilityRole="button"
               accessibilityLabel={t("home.showPass")}
+              hitSlop={auraHitSlop(30)}
               style={[styles.flipBack, { backgroundColor: c.surfaceStrong }]}
             >
               <Icon name="swap" size={14} color={c.text} />
@@ -434,6 +436,11 @@ function GravitySensor({ target, scrolling }: { target: SharedValue<{ x: number;
     () => sensor.sensor.get(),
     (g) => {
       if (scrolling?.get()) return;
+      // Dead band on the direction: sensor jitter on a still phone would otherwise redraw the foil every sample.
+      const len = Math.hypot(g.x, g.y, g.z) || 1;
+      const p = target.get();
+      const plen = Math.hypot(p.x, p.y, p.z) || 1;
+      if (Math.abs(g.x / len - p.x / plen) < TILT_DEAD_BAND && Math.abs(g.y / len - p.y / plen) < TILT_DEAD_BAND) return;
       target.set({ x: g.x, y: g.y, z: g.z });
     },
   );

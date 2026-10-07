@@ -13,6 +13,8 @@ const COLORS = [BLUE, TEAL, VIOLET, BLUE];
 export const GLOW_BLEED = 44;
 const BLEED = GLOW_BLEED;
 const STROKE = 1.5;
+// The soft gradient turns at ~30 fps rather than the display rate.
+const TICK_S = 0.033;
 
 /**
  * Aura-coloured gradient ring that hugs a rounded panel: faint and slow while `focus`,
@@ -28,6 +30,7 @@ export function AiGlowRing({ mode, radius }: { mode: AiGlowMode; radius: number 
   const speed = useSharedValue(0);
   const ring = useSharedValue(0);
   const glow = useSharedValue(0);
+  const pending = useSharedValue(0);
 
   useEffect(() => {
     speed.set(withTiming(mode === "active" ? 3.2 : 0.7, { duration: 500 }));
@@ -36,7 +39,13 @@ export function AiGlowRing({ mode, radius }: { mode: AiGlowMode; radius: number 
   }, [glow, mode, ring, speed]);
 
   const spin = useFrameCallback((frame) => {
-    angle.set((angle.get() + ((frame.timeSincePreviousFrame ?? 16) / 1000) * speed.get()) % (Math.PI * 2));
+    const elapsed = pending.get() + (frame.timeSincePreviousFrame ?? 16) / 1000;
+    if (elapsed < TICK_S) {
+      pending.set(elapsed);
+      return;
+    }
+    pending.set(0);
+    angle.set((angle.get() + Math.min(elapsed, 0.1) * speed.get()) % (Math.PI * 2));
   }, false);
   useEffect(() => {
     spin.setActive(animating && !reduceMotion && mode !== "off");

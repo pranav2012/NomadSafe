@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image } from "expo-image";
 import { AuraButton, AuraSheet, PressableScale, useAura } from "@/atoms";
 import { useLocalization } from "@/localization";
 import { PrivateView } from "@/modules/analytics";
@@ -56,7 +57,7 @@ export function PhotoEditorSheet({
                   accessibilityRole="button"
                   accessibilityLabel={t("recap.swapPhoto")}
                 >
-                  <Image source={{ uri: spare.photo.uri }} style={styles.spare} accessibilityIgnoresInvertColors />
+                  <Image source={{ uri: spare.photo.uri }} style={styles.spare} contentFit="cover" recyclingKey={spare.photo.id} cachePolicy="memory" accessibilityIgnoresInvertColors />
                 </PressableScale>
               ))}
             </ScrollView>
@@ -107,6 +108,9 @@ export function PhotoEditorSheet({
                       <Image
                         source={{ uri: photo.uri }}
                         style={[styles.thumb, { borderColor: photo.id === selected ? c.text : "transparent" }]}
+                        contentFit="cover"
+                        recyclingKey={photo.id}
+                        cachePolicy="memory"
                         accessibilityIgnoresInvertColors
                       />
                     </PressableScale>

@@ -1,4 +1,5 @@
 import { Skia, type SkPath } from "react-native-skia";
+import { boundaryView, type BoundaryView } from "../utils/boundaries";
 import { countriesInBox, countryRings, type GeoBox } from "../utils/countryShapes";
 import { legControl, type MapFrame, type Point } from "../utils/recapMap";
 import type { RecapLeg, RecapStop } from "../utils/recapFacts";
@@ -14,10 +15,10 @@ export interface RecapGeometry {
   gradient: [Point, Point];
 }
 
-function ringsPath(codes: string[], frame: MapFrame): SkPath {
+function ringsPath(codes: string[], frame: MapFrame, view: BoundaryView): SkPath {
   const builder = Skia.PathBuilder.Make();
   for (const code of codes) {
-    for (const ring of countryRings(code)) {
+    for (const ring of countryRings(code, view)) {
       ring.forEach(([lon, lat], i) => {
         const p = frame.project(lon, lat);
         if (i === 0) builder.moveTo(p.x, p.y);
@@ -29,9 +30,16 @@ function ringsPath(codes: string[], frame: MapFrame): SkPath {
   return builder.build();
 }
 
-/** Projects the trip onto `frame`: outlines of countries within `area`, one curved path per leg, and the stop positions. */
-export function buildRecapGeometry(frame: MapFrame, stops: RecapStop[], legs: RecapLeg[], countries: string[], area: GeoBox = frame.box): RecapGeometry {
-  const inView = countriesInBox(area);
+/** Projects the trip onto `frame`: outlines of countries within `area` (in border `view`), one curved path per leg, and the stop positions. */
+export function buildRecapGeometry(
+  frame: MapFrame,
+  stops: RecapStop[],
+  legs: RecapLeg[],
+  countries: string[],
+  area: GeoBox = frame.box,
+  view: BoundaryView = boundaryView(),
+): RecapGeometry {
+  const inView = countriesInBox(area, view);
   const points = stops.map((stop) => frame.project(stop.longitude, stop.latitude));
   const legPaths = legs.flatMap((leg, i) => {
     const a = points[i];
@@ -53,8 +61,8 @@ export function buildRecapGeometry(frame: MapFrame, stops: RecapStop[], legs: Re
           { x: frame.width, y: 0 },
         ];
   return {
-    home: ringsPath(inView.filter((code) => countries.includes(code)), frame),
-    around: ringsPath(inView.filter((code) => !countries.includes(code)), frame),
+    home: ringsPath(inView.filter((code) => countries.includes(code)), frame, view),
+    around: ringsPath(inView.filter((code) => !countries.includes(code)), frame, view),
     legs: legPaths,
     points,
     gradient,

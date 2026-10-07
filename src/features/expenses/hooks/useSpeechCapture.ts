@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import { Platform } from "react-native";
 import { getLocales } from "expo-localization";
+import { useSharedValue } from "react-native-reanimated";
 import {
   ExpoSpeechRecognitionModule,
   useSpeechRecognitionEvent,
@@ -69,7 +70,8 @@ export function useSpeechCapture({
   contextualStrings: string[];
 }) {
   const [state, setState] = useState<SpeechCaptureState>({ status: "idle" });
-  const [volume, setVolume] = useState(0);
+  // Mic level arrives ~8 times a second; a shared value feeds the orb without re-rendering the screen.
+  const volume = useSharedValue(0);
   const transcriptRef = useRef("");
   const deliveredRef = useRef(false);
 
@@ -87,7 +89,7 @@ export function useSpeechCapture({
     }
   });
 
-  useSpeechRecognitionEvent("volumechange", (event) => setVolume(Math.max(0, event.value)));
+  useSpeechRecognitionEvent("volumechange", (event) => volume.set(Math.max(0, event.value)));
 
   useSpeechRecognitionEvent("error", (event) => {
     if (event.error === "aborted") return;
@@ -112,7 +114,7 @@ export function useSpeechCapture({
       onFinal(transcript);
     }
     setState((current) => (current.status === "listening" ? { status: "idle" } : current));
-    setVolume(0);
+    volume.set(0);
   });
 
   const start = useCallback(async () => {

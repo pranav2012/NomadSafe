@@ -580,6 +580,7 @@
     "disabledBody": "설정에서 로컬 AI가 꺼져 있습니다. 기능을 켜서 채팅을 시작하고, 모델을 관리하며, 온디바이스 인사이트를 확인해 보세요.",
     "disabledAction": "설정 열기",
     "yesterday": "어제",
+    "showEarlier": "이전 메시지 보기",
     "assistantName": "Nomad",
     "chatBusyElsewhere": "다른 여행 채팅에서 답변을 마무리하는 중…",
     "stopReply": "답변 중지",

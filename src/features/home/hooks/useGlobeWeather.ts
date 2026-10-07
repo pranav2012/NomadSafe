@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useEffectEvent, useMemo, useState } from "react";
 import { AlphaType, ColorType, Skia, type SkImage } from "react-native-skia";
 import { api, useQueries } from "@/modules/backend";
 import {
@@ -59,7 +59,7 @@ export function useGlobeWeather(stops: { latitude: number; longitude: number }[]
     saveCachedClouds(live, live.updatedAt);
   }, [live, liveImage]);
 
-  useEffect(() => {
+  const loadStops = useEffectEvent(() => {
     let mounted = true;
     void getStopsWeather(stops).then((data) => {
       if (mounted && data) setStopWeather({ key: stopsKey, data });
@@ -67,8 +67,9 @@ export function useGlobeWeather(stops: { latitude: number; longitude: number }[]
     return () => {
       mounted = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stopsKey]);
+  });
+  // Keyed on the coordinates, not the array, which is new on every render.
+  useEffect(() => loadStops(), [stopsKey]);
 
   return { clouds, stopWeather: stopWeather?.key === stopsKey ? stopWeather.data : [] };
 }

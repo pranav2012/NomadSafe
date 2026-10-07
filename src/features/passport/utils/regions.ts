@@ -1,6 +1,14 @@
 import { decodePolyline, type GeoBox, type LonLat } from "@/features/recap/utils/countryShapes";
 import { boundaryView } from "@/features/recap/utils/boundaries";
-import { REGION_SHAPES, REGION_SHAPES_IN_VIEW } from "../data/regionShapes";
+
+type RegionData = typeof import("../data/regionShapes");
+let regionData: RegionData | null = null;
+
+// The state outlines (~800 KB of source) load on the first lookup rather than at app launch.
+function shapes(): RegionData {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  return (regionData ??= require("../data/regionShapes") as RegionData);
+}
 
 export interface Region {
   key: string;
@@ -15,6 +23,7 @@ const listed = new Map<string, Region[]>();
 
 /** A country's region rows in the current border view. */
 function rowsOf(country: string) {
+  const { REGION_SHAPES, REGION_SHAPES_IN_VIEW } = shapes();
   return (boundaryView() === "IN" ? REGION_SHAPES_IN_VIEW[country] : undefined) ?? REGION_SHAPES[country] ?? [];
 }
 

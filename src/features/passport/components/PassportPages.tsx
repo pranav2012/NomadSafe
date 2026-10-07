@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
 import { Image } from "expo-image";
-import { Canvas, Fill, Shader, Skia } from "react-native-skia";
+import { Canvas, Fill, Shader } from "react-native-skia";
 import { useAnimatedReaction, useDerivedValue, useSharedValue, type SharedValue } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import { Icon, PressableScale } from "@/atoms";
@@ -14,7 +14,7 @@ import { buildMrz, iso3, passportNumber } from "../utils/mrz";
 import { stampDate, type Seal, type Stamp } from "../utils/passport";
 import { countryRegions } from "../utils/regions";
 import { scatter } from "../utils/scatter";
-import { TiltSensor } from "./PassportCover";
+import { lazyEffect, TiltSensor } from "./PassportCover";
 import { HomeMap } from "./HomeMap";
 import { INK } from "./PassportPaper";
 import { PassportStamp, StateSeal } from "./PassportStamp";
@@ -27,7 +27,7 @@ const FOOT_SPACE = 34;
 const MONO = Platform.select({ ios: "Menlo", default: "monospace" });
 
 // Holographic film over the photo: soft rainbow bands that slide with the phone's tilt.
-const HOLO = Skia.RuntimeEffect.Make(`
+const HOLO = lazyEffect(`
 uniform float2 res;
 uniform float tilt;
 
@@ -39,7 +39,7 @@ half4 main(float2 xy) {
   float a = (0.10 + 0.08 * ridge) * (0.6 + 0.4 * sin(band * 3.1416));
   return half4(half3(hue) * a, a);
 }
-`)!;
+`);
 
 export function usePassportNumber() {
   const user = useAuthStore((state) => state.user);
@@ -121,7 +121,7 @@ export function DataPage({ width, height, turn, photo, onPhoto }: DataPageProps)
           {portrait({ width: PHOTO_W, height: PHOTO_H })}
           <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
             <Fill>
-              <Shader source={HOLO} uniforms={holo} />
+              <Shader source={HOLO()} uniforms={holo} />
             </Fill>
           </Canvas>
         </View>
@@ -165,13 +165,14 @@ interface VisaPageProps {
 /** Visa pages: up to six stamps, set down by hand at seeded spots and angles. */
 export function VisaPage({ stamps, width, height, onOpen, onAdd }: VisaPageProps) {
   const { t, locale } = useLocalization();
-  const area = { width: width - PAD * 2, height: height - PAD - LABEL_SPACE - FOOT_SPACE };
-  const stampW = Math.min((area.width / 2) * 1.04, (area.height / 3) * 1.15);
+  const areaW = width - PAD * 2;
+  const areaH = height - PAD - LABEL_SPACE - FOOT_SPACE;
+  const area = { width: areaW, height: areaH };
+  const stampW = Math.min((areaW / 2) * 1.04, (areaH / 3) * 1.15);
   const stampH = (stampW * 130) / 160;
   const spots = useMemo(
-    () => scatter(stamps.map((stamp) => stamp.id), 2, 3, area, { width: stampW, height: stampH }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [stamps, area.width, area.height, stampW, stampH],
+    () => scatter(stamps.map((stamp) => stamp.id), 2, 3, { width: areaW, height: areaH }, { width: stampW, height: stampH }),
+    [stamps, areaW, areaH, stampW, stampH],
   );
   if (stamps.length === 0) {
     return (
@@ -230,12 +231,13 @@ export function HomePage({ home, seals, map, width, height, onOpen }: HomePagePr
   const regions = countryRegions(home);
   const names = new Map(regions.map((region) => [region.key, region.name]));
   const visited = new Set(passport.seals.map((seal) => seal.region));
-  const area = { width: width - PAD * 2, height: height - PAD - LABEL_SPACE - FOOT_SPACE };
-  const sealW = Math.min(area.width / 3, area.height / 3) * 1.02;
+  const areaW = width - PAD * 2;
+  const areaH = height - PAD - LABEL_SPACE - FOOT_SPACE;
+  const area = { width: areaW, height: areaH };
+  const sealW = Math.min(areaW / 3, areaH / 3) * 1.02;
   const spots = useMemo(
-    () => (map ? [] : scatter(seals.map((seal) => seal.region), 3, 3, area, { width: sealW, height: sealW })),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [map, seals, area.width, area.height, sealW],
+    () => (map ? [] : scatter(seals.map((seal) => seal.region), 3, 3, { width: areaW, height: areaH }, { width: sealW, height: sealW })),
+    [map, seals, areaW, areaH, sealW],
   );
   const seal = (item: Seal, size: number) => (
     <PressableScale onPress={() => onOpen(item)} accessibilityRole="button" accessibilityLabel={names.get(item.region) ?? item.region}>

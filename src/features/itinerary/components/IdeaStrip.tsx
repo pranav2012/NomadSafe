@@ -57,7 +57,7 @@ export function IdeaStrip({ tripId, ideas, size = "md", inset = 20 }: { tripId: 
           >
             <View style={[styles.media, { height: idea.link ? mediaHeight : Math.round(mediaHeight * 0.6), borderColor: c.textMuted, backgroundColor: idea.link ? c.surfaceStrong : `${auraEventColors[idea.type]}1F` }]}>
               {image ? (
-                <Image source={{ uri: image }} style={StyleSheet.absoluteFill} contentFit="cover" />
+                <Image source={{ uri: image }} style={StyleSheet.absoluteFill} contentFit="cover" recyclingKey={idea.id} cachePolicy="memory-disk" />
               ) : (
                 <Icon name={idea.link ? (idea.link.provider === "web" ? "globe" : "play") : getEventTypeMeta(idea.type).icon} size={size === "md" ? 24 : 18} color={idea.link ? c.textSoft : auraEventColors[idea.type]} />
               )}

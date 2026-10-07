@@ -215,7 +215,6 @@ export function TripHome({
   const moneyCard =
     !data.hasSpends ? (
       <View style={[styles.moneyCard, styles.moneyEmpty, { backgroundColor: c.surface, borderColor: c.hairline }]}>
-        <View style={[styles.cardHighlight, { backgroundColor: c.highlight }]} />
         <View style={styles.emptyHead}>
           <View style={[styles.emptyIcon, { backgroundColor: c.surfaceStrong }]}>
             <Icon name="wallet" size={18} color={c.text} />
@@ -258,7 +257,6 @@ export function TripHome({
         accessibilityLabel={`${data.moneyLabel} ${data.moneyValue}`}
         style={[styles.moneyCard, { backgroundColor: c.surface, borderColor: c.hairline }]}
       >
-        <View style={[styles.cardHighlight, { backgroundColor: c.highlight }]} />
         <View style={styles.moneyText}>
           <Text style={[styles.moneyLabel, { color: c.textMuted }]}>{data.moneyLabel}</Text>
           <RollingNumber value={data.moneyValue} lineHeight={42} style={[styles.moneyValue, { color: c.text }]} />
@@ -628,13 +626,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
     overflow: "hidden",
-  },
-  cardHighlight: {
-    position: "absolute",
-    top: 0,
-    left: 28,
-    right: 28,
-    height: StyleSheet.hairlineWidth,
   },
   moneyEmpty: { flexDirection: "column", alignItems: "stretch", gap: 16 },
   emptyHead: { flexDirection: "row", alignItems: "center", gap: 12 },

@@ -6,7 +6,7 @@ import { PrivateView } from "@/modules/analytics";
 import { LinearGradient } from "expo-linear-gradient";
 import { AuraButton, Icon, PressableScale, useAura, useTabBarInset } from "@/atoms";
 import { useScrollActivity } from "@/hooks/useScrollActivity";
-import { auraStatusAccent } from "@/constants/aura";
+import { auraSignal, auraStatusAccent } from "@/constants/aura";
 import { useGlobeContext } from "@/features/home/hooks/useGlobeContext";
 import { useLocalization } from "@/localization";
 import { PlannedTripCard } from "@/features/trips/components/PlannedTripCard";
@@ -65,7 +65,7 @@ export function EmptyHome({
               origin={globe.origin}
               contacts={[]}
               plannedPins={plannedPins}
-              contactColor="#3DDC97"
+              contactColor={auraSignal.ready}
               accent={auraStatusAccent.calm}
               isDark={isDark}
               onTouchActive={setGlobeTouched}

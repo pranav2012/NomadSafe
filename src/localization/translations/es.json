@@ -580,6 +580,7 @@
     "disabledBody": "La IA local está desactivada en Ajustes. Actívala para chatear, gestionar modelos y ver análisis en el dispositivo.",
     "disabledAction": "Abrir Ajustes",
     "yesterday": "Ayer",
+    "showEarlier": "Mostrar mensajes anteriores",
     "assistantName": "Nomad",
     "chatBusyElsewhere": "Terminando una respuesta en otro chat de viaje…",
     "stopReply": "Detener respuesta",

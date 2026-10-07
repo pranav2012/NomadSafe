@@ -40,6 +40,8 @@ const NEAR_BOTTOM_PX = 80;
 const COMPOSER_FALLBACK_HEIGHT = 150;
 const HERO_SIZE = 84;
 const LEFT_TAB_RELEASE_MS = 20_000;
+// Long threads render only their latest messages; "Show earlier" reveals more in steps of this size.
+const MESSAGE_WINDOW = 40;
 /** Scroll distance over which the chat's hero orb shrinks away and docks into the header. */
 export const HERO_DOCK_DISTANCE = 110;
 
@@ -113,6 +115,9 @@ export function AiChat({
   const containerRef = useRef<View>(null);
   const blurTarget = useRef<View>(null);
   const nearBottom = useSharedValue(true);
+  const [windowSize, setWindowSize] = useState({ key: conversationKey, count: MESSAGE_WINDOW });
+  const shownCount = windowSize.key === conversationKey ? windowSize.count : MESSAGE_WINDOW;
+  const firstShown = Math.max(0, messages.length - shownCount);
 
   const animating = useAnimationsActive();
   const isEmpty = messages.length === 0;
@@ -279,7 +284,17 @@ export function AiChat({
                   <Text style={[styles.tempTagText, { color: c.textMuted, fontFamily: f.medium }]}>{t("aiTab.temporary.tag")}</Text>
                 </View>
               ) : null}
-              {messages.map((m, i) => {
+              {firstShown > 0 ? (
+                <PressableScale
+                  onPress={() => setWindowSize({ key: conversationKey, count: shownCount + MESSAGE_WINDOW })}
+                  accessibilityRole="button"
+                  style={[styles.earlier, { borderColor: c.hairline }]}
+                >
+                  <Text style={[styles.earlierText, { color: c.textSoft, fontFamily: f.medium }]}>{t("aiTab.showEarlier")}</Text>
+                </PressableScale>
+              ) : null}
+              {messages.slice(firstShown).map((m, j) => {
+                const i = firstShown + j;
                 const previous = messages[i - 1];
                 const showDivider =
                   m.createdAt !== undefined &&
@@ -390,5 +405,7 @@ const styles = StyleSheet.create({
     borderStyle: "dashed",
   },
   tempTagText: { fontSize: 12 },
+  earlier: { alignSelf: "center", height: 32, paddingHorizontal: 14, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, justifyContent: "center" },
+  earlierText: { fontSize: 13 },
   emptyHint: { fontSize: 14.5, lineHeight: 21, textAlign: "center", marginTop: 8, maxWidth: 280 },
 });

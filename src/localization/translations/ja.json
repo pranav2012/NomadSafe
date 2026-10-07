@@ -580,6 +580,7 @@
     "disabledBody": "設定でローカルAIがオフになっています。オンにすると、チャット、モデルの管理、デバイス上での分析情報の表示が可能になります。",
     "disabledAction": "設定を開く",
     "yesterday": "昨日",
+    "showEarlier": "以前のメッセージを表示",
     "assistantName": "Nomad",
     "chatBusyElsewhere": "別の旅行チャットで返信を作成中です…",
     "stopReply": "返信を停止",

@@ -1,37 +1,45 @@
-import React, { useMemo } from "react";
+import React from "react";
 import Svg, { Defs, LinearGradient, Path, Stop } from "react-native-svg";
 import { useBoundaryStore } from "@/features/recap/utils/boundaries";
 import { frameRoute } from "@/features/recap/utils/recapMap";
 import { countryRegions, mainlandBox, regionRings } from "../utils/regions";
 
+let lastShapes: { key: string; shapes: { key: string; d: string }[] } | null = null;
+
+/** SVG paths of the country's mainland states, framed to the map; `view` (the border view) is part of the cache key. */
+function mapShapes(country: string, width: number, height: number, view: string) {
+  const key = `${view}|${country}|${width}|${height}`;
+  if (lastShapes?.key === key) return lastShapes.shapes;
+  const box = mainlandBox(country);
+  if (!box) return [];
+  const corners = [
+    { latitude: box.south, longitude: box.west },
+    { latitude: box.north, longitude: box.east },
+  ];
+  const frame = frameRoute(corners, width, height, 6);
+  const shapes = countryRegions(country)
+    .filter((region) => !region.far)
+    .map((region) => ({
+      key: region.key,
+      d: regionRings(country, region.key)
+        .map((ring) =>
+          ring
+            .map(([lon, lat], i) => {
+              const p = frame.project(lon, lat);
+              return `${i === 0 ? "M" : "L"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
+            })
+            .join("") + "Z",
+        )
+        .join(""),
+    }));
+  lastShapes = { key, shapes };
+  return shapes;
+}
+
 /** The home country's mainland states, with the visited ones filled in aurora. */
 export function HomeMap({ country, visited, width, height, paper = false }: { country: string; visited: Set<string>; width: number; height: number; paper?: boolean }) {
   const view = useBoundaryStore((state) => state.view);
-  const shapes = useMemo(() => {
-    const box = mainlandBox(country);
-    if (!box) return [];
-    const corners = [
-      { latitude: box.south, longitude: box.west },
-      { latitude: box.north, longitude: box.east },
-    ];
-    const frame = frameRoute(corners, width, height, 6);
-    return countryRegions(country)
-      .filter((region) => !region.far)
-      .map((region) => ({
-        key: region.key,
-        d: regionRings(country, region.key)
-          .map((ring) =>
-            ring
-              .map(([lon, lat], i) => {
-                const p = frame.project(lon, lat);
-                return `${i === 0 ? "M" : "L"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
-              })
-              .join("") + "Z",
-          )
-          .join(""),
-      }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [country, width, height, view]);
+  const shapes = mapShapes(country, width, height, view);
 
   return (
     <Svg width={width} height={height}>

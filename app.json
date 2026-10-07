@@ -185,6 +185,8 @@
       "./plugins/withGoogleMobileAdsBackend",
       "./plugins/withRecentsPrivacy",
       "./plugins/withFirebaseAppCheck",
+      "./plugins/withVulkanRequirement",
+      "./plugins/withNetworkSecurity",
       [
         "expo-build-properties",
         {

@@ -1,13 +1,15 @@
 import React, { useEffect } from "react";
-import { Canvas, Rect, Shader, Skia } from "react-native-skia";
+import { Canvas, Rect, Shader, Skia, type SkRuntimeEffect } from "react-native-skia";
 import { View } from "react-native";
 import {
+  useAnimatedReaction,
   useDerivedValue,
   useFrameCallback,
   useReducedMotion,
   useSharedValue,
   withSpring,
   withTiming,
+  type SharedValue,
 } from "react-native-reanimated";
 import { auraStatusColors } from "@/constants/aura";
 import { useAppActive } from "@/hooks/useAnimationsActive";
@@ -17,6 +19,8 @@ export type VoiceOrbMode = "idle" | "listening" | "thinking" | "done";
 const DONE = "#3DDC97";
 const DISC_RADIUS = 0.25;
 const PHASE_WRAP = 1000;
+// The bars redraw at ~30 fps; the mic level is sampled on the same tick.
+const TICK_S = 0.033;
 
 function rgb(hex: string): [number, number, number] {
   const value = parseInt(hex.slice(1), 16);
@@ -29,7 +33,7 @@ const GREEN = rgb(DONE);
 // A solid disc (the mic button) inside one ring of 64 spectrum bars in the aura colours. The bars
 // are the same in every state and morph between them: a slow wave at rest, bouncing with the mic
 // `level` while listening, a crest sweeping round while thinking, and calm green when done.
-const VOICE = Skia.RuntimeEffect.Make(`
+const VOICE_SKSL = `
 uniform float2 center;
 uniform float radius;
 uniform float limit;
@@ -109,23 +113,29 @@ half4 main(float2 xy) {
   float outA = clamp(alpha * k, 0.0, 1.0);
   return half4(half3(clamp(col * k, 0.0, 1.0)), half(outA));
 }
-`)!;
+`;
+
+let voiceEffect: SkRuntimeEffect | null = null;
+// Compiled on first use, not at import.
+function voiceShader() {
+  return (voiceEffect ??= Skia.RuntimeEffect.Make(VOICE_SKSL)!);
+}
 
 /**
  * Voice-entry orb: a solid disc for the mic icon in a ring of spectrum bars that wave gently at
- * rest, bounce with `level` (speech volume, about -2..10) while listening, carry a sweeping crest
+ * rest, bounce with `level` (a shared value of speech volume, about -2..10) while listening, carry a sweeping crest
  * while thinking and settle green when saved. `discColor` is any CSS colour (usually the theme surface).
  */
 export function VoiceOrb({
   size,
   mode,
-  level = 0,
+  level,
   isDark,
   discColor,
 }: {
   size: number;
   mode: VoiceOrbMode;
-  level?: number;
+  level?: SharedValue<number>;
   isDark: boolean;
   discColor: string;
 }) {
@@ -133,6 +143,8 @@ export function VoiceOrb({
   const appActive = useAppActive();
   const phase = useSharedValue(0);
   const volume = useSharedValue(0);
+  const shownVolume = useSharedValue(0);
+  const pending = useSharedValue(0);
   const listen = useSharedValue(mode === "listening" ? 1 : 0);
   const think = useSharedValue(mode === "thinking" ? 1 : 0);
   const done = useSharedValue(mode === "done" ? 1 : 0);
@@ -143,13 +155,24 @@ export function VoiceOrb({
     done.set(withTiming(mode === "done" ? 1 : 0, { duration: 450 }));
   }, [done, listen, mode, think]);
 
-  useEffect(() => {
-    const normalized = mode === "listening" ? Math.min(1, Math.max(0, (level + 2) / 12)) : 0;
-    volume.set(withSpring(normalized, { damping: 12, stiffness: 180 }));
-  }, [level, mode, volume]);
+  const listening = mode === "listening";
+  useAnimatedReaction(
+    () => (listening ? Math.min(1, Math.max(0, ((level?.get() ?? 0) + 2) / 12)) : 0),
+    (normalized, previous) => {
+      if (normalized !== previous) volume.set(withSpring(normalized, { damping: 12, stiffness: 180 }));
+    },
+    [listening, level],
+  );
 
   const clock = useFrameCallback((frame) => {
-    const dt = (frame.timeSincePreviousFrame ?? 16) / 1000;
+    const elapsed = pending.get() + (frame.timeSincePreviousFrame ?? 16) / 1000;
+    if (elapsed < TICK_S) {
+      pending.set(elapsed);
+      return;
+    }
+    pending.set(0);
+    const dt = Math.min(elapsed, 0.1);
+    shownVolume.set(volume.get());
     phase.set((phase.get() + dt * (1 + volume.get() * 1.5)) % PHASE_WRAP);
   }, false);
   useEffect(() => {
@@ -166,7 +189,7 @@ export function VoiceOrb({
     radius,
     limit: center / radius,
     phase: phase.get(),
-    level: volume.get(),
+    level: reduceMotion ? volume.get() : shownVolume.get(),
     listen: listen.get(),
     think: think.get(),
     done: done.get(),
@@ -182,7 +205,7 @@ export function VoiceOrb({
     <View style={{ width: size, height: size }} pointerEvents="none">
       <Canvas style={{ width: size, height: size }}>
         <Rect x={0} y={0} width={size} height={size}>
-          <Shader source={VOICE} uniforms={uniforms} />
+          <Shader source={voiceShader()} uniforms={uniforms} />
         </Rect>
       </Canvas>
     </View>

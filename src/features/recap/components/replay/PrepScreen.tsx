@@ -1,5 +1,6 @@
 import React from "react";
-import { ActivityIndicator, Image, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated from "react-native-reanimated";
@@ -104,7 +105,7 @@ export function PrepScreen({
             <PrivateView style={styles.prints}>
               {photos.slice(0, 3).map((photo, i) => (
                 <Animated.View key={photo.id} entering={rise(i * 90)} style={[styles.print, { transform: [{ rotate: `${(i - 1) * 6}deg` }], zIndex: i === 1 ? 2 : 1 }]}>
-                  <Image source={{ uri: photo.uri }} style={styles.printImage} accessibilityIgnoresInvertColors />
+                  <Image source={{ uri: photo.uri }} style={styles.printImage} contentFit="cover" recyclingKey={photo.id} cachePolicy="memory" accessibilityIgnoresInvertColors />
                 </Animated.View>
               ))}
             </PrivateView>

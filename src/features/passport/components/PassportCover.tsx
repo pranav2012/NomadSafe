@@ -1,15 +1,30 @@
 import React, { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { Canvas, DashPathEffect, Fill, Glyphs, Group, Path, RoundedRect, Shader, Skia, useFont, type SkFont } from "react-native-skia";
+import { Canvas, DashPathEffect, Fill, Glyphs, Group, Path, RoundedRect, Shader, Skia, useFont, type SkFont, type SkRuntimeEffect } from "react-native-skia";
 import { SensorType, useAnimatedReaction, useAnimatedSensor, useDerivedValue, useSharedValue, type SharedValue } from "react-native-reanimated";
 import { AURA_FONT_FILES, auraFonts as f } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 
-// Pebbled navy leather: layered value noise read as a height map and lit from the top left.
-const LEATHER = Skia.RuntimeEffect.Make(`
-uniform float2 res;
+// sin()-free hash (Dave Hoskins): many Android GPUs evaluate sin() of large values with low
+// precision, which turns the classic fract(sin(...)) hash into visible blocks.
+export const HOSKINS_HASH = `
+float hash(float2 p) {
+  float3 p3 = fract(float3(p.xyx) * 0.1031);
+  p3 += dot(p3, p3.yzx + 33.33);
+  return fract((p3.x + p3.y) * p3.z);
+}
+`;
 
-float hash(float2 p) { return fract(sin(dot(p, float2(127.1, 311.7))) * 43758.5453); }
+/** A runtime effect compiled on first use rather than at import. */
+export function lazyEffect(source: string) {
+  let effect: SkRuntimeEffect | null = null;
+  return () => (effect ??= Skia.RuntimeEffect.Make(source)!);
+}
+
+// Pebbled navy leather: layered value noise read as a height map and lit from the top left.
+const LEATHER = lazyEffect(`
+uniform float2 res;
+${HOSKINS_HASH}
 
 float noise(float2 p) {
   float2 i = floor(p);
@@ -32,12 +47,13 @@ half4 main(float2 xy) {
   float3 col = (base * (0.66 + 0.55 * diffuse) + glow) * vignette;
   return half4(half3(col), 1.0);
 }
-`)!;
+`);
 
 // Gold foil: warm metal bands plus a bright streak whose position follows the tilt / opening angle.
-const FOIL = Skia.RuntimeEffect.Make(`
+const FOIL = lazyEffect(`
 uniform float2 res;
 uniform float sheen;
+${HOSKINS_HASH}
 
 half4 main(float2 xy) {
   float2 uv = xy / res;
@@ -46,13 +62,14 @@ half4 main(float2 xy) {
   float3 col = mix(float3(0.50, 0.36, 0.14), float3(0.86, 0.69, 0.34), smoothstep(0.0, 0.7, band));
   float streak = exp(-pow((t - 0.75 - sheen * 0.7) * 4.5, 2.0));
   col = mix(col, float3(1.0, 0.94, 0.74), streak * 0.85);
-  col += (fract(sin(dot(floor(xy * 2.0), float2(12.9898, 78.233))) * 43758.5453) - 0.5) * 0.06;
+  col += (hash(floor(xy * 2.0)) - 0.5) * 0.06;
   return half4(half3(col), 1.0);
 }
-`)!;
+`);
 
-const ENDPAPER = Skia.RuntimeEffect.Make(`
+const ENDPAPER = lazyEffect(`
 uniform float2 res;
+${HOSKINS_HASH}
 
 float lines(float v, float period) {
   float d = abs(fract(v / period) - 0.5) * period;
@@ -65,10 +82,10 @@ half4 main(float2 xy) {
   float a = lines(xy.y + sin(xy.x * 0.035) * 14.0 + sin(xy.x * 0.011 + 1.3) * 24.0, 16.0);
   float b = lines(xy.y + sin(xy.x * 0.041 + 2.1) * 12.0 + sin(xy.x * 0.009) * 30.0 + 8.0, 16.0);
   col += float3(0.13, 0.78, 0.72) * a * 0.07 + float3(0.61, 0.48, 1.0) * b * 0.07;
-  col += (fract(sin(dot(floor(xy * 1.5), float2(12.9898, 78.233))) * 43758.5453) - 0.5) * 0.025;
+  col += (hash(floor(xy * 1.5)) - 0.5) * 0.025;
   return half4(half3(col), 1.0);
 }
-`)!;
+`);
 
 const EMBLEM = 230;
 const INSET = 12;
@@ -122,9 +139,10 @@ export function PassportCover({ width, height, turn, live }: CoverProps) {
   return (
     <View style={StyleSheet.absoluteFill}>
       {live ? <TiltSensor target={tilt} /> : null}
+      {/* The leather is costly to shade and never moves, so it has its own canvas; tilt redraws only the foil. */}
       <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
         <Fill>
-          <Shader source={LEATHER} uniforms={leather} />
+          <Shader source={LEATHER()} uniforms={leather} />
         </Fill>
         <RoundedRect x={INSET} y={INSET + 1} width={width - INSET * 2} height={height - INSET * 2} r={18} style="stroke" strokeWidth={1.4} color="rgba(0,0,0,0.45)">
           <DashPathEffect intervals={[6, 4]} />
@@ -135,8 +153,10 @@ export function PassportCover({ width, height, turn, live }: CoverProps) {
         <Group transform={[{ translateY: 1.5 }]}>
           <Path path={n} style="stroke" strokeWidth={46 * scale} strokeCap="round" strokeJoin="round" color="rgba(0,0,0,0.5)" />
         </Group>
+      </Canvas>
+      <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
         <Group>
-          <Shader source={FOIL} uniforms={foil} />
+          <Shader source={FOIL()} uniforms={foil} />
           <Path path={n} style="stroke" strokeWidth={46 * scale} strokeCap="round" strokeJoin="round" />
           <Path path={arc} style="stroke" strokeWidth={6 * scale} strokeCap="round">
             <DashPathEffect intervals={[2 * scale, 14 * scale]} />
@@ -161,7 +181,7 @@ export function PassportEndpaper({ width, height }: { width: number; height: num
   return (
     <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
       <Fill>
-        <Shader source={ENDPAPER} uniforms={uniforms} />
+        <Shader source={ENDPAPER()} uniforms={uniforms} />
       </Fill>
     </Canvas>
   );

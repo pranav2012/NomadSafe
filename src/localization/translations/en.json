@@ -633,6 +633,7 @@
     "notifyBannerText": "Get notified when Nomad finishes a reply while you're away.",
     "notifyBannerAction": "Turn on",
     "yesterday": "Yesterday",
+    "showEarlier": "Show earlier messages",
     "assistantName": "Nomad",
     "chatBusyElsewhere": "Finishing a reply in another trip chat…",
     "stopReply": "Stop reply",
