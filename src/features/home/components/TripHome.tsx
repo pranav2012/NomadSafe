@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
-import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
+import Animated, { FadeIn, FadeOut, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PrivateView, track } from "@/modules/analytics";
 import { LinearGradient } from "expo-linear-gradient";
@@ -39,7 +39,7 @@ import { useLocalization } from "@/localization";
 import { ActionButton } from "./aura/ActionButton";
 import { BoardingPass } from "./aura/BoardingPass";
 import { DayRail } from "./aura/DayRail";
-import { Globe } from "./aura/globe/Globe";
+import { GLOBE_MORPH, Globe } from "./aura/globe/Globe";
 import { InlineSafetyMap } from "./aura/safety/InlineSafetyMap";
 import { SpendChart } from "./aura/SpendChart";
 
@@ -132,6 +132,12 @@ export function TripHome({
   const selectedStop = pickedDay === null ? focusStop : data.stops[todayStopIndex(data.stops, "active", selectedIndex + 1, data.totalDays, null)];
   const live = useLivePass({ events: tripEvents, now, stage, day: data.day, totalDays: data.totalDays, city: focusStop?.name.split(",")[0] });
   const heroHeight = horizon ? HORIZON_HEIGHT : globeHeight;
+  // The hero grows and shrinks with the globe's strip morph; the canvas keeps its full size and is clipped.
+  const heroBox = useSharedValue(headerSpace + heroHeight);
+  useEffect(() => {
+    heroBox.set(withTiming(headerSpace + heroHeight, GLOBE_MORPH));
+  }, [headerSpace, heroBox, heroHeight]);
+  const heroBoxStyle = useAnimatedStyle(() => ({ height: heroBox.get() }));
   const router = useRouter();
   const tickets = useTicketsStore((state) => state.tickets);
   const ticketEventIds = new Set(tickets.map((ticket) => ticket.eventId));
@@ -296,7 +302,7 @@ export function TripHome({
           paddingBottom: tabBarInset + 24,
         }}
       >
-        <View style={{ height: headerSpace + heroHeight }}>
+        <Animated.View style={[styles.hero, heroBoxStyle]}>
         <View style={[styles.heroTop, { top: insets.top + 12 }]}>
           <Text numberOfLines={1} style={[styles.greeting, hero.mode === "globe" ? styles.greetingOnGlobe : { color: hc.textSoft }]}>
             {data.greeting}, {data.userName}
@@ -332,7 +338,8 @@ export function TripHome({
                 stops={data.stops}
                 focusIndex={focusIndex}
                 width={width}
-                height={headerSpace + heroHeight}
+                height={headerSpace + globeHeight}
+                stripHeight={headerSpace + HORIZON_HEIGHT}
                 topInset={headerSpace}
                 horizon={horizon}
                 onPress={() => {
@@ -394,7 +401,7 @@ export function TripHome({
             <Icon name="chevronDown" size={16} color={c.text} />
           </PressableScale>
         ) : null}
-        </View>
+        </Animated.View>
 
         {chips.length > 0 ? (
           <Animated.View entering={FadeIn.delay(900).duration(400)} style={styles.chips} pointerEvents="box-none">
@@ -539,6 +546,7 @@ export function TripHome({
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   topFade: { position: "absolute", top: 0, left: 0, right: 0 },
+  hero: { overflow: "hidden" },
   heroFade: { position: "absolute", left: 0, right: 0, bottom: 0, height: HERO_FADE_HEIGHT },
   map: { position: "absolute", left: 0, right: 0, bottom: 0 },
   heroTop: {

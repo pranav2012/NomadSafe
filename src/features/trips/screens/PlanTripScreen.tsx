@@ -167,7 +167,10 @@ export default function PlanTripScreen() {
               contactColor="#3DDC97"
               accent={auraStatusAccent.calm}
               isDark={isDark}
-              overview
+              overview={stops.length === 0}
+              showRoute
+              labelStops
+              fitHeight={keyboardOpen ? compactBand : step === "cities" ? fullBand : detailsBand}
             />
           </Animated.View>
         </PrivateView>

@@ -30,7 +30,7 @@ import Animated, {
   withTiming,
   type SharedValue,
 } from "react-native-reanimated";
-import { scheduleOnRN } from "react-native-worklets";
+import { scheduleOnRN, scheduleOnUI } from "react-native-worklets";
 import { springs, useAura } from "@/atoms";
 import { useAnimationsActive } from "@/hooks/useAnimationsActive";
 import { useGlobeWeather } from "@/features/home/hooks/useGlobeWeather";
@@ -49,7 +49,13 @@ const SKY_TEXTURE = require("../../../../../../assets/images/globe/milky-way.jpg
 
 const MIN_ZOOM = 1;
 const DEFAULT_SPAN_KM = 400;
-const MIN_ROUTE_KM = 500;
+// The fitted route view spans at least this much ground (half-width, km), so stops in one region
+// still fill the view; tighter than this and NASA's 500 m imagery turns soft.
+const MIN_ROUTE_KM = 50;
+// A route with a single stop shows about this much ground, enough to see where in the country it is.
+const SINGLE_STOP_SPAN_KM = 1200;
+// Later refits (a stop added, the window resized) move faster than the opening fly-in.
+const REFRAME_MS = 900;
 // The fitted route view keeps every stop within this share of the clear window's half width / half height.
 const ROUTE_FIT = 0.85;
 // Sharp imagery reaches this far past a stop, a little more than the focused view shows, so a drag stays sharp.
@@ -73,6 +79,8 @@ const DEG = Math.PI / 180;
 const HORIZON_RADIUS = 1.15;
 const HORIZON_TILT = 1.2;
 const HORIZON_EDGE = 0.32;
+/** Strip ↔ full globe morph; the page animates the hero's height with the same timing. */
+export const GLOBE_MORPH = { duration: 650, easing: Easing.bezier(0.33, 0, 0.15, 1) };
 // Angular margin (radians, ~4.5°) of the night light past the outermost stop.
 const GLOW_MARGIN = 0.08;
 // The focused pin sends out one soft ring this often.
@@ -224,8 +232,8 @@ function unproject(x: number, y: number, lat: number, lng: number) {
  * screen width. On the orthographic disc a point θ from the centre sits sin(θ)·R out, and the screen
  * is ~1.25× the square box the radius is sized from. `liftPx` raises the stop above the globe's centre.
  */
-function frameFocus(focus: GlobeStop, baseRadius = 1, liftPx = 0) {
-  const halfBoxAngle = DEFAULT_SPAN_KM / 2 / 1.25 / EARTH_RADIUS_KM;
+function frameFocus(focus: GlobeStop, baseRadius = 1, liftPx = 0, spanKm = DEFAULT_SPAN_KM) {
+  const halfBoxAngle = spanKm / 2 / 1.25 / EARTH_RADIUS_KM;
   const zoom = 1 / (0.9 * Math.sin(halfBoxAngle));
   const lat = Math.max(-1.3, Math.min(1.3, focus.latitude * DEG));
   const lng = focus.longitude * DEG;
@@ -252,6 +260,7 @@ function meanCenter(stops: GlobeStop[]) {
  * window (`halfH`), centring their bounding box `liftPx` above the globe's centre, i.e. in that window.
  */
 function frameRoute(stops: GlobeStop[], baseRadius: number, halfW: number, halfH: number, liftPx: number) {
+  if (stops.length === 1) return frameFocus(stops[0], baseRadius, liftPx, SINGLE_STOP_SPAN_KM);
   const { lat, lng } = meanCenter(stops);
   const pts = stops.map((stop) => project(stop.latitude * DEG, stop.longitude * DEG, lng, lat, 0, 0, 1));
   if (pts.some((pt) => pt.z <= 0.05)) return { lat: Math.max(-1.3, Math.min(1.3, lat)), lng, zoom: MIN_ZOOM };
@@ -261,7 +270,7 @@ function frameRoute(stops: GlobeStop[], baseRadius: number, halfW: number, halfH
   const spanX = Math.max(minSpan, (Math.max(...xs) - Math.min(...xs)) / 2);
   const spanY = Math.max(minSpan, (Math.max(...ys) - Math.min(...ys)) / 2);
   const fit = Math.min((ROUTE_FIT * halfW) / (baseRadius * spanX), (ROUTE_FIT * halfH) / (baseRadius * spanY));
-  const zoom = Math.min(frameFocus(stops[0]).zoom, Math.max(MIN_ZOOM, fit));
+  const zoom = Math.max(MIN_ZOOM, fit);
   const mx = (Math.max(...xs) + Math.min(...xs)) / 2;
   const my = (Math.max(...ys) + Math.min(...ys)) / 2;
   return { ...unproject(mx, my + liftPx / (baseRadius * zoom), lat, lng), zoom };
@@ -280,6 +289,7 @@ function tripGlow(stops: GlobeStop[]) {
 
 /** Same angle shifted by whole turns to be closest to `from`, so the spin takes the short way round. */
 function nearestTurn(angle: number, from: number) {
+  "worklet";
   return angle + Math.round((from - angle) / (2 * Math.PI)) * 2 * Math.PI;
 }
 
@@ -312,6 +322,7 @@ uniform float2 focusSize;
 uniform float focusOn;
 uniform shader sky;
 uniform float skyScale;
+uniform float skyPhoto;
 uniform float2 center;
 uniform float radius;
 uniform float rotLng;
@@ -419,7 +430,10 @@ half4 main(float2 p) {
   float glon = atan(d.x, -d.z);
   float glat = asin(clamp(d.y, -1.0, 1.0));
   float2 suv = float2((glon / (2.0 * PI) + 0.5) * ${SKY_W}.0, (0.5 - glat / PI) * ${SKY_H}.0);
-  float3 space = pow(float3(sky.eval(suv).rgb), float3(1.15)) * 0.9;
+  float3 photo = pow(float3(sky.eval(suv).rgb), float3(1.15)) * 0.9;
+  // The horizon strip has no stars, like a daylight orbital photo: deep blue at the limb into black.
+  float3 deep = mix(float3(0.03, 0.055, 0.12), float3(0.008, 0.01, 0.022), smoothstep(1.0, 1.3, r));
+  float3 space = mix(deep, photo, skyPhoto);
   float3 back = mix(space, ATMO, clamp(halo, 0.0, 1.0));
   if (r > 1.0) return half4(half3(back), 1.0);
 
@@ -540,6 +554,10 @@ interface GlobeProps {
   showRoute?: boolean;
   /** Draw only the globe's top arc as a short strip; pinch is off and a tap calls `onPress`. */
   horizon?: boolean;
+  /** Height of the canvas's visible part while `horizon` is on (the page clips the rest); defaults to `height`. */
+  stripHeight?: number;
+  /** Height of the window, centred on the globe, that the route is fitted in; defaults to the space between the insets. */
+  fitHeight?: number;
   onPress?: () => void;
   /**
    * How far along the trip is. Travelled legs and the next one are bright, the rest faint:
@@ -558,6 +576,15 @@ interface StopLayout {
   pinOn: number[];
   labels: number[][];
 }
+
+/** Globe radius and centre on screen (px). */
+interface GlobeView {
+  r: number;
+  x: number;
+  y: number;
+}
+
+type ViewValue = ReturnType<typeof useDerivedValue<GlobeView>>;
 
 /** Projects a lat/lng onto the globe's disc; z < 0 means it is on the far side. */
 function project(lat: number, lng: number, rotLng: number, rotLat: number, cx: number, cy: number, radius: number) {
@@ -627,7 +654,7 @@ function legPoint(a: GlobeStop, b: GlobeStop, t: number) {
  * On mount it spins and zooms in on the current stop; drag to spin it, pinch out for the route and
  * the whole globe or in to hand off to the map.
  */
-export function Globe({ stops, focusIndex, width, height, origin, contacts = [], plannedPins = [], contactColor, accent, isDark, onZoomThrough, entry, topInset = 0, onTouchActive, scrolling, overview = false, showRoute = false, horizon = false, onPress, routeState = "done", labelStops = false, bottomInset = 0 }: GlobeProps) {
+export function Globe({ stops, focusIndex, width, height, origin, contacts = [], plannedPins = [], contactColor, accent, isDark, onZoomThrough, entry, topInset = 0, onTouchActive, scrolling, overview = false, showRoute = false, horizon = false, stripHeight, fitHeight, onPress, routeState = "done", labelStops = false, bottomInset = 0 }: GlobeProps) {
   const textures = useGlobeTextures();
   const dayImage = textures?.day ?? null;
   const nightImage = textures?.night ?? null;
@@ -641,24 +668,26 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
   const clock = useSharedValue(0);
   const shaderTime = useSharedValue(0);
   const shaderTickAt = useSharedValue(0);
-  const baseRadius = horizon ? width * HORIZON_RADIUS : Math.min(width, height - topInset) * 0.45;
+  const baseRadius = Math.min(width, height - topInset) * 0.45;
+  const stripRadius = width * HORIZON_RADIUS;
   const focus = stops[focusIndex] ?? { name: "", latitude: 20, longitude: 0 };
+  const focusLat = focus.latitude * DEG;
+  const focusLng = focus.longitude * DEG;
   // The clear window: below the overlaid header, above the page's bottom fade (and the lowest name).
-  const hiddenBottom = bottomInset + (labelStops ? LABEL_ROOM : 0);
-  const clearHalfH = (height - topInset - hiddenBottom) / 2;
-  const frameLift = hiddenBottom / 2;
+  const roomBelow = labelStops ? LABEL_ROOM : 0;
+  const clearHalfH = ((fitHeight ?? height - topInset - bottomInset) - roomBelow) / 2;
+  const frameLift = ((fitHeight == null ? bottomInset : 0) + roomBelow) / 2;
   const frame = useMemo(
     () =>
-      horizon
-        ? { lat: Math.max(-1.3, Math.min(1.3, focus.latitude * DEG)) - HORIZON_TILT, lng: focus.longitude * DEG, zoom: MIN_ZOOM }
-        : overview
+      overview
         ? { lat: Math.max(-0.6, Math.min(0.6, focus.latitude * DEG * 0.8)), lng: focus.longitude * DEG, zoom: MIN_ZOOM }
         : showRoute && stops.length > 0
           ? frameRoute(stops, baseRadius, width / 2, clearHalfH, frameLift)
           : frameFocus(focus, baseRadius, frameLift),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [horizon, overview, showRoute, stops, focus.latitude, focus.longitude, baseRadius, width, clearHalfH, frameLift],
+    [overview, showRoute, stops, focus.latitude, focus.longitude, baseRadius, width, clearHalfH, frameLift],
   );
+  const stripLat = Math.max(-1.3, Math.min(1.3, focusLat)) - HORIZON_TILT;
   const spinning = overview && stops.length === 0 && !reduceMotion;
   const restZoom = frame.zoom;
   const imagery = useTripImagery(stops, focusIndex, !overview);
@@ -674,18 +703,44 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
   const maxZoom = handoffZoom * 1.4;
   const zoom = useSharedValue(entry ? handoffZoom : reduceMotion ? restZoom : 1);
   const zoomStart = useSharedValue(1);
-  const radius = useDerivedValue(() => baseRadius * zoom.get());
   const handoffHinted = useSharedValue(false);
   const fade = useDerivedValue(() => 1 - Math.min(1, Math.max(0, (zoom.get() - handoffZoom) / (maxZoom - handoffZoom))) * 0.6);
   const cx = width / 2;
-  const cy = horizon ? topInset + (height - topInset) * HORIZON_EDGE + baseRadius : topInset + (height - topInset) / 2;
-  const targetLng = frame.lng;
-  const targetLat = frame.lat;
+  const fullCy = topInset + (height - topInset) / 2;
+  const stripCy = topInset + ((stripHeight ?? height) - topInset) * HORIZON_EDGE + stripRadius;
+  const targetLng = horizon ? focusLng : frame.lng;
+  const targetLat = horizon ? stripLat : frame.lat;
 
   const rotLng = useSharedValue(entry ? entry.longitude * DEG : targetLng - (reduceMotion ? 0 : 2.2));
   const rotLat = useSharedValue(entry ? entry.latitude * DEG : reduceMotion || spinning ? targetLat : 0.1);
   const touching = useSharedValue(false);
   const resumeAt = useSharedValue(0);
+
+  // Strip ↔ full: `strip` flips at the start and `morph` runs 0 → 1, blending from the view the globe
+  // had (`morphFrom`) into the new one. Kept in shared values so the prop change itself never jumps.
+  const strip = useSharedValue(horizon ? 1 : 0);
+  const morph = useSharedValue(1);
+  const morphFrom = useSharedValue({ r: 1, x: 0, y: 0, px: 0, py: 0, anchored: 0 });
+  const view = useDerivedValue<GlobeView>(() => {
+    const isStrip = strip.get() === 1;
+    const r1 = isStrip ? stripRadius : baseRadius * zoom.get();
+    const y1 = isStrip ? stripCy : fullCy;
+    const t = morph.get();
+    if (t >= 1) return { r: r1, x: cx, y: y1 };
+    const from = morphFrom.get();
+    // Scale changes ~20x between the two, so it eases in log space to feel even throughout.
+    const r = Math.exp(Math.log(from.r) + (Math.log(r1) - Math.log(from.r)) * t);
+    if (!from.anchored) return { r, x: from.x + (cx - from.x) * t, y: from.y + (y1 - from.y) * t };
+    // The focused stop glides straight to where it lands, and the globe is placed around it.
+    const end = project(focusLat, focusLng, isStrip ? focusLng : frame.lng, isStrip ? stripLat : frame.lat, cx, y1, r1);
+    const now = project(focusLat, focusLng, rotLng.get(), rotLat.get(), 0, 0, r);
+    return { r, x: from.px + (end.x - from.px) * t - now.x, y: from.py + (end.y - from.py) * t - now.y };
+  });
+  const radius = useDerivedValue(() => view.get().r);
+  // 1 on the strip, 0 on the full globe, blended through the morph.
+  const stripness = useDerivedValue(() => (strip.get() === 1 ? morph.get() : 1 - morph.get()));
+  // Names belong to the full globe: they fade in over the end of an expand and out early on a collapse.
+  const labelsShown = useDerivedValue(() => (strip.get() === 1 ? Math.max(0, 1 - 2 * morph.get()) : Math.max(0, 2 * morph.get() - 1)));
 
   // One clock for clouds, comet, the pin halo and the overview spin, advanced in ~30 fps ticks. It only
   // runs while the globe is visible and holds still during page scrolls.
@@ -717,9 +772,34 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
     return () => clearInterval(id);
   }, [animating]);
 
+  const wasStrip = useRef(horizon);
+  const framed = useRef(false);
   useEffect(() => {
     const ease = Easing.bezier(0.2, 0.8, 0.2, 1);
     const lng = nearestTurn(targetLng, rotLng.get());
+    if (wasStrip.current !== horizon) {
+      wasStrip.current = horizon;
+      const toStrip = horizon ? 1 : 0;
+      if (reduceMotion) {
+        strip.set(toStrip);
+        zoom.set(restZoom);
+        rotLng.set(lng);
+        rotLat.set(targetLat);
+        return;
+      }
+      scheduleOnUI(() => {
+        const v = view.get();
+        const p = project(focusLat, focusLng, rotLng.get(), rotLat.get(), v.x, v.y, v.r);
+        morphFrom.set({ r: v.r, x: v.x, y: v.y, px: p.x, py: p.y, anchored: p.z > 0.2 ? 1 : 0 });
+        if (!toStrip) zoom.set(restZoom);
+        strip.set(toStrip);
+        morph.set(0);
+        morph.set(withTiming(1, GLOBE_MORPH));
+        rotLng.set(withTiming(nearestTurn(targetLng, rotLng.get()), GLOBE_MORPH));
+        rotLat.set(withTiming(targetLat, GLOBE_MORPH));
+      });
+      return;
+    }
     if (entry) {
       zoom.set(withSpring(restZoom, springs.sheet));
       rotLng.set(withTiming(lng, { duration: 700, easing: ease }));
@@ -727,7 +807,9 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
       return;
     }
     if (spinning) {
-      zoom.set(restZoom);
+      // Back to the whole globe after the last stop was removed: ease out rather than jump.
+      zoom.set(framed.current ? withTiming(restZoom, { duration: REFRAME_MS, easing: ease }) : restZoom);
+      if (framed.current) rotLat.set(withTiming(targetLat, { duration: REFRAME_MS, easing: ease }));
       return;
     }
     if (reduceMotion) {
@@ -736,17 +818,21 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
       rotLat.set(targetLat);
       return;
     }
-    zoom.set(withTiming(restZoom, { duration: 2600, easing: ease }));
-    rotLng.set(withTiming(lng, { duration: 2600, easing: ease }));
-    rotLat.set(withTiming(targetLat, { duration: 2600, easing: ease }));
-  }, [entry, reduceMotion, restZoom, rotLat, rotLng, spinning, targetLat, targetLng, zoom]);
+    const duration = framed.current ? REFRAME_MS : 2600;
+    framed.current = true;
+    zoom.set(withTiming(restZoom, { duration, easing: ease }));
+    rotLng.set(withTiming(lng, { duration, easing: ease }));
+    rotLat.set(withTiming(targetLat, { duration, easing: ease }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entry, horizon, reduceMotion, restZoom, spinning, targetLat, targetLng]);
 
   const uniforms = useDerivedValue(() => ({
-    center: [cx, cy],
+    center: [view.get().x, view.get().y],
     radius: radius.get(),
     rotLng: rotLng.get(),
     rotLat: rotLat.get(),
     skyScale: Math.min(width, height - topInset) / 2,
+    skyPhoto: 1 - stripness.get(),
     sun,
     time: shaderTime.get(),
     moon,
@@ -766,16 +852,17 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
     "worklet";
     const a = stops[i];
     const b = stops[i + 1];
-    const r = radius.get();
-    const pa = project(a.latitude * DEG, a.longitude * DEG, rotLng.get(), rotLat.get(), cx, cy, r);
-    const pb = project(b.latitude * DEG, b.longitude * DEG, rotLng.get(), rotLat.get(), cx, cy, r);
+    const v = view.get();
+    const r = v.r;
+    const pa = project(a.latitude * DEG, a.longitude * DEG, rotLng.get(), rotLat.get(), v.x, v.y, r);
+    const pb = project(b.latitude * DEG, b.longitude * DEG, rotLng.get(), rotLat.get(), v.x, v.y, r);
     const trimA = i === focusIndex ? FOCUS_TRIM_PX : PIN_TRIM_PX;
     const trimB = i + 1 === focusIndex ? FOCUS_TRIM_PX : PIN_TRIM_PX;
     if (Math.hypot(pb.x - pa.x, pb.y - pa.y) < trimA + trimB + MIN_LEG_PX) return;
     let drawing = false;
     for (let s = 0; s <= 48; s += 1) {
       const pt = legPoint(a, b, s / 48);
-      const pr = project(pt.lat, pt.lng, rotLng.get(), rotLat.get(), cx, cy, r);
+      const pr = project(pt.lat, pt.lng, rotLng.get(), rotLat.get(), v.x, v.y, r);
       if (pr.z < -0.02 || Math.hypot(pr.x - pa.x, pr.y - pa.y) < trimA || Math.hypot(pr.x - pb.x, pr.y - pb.y) < trimB) {
         drawing = false;
         continue;
@@ -788,9 +875,10 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
   const traceArc = (builder: SkPathBuilder, a: GlobeStop, b: GlobeStop) => {
     "worklet";
     let drawing = false;
+    const v = view.get();
     for (let s = 0; s <= 48; s += 1) {
       const pt = arcPoint(a, b, s / 48);
-      const pr = project(pt.lat, pt.lng, rotLng.get(), rotLat.get(), cx, cy, radius.get() * pt.lift);
+      const pr = project(pt.lat, pt.lng, rotLng.get(), rotLat.get(), v.x, v.y, v.r * pt.lift);
       if (pr.z < -0.02) {
         drawing = false;
         continue;
@@ -836,12 +924,13 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
   // would sit on one already drawn is dropped; a name goes on the side of its pin facing away from the
   // route, or another free side, and is hidden if none is free, until a zoom pulls things apart.
   const labelWidths = useSharedValue<number[]>([]);
-  const labelOrder = useMemo(() => [focusIndex, ...stops.map((_, i) => i).filter((i) => i !== focusIndex)], [focusIndex, stops]);
+  const labelOrder = useMemo(() => stops.map((_, i) => i).sort((a, b) => Number(b === focusIndex) - Number(a === focusIndex)), [focusIndex, stops]);
   const hasBadge = Boolean(stopWeather[0]);
   const stopLayout = useDerivedValue(() => {
     const pinOn = stops.map(() => 1);
     const labels = stops.map(() => [0, 0, 0]);
-    const points = stops.map((stop) => project(stop.latitude * DEG, stop.longitude * DEG, rotLng.get(), rotLat.get(), cx, cy, radius.get()));
+    const v = view.get();
+    const points = stops.map((stop) => project(stop.latitude * DEG, stop.longitude * DEG, rotLng.get(), rotLat.get(), v.x, v.y, v.r));
     const kept: number[] = [];
     for (const i of labelOrder) {
       const pt = points[i];
@@ -852,7 +941,7 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
       }
       kept.push(i);
     }
-    if (!labelStops || horizon) return { pinOn, labels };
+    if (!labelStops) return { pinOn, labels };
     const overlaps = (a: number[], b: number[]) => a[0] < b[0] + b[2] && a[0] + a[2] > b[0] && a[1] < b[1] + b[3] && a[1] + a[3] > b[1];
     const pinBoxes = kept.map((j) => ({ j, box: [points[j].x - 6, points[j].y - 6, 12, 12] }));
     const placed: number[][] = [];
@@ -1008,13 +1097,13 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
               <DashPathEffect intervals={DASH} phase={march} />
             </Path>
             {origin ? (
-              <GlobePin stop={origin} focused={false} rotLng={rotLng} rotLat={rotLat} cx={cx} cy={cy} radius={radius} accent={isDark ? "#EDEFF5" : "#0E1018"} pulse={pulse} quiet />
+              <GlobePin stop={origin} focused={false} rotLng={rotLng} rotLat={rotLat} view={view} accent={isDark ? "#EDEFF5" : "#0E1018"} pulse={pulse} quiet />
             ) : null}
             {plannedPins.map((pin, i) => (
-              <PlannedPin key={`planned-${i}`} stop={pin} rotLng={rotLng} rotLat={rotLat} cx={cx} cy={cy} radius={radius} color={isDark ? "#EDEFF5" : "#0E1018"} />
+              <PlannedPin key={`planned-${i}`} stop={pin} rotLng={rotLng} rotLat={rotLat} view={view} color={isDark ? "#EDEFF5" : "#0E1018"} />
             ))}
             {contacts.map((contact, i) => (
-              <GlobePin key={`contact-${i}`} stop={contact} focused={false} rotLng={rotLng} rotLat={rotLat} cx={cx} cy={cy} radius={radius} accent={contactColor} pulse={pulse} quiet />
+              <GlobePin key={`contact-${i}`} stop={contact} focused={false} rotLng={rotLng} rotLat={rotLat} view={view} accent={contactColor} pulse={pulse} quiet />
             ))}
             {pins.map(({ stop, focused, visited }, i) => (
               <GlobePin
@@ -1026,9 +1115,7 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
                 visited={visited}
                 rotLng={rotLng}
                 rotLat={rotLat}
-                cx={cx}
-                cy={cy}
-                radius={radius}
+                view={view}
                 accent={accent}
                 pulse={pulse}
               />
@@ -1043,13 +1130,11 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
             weather={stopWeather[0]}
             rotLng={rotLng}
             rotLat={rotLat}
-            cx={cx}
-            cy={cy}
-            radius={radius}
+            view={view}
             fade={fade}
           />
         ) : null}
-        {labelStops && !horizon && dayImage && nightImage
+        {labelStops && dayImage && nightImage
           ? stops.map((stop, i) => (
               <StopLabel
                 key={`label-${stop.name}-${i}`}
@@ -1061,10 +1146,9 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
                 onWidth={onLabelWidth}
                 rotLng={rotLng}
                 rotLat={rotLat}
-                cx={cx}
-                cy={cy}
-                radius={radius}
+                view={view}
                 fade={fade}
+                shown={labelsShown}
               />
             ))
           : null}
@@ -1081,9 +1165,7 @@ function GlobePin({
   visited = false,
   rotLng,
   rotLat,
-  cx,
-  cy,
-  radius,
+  view,
   accent,
   pulse,
   quiet = false,
@@ -1097,13 +1179,11 @@ function GlobePin({
   visited?: boolean;
   rotLng: ReturnType<typeof useSharedValue<number>>;
   rotLat: ReturnType<typeof useSharedValue<number>>;
-  cx: number;
-  cy: number;
-  radius: ReturnType<typeof useDerivedValue<number>>;
+  view: ViewValue;
   accent: string;
   pulse: ReturnType<typeof useDerivedValue<number>>;
 }) {
-  const point = useDerivedValue(() => project(stop.latitude * DEG, stop.longitude * DEG, rotLng.get(), rotLat.get(), cx, cy, radius.get()));
+  const point = useDerivedValue(() => project(stop.latitude * DEG, stop.longitude * DEG, rotLng.get(), rotLat.get(), view.get().x, view.get().y, view.get().r));
   const x = useDerivedValue(() => point.get().x);
   const y = useDerivedValue(() => point.get().y);
   const visible = useDerivedValue(() => (point.get().z > 0 ? (layout ? (layout.get().pinOn[index] ?? 1) : 1) * (visited ? 0.6 : 1) : 0));
@@ -1128,20 +1208,16 @@ function PlannedPin({
   stop,
   rotLng,
   rotLat,
-  cx,
-  cy,
-  radius,
+  view,
   color,
 }: {
   stop: GlobeStop;
   rotLng: ReturnType<typeof useSharedValue<number>>;
   rotLat: ReturnType<typeof useSharedValue<number>>;
-  cx: number;
-  cy: number;
-  radius: ReturnType<typeof useDerivedValue<number>>;
+  view: ViewValue;
   color: string;
 }) {
-  const point = useDerivedValue(() => project(stop.latitude * DEG, stop.longitude * DEG, rotLng.get(), rotLat.get(), cx, cy, radius.get()));
+  const point = useDerivedValue(() => project(stop.latitude * DEG, stop.longitude * DEG, rotLng.get(), rotLat.get(), view.get().x, view.get().y, view.get().r));
   const x = useDerivedValue(() => point.get().x);
   const y = useDerivedValue(() => point.get().y);
   const visible = useDerivedValue(() => (point.get().z > 0 ? 0.85 : 0));
@@ -1157,25 +1233,21 @@ function WeatherBadge({
   weather,
   rotLng,
   rotLat,
-  cx,
-  cy,
-  radius,
+  view,
   fade,
 }: {
   stop: GlobeStop;
   weather: StopWeather;
   rotLng: ReturnType<typeof useSharedValue<number>>;
   rotLat: ReturnType<typeof useSharedValue<number>>;
-  cx: number;
-  cy: number;
-  radius: ReturnType<typeof useDerivedValue<number>>;
+  view: ViewValue;
   fade: ReturnType<typeof useDerivedValue<number>>;
 }) {
   const { f } = useAura();
   const { formatTemperature } = useLocalization();
   // Sits up and to the right of the pin; fades out as the stop turns toward the limb.
   const style = useAnimatedStyle(() => {
-    const point = project(stop.latitude * DEG, stop.longitude * DEG, rotLng.get(), rotLat.get(), cx, cy, radius.get());
+    const point = project(stop.latitude * DEG, stop.longitude * DEG, rotLng.get(), rotLat.get(), view.get().x, view.get().y, view.get().r);
     return {
       opacity: Math.min(1, Math.max(0, (point.z - 0.15) / 0.2)) * (fade.get() - 0.4) / 0.6,
       transform: [{ translateX: point.x + 9 }, { translateY: point.y - 30 }],
@@ -1210,10 +1282,9 @@ function StopLabel({
   onWidth,
   rotLng,
   rotLat,
-  cx,
-  cy,
-  radius,
+  view,
   fade,
+  shown,
 }: {
   index: number;
   stop: GlobeStop;
@@ -1221,20 +1292,19 @@ function StopLabel({
   visited: boolean;
   layout: ReturnType<typeof useDerivedValue<StopLayout>>;
   onWidth: (index: number, width: number) => void;
+  shown: ReturnType<typeof useDerivedValue<number>>;
   rotLng: ReturnType<typeof useSharedValue<number>>;
   rotLat: ReturnType<typeof useSharedValue<number>>;
-  cx: number;
-  cy: number;
-  radius: ReturnType<typeof useDerivedValue<number>>;
+  view: ViewValue;
   fade: ReturnType<typeof useDerivedValue<number>>;
 }) {
   const { f } = useAura();
   const style = useAnimatedStyle(() => {
-    const point = project(stop.latitude * DEG, stop.longitude * DEG, rotLng.get(), rotLat.get(), cx, cy, radius.get());
+    const point = project(stop.latitude * DEG, stop.longitude * DEG, rotLng.get(), rotLat.get(), view.get().x, view.get().y, view.get().r);
     const limb = Math.min(1, Math.max(0, (point.z - 0.15) / 0.2));
-    const [shown, ox, oy] = layout.get().labels[index] ?? [0, 0, 0];
+    const [placed, ox, oy] = layout.get().labels[index] ?? [0, 0, 0];
     return {
-      opacity: shown * limb * ((fade.get() - 0.4) / 0.6) * (visited ? 0.7 : 1),
+      opacity: placed * shown.get() * limb * ((fade.get() - 0.4) / 0.6) * (visited ? 0.7 : 1),
       transform: [{ translateX: point.x + ox }, { translateY: point.y + oy }],
     };
   });
