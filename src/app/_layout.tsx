@@ -286,6 +286,9 @@ function AnalyticsEffects() {
   return null;
 }
 
+// iOS shows "modal" as a stacked page sheet; open these as full pages there, like Android does.
+const PAGE_OPTIONS = Platform.OS === "ios" ? {} : ({ presentation: "modal" } as const);
+
 /**
  * Protected groups drop onboarding/sign-in from history once they no longer
  * apply (so Back can't return to them) and keep signed-in screens unreachable
@@ -310,17 +313,17 @@ function AppStack() {
         <Stack.Screen name="(auth)" />
         <Stack.Protected guard={inApp}>
           <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="settings" options={{ presentation: "modal" }} />
-          <Stack.Screen name="trips" options={{ presentation: "modal" }} />
-          <Stack.Screen name="passport" options={{ presentation: "modal" }} />
+          <Stack.Screen name="settings" options={PAGE_OPTIONS} />
+          <Stack.Screen name="trips" options={PAGE_OPTIONS} />
+          <Stack.Screen name="passport" options={PAGE_OPTIONS} />
           <Stack.Screen name="plan-trip" options={{ presentation: "fullScreenModal", animation: "fade" }} />
-          <Stack.Screen name="join/[code]" options={{ presentation: "modal" }} />
-          <Stack.Screen name="paywall" options={{ presentation: "modal" }} />
+          <Stack.Screen name="join/[code]" options={PAGE_OPTIONS} />
+          <Stack.Screen name="paywall" options={PAGE_OPTIONS} />
           <Stack.Screen name="circle" />
           <Stack.Screen name="trip-recap/[id]" options={{ presentation: "fullScreenModal", animation: "fade" }} />
           <Stack.Screen name="ticket/[eventId]" options={{ presentation: "fullScreenModal", animation: "fade" }} />
-          <Stack.Screen name="receive-ticket" options={{ presentation: "modal" }} />
-          <Stack.Screen name="save-link" options={{ presentation: "modal" }} />
+          <Stack.Screen name="receive-ticket" options={PAGE_OPTIONS} />
+          <Stack.Screen name="save-link" options={PAGE_OPTIONS} />
           <Stack.Screen name="idea/[eventId]" options={{ presentation: "fullScreenModal", animation: "fade" }} />
           <Stack.Screen
             name="voice-expense"

@@ -23,7 +23,6 @@ import { useEventsStore } from "@/features/itinerary/store/eventsStore";
 import { clearTripGmailCoverage } from "@/features/expenses/store/tripGmailCoverageStore";
 import { useExpensesStore } from "@/features/expenses/store/expensesStore";
 import { selectionChanged } from "@/utils/haptics";
-import { useSheetTopInset } from "@/hooks/useSheetTopInset";
 
 type SectionKey = "current" | "upcoming" | "past" | "archived";
 
@@ -89,7 +88,6 @@ export default function TripsScreen() {
   const router = useRouter();
   const startNewTrip = useStartNewTrip();
   const insets = useSafeAreaInsets();
-  const sheetTop = useSheetTopInset();
   const trips = useTripsStore((state) => state.trips);
   const plannedTrips = useTripsStore((state) => state.plannedTrips);
   const { unlimitedTrips } = usePlan();
@@ -204,7 +202,7 @@ export default function TripsScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: c.bg }]}>
-      <ScrollView contentContainerStyle={[styles.scroll, { paddingTop: sheetTop + 16, paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <View style={styles.flex}>
             <Text style={[styles.count, { color: c.textMuted, fontFamily: f.medium }]}>{t("trip.tripsCount", { count: trips.length })}</Text>

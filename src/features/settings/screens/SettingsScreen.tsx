@@ -38,7 +38,6 @@ import { useCircle } from "@/features/location-sharing/hooks/useCircle";
 import { exportEverything } from "@/features/settings/services/exportService";
 import { wipeAllDeviceData } from "@/features/settings/services/wipeService";
 import { SettingsProfileHeader } from "@/features/settings/components/SettingsProfileHeader";
-import { useSheetTopInset } from "@/hooks/useSheetTopInset";
 import { CountryPickerSheet, useHomeCountry } from "@/features/passport";
 import { countryDisplayName } from "@/features/trips/data/destinations";
 
@@ -80,7 +79,6 @@ function nativeLanguageName(locale: SupportedLocale): string {
 export default function SettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const sheetTop = useSheetTopInset();
   const { c, f, isDark } = useAura();
   const { t, locale, deviceLocale, deviceCurrency, deviceUnits, deviceHour12 } = useLocalization();
 
@@ -411,7 +409,7 @@ export default function SettingsScreen() {
     <View style={[styles.root, { backgroundColor: c.bg }]}>
       <StatusBar style={isDark ? "light" : "dark"} />
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: sheetTop + 16, paddingBottom: insets.bottom + 32 }]}
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 32 }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>

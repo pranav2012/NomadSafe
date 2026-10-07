@@ -7,7 +7,6 @@ import { AuraButton, AuraField, Icon, PressableScale, showToast, useAura, type I
 import { useLocalization } from "@/localization";
 import { PrivateView, track } from "@/modules/analytics";
 import { canCreatePlannedTrip, usePlanStore } from "@/modules/billing";
-import { useSheetTopInset } from "@/hooks/useSheetTopInset";
 import { SELF_ID } from "@/features/expenses/utils/split";
 import { fetchLinkPreview, type LinkPreview } from "@/features/itinerary/services/linkPreview";
 import { useEventsStore } from "@/features/itinerary/store/eventsStore";
@@ -31,7 +30,6 @@ export default function SaveLinkScreen() {
   const { t, locale } = useLocalization();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const sheetTop = useSheetTopInset();
   const params = useLocalSearchParams<{ text?: string }>();
   const [shared] = useState(() => params.text ?? "");
   const raw = extractLink(shared);
@@ -156,7 +154,7 @@ export default function SaveLinkScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: c.bg }]}>
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.scroll, { paddingTop: sheetTop + 16, paddingBottom: insets.bottom + 120 }]}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 120 }]}>
         <View style={styles.header}>
           <Text style={[styles.title, { color: c.text, fontFamily: f.semibold }]}>{t("saveLink.title")}</Text>
           <PressableScale onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={t("common.close")} style={[styles.close, { backgroundColor: c.surfaceStrong }]}>

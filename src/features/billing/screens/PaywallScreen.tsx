@@ -23,7 +23,6 @@ import {
   type PlanTier,
   type PurchasesPackage,
 } from "@/modules/billing";
-import { useSheetTopInset } from "@/hooks/useSheetTopInset";
 
 type PaidTier = Exclude<PlanTier, "free">;
 type Reason = "trips" | "groups" | "planned" | "plus" | "ai" | "settings";
@@ -59,7 +58,6 @@ export default function PaywallScreen() {
   const { t } = useLocalization();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const sheetTop = useSheetTopInset();
   const { reason = "settings", feature } = useLocalSearchParams<{ reason?: Reason; feature?: string }>();
   const plan = usePlan();
   const [tier, setTier] = useState<PaidTier>(reason === "ai" || plan.tier === "plus" ? "pro" : "plus");
@@ -168,7 +166,7 @@ export default function PaywallScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: c.bg }]}>
-      <ScrollView contentContainerStyle={[styles.scroll, { paddingTop: sheetTop + 16, paddingBottom: 24 }]} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 16, paddingBottom: 24 }]} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <View style={styles.flex}>
             <Text style={[styles.eyebrow, { color: c.textMuted, fontFamily: f.medium }]}>{t("paywall.eyebrow")}</Text>
