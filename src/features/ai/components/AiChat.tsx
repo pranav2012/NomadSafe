@@ -382,7 +382,8 @@ const styles = StyleSheet.create({
   empty: { alignItems: "center" },
   emptyTitle: { fontSize: 22, letterSpacing: -0.6, textAlign: "center", marginTop: 6 },
   orb: { marginBottom: 18 },
-  hero: { alignSelf: "center", marginTop: 18, marginBottom: 14 },
+  // The orb's corona bleeds 45% of its size past its box; the top margin keeps it clear of the scroll view's clip.
+  hero: { alignSelf: "center", marginTop: 34, marginBottom: 6 },
   tempIcon: {
     width: 76,
     height: 76,
