@@ -1537,7 +1537,9 @@
     },
     "ledePlus": "Plus adds money tools on top of everything that's free: shares splits and saved splits, recurring spends, charts, export and receipt scanning. Paid plans have no ads.",
     "featureMoneyTools": "Recurring spends, shares splits, charts, export and receipt scan",
-    "featureReceiptItems": "Split receipts item by item"
+    "featureReceiptItems": "Split receipts item by item",
+    "titlePlanned": "You've used your {{count}} planned trips",
+    "ledePlanned": "Free covers {{count}} planned trips. Plus lets you plan as many as you like and confirm unlimited trips."
   },
   "aiKey": {
     "title": "Your own API key",
@@ -2082,5 +2084,40 @@
     "savedBy": "Saved by {{name}}",
     "savedByYou": "Saved by you",
     "popularHere": "Popular here"
+  },
+  "planned": {
+    "anyTime": "Any time",
+    "badge": "Planning",
+    "body": "No dates needed. Collect ideas now and confirm it when you know when you're going.",
+    "confirm": "Confirm trip",
+    "confirmBody": "Check the places, then pick your dates.",
+    "confirmTitle": "Confirm {{name}}",
+    "discard": "Discard",
+    "discardBody_one": "It has {{count}} saved idea. Move it to another trip, or discard it too?",
+    "discardBody_other": "It has {{count}} saved ideas. Move them to another trip, or discard them too?",
+    "discardEmptyBody": "It has no saved ideas yet.",
+    "discardTitle": "Discard {{name}}?",
+    "discardWithIdeas": "Discard with ideas",
+    "formTitle": "Start planning",
+    "ideas_one": "{{count}} idea",
+    "ideas_other": "{{count}} ideas",
+    "ideasButton": "Ideas",
+    "justName": "Not sure where yet? Just name it",
+    "limitNote": "You've used your {{count}} free trips. Save this as a planned trip and confirm it with Plus when you have dates.",
+    "moveIdeas": "Move ideas",
+    "moveTitle": "Move ideas to…",
+    "movedToast_one": "Moved {{count}} idea to {{name}}",
+    "movedToast_other": "Moved {{count}} ideas to {{name}}",
+    "nameLabel": "Trip name",
+    "namePlaceholder": "e.g. Europe in summer",
+    "noDates": "No dates yet",
+    "notSure": "Not sure of dates yet?",
+    "planAfterConfirm": "Confirm this trip with dates to plan ideas for a day.",
+    "roughMonth": "Sometime in {{month}}",
+    "save": "Save as planned trip",
+    "savedToast": "{{name}} saved as a planned trip",
+    "section": "Planning",
+    "sectionCount": "{{count}} of {{limit}} free",
+    "whenLabel": "Roughly when?"
   }
 }

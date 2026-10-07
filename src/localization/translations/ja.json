@@ -1537,7 +1537,9 @@
     },
     "ledePlus": "Plusは無料の機能に加えて、口数割りと保存した割り方、定期支出、グラフ、書き出し、レシート読み取りを追加します。有料プランは広告なしです。",
     "featureMoneyTools": "定期支出、口数割り、グラフ、書き出し、レシート読み取り",
-    "featureReceiptItems": "レシートを品目ごとに割り勘"
+    "featureReceiptItems": "レシートを品目ごとに割り勘",
+    "titlePlanned": "計画中の旅行{{count}}件を使い切りました",
+    "ledePlanned": "無料プランでは計画中の旅行は{{count}}件までです。Plusなら好きなだけ計画でき、旅行も無制限に確定できます。"
   },
   "aiKey": {
     "title": "自分のAPIキー",
@@ -2082,5 +2084,40 @@
     "savedBy": "{{name}}が保存",
     "savedByYou": "あなたが保存",
     "popularHere": "この辺りの人気スポット"
+  },
+  "planned": {
+    "anyTime": "いつでも",
+    "badge": "計画中",
+    "body": "日程は不要です。アイデアを集めて、行く時期が決まったら確定しましょう。",
+    "confirm": "旅行を確定",
+    "confirmBody": "場所を確認して、日程を選びましょう。",
+    "confirmTitle": "{{name}}を確定",
+    "discard": "破棄",
+    "discardBody_one": "保存したアイデアが{{count}}件あります。別の旅行に移しますか？一緒に破棄しますか？",
+    "discardBody_other": "保存したアイデアが{{count}}件あります。別の旅行に移しますか？一緒に破棄しますか？",
+    "discardEmptyBody": "保存したアイデアはまだありません。",
+    "discardTitle": "{{name}}を破棄しますか？",
+    "discardWithIdeas": "アイデアごと破棄",
+    "formTitle": "計画を始める",
+    "ideas_one": "アイデア{{count}}件",
+    "ideas_other": "アイデア{{count}}件",
+    "ideasButton": "アイデア",
+    "justName": "行き先は未定？名前だけ付ける",
+    "limitNote": "無料の旅行{{count}}件を使い切りました。計画中の旅行として保存し、日程が決まったらPlusで確定できます。",
+    "moveIdeas": "アイデアを移す",
+    "moveTitle": "アイデアの移動先…",
+    "movedToast_one": "アイデア{{count}}件を{{name}}に移しました",
+    "movedToast_other": "アイデア{{count}}件を{{name}}に移しました",
+    "nameLabel": "旅行の名前",
+    "namePlaceholder": "例：夏のヨーロッパ",
+    "noDates": "日程未定",
+    "notSure": "日程はまだ？",
+    "planAfterConfirm": "日程を決めて確定すると、アイデアを日ごとに予定できます。",
+    "roughMonth": "{{month}}ごろ",
+    "save": "計画中の旅行として保存",
+    "savedToast": "{{name}}を計画中の旅行として保存しました",
+    "section": "計画中",
+    "sectionCount": "無料 {{limit}}件中{{count}}件",
+    "whenLabel": "だいたいいつ？"
   }
 }

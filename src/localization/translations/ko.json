@@ -1537,7 +1537,9 @@
     },
     "ledePlus": "Plus는 무료 기능에 더해 몫 나누기와 저장된 분배, 반복 지출, 차트, 내보내기, 영수증 스캔을 제공해요. 유료 플랜은 광고가 없어요.",
     "featureMoneyTools": "반복 지출, 몫 나누기, 차트, 내보내기, 영수증 스캔",
-    "featureReceiptItems": "영수증을 항목별로 나누기"
+    "featureReceiptItems": "영수증을 항목별로 나누기",
+    "titlePlanned": "계획 중인 여행 {{count}}개를 모두 썼어요",
+    "ledePlanned": "무료는 계획 중인 여행 {{count}}개까지예요. Plus로 원하는 만큼 계획하고 여행을 무제한으로 확정하세요."
   },
   "aiKey": {
     "title": "내 API 키",
@@ -2082,5 +2084,40 @@
     "savedBy": "{{name}}님이 저장",
     "savedByYou": "내가 저장",
     "popularHere": "이 근처 인기 코스"
+  },
+  "planned": {
+    "anyTime": "언제든",
+    "badge": "계획 중",
+    "body": "날짜는 필요 없어요. 지금 아이디어를 모으고 갈 때가 정해지면 확정하세요.",
+    "confirm": "여행 확정",
+    "confirmBody": "장소를 확인하고 날짜를 고르세요.",
+    "confirmTitle": "{{name}} 확정",
+    "discard": "삭제",
+    "discardBody_one": "저장한 아이디어가 {{count}}개 있어요. 다른 여행으로 옮길까요, 함께 삭제할까요?",
+    "discardBody_other": "저장한 아이디어가 {{count}}개 있어요. 다른 여행으로 옮길까요, 함께 삭제할까요?",
+    "discardEmptyBody": "아직 저장한 아이디어가 없어요.",
+    "discardTitle": "{{name}}을(를) 삭제할까요?",
+    "discardWithIdeas": "아이디어와 함께 삭제",
+    "formTitle": "계획 시작",
+    "ideas_one": "아이디어 {{count}}개",
+    "ideas_other": "아이디어 {{count}}개",
+    "ideasButton": "아이디어",
+    "justName": "어디로 갈지 미정인가요? 이름만 정하기",
+    "limitNote": "무료 여행 {{count}}개를 모두 썼어요. 계획 중인 여행으로 저장하고 날짜가 정해지면 Plus로 확정하세요.",
+    "moveIdeas": "아이디어 옮기기",
+    "moveTitle": "아이디어 옮길 곳…",
+    "movedToast_one": "아이디어 {{count}}개를 {{name}}(으)로 옮겼어요",
+    "movedToast_other": "아이디어 {{count}}개를 {{name}}(으)로 옮겼어요",
+    "nameLabel": "여행 이름",
+    "namePlaceholder": "예: 여름 유럽",
+    "noDates": "날짜 미정",
+    "notSure": "아직 날짜가 없나요?",
+    "planAfterConfirm": "날짜를 정해 여행을 확정하면 아이디어를 하루에 넣을 수 있어요.",
+    "roughMonth": "{{month}} 쯤",
+    "save": "계획 중인 여행으로 저장",
+    "savedToast": "{{name}}을(를) 계획 중인 여행으로 저장했어요",
+    "section": "계획 중",
+    "sectionCount": "무료 {{limit}}개 중 {{count}}개",
+    "whenLabel": "대략 언제쯤?"
   }
 }

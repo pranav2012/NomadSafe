@@ -8,7 +8,8 @@ import { isSettledUp, setGroupArchived } from "@/features/sync";
 import { AuraButton, AuraField, AuraSheet, Icon, PressableScale, showAlert, useAura, AuraTopFade } from "@/atoms";
 import { auraStatusColors } from "@/constants/aura";
 import { useLocalization } from "@/localization";
-import { useStartNewTrip } from "@/modules/billing";
+import { FREE_PLANNED_LIMIT, usePlan, useStartNewTrip } from "@/modules/billing";
+import { PlannedTripCard } from "@/features/trips/components/PlannedTripCard";
 import { TripFormSheet } from "@/features/trips/components/TripForm";
 import { isArchived, GroupPeopleSheet } from "@/features/trips/components/GroupPeopleSheet";
 import { selectActiveTrip, type Trip, useTripsStore } from "@/features/trips/store/tripsStore";
@@ -90,6 +91,8 @@ export default function TripsScreen() {
   const insets = useSafeAreaInsets();
   const sheetTop = useSheetTopInset();
   const trips = useTripsStore((state) => state.trips);
+  const plannedTrips = useTripsStore((state) => state.plannedTrips);
+  const { unlimitedTrips } = usePlan();
   const activeTrip = useTripsStore(selectActiveTrip);
   const setActiveTrip = useTripsStore((state) => state.setActiveTrip);
   const deleteTrip = useTripsStore((state) => state.deleteTrip);
@@ -158,6 +161,13 @@ export default function TripsScreen() {
     setConfirmText("");
   };
 
+  const renderSection = (section: TripSection) => (
+    <View>
+      <Text style={[styles.section, { color: c.textSoft, fontFamily: f.medium }]}>{sectionLabels[section.key]}</Text>
+      {section.data.map((trip, index) => renderPass(trip, { active: false, overlap: index > 0, index }))}
+    </View>
+  );
+
   const renderPass = (trip: Trip, opts: { active: boolean; overlap: boolean; index: number }) => (
     <TripPass
       key={trip.id}
@@ -207,7 +217,7 @@ export default function TripsScreen() {
 
         <PassportCard onPress={() => router.push({ pathname: "/passport", params: { source: "trips" } })} />
 
-        {trips.length === 0 ? (
+        {trips.length === 0 && plannedTrips.length === 0 ? (
           <Animated.View entering={FadeIn.duration(300)} style={[styles.empty, { backgroundColor: c.surface, borderColor: c.hairline }]}>
             <Icon name="compass" size={22} color={c.textSoft} />
             <Text style={[styles.emptyTitle, { color: c.text, fontFamily: f.semibold }]}>{t("trip.noTripsTitle")}</Text>
@@ -223,10 +233,33 @@ export default function TripsScreen() {
         ) : null}
 
         {sections.map((section) => (
-          <View key={section.key}>
-            <Text style={[styles.section, { color: c.textSoft, fontFamily: f.medium }]}>{sectionLabels[section.key]}</Text>
-            {section.data.map((trip, index) => renderPass(trip, { active: false, overlap: index > 0, index }))}
+          <React.Fragment key={section.key}>
+            {section.key === "past" || section.key === "archived" ? null : renderSection(section)}
+          </React.Fragment>
+        ))}
+
+        {plannedTrips.length > 0 ? (
+          <View>
+            <View style={styles.sectionRow}>
+              <Text style={[styles.section, { color: c.textSoft, fontFamily: f.medium }]}>{t("planned.section")}</Text>
+              {unlimitedTrips ? null : (
+                <Text style={[styles.sectionCount, { color: c.textMuted, fontFamily: f.regular }]}>
+                  {t("planned.sectionCount", { count: plannedTrips.length, limit: FREE_PLANNED_LIMIT })}
+                </Text>
+              )}
+            </View>
+            <View style={styles.plannedList}>
+              {plannedTrips.map((planned) => (
+                <PlannedTripCard key={planned.id} planned={planned} />
+              ))}
+            </View>
           </View>
+        ) : null}
+
+        {sections.map((section) => (
+          <React.Fragment key={section.key}>
+            {section.key === "past" || section.key === "archived" ? renderSection(section) : null}
+          </React.Fragment>
         ))}
 
         <AuraButton label={t("trip.addTrip")} icon="plus" variant="secondary" onPress={() => startNewTrip()} style={styles.add} />
@@ -417,6 +450,9 @@ const styles = StyleSheet.create({
   title: { fontSize: 34, letterSpacing: -1.2 },
   close: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center", marginTop: 4 },
   section: { fontSize: 13.5, marginTop: 22 },
+  sectionRow: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between" },
+  sectionCount: { fontSize: 12.5 },
+  plannedList: { gap: 10, marginTop: 12 },
   empty: { borderRadius: 24, borderWidth: StyleSheet.hairlineWidth, padding: 20, gap: 8, marginTop: 16 },
   emptyTitle: { fontSize: 18 },
   emptyBody: { fontSize: 14.5, lineHeight: 21 },

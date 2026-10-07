@@ -1537,7 +1537,9 @@
     },
     "ledePlus": "Plus 在免费功能之外增加资金工具：按份数分摊和保存的分摊方式、定期花费、图表、导出和收据扫描。付费方案无广告。",
     "featureMoneyTools": "定期花费、按份数分摊、图表、导出和收据扫描",
-    "featureReceiptItems": "按项目分摊收据"
+    "featureReceiptItems": "按项目分摊收据",
+    "titlePlanned": "你已用完 {{count}} 个计划中的旅行",
+    "ledePlanned": "免费版可有 {{count}} 个计划中的旅行。Plus 可随意计划，并确认无限旅行。"
   },
   "aiKey": {
     "title": "自己的 API 密钥",
@@ -2082,5 +2084,40 @@
     "savedBy": "{{name}} 保存",
     "savedByYou": "你保存的",
     "popularHere": "附近热门"
+  },
+  "planned": {
+    "anyTime": "随时",
+    "badge": "计划中",
+    "body": "不需要日期。现在就收集想法，确定出行时间后再确认。",
+    "confirm": "确认旅行",
+    "confirmBody": "检查地点，然后选择日期。",
+    "confirmTitle": "确认{{name}}",
+    "discard": "放弃",
+    "discardBody_one": "它有 {{count}} 个已存想法。移到其他旅行，还是一起放弃？",
+    "discardBody_other": "它有 {{count}} 个已存想法。移到其他旅行，还是一起放弃？",
+    "discardEmptyBody": "还没有保存任何想法。",
+    "discardTitle": "放弃{{name}}？",
+    "discardWithIdeas": "连同想法一起放弃",
+    "formTitle": "开始计划",
+    "ideas_one": "{{count}} 个想法",
+    "ideas_other": "{{count}} 个想法",
+    "ideasButton": "想法",
+    "justName": "还没想好去哪？先起个名字",
+    "limitNote": "你已用完 {{count}} 个免费旅行。先存为计划中的旅行，有日期后用 Plus 确认。",
+    "moveIdeas": "移动想法",
+    "moveTitle": "把想法移到…",
+    "movedToast_one": "已把 {{count}} 个想法移到{{name}}",
+    "movedToast_other": "已把 {{count}} 个想法移到{{name}}",
+    "nameLabel": "旅行名称",
+    "namePlaceholder": "例如：夏天去欧洲",
+    "noDates": "尚无日期",
+    "notSure": "还没有日期？",
+    "planAfterConfirm": "为旅行确定日期后，才能把想法安排到某一天。",
+    "roughMonth": "大约{{month}}",
+    "save": "存为计划中的旅行",
+    "savedToast": "{{name}}已存为计划中的旅行",
+    "section": "计划中",
+    "sectionCount": "免费 {{count}}/{{limit}}",
+    "whenLabel": "大概什么时候？"
   }
 }

@@ -10,7 +10,7 @@ import { logger } from "@/modules/logger";
 import { track } from "@/modules/analytics";
 import { selectionChanged, successNotification } from "@/utils/haptics";
 import {
-  FREE_GROUP_LIMIT,
+  FREE_GROUP_LIMIT, FREE_PLANNED_LIMIT,
   FREE_TRIP_LIMIT,
   PACKAGE_IDS,
   freeTrialDays,
@@ -26,7 +26,7 @@ import {
 import { useSheetTopInset } from "@/hooks/useSheetTopInset";
 
 type PaidTier = Exclude<PlanTier, "free">;
-type Reason = "trips" | "groups" | "plus" | "ai" | "settings";
+type Reason = "trips" | "groups" | "planned" | "plus" | "ai" | "settings";
 
 const [INDIGO, TEAL, VIOLET] = auraStatusColors.calm;
 const TIER_RANK: Record<PlanTier, number> = { free: 0, plus: 1, pro: 2 };
@@ -106,6 +106,7 @@ export default function PaywallScreen() {
   const titles: Partial<Record<Reason, string>> = {
     trips: t("paywall.titleTrips", { count: FREE_TRIP_LIMIT }),
     groups: t("paywall.titleGroups", { count: FREE_GROUP_LIMIT }),
+    planned: t("paywall.titlePlanned", { count: FREE_PLANNED_LIMIT }),
     plus: feature ? t(`paywall.titlePlus.${feature}`) : undefined,
     ai: t("paywall.titleAi"),
   };
@@ -187,6 +188,8 @@ export default function PaywallScreen() {
             ? t("paywall.ledeTrips", { count: FREE_TRIP_LIMIT })
             : reason === "groups"
               ? t("paywall.ledeGroups", { count: FREE_GROUP_LIMIT })
+              : reason === "planned"
+                ? t("paywall.ledePlanned", { count: FREE_PLANNED_LIMIT })
               : reason === "plus"
                 ? t("paywall.ledePlus")
               : t("paywall.lede", { count: FREE_TRIP_LIMIT })}

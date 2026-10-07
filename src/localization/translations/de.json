@@ -1537,7 +1537,9 @@
     },
     "ledePlus": "Plus ergänzt alles Kostenlose um Geld-Werkzeuge: Anteile und gespeicherte Aufteilungen, wiederkehrende Ausgaben, Diagramme, Export und Belegscan. Bezahlte Pläne sind werbefrei.",
     "featureMoneyTools": "Wiederkehrende Ausgaben, Anteile, Diagramme, Export und Belegscan",
-    "featureReceiptItems": "Belege Posten für Posten aufteilen"
+    "featureReceiptItems": "Belege Posten für Posten aufteilen",
+    "titlePlanned": "Du hast deine {{count}} geplanten Reisen genutzt",
+    "ledePlanned": "Kostenlos sind {{count}} geplante Reisen. Mit Plus planst du so viele du willst und bestätigst unbegrenzt Reisen."
   },
   "aiKey": {
     "title": "Eigener API-Schlüssel",
@@ -2082,5 +2084,40 @@
     "savedBy": "Gespeichert von {{name}}",
     "savedByYou": "Von dir gespeichert",
     "popularHere": "Beliebt hier"
+  },
+  "planned": {
+    "anyTime": "Jederzeit",
+    "badge": "In Planung",
+    "body": "Keine Daten nötig. Sammle jetzt Ideen und bestätige die Reise, sobald du weißt, wann es losgeht.",
+    "confirm": "Reise bestätigen",
+    "confirmBody": "Prüfe die Orte und wähle dann deine Daten.",
+    "confirmTitle": "{{name}} bestätigen",
+    "discard": "Verwerfen",
+    "discardBody_one": "Sie hat {{count}} gespeicherte Idee. In eine andere Reise verschieben oder mit verwerfen?",
+    "discardBody_other": "Sie hat {{count}} gespeicherte Ideen. In eine andere Reise verschieben oder mit verwerfen?",
+    "discardEmptyBody": "Sie hat noch keine gespeicherten Ideen.",
+    "discardTitle": "{{name}} verwerfen?",
+    "discardWithIdeas": "Mit Ideen verwerfen",
+    "formTitle": "Planung starten",
+    "ideas_one": "{{count}} Idee",
+    "ideas_other": "{{count}} Ideen",
+    "ideasButton": "Ideen",
+    "justName": "Noch kein Ziel? Gib ihr einfach einen Namen",
+    "limitNote": "Du hast deine {{count}} kostenlosen Reisen genutzt. Speichere sie als geplante Reise und bestätige sie mit Plus, sobald du Daten hast.",
+    "moveIdeas": "Ideen verschieben",
+    "moveTitle": "Ideen verschieben nach…",
+    "movedToast_one": "{{count}} Idee nach {{name}} verschoben",
+    "movedToast_other": "{{count}} Ideen nach {{name}} verschoben",
+    "nameLabel": "Name der Reise",
+    "namePlaceholder": "z. B. Europa im Sommer",
+    "noDates": "Noch keine Daten",
+    "notSure": "Noch keine Daten?",
+    "planAfterConfirm": "Bestätige die Reise mit Daten, um Ideen für einen Tag einzuplanen.",
+    "roughMonth": "Irgendwann im {{month}}",
+    "save": "Als geplante Reise speichern",
+    "savedToast": "{{name}} als geplante Reise gespeichert",
+    "section": "In Planung",
+    "sectionCount": "{{count}} von {{limit}} kostenlos",
+    "whenLabel": "Ungefähr wann?"
   }
 }

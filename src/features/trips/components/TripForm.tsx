@@ -22,6 +22,7 @@ import {
   type CreateTripInput,
   getDestinationCoordinates,
   type LatLng,
+  type PlannedTrip,
   type Trip,
   type TripMode,
   type UpdateTripInput,
@@ -66,6 +67,18 @@ export interface TripFormProps {
   fromGroupId?: string;
   /** Coordinates already resolved for `destinations`, so saving doesn't geocode them again. */
   knownCoordinates?: ReadonlyMap<string, LatLng | null>;
+  /** Confirming this planned trip: starts from its name and month, and saving turns it into the trip. */
+  plannedTrip?: PlannedTrip;
+  /** Shows "Not sure of dates yet?" under the dates (new trips only). */
+  onNotSureOfDates?: () => void;
+}
+
+/** First day of a planned trip's month, or today when there's none or it has started. */
+function plannedStart(month: string | undefined): Date {
+  const today = startOfLocalDay(new Date());
+  if (!month) return today;
+  const first = fromDateKey(`${month}-01`);
+  return first > today ? first : today;
 }
 
 function getCurrencyAffix(locale: string, currency: string) {
@@ -136,12 +149,13 @@ function tripToFormState(trip: Trip): FormState {
   };
 }
 
-export function TripForm({ editingTrip, onSave, onCancel, destinations, knownCoordinates, fromGroupId }: TripFormProps) {
+export function TripForm({ editingTrip, onSave, onCancel, destinations, knownCoordinates, fromGroupId, plannedTrip, onNotSureOfDates }: TripFormProps) {
   const { c, f } = useAura();
   const { t, locale, formatCurrency } = useLocalization();
   const defaultCurrency = useDefaultCurrency();
   const createTrip = useTripsStore((state) => state.createTrip);
   const updateTrip = useTripsStore((state) => state.updateTrip);
+  const confirmPlannedTrip = useTripsStore((state) => state.confirmPlannedTrip);
 
   const fromGroup = useTripsStore((state) => (fromGroupId ? (state.groups.find((group) => group.id === fromGroupId) ?? null) : null));
   const initialForm = useMemo(
@@ -150,6 +164,9 @@ export function TripForm({ editingTrip, onSave, onCancel, destinations, knownCoo
         ? tripToFormState(editingTrip)
         : makeInitialForm(fromGroup?.currency ?? defaultCurrency, {
             ...(destinations?.length ? { destinations, name: defaultTripName(destinations, t) } : {}),
+            ...(plannedTrip
+              ? { name: plannedTrip.name, nameSource: "user" as const, startDate: plannedStart(plannedTrip.month), endDate: addDays(plannedStart(plannedTrip.month), 6) }
+              : {}),
             ...(fromGroup && fromGroup.companions.length > 0 ? { mode: "group" as const, companions: fromGroup.companions } : {}),
           }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -504,6 +521,9 @@ export function TripForm({ editingTrip, onSave, onCancel, destinations, knownCoo
 
       if (editingTrip) {
         updateTrip(editingTrip.id, input satisfies UpdateTripInput);
+      } else if (plannedTrip) {
+        confirmPlannedTrip(plannedTrip.id, input satisfies CreateTripInput);
+        track("planned_trip", { action: "confirmed", destinations: input.destinations.length, had_month: Boolean(plannedTrip.month) });
       } else {
         const created = createTrip(input satisfies CreateTripInput);
         if (fromGroup?.shared && input.companions.length > 0) {
@@ -558,6 +578,13 @@ export function TripForm({ editingTrip, onSave, onCancel, destinations, knownCoo
           </View>
           <AuraDateField value={form.startDate} onChange={(date) => handleDateChange("start", date)} caption={t("trip.departDate")} />
           <AuraDateField value={form.endDate} onChange={(date) => handleDateChange("end", date)} minimumDate={form.startDate} caption={t("trip.returnDate")} />
+          {onNotSureOfDates && !editingTrip && !plannedTrip ? (
+            <PressableScale onPress={onNotSureOfDates} accessibilityRole="button" hitSlop={8} style={styles.notSure}>
+              <Icon name="bookmark" size={14} color={c.textSoft} />
+              <Text style={[styles.notSureText, { color: c.textSoft, fontFamily: f.medium }]}>{t("planned.notSure")}</Text>
+              <Icon name="chevronRight" size={12} color={c.textMuted} />
+            </PressableScale>
+          ) : null}
         </View>
 
         <AuraField
@@ -684,7 +711,17 @@ export function TripForm({ editingTrip, onSave, onCancel, destinations, knownCoo
       <View style={styles.footer}>
         {onCancel ? <AuraButton label={t("common.cancel")} variant="secondary" onPress={onCancel} style={styles.cancel} /> : null}
         <AuraButton
-          label={isSaving ? (editingTrip ? t("trip.savingAction") : t("trip.creatingAction")) : editingTrip ? t("trip.saveAction") : t("trip.createAction")}
+          label={
+            isSaving
+              ? editingTrip
+                ? t("trip.savingAction")
+                : t("trip.creatingAction")
+              : editingTrip
+                ? t("trip.saveAction")
+                : plannedTrip
+                  ? t("planned.confirm")
+                  : t("trip.createAction")
+          }
           icon="flag"
           loading={isSaving}
           disabled={!canSave}
@@ -717,6 +754,8 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   scroll: { paddingHorizontal: 20, paddingTop: 6, paddingBottom: 20, gap: 18 },
   wrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  notSure: { flexDirection: "row", alignItems: "center", gap: 8, alignSelf: "flex-start", paddingVertical: 4 },
+  notSureText: { fontSize: 14 },
   group: { gap: 10 },
   labelRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   label: { fontSize: 13.5 },

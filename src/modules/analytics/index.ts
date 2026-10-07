@@ -21,6 +21,7 @@ export interface AnalyticsEvents {
   sign_in_started: undefined;
   sign_in_failed: undefined;
   trip_created: { mode: "solo" | "group"; destinations: number; has_budget: boolean };
+  planned_trip: { action: "created" | "confirmed" | "discarded"; destinations?: number; had_month?: boolean; ideas?: number; at_trip_limit?: boolean };
   group_created: { people: number };
   ai_context_picked: { kind: "trip" | "group" | "overview" | "general" };
   home_card_opened: { card: "balance" | "get_home_safe" };
@@ -54,7 +55,8 @@ export interface AnalyticsEvents {
   voice_draft_saved: { kind: "expense" | "settlement"; split: boolean; edited: boolean; auto: boolean };
   trip_limit_reached: undefined;
   group_limit_reached: undefined;
-  paywall_viewed: { reason: "trips" | "groups" | "plus" | "ai" | "settings" };
+  planned_trip_limit_reached: undefined;
+  paywall_viewed: { reason: "trips" | "groups" | "planned" | "plus" | "ai" | "settings" };
   purchase_completed: { tier: PaidTier; period: BillingPeriod; trial: boolean };
   purchases_restored: { tier: "free" | PaidTier };
   ai_provider_used: { provider: AiProvider; task: AiTask; fallback: boolean };

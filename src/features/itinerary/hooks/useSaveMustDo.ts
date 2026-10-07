@@ -15,13 +15,13 @@ export function useSaveMustDo() {
   const { t } = useLocalization();
   const addEvent = useEventsStore((state) => state.addEvent);
   const showSheet = useSavedSheetStore((state) => state.show);
-  return (trip: { id: string; name: string; startDate: string }, item: MustDo, where: Where) => {
+  return (trip: { id: string; name: string; startDate?: string }, item: MustDo, where: Where) => {
     track("must_do_suggestion", { action: "added", where });
     addEvent({
       tripId: trip.id,
       type: item.type,
       title: item.name,
-      startAt: toWallClock(fromDateKey(trip.startDate)),
+      startAt: toWallClock(trip.startDate ? fromDateKey(trip.startDate) : new Date()),
       timing: "wishlist",
       source: "manual",
       savedBy: SELF_ID,

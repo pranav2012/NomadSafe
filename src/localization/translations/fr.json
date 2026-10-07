@@ -1537,7 +1537,9 @@
     },
     "ledePlus": "Plus ajoute des outils d'argent à tout ce qui est gratuit : partage par parts et partages enregistrés, dépenses récurrentes, graphiques, export et scan de reçus. Les offres payantes sont sans pub.",
     "featureMoneyTools": "Dépenses récurrentes, partage par parts, graphiques, export et scan de reçus",
-    "featureReceiptItems": "Partage les reçus article par article"
+    "featureReceiptItems": "Partage les reçus article par article",
+    "titlePlanned": "Tu as utilisé tes {{count}} voyages en projet",
+    "ledePlanned": "La version gratuite inclut {{count}} voyages en projet. Avec Plus, planifie autant que tu veux et confirme des voyages sans limite."
   },
   "aiKey": {
     "title": "Votre propre clé API",
@@ -2082,5 +2084,40 @@
     "savedBy": "Enregistré par {{name}}",
     "savedByYou": "Enregistré par toi",
     "popularHere": "Populaire ici"
+  },
+  "planned": {
+    "anyTime": "N'importe quand",
+    "badge": "En projet",
+    "body": "Pas besoin de dates. Rassemble des idées maintenant et confirme-le quand tu sais quand tu pars.",
+    "confirm": "Confirmer le voyage",
+    "confirmBody": "Vérifie les lieux, puis choisis tes dates.",
+    "confirmTitle": "Confirmer {{name}}",
+    "discard": "Abandonner",
+    "discardBody_one": "Il a {{count}} idée enregistrée. La déplacer vers un autre voyage ou l'abandonner aussi ?",
+    "discardBody_other": "Il a {{count}} idées enregistrées. Les déplacer vers un autre voyage ou les abandonner aussi ?",
+    "discardEmptyBody": "Il n'a pas encore d'idées enregistrées.",
+    "discardTitle": "Abandonner {{name}} ?",
+    "discardWithIdeas": "Abandonner avec les idées",
+    "formTitle": "Commencer à planifier",
+    "ideas_one": "{{count}} idée",
+    "ideas_other": "{{count}} idées",
+    "ideasButton": "Idées",
+    "justName": "Pas encore de destination ? Donne-lui un nom",
+    "limitNote": "Tu as utilisé tes {{count}} voyages gratuits. Enregistre-le en projet et confirme-le avec Plus quand tu as des dates.",
+    "moveIdeas": "Déplacer les idées",
+    "moveTitle": "Déplacer les idées vers…",
+    "movedToast_one": "{{count}} idée déplacée vers {{name}}",
+    "movedToast_other": "{{count}} idées déplacées vers {{name}}",
+    "nameLabel": "Nom du voyage",
+    "namePlaceholder": "ex. L'Europe en été",
+    "noDates": "Pas encore de dates",
+    "notSure": "Pas encore de dates ?",
+    "planAfterConfirm": "Confirme ce voyage avec des dates pour placer des idées sur un jour.",
+    "roughMonth": "Courant {{month}}",
+    "save": "Enregistrer en projet",
+    "savedToast": "{{name}} enregistré en projet",
+    "section": "En projet",
+    "sectionCount": "{{count}} sur {{limit}} gratuits",
+    "whenLabel": "À peu près quand ?"
   }
 }

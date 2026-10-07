@@ -478,6 +478,8 @@ interface GlobeProps {
   /** Where the user is now; draws a softer arc from here to the focused stop. */
   origin?: GlobeStop | null;
   contacts?: GlobeStop[];
+  /** Places of planned trips: hollow dashed rings, since nothing is booked there yet. */
+  plannedPins?: GlobeStop[];
   contactColor: string;
   accent: string;
   isDark: boolean;
@@ -545,7 +547,7 @@ function arcPoint(a: GlobeStop, b: GlobeStop, t: number) {
  * On mount it spins and zooms in on the current stop; drag to spin it, pinch out for the route and
  * the whole globe or in to hand off to the map.
  */
-export function Globe({ stops, focusIndex, width, height, origin, contacts = [], contactColor, accent, isDark, onZoomThrough, entry, topInset = 0, onTouchActive, scrolling, overview = false, showRoute = false, horizon = false, onPress }: GlobeProps) {
+export function Globe({ stops, focusIndex, width, height, origin, contacts = [], plannedPins = [], contactColor, accent, isDark, onZoomThrough, entry, topInset = 0, onTouchActive, scrolling, overview = false, showRoute = false, horizon = false, onPress }: GlobeProps) {
   const textures = useGlobeTextures();
   const dayImage = textures?.day ?? null;
   const nightImage = textures?.night ?? null;
@@ -810,6 +812,9 @@ export function Globe({ stops, focusIndex, width, height, origin, contacts = [],
             {origin ? (
               <GlobePin stop={origin} focused={false} rotLng={rotLng} rotLat={rotLat} cx={cx} cy={cy} radius={radius} accent={isDark ? "#EDEFF5" : "#0E1018"} breathe={breathe} quiet />
             ) : null}
+            {plannedPins.map((pin, i) => (
+              <PlannedPin key={`planned-${i}`} stop={pin} rotLng={rotLng} rotLat={rotLat} cx={cx} cy={cy} radius={radius} color={isDark ? "#EDEFF5" : "#0E1018"} />
+            ))}
             {contacts.map((contact, i) => (
               <GlobePin key={`contact-${i}`} stop={contact} focused={false} rotLng={rotLng} rotLat={rotLat} cx={cx} cy={cy} radius={radius} accent={contactColor} breathe={breathe} quiet />
             ))}
@@ -886,6 +891,34 @@ function GlobePin({
       <Circle cx={x} cy={y} r={focused ? 5.5 : 3.5} color="#FFFFFF" opacity={visible} />
       <Circle cx={x} cy={y} r={focused ? 3.5 : 2.2} color={accent} opacity={visible} />
     </>
+  );
+}
+
+function PlannedPin({
+  stop,
+  rotLng,
+  rotLat,
+  cx,
+  cy,
+  radius,
+  color,
+}: {
+  stop: GlobeStop;
+  rotLng: ReturnType<typeof useSharedValue<number>>;
+  rotLat: ReturnType<typeof useSharedValue<number>>;
+  cx: number;
+  cy: number;
+  radius: ReturnType<typeof useDerivedValue<number>>;
+  color: string;
+}) {
+  const point = useDerivedValue(() => project(stop.latitude * DEG, stop.longitude * DEG, rotLng.get(), rotLat.get(), cx, cy, radius.get()));
+  const x = useDerivedValue(() => point.get().x);
+  const y = useDerivedValue(() => point.get().y);
+  const visible = useDerivedValue(() => (point.get().z > 0 ? 0.85 : 0));
+  return (
+    <Circle cx={x} cy={y} r={6} color={color} style="stroke" strokeWidth={1.5} opacity={visible}>
+      <DashPathEffect intervals={[2.5, 2.5]} />
+    </Circle>
   );
 }
 

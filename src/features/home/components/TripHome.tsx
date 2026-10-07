@@ -12,7 +12,7 @@ import { useGlobeContext } from "@/features/home/hooks/useGlobeContext";
 import { useHotelPin, useSafetyPlaces } from "@/features/home/hooks/useTripSafety";
 import type { HomeData } from "@/features/home/types";
 import { todayStopIndex } from "@/features/home/utils/globeTiles";
-import { SavedIdeasSheet, TripItinerary, useEventsStore } from "@/features/itinerary";
+import { TripItinerary, useEventsStore } from "@/features/itinerary";
 import { useTicketsStore } from "@/features/itinerary/store/ticketsStore";
 import { localizeEventTitle } from "@/features/itinerary/utils/eventText";
 import { useRouter } from "expo-router";
@@ -503,7 +503,6 @@ export function TripHome({
       </Animated.ScrollView>
       <AuraTopFade />
       <LinearGradient pointerEvents="none" colors={[c.bg, `${c.bg}00`]} style={[styles.topFade, { height: insets.top + 18 }]} />
-      <SavedIdeasSheet stops={data.stops} />
       <DriverCard
         stay={driverStay}
         stop={focusStop}

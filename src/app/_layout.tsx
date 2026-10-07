@@ -31,6 +31,7 @@ import { checkDeferredInvite } from "@/features/trips/services/deferredInvite";
 import { WidgetSync } from "@/features/widget/WidgetSync";
 import { BillingEffects } from "@/modules/billing";
 import { useRecapEffects } from "@/features/recap";
+import { SavedIdeasSheet } from "@/features/itinerary";
 import { useBoundaryViewSync } from "@/features/passport";
 import { AdsEffects } from "@/modules/ads";
 import { ThemeProvider } from "@/providers/ThemeProvider";
@@ -324,6 +325,7 @@ function AppStack() {
           />
         </Stack.Protected>
       </Stack>
+      {inApp ? <SavedIdeasSheet /> : null}
     </NavigationThemeProvider>
   );
 }

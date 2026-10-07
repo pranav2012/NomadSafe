@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PrivateView } from "@/modules/analytics";
@@ -9,9 +9,12 @@ import { useScrollActivity } from "@/hooks/useScrollActivity";
 import { auraStatusAccent } from "@/constants/aura";
 import { useGlobeContext } from "@/features/home/hooks/useGlobeContext";
 import { useLocalization } from "@/localization";
-import { Globe } from "./aura/globe/Globe";
+import { PlannedTripCard } from "@/features/trips/components/PlannedTripCard";
+import { useTripsStore } from "@/features/trips/store/tripsStore";
+import { FREE_PLANNED_LIMIT, usePlan } from "@/modules/billing";
+import { Globe, type GlobeStop } from "./aura/globe/Globe";
 
-/** Home before any trip: the spinning globe with "Where to first?"; the search opens the trip planner. */
+/** Home without a trip: the spinning globe with "Where to first?" (search opens the planner) and planned trips as dashed cards and pins. */
 export function EmptyHome({
   tripCount,
   onViewTrips,
@@ -32,6 +35,14 @@ export function EmptyHome({
   const [globeTouched, setGlobeTouched] = useState(false);
   const { scrolling, onScroll } = useScrollActivity();
   const globe = useGlobeContext(undefined);
+  const plannedTrips = useTripsStore((state) => state.plannedTrips);
+  const { unlimitedTrips } = usePlan();
+  const plannedPins: GlobeStop[] = plannedTrips.flatMap((planned) =>
+    planned.destinations.flatMap((name, i) => {
+      const point = planned.destinationCoordinates?.[i];
+      return point ? [{ name, ...point }] : [];
+    }),
+  );
   const globeHeight = Math.round(width * 0.78);
 
   return (
@@ -53,6 +64,7 @@ export function EmptyHome({
               topInset={insets.top + 8}
               origin={globe.origin}
               contacts={[]}
+              plannedPins={plannedPins}
               contactColor="#3DDC97"
               accent={auraStatusAccent.calm}
               isDark={isDark}
@@ -79,6 +91,23 @@ export function EmptyHome({
               {t("trip.destinationPlaceholder")}
             </Text>
           </PressableScale>
+          {plannedTrips.length > 0 ? (
+            <View style={styles.planning}>
+              <View style={styles.planningHead}>
+                <Text style={[styles.planningTitle, { color: c.text, fontFamily: f.semibold }]}>{t("planned.section")}</Text>
+                {unlimitedTrips ? null : (
+                  <Text style={[styles.planningCount, { color: c.textMuted, fontFamily: f.regular }]}>
+                    {t("planned.sectionCount", { count: plannedTrips.length, limit: FREE_PLANNED_LIMIT })}
+                  </Text>
+                )}
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.planningRow} style={styles.planningScroll}>
+                {plannedTrips.map((planned) => (
+                  <PlannedTripCard key={planned.id} planned={planned} compact />
+                ))}
+              </ScrollView>
+            </View>
+          ) : null}
           {tripCount > 0 ? (
             <AuraButton
               label={t("trip.viewExistingTrips", { count: tripCount })}
@@ -105,4 +134,10 @@ const styles = StyleSheet.create({
   search: { flexDirection: "row", alignItems: "center", gap: 10, minHeight: 64, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 16 },
   searchText: { flex: 1, fontSize: 18 },
   existing: { alignSelf: "flex-start", marginTop: 4 },
+  planning: { gap: 10, marginTop: 10 },
+  planningHead: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between" },
+  planningTitle: { fontSize: 17, letterSpacing: -0.2 },
+  planningCount: { fontSize: 12.5 },
+  planningScroll: { marginHorizontal: -20 },
+  planningRow: { paddingHorizontal: 20, gap: 10 },
 });

@@ -25,6 +25,7 @@ import { Globe } from "@/features/home/components/aura/globe/Globe";
 import { useGlobeContext } from "@/features/home/hooks/useGlobeContext";
 import type { HomeStop } from "@/features/home/types";
 import { DestinationSearch } from "@/features/trips/components/DestinationSearch";
+import { PlannedTripForm } from "@/features/trips/components/PlannedTripForm";
 import { TripForm } from "@/features/trips/components/TripForm";
 import { normalizeSearchText } from "@/features/trips/data/destinations";
 import { geocodeDestination, type LatLng } from "@/features/trips/services/geocoding";
@@ -35,10 +36,17 @@ import { selectionChanged, successNotification } from "@/utils/haptics";
 
 type Step = "cities" | "details";
 
-/** New trip in two steps under a live globe: pick cities (pinned and joined by arcs), then the details. */
+/**
+ * New trip in two steps under a live globe: pick cities (pinned and joined by arcs), then the details.
+ * Without dates (or a place) it becomes a planned trip; `confirm` turns a planned trip into a real one,
+ * and `plannedOnly` is for free users at the trip limit, who can still start planning.
+ */
 export default function PlanTripScreen() {
   const router = useRouter();
-  const { fromGroup } = useLocalSearchParams<{ fromGroup?: string }>();
+  const { fromGroup, plannedOnly, confirm } = useLocalSearchParams<{ fromGroup?: string; plannedOnly?: string; confirm?: string }>();
+  const [confirming] = useState(() => useTripsStore.getState().plannedTrips.find((planned) => planned.id === confirm));
+  const onlyPlanned = plannedOnly === "1";
+  const [planned, setPlanned] = useState(onlyPlanned);
   const { c, f, isDark } = useAura();
   const { t } = useLocalization();
   const insets = useSafeAreaInsets();
@@ -46,10 +54,13 @@ export default function PlanTripScreen() {
   const isFirstTrip = useTripsStore((state) => state.trips.length === 0);
   // Checked once on open: saving the new trip must not flip this and bounce to the paywall.
   const [tripAllowed] = useState(() => canCreateTrip(useTripsStore.getState().trips, usePlanStore.getState()));
-  const [step, setStep] = useState<Step>("cities");
-  const [detailsMounted, setDetailsMounted] = useState(false);
-  const [destinations, setDestinations] = useState<string[]>([]);
-  const [coordinates, setCoordinates] = useState<ReadonlyMap<string, LatLng | null>>(new Map());
+  const startOnDetails = Boolean(confirming && confirming.destinations.length > 0);
+  const [step, setStep] = useState<Step>(startOnDetails ? "details" : "cities");
+  const [detailsMounted, setDetailsMounted] = useState(startOnDetails);
+  const [destinations, setDestinations] = useState<string[]>(() => confirming?.destinations ?? []);
+  const [coordinates, setCoordinates] = useState<ReadonlyMap<string, LatLng | null>>(
+    () => new Map(confirming?.destinations.map((name, i) => [name, confirming.destinationCoordinates?.[i] ?? null] as const) ?? []),
+  );
 
   const stops: HomeStop[] = destinations.flatMap((name) => {
     const coords = coordinates.get(name);
@@ -94,11 +105,12 @@ export default function PlanTripScreen() {
   }));
 
   useEffect(() => {
-    if (!tripAllowed) router.replace({ pathname: "/paywall", params: { reason: "trips" } });
-  }, [router, tripAllowed]);
+    if (!tripAllowed && !onlyPlanned) router.replace({ pathname: "/paywall", params: { reason: "trips" } });
+  }, [onlyPlanned, router, tripAllowed]);
 
   const goToCities = () => {
     Keyboard.dismiss();
+    if (!onlyPlanned) setPlanned(false);
     setStep("cities");
   };
 
@@ -106,11 +118,12 @@ export default function PlanTripScreen() {
     if (step !== "details") return;
     const sub = BackHandler.addEventListener("hardwareBackPress", () => {
       Keyboard.dismiss();
+      if (!onlyPlanned) setPlanned(false);
       setStep("cities");
       return true;
     });
     return () => sub.remove();
-  }, [step]);
+  }, [onlyPlanned, step]);
 
   const addCity = async (destination: string) => {
     const normalized = normalizeSearchText(destination);
@@ -131,6 +144,11 @@ export default function PlanTripScreen() {
     Keyboard.dismiss();
     setDetailsMounted(true);
     setStep("details");
+  };
+
+  const planWithoutPlace = () => {
+    setPlanned(true);
+    goToDetails();
   };
 
   return (
@@ -172,9 +190,9 @@ export default function PlanTripScreen() {
             {keyboardOpen ? null : (
               <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(120)} style={styles.intro}>
                 <Text style={[styles.title, { color: c.text, fontFamily: f.semibold }]}>
-                  {isFirstTrip ? t("trip.createTitle") : t("trip.planNextTitle")}
+                  {confirming ? t("planned.confirmTitle", { name: confirming.name }) : isFirstTrip ? t("trip.createTitle") : t("trip.planNextTitle")}
                 </Text>
-                <Text style={[styles.lede, { color: c.textSoft, fontFamily: f.regular }]}>{t("trip.planBody")}</Text>
+                <Text style={[styles.lede, { color: c.textSoft, fontFamily: f.regular }]}>{confirming ? t("planned.confirmBody") : t("trip.planBody")}</Text>
               </Animated.View>
             )}
             <DestinationSearch large autoFocus selected={destinations} onSelect={(destination) => void addCity(destination)} />
@@ -188,6 +206,9 @@ export default function PlanTripScreen() {
           </ScrollView>
           <View style={styles.footer}>
             <AuraButton label={t("common.continue")} icon="chevronRight" disabled={destinations.length === 0} onPress={goToDetails} />
+            {!confirming && destinations.length === 0 && !keyboardOpen ? (
+              <AuraButton label={t("planned.justName")} variant="ghost" size="md" onPress={planWithoutPlace} style={styles.justName} />
+            ) : null}
           </View>
         </Animated.View>
       ) : null}
@@ -201,15 +222,30 @@ export default function PlanTripScreen() {
           ]}
         >
           <View style={styles.panelHeader}>
-            <Text style={[styles.panelTitle, { color: c.text, fontFamily: f.semibold }]}>{t("trip.planDetailsTitle")}</Text>
-            <PressableScale onPress={goToCities} hitSlop={8} accessibilityRole="button" style={styles.route}>
-              <Text numberOfLines={1} style={[styles.routeText, { color: c.textSoft, fontFamily: f.regular }]}>
-                {destinations.join(" → ")}
-              </Text>
-              <Icon name="chevronRight" size={12} color={c.textMuted} />
-            </PressableScale>
+            <Text style={[styles.panelTitle, { color: c.text, fontFamily: f.semibold }]}>
+              {planned ? t("planned.formTitle") : confirming ? t("planned.confirmTitle", { name: confirming.name }) : t("trip.planDetailsTitle")}
+            </Text>
+            {destinations.length > 0 ? (
+              <PressableScale onPress={goToCities} hitSlop={8} accessibilityRole="button" style={styles.route}>
+                <Text numberOfLines={1} style={[styles.routeText, { color: c.textSoft, fontFamily: f.regular }]}>
+                  {destinations.join(" → ")}
+                </Text>
+                <Icon name="chevronRight" size={12} color={c.textMuted} />
+              </PressableScale>
+            ) : null}
           </View>
-          <TripForm destinations={destinations} knownCoordinates={coordinates} fromGroupId={fromGroup} onSave={() => router.back()} />
+          {planned ? (
+            <PlannedTripForm destinations={destinations} knownCoordinates={coordinates} atTripLimit={onlyPlanned} onSaved={() => router.back()} />
+          ) : (
+            <TripForm
+              destinations={destinations}
+              knownCoordinates={coordinates}
+              fromGroupId={fromGroup}
+              plannedTrip={confirming}
+              onNotSureOfDates={confirming || fromGroup ? undefined : () => setPlanned(true)}
+              onSave={() => router.back()}
+            />
+          )}
         </Animated.View>
       ) : null}
 
@@ -232,6 +268,7 @@ const styles = StyleSheet.create({
   lede: { fontSize: 15, lineHeight: 21 },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   footer: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 8 },
+  justName: { alignSelf: "center", marginTop: 4 },
   panel: {
     flex: 1,
     marginTop: -12,

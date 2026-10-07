@@ -3,7 +3,7 @@ import { useRouter } from "expo-router";
 import { useTripsStore } from "@/features/trips/store/tripsStore";
 import { track } from "@/modules/analytics";
 import { usePlanStore } from "./planStore";
-import { canCreateGroup, canCreateTrip, tierOf } from "./plan";
+import { canCreateGroup, canCreatePlannedTrip, canCreateTrip, tierOf } from "./plan";
 
 export function usePlan() {
   const unlimitedTrips = usePlanStore((s) => s.unlimitedTrips);
@@ -13,13 +13,21 @@ export function usePlan() {
   return { unlimitedTrips, cloudAi, billingAvailable, lifetime, tier: tierOf({ unlimitedTrips, cloudAi }) };
 }
 
-/** Opens trip planning, or the paywall when a free user already owns the maximum number of trips. */
+/**
+ * Opens trip planning; a free user at the trip limit can still start a planned trip (it's
+ * confirmed later), and gets the paywall only when planned trips are used up too.
+ */
 export function useStartNewTrip() {
   const router = useRouter();
   return useCallback((fromGroupId?: string) => {
     const plan = usePlanStore.getState();
-    if (canCreateTrip(useTripsStore.getState().trips, plan)) {
+    const { trips, plannedTrips } = useTripsStore.getState();
+    if (canCreateTrip(trips, plan)) {
       router.push(fromGroupId ? { pathname: "/plan-trip", params: { fromGroup: fromGroupId } } : "/plan-trip");
+      return;
+    }
+    if (!fromGroupId && canCreatePlannedTrip(plannedTrips, plan)) {
+      router.push({ pathname: "/plan-trip", params: { plannedOnly: "1" } });
       return;
     }
     track("trip_limit_reached");

@@ -4,6 +4,7 @@ export { ENTITLEMENT_IDS };
 
 export const FREE_TRIP_LIMIT = 2;
 export const FREE_GROUP_LIMIT = 2;
+export const FREE_PLANNED_LIMIT = 3;
 
 export type PlanTier = "free" | "plus" | "pro";
 
@@ -32,6 +33,11 @@ export function ownedTripCount(trips: readonly { shared?: { role: "owner" | "mem
 
 export function canCreateTrip(trips: readonly { shared?: { role: "owner" | "member" } }[], plan: PlanState): boolean {
   return plan.unlimitedTrips || ownedTripCount(trips) < FREE_TRIP_LIMIT;
+}
+
+/** Planned trips have their own allowance; the trip limit applies when one is confirmed. */
+export function canCreatePlannedTrip(plannedTrips: readonly unknown[], plan: PlanState): boolean {
+  return plan.unlimitedTrips || plannedTrips.length < FREE_PLANNED_LIMIT;
 }
 
 /** Groups (not trips) count separately: free covers this many owned groups; joined ones never count. */

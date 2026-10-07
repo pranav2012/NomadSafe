@@ -69,6 +69,23 @@ export interface Trip extends GroupBase {
   mode: TripMode;
 }
 
+/**
+ * A trip still being considered: a name and maybe places, a rough month at most, and saved ideas.
+ * Kept apart from `trips` so nothing that needs dates (active trip, safety, recap, money) sees it;
+ * confirming turns it into a trip with the same id, so its ideas carry over.
+ */
+export interface PlannedTrip {
+  id: string;
+  name: string;
+  destinations: string[];
+  destinationCoordinates?: (LatLng | null)[];
+  /** "YYYY-MM" when there's a month in mind. */
+  month?: string;
+  createdAt: string;
+}
+
+export type PlannedTripInput = Omit<PlannedTrip, "id" | "createdAt">;
+
 /** Anything expenses can belong to: a trip or a group. */
 export type MoneyGroup = Trip | Group;
 
@@ -102,6 +119,7 @@ export type UpdateGroupInput = Partial<Omit<Group, "id" | "createdAt" | "kind">>
 interface TripsState {
   trips: Trip[];
   groups: Group[];
+  plannedTrips: PlannedTrip[];
   activeTripId: string | null;
   createTrip: (input: CreateTripInput) => Trip;
   updateTrip: (tripId: string, input: UpdateTripInput) => Trip | null;
@@ -111,6 +129,12 @@ interface TripsState {
   deleteGroup: (groupId: string) => void;
   setActiveTrip: (tripId: string) => void;
   clearActiveTrip: () => void;
+  createPlannedTrip: (input: PlannedTripInput) => PlannedTrip;
+  updatePlannedTrip: (id: string, input: Partial<PlannedTripInput>) => void;
+  /** Removes only the planned trip; its ideas are the caller's to move or delete. */
+  deletePlannedTrip: (id: string) => void;
+  /** Turns a planned trip into a real one with the same id (so its ideas follow) and makes it active. */
+  confirmPlannedTrip: (id: string, input: CreateTripInput) => Trip;
   reset: () => void;
 }
 
@@ -186,6 +210,7 @@ export const useTripsStore = create<TripsState>()(
     (set) => ({
       trips: [],
       groups: [],
+      plannedTrips: [],
       activeTripId: null,
       createTrip: (input) => {
         const now = new Date().toISOString();
@@ -249,7 +274,24 @@ export const useTripsStore = create<TripsState>()(
       // Only trips can be active; a group id is ignored.
       setActiveTrip: (tripId) => set((state) => (state.trips.some((trip) => trip.id === tripId) ? { activeTripId: tripId } : {})),
       clearActiveTrip: () => set({ activeTripId: null }),
-      reset: () => set({ trips: [], groups: [], activeTripId: null }),
+      createPlannedTrip: (input) => {
+        const planned: PlannedTrip = { ...input, id: `${Date.now()}`, createdAt: new Date().toISOString() };
+        set((state) => ({ plannedTrips: [planned, ...state.plannedTrips] }));
+        return planned;
+      },
+      updatePlannedTrip: (id, input) =>
+        set((state) => ({ plannedTrips: state.plannedTrips.map((planned) => (planned.id === id ? { ...planned, ...input } : planned)) })),
+      deletePlannedTrip: (id) => set((state) => ({ plannedTrips: state.plannedTrips.filter((planned) => planned.id !== id) })),
+      confirmPlannedTrip: (id, input) => {
+        const trip: Trip = { ...input, id, createdAt: new Date().toISOString() };
+        set((state) => ({
+          trips: [trip, ...state.trips],
+          plannedTrips: state.plannedTrips.filter((planned) => planned.id !== id),
+          activeTripId: trip.id,
+        }));
+        return trip;
+      },
+      reset: () => set({ trips: [], groups: [], plannedTrips: [], activeTripId: null }),
     }),
     {
       name: "trips-store",
@@ -258,8 +300,8 @@ export const useTripsStore = create<TripsState>()(
       migrate: (persistedState, version) => {
         const state = persistedState as Partial<TripsState> | undefined;
         if (!state?.trips) return persistedState;
-        // v5 added groups next to trips.
-        if (version >= 4) return { ...state, groups: state.groups ?? [] };
+        // v5 added groups next to trips; planned trips came later and default to none.
+        if (version >= 4) return { ...state, groups: state.groups ?? [], plannedTrips: state.plannedTrips ?? [] };
 
         const trips = state.trips.map((trip) => {
           const legacyTrip = trip as Trip & { destination?: string };
@@ -278,7 +320,7 @@ export const useTripsStore = create<TripsState>()(
           ? (state.activeTripId ?? null)
           : (pickDefaultActiveTripId(trips) ?? trips[0]?.id ?? null);
 
-        return { ...state, trips, groups: [], activeTripId };
+        return { ...state, trips, groups: [], plannedTrips: [], activeTripId };
       },
     },
   ),

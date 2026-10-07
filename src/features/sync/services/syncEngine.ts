@@ -6,7 +6,7 @@ import { usePassportStore, type PastTravel } from "@/features/passport/store/pas
 import { deleteAllTripPhotos } from "@/features/recap/services/tripPhotos";
 import { deleteAllTickets } from "@/features/itinerary/services/tickets";
 import { useTravelInfoStore } from "@/features/trips/store/travelInfoStore";
-import { pickDefaultActiveTripId, selectMoneyGroups, useTripsStore, type Group, type Trip } from "@/features/trips/store/tripsStore";
+import { pickDefaultActiveTripId, selectMoneyGroups, useTripsStore, type Group, type PlannedTrip, type Trip } from "@/features/trips/store/tripsStore";
 import { useRecurringStore, type RecurringRule } from "@/features/expenses/store/recurringStore";
 import { syncWidgets } from "@/features/widget/syncWidgets";
 import { logger } from "@/modules/logger";
@@ -14,7 +14,7 @@ import { storage } from "@/modules/storage";
 import { hashOf } from "../utils/hash";
 import { clearGroupLedgers, keepLocalOnly, makeSharedScope, stripRaw } from "../utils/sharedScope";
 
-type Kind = "trip" | "group" | "expense" | "settlement" | "event" | "passport" | "recurring";
+type Kind = "trip" | "group" | "planned" | "expense" | "settlement" | "event" | "passport" | "recurring";
 
 interface LedgerEntry {
   hash: string;
@@ -51,6 +51,7 @@ function localRecords(): Map<string, { kind: Kind; id: string; data: unknown }> 
   const scope = makeSharedScope(userId, selectMoneyGroups(useTripsStore.getState()));
   for (const trip of trips) if (!trip.shared) add("trip", trip.id, trip);
   for (const group of groups) if (!group.shared) add("group", group.id, group);
+  for (const planned of useTripsStore.getState().plannedTrips) add("planned", planned.id, planned);
   const { expenses, settlements } = useExpensesStore.getState();
   for (const expense of expenses) if (!scope.has("expense", expense)) add("expense", expense.id, stripRaw(expense));
   for (const settlement of settlements) if (!scope.has("settlement", settlement)) add("settlement", settlement.id, settlement);
@@ -62,7 +63,7 @@ function localRecords(): Map<string, { kind: Kind; id: string; data: unknown }> 
 
 /** Whether the local copy of a record (if any) currently belongs to a shared trip. */
 function isLocallyShared(scope: ReturnType<typeof makeSharedScope>, kind: Exclude<Kind, "trip" | "group">, id: string) {
-  if (kind === "passport" || kind === "recurring") return false;
+  if (kind === "passport" || kind === "recurring" || kind === "planned") return false;
   if (kind === "event") {
     const event = useEventsStore.getState().events.find((item) => item.id === id);
     return event ? scope.has("event", event) : false;
@@ -187,7 +188,7 @@ async function pullChanges(uid: string): Promise<boolean> {
   for (const [key, record] of incoming) {
     const local = { id: record.clientId, ...(withGroupId(record.data) as { groupId?: string | null; tripId?: string | null }) };
     const ownedByTrip =
-      record.kind === "passport" || record.kind === "recurring"
+      record.kind === "passport" || record.kind === "recurring" || record.kind === "planned"
         ? false
         : record.kind === "trip" || record.kind === "group"
         ? selectMoneyGroups(useTripsStore.getState()).some((item) => item.id === record.clientId && item.shared)
@@ -236,6 +237,8 @@ function applyRemote(incoming: Map<string, RemoteRecord>) {
   }
   const groups = merge<Group>(tripsState.groups, "group", incoming);
   if (groups) useTripsStore.setState({ groups });
+  const plannedTrips = merge<PlannedTrip>(tripsState.plannedTrips, "planned", incoming);
+  if (plannedTrips) useTripsStore.setState({ plannedTrips });
   const expensesState = useExpensesStore.getState();
   const expenses = merge<Expense>(expensesState.expenses, "expense", incoming);
   const settlements = merge<Settlement>(expensesState.settlements, "settlement", incoming);

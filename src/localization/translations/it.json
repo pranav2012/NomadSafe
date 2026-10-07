@@ -1537,7 +1537,9 @@
     },
     "ledePlus": "Plus aggiunge strumenti per i soldi a tutto ciò che è gratis: quote e divisioni salvate, spese ricorrenti, grafici, esportazione e scansione ricevute. I piani a pagamento sono senza pubblicità.",
     "featureMoneyTools": "Spese ricorrenti, divisione per quote, grafici, esportazione e scansione ricevute",
-    "featureReceiptItems": "Dividi le ricevute voce per voce"
+    "featureReceiptItems": "Dividi le ricevute voce per voce",
+    "titlePlanned": "Hai usato i tuoi {{count}} viaggi in programma",
+    "ledePlanned": "Il piano gratuito include {{count}} viaggi in programma. Con Plus ne pianifichi quanti vuoi e confermi viaggi senza limiti."
   },
   "aiKey": {
     "title": "La tua chiave API",
@@ -2082,5 +2084,40 @@
     "savedBy": "Salvato da {{name}}",
     "savedByYou": "Salvato da te",
     "popularHere": "Popolari qui"
+  },
+  "planned": {
+    "anyTime": "Quando vuoi",
+    "badge": "In programma",
+    "body": "Niente date. Raccogli idee ora e confermalo quando sai quando parti.",
+    "confirm": "Conferma viaggio",
+    "confirmBody": "Controlla i luoghi, poi scegli le date.",
+    "confirmTitle": "Conferma {{name}}",
+    "discard": "Elimina",
+    "discardBody_one": "Ha {{count}} idea salvata. Spostarla in un altro viaggio o eliminarla?",
+    "discardBody_other": "Ha {{count}} idee salvate. Spostarle in un altro viaggio o eliminarle?",
+    "discardEmptyBody": "Non ha ancora idee salvate.",
+    "discardTitle": "Eliminare {{name}}?",
+    "discardWithIdeas": "Elimina con le idee",
+    "formTitle": "Inizia a pianificare",
+    "ideas_one": "{{count}} idea",
+    "ideas_other": "{{count}} idee",
+    "ideasButton": "Idee",
+    "justName": "Non sai ancora dove? Dagli un nome",
+    "limitNote": "Hai usato i tuoi {{count}} viaggi gratuiti. Salvalo come viaggio in programma e confermalo con Plus quando avrai le date.",
+    "moveIdeas": "Sposta le idee",
+    "moveTitle": "Sposta le idee in…",
+    "movedToast_one": "{{count}} idea spostata in {{name}}",
+    "movedToast_other": "{{count}} idee spostate in {{name}}",
+    "nameLabel": "Nome del viaggio",
+    "namePlaceholder": "es. Europa in estate",
+    "noDates": "Ancora senza date",
+    "notSure": "Non hai ancora le date?",
+    "planAfterConfirm": "Conferma il viaggio con le date per programmare le idee in un giorno.",
+    "roughMonth": "Più o meno a {{month}}",
+    "save": "Salva come viaggio in programma",
+    "savedToast": "{{name}} salvato come viaggio in programma",
+    "section": "In programma",
+    "sectionCount": "{{count}} di {{limit}} gratuiti",
+    "whenLabel": "Più o meno quando?"
   }
 }

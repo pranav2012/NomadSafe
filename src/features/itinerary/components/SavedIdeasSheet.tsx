@@ -17,7 +17,7 @@ import { localizeEventTitle } from "@/features/itinerary/utils/eventText";
 import { ideasOf, stopIndexOf } from "@/features/itinerary/utils/ideas";
 import { mustDosAlong } from "@/features/itinerary/utils/mustDos";
 import { toWallClock } from "@/features/itinerary/utils/wallClock";
-import { useTripsStore } from "@/features/trips/store/tripsStore";
+import { getDestinationCoordinates, useTripsStore, type PlannedTrip, type Trip } from "@/features/trips/store/tripsStore";
 import { addDays, fromDateKey } from "@/features/trips/utils/dates";
 
 interface Stop {
@@ -28,23 +28,37 @@ interface Stop {
 
 type PlaceFilter = "all" | number | "none";
 
-/** The trip's Saved sheet: its ideas as dashed cards (filter by stop, plan one for a day or remove it) and Popular must-dos to save. */
-export function SavedIdeasSheet({ stops }: { stops: Stop[] }) {
+/** A trip's or planned trip's places that have coordinates. */
+function stopsOf(trip: Trip | PlannedTrip): Stop[] {
+  const coordinates = "startDate" in trip ? getDestinationCoordinates(trip) : (trip.destinationCoordinates ?? []);
+  return trip.destinations.flatMap((name, index) => {
+    const point = coordinates[index];
+    return point ? [{ name, ...point }] : [];
+  });
+}
+
+/**
+ * The Saved sheet for a trip or planned trip, mounted once at the root: ideas as dashed cards
+ * (filter by stop, plan one for a day once the trip has dates, or remove it) and Popular must-dos.
+ */
+export function SavedIdeasSheet() {
   const { t } = useLocalization();
   const open = useSavedSheetStore((state) => state.open);
   const close = useSavedSheetStore((state) => state.close);
-  const trip = useTripsStore((state) => (open ? state.trips.find((item) => item.id === open.tripId) : undefined));
+  const trip = useTripsStore((state) =>
+    open ? (state.trips.find((item) => item.id === open.tripId) ?? state.plannedTrips.find((item) => item.id === open.tripId)) : undefined,
+  );
   if (!open || !trip) return null;
   return (
     <AuraSheet visible onClose={close} title={t("ideas.sheetTitle")} subtitle={trip.name} full>
       <PrivateView style={styles.flex}>
-        <SheetBody key={trip.id} trip={trip} stops={stops} />
+        <SheetBody key={trip.id} trip={trip} stops={stopsOf(trip)} />
       </PrivateView>
     </AuraSheet>
   );
 }
 
-function SheetBody({ trip, stops }: { trip: { id: string; name: string; startDate: string; endDate: string }; stops: Stop[] }) {
+function SheetBody({ trip, stops }: { trip: Trip | PlannedTrip; stops: Stop[] }) {
   const { c, f } = useAura();
   const { t, locale, hour12 } = useLocalization();
   const tab = useSavedSheetStore((state) => state.open?.tab ?? "ideas");
@@ -78,9 +92,13 @@ function SheetBody({ trip, stops }: { trip: { id: string; name: string; startDat
   ];
 
   const saverName = (idea: TripEvent) => (idea.savedBy === undefined ? null : idea.savedBy === SELF_ID ? t("itinerary.form.you") : idea.savedBy);
-  const days = Array.from({ length: Math.round((fromDateKey(trip.endDate).getTime() - fromDateKey(trip.startDate).getTime()) / 86_400_000) + 1 }, (_, i) =>
-    addDays(fromDateKey(trip.startDate), i),
-  );
+  // Planned trips have no dates yet: ideas can only be planned for a day once it's confirmed.
+  const days =
+    "startDate" in trip
+      ? Array.from({ length: Math.round((fromDateKey(trip.endDate).getTime() - fromDateKey(trip.startDate).getTime()) / 86_400_000) + 1 }, (_, i) =>
+          addDays(fromDateKey(trip.startDate), i),
+        )
+      : [];
 
   if (acting) {
     return (
@@ -94,6 +112,9 @@ function SheetBody({ trip, stops }: { trip: { id: string; name: string; startDat
           </Text>
         </View>
         <ScrollView contentContainerStyle={styles.days} showsVerticalScrollIndicator={false}>
+          {days.length === 0 ? (
+            <Text style={[styles.hint, { color: c.textSoft, fontFamily: f.regular }]}>{t("planned.planAfterConfirm")}</Text>
+          ) : null}
           {days.map((day, index) => (
             <PressableScale
               key={day.getTime()}
@@ -250,4 +271,5 @@ const styles = StyleSheet.create({
   dayNumber: { width: 52, fontSize: 13 },
   dayLabel: { flex: 1, fontSize: 15 },
   remove: { alignSelf: "flex-start", marginTop: 16 },
+  hint: { fontSize: 14, lineHeight: 20, paddingVertical: 8 },
 });
