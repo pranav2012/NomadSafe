@@ -45,7 +45,10 @@ import { SpendChart } from "./aura/SpendChart";
 
 // Hero height (below the header) for the horizon strip during the trip.
 const HORIZON_HEIGHT = 150;
+const HERO_FADE_HEIGHT = 72;
 const GLOBE_BUTTON_FILL = "rgba(14,16,24,0.55)";
+// Darkens the top of the globe so the greeting stays readable over bright daytime clouds.
+const GREETING_SCRIM = ["rgba(6,8,14,0.55)", "rgba(6,8,14,0.22)", "rgba(6,8,14,0)"] as const;
 
 export interface UserLocation {
   city?: string;
@@ -120,7 +123,7 @@ export function TripHome({
   const selectedIndex = pickedDay ?? todayIndex;
   const selectedDate = addDays(fromDateKey(trip.startDate), selectedIndex);
 
-  const globeHeight = Math.round(width * 0.8);
+  const globeHeight = Math.round(width * 0.72);
   const headerSpace = insets.top + 62;
   const here = userLocation?.latitude != null && userLocation.longitude != null ? { latitude: userLocation.latitude, longitude: userLocation.longitude } : null;
   const focusIndex = todayStopIndex(data.stops, data.phase, data.day, data.totalDays, here);
@@ -295,7 +298,7 @@ export function TripHome({
       >
         <View style={{ height: headerSpace + heroHeight }}>
         <View style={[styles.heroTop, { top: insets.top + 12 }]}>
-          <Text numberOfLines={1} style={[styles.greeting, hero.mode === "globe" && styles.greetingOnGlobe, { color: hc.textSoft }]}>
+          <Text numberOfLines={1} style={[styles.greeting, hero.mode === "globe" ? styles.greetingOnGlobe : { color: hc.textSoft }]}>
             {data.greeting}, {data.userName}
           </Text>
           <PressableScale
@@ -344,6 +347,9 @@ export function TripHome({
                 onTouchActive={setHeroTouched}
                 scrolling={scrolling}
                 showRoute={data.phase !== "active"}
+                routeState={data.phase === "upcoming" ? "planned" : data.phase === "active" ? "live" : "done"}
+                labelStops
+                bottomInset={HERO_FADE_HEIGHT}
                 onZoomThrough={(center, radiusPx) => setHero({ mode: "map", center, radiusPx })}
               />
             </Animated.View>
@@ -370,7 +376,10 @@ export function TripHome({
           )}
         </PrivateView>
         {hero.mode === "globe" ? (
-          <LinearGradient pointerEvents="none" colors={[`${c.bg}00`, c.bg]} style={styles.heroFade} />
+          <>
+            <LinearGradient pointerEvents="none" colors={GREETING_SCRIM} style={[styles.greetingScrim, { height: headerSpace + 40 }]} />
+            <LinearGradient pointerEvents="none" colors={[`${c.bg}00`, c.bg]} style={styles.heroFade} />
+          </>
         ) : null}
         {liveMode && globeExpanded && hero.mode === "globe" ? (
           <PressableScale
@@ -530,7 +539,7 @@ export function TripHome({
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   topFade: { position: "absolute", top: 0, left: 0, right: 0 },
-  heroFade: { position: "absolute", left: 0, right: 0, bottom: 0, height: 72 },
+  heroFade: { position: "absolute", left: 0, right: 0, bottom: 0, height: HERO_FADE_HEIGHT },
   map: { position: "absolute", left: 0, right: 0, bottom: 0 },
   heroTop: {
     position: "absolute",
@@ -543,7 +552,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   greeting: { fontFamily: f.medium, fontSize: 15, flex: 1 },
-  greetingOnGlobe: { textShadowColor: "rgba(0,0,0,0.6)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },
+  greetingOnGlobe: { color: "#FFFFFF", textShadowColor: "rgba(0,0,0,0.75)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 8 },
+  greetingScrim: { position: "absolute", top: 0, left: 0, right: 0 },
   round: {
     width: 38,
     height: 38,
