@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { StyleSheet, Text, View, type StyleProp, type TextStyle } from "react-native";
-import Animated, { useAnimatedStyle, useSharedValue, withDelay, withSpring } from "react-native-reanimated";
+import Animated, { Easing, ReduceMotion, useAnimatedStyle, useSharedValue, withDelay, withSpring, withTiming } from "react-native-reanimated";
 import { springs } from "./springs";
 
 const DIGITS = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
@@ -9,10 +9,12 @@ interface RollingNumberProps {
   value: string;
   lineHeight: number;
   style?: StyleProp<TextStyle>;
+  /** Eases each digit into place instead of springing (no overshoot). */
+  calm?: boolean;
 }
 
 /** Odometer-style text: each digit column springs to its new value, staggered from the right. */
-export function RollingNumber({ value, lineHeight, style: textStyle }: RollingNumberProps) {
+export function RollingNumber({ value, lineHeight, style: textStyle, calm = false }: RollingNumberProps) {
   // Margins belong on the row: on each stacked digit they'd push every digit off its slot.
   const { margin, marginTop, marginBottom, marginLeft, marginRight, marginHorizontal, marginVertical, ...style } =
     StyleSheet.flatten(textStyle) ?? {};
@@ -24,7 +26,7 @@ export function RollingNumber({ value, lineHeight, style: textStyle }: RollingNu
         // Key from the right so existing columns keep their identity when the length changes.
         const key = chars.length - index;
         return DIGITS.includes(char) ? (
-          <DigitColumn key={key} digit={Number(char)} delay={(chars.length - index) * 40} lineHeight={lineHeight} style={style} />
+          <DigitColumn key={key} digit={Number(char)} delay={(chars.length - index) * 40} lineHeight={lineHeight} style={style} calm={calm} />
         ) : (
           <Text key={key} style={[style, { lineHeight, height: lineHeight }]}>
             {char}
@@ -40,17 +42,20 @@ function DigitColumn({
   delay,
   lineHeight,
   style,
+  calm,
 }: {
   digit: number;
   delay: number;
   lineHeight: number;
   style?: StyleProp<TextStyle>;
+  calm: boolean;
 }) {
   const offset = useSharedValue(0);
 
   useEffect(() => {
-    offset.set(withDelay(delay, withSpring(-digit * lineHeight, springs.snappy)));
-  }, [delay, digit, lineHeight, offset]);
+    const to = -digit * lineHeight;
+    offset.set(withDelay(delay, calm ? withTiming(to, { duration: 700, easing: Easing.out(Easing.cubic), reduceMotion: ReduceMotion.System }) : withSpring(to, springs.snappy)));
+  }, [calm, delay, digit, lineHeight, offset]);
 
   const animatedStyle = useAnimatedStyle(() => ({ transform: [{ translateY: offset.get() }] }));
 

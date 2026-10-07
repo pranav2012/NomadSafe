@@ -83,7 +83,11 @@ export interface AnalyticsEvents {
   passport_opened: { source: "trips" | "replay"; stamps: number };
   past_travel_added: { has_region: boolean; has_month: boolean };
   steps_linked: { source: "health_connect" | "apple_health" | "none"; granted: boolean };
-  trip_photos_added: { count: number };
+  /** Photos picked for a replay and how many the phone kept; `labelled` is false on builds without on-device labelling. */
+  trip_photos_curated: { picked: number; chosen: number; rejected: number; labelled: boolean };
+  trip_photo_edited: { action: "swap" | "remove" };
+  recap_prepared: { action: "play" | "skip"; photos: number; steps: boolean };
+  recap_music: { muted: boolean };
 }
 
 export interface FeatureFlags {

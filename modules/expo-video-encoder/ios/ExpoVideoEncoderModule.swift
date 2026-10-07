@@ -49,25 +49,30 @@ public class ExpoVideoEncoderModule: Module {
     }
 
     AsyncFunction("finish") { (promise: Promise) in
-      self.queue.async {
-        guard let writer = self.writer, let input = self.input, let url = self.outputURL else {
-          promise.reject(VideoEncoderException("not started"))
-          return
+      self.finishVideo { result in
+        switch result {
+        case .success(let url): promise.resolve(url.absoluteString)
+        case .failure(let error): promise.reject(error)
         }
-        if let failure = self.failure {
-          writer.cancelWriting()
-          self.reset()
-          promise.reject(VideoEncoderException(failure))
-          return
-        }
-        input.markAsFinished()
-        writer.finishWriting {
-          if writer.status == .completed {
+      }
+    }
+
+    // Like `finish`, then adds `audioPath` (an AAC file) under the video, trimmed to its length with a
+    // fade-out. If the music can't be added, the silent video is still returned.
+    AsyncFunction("finishWithAudio") { (audioPath: String, fadeSeconds: Double, promise: Promise) in
+      self.finishVideo { result in
+        switch result {
+        case .failure(let error):
+          promise.reject(error)
+        case .success(let url):
+          let audioURL = audioPath.hasPrefix("file://") ? URL(string: audioPath) : URL(fileURLWithPath: audioPath)
+          guard let audioURL else {
             promise.resolve(url.absoluteString)
-          } else {
-            promise.reject(VideoEncoderException(writer.error?.localizedDescription ?? "writing failed"))
+            return
           }
-          self.queue.async { self.reset() }
+          Self.addAudio(video: url, audio: audioURL, fadeSeconds: fadeSeconds) {
+            promise.resolve(url.absoluteString)
+          }
         }
       }
     }
@@ -77,6 +82,147 @@ public class ExpoVideoEncoderModule: Module {
         self.writer?.cancelWriting()
         if let url = self.outputURL { try? FileManager.default.removeItem(at: url) }
         self.reset()
+      }
+    }
+  }
+
+  private func finishVideo(_ done: @escaping (Result<URL, VideoEncoderException>) -> Void) {
+    queue.async {
+      guard let writer = self.writer, let input = self.input, let url = self.outputURL else {
+        done(.failure(VideoEncoderException("not started")))
+        return
+      }
+      if let failure = self.failure {
+        writer.cancelWriting()
+        self.reset()
+        done(.failure(VideoEncoderException(failure)))
+        return
+      }
+      input.markAsFinished()
+      writer.finishWriting {
+        if writer.status == .completed {
+          done(.success(url))
+        } else {
+          done(.failure(VideoEncoderException(writer.error?.localizedDescription ?? "writing failed")))
+        }
+        self.queue.async { self.reset() }
+      }
+    }
+  }
+
+  /// Rewrites `video` with `audio` as its soundtrack: the video samples are copied as they are, the
+  /// music is looped or trimmed to the video's length, faded in and out, and encoded to AAC.
+  private static func addAudio(video: URL, audio: URL, fadeSeconds: Double, done: @escaping () -> Void) {
+    let videoAsset = AVURLAsset(url: video)
+    let musicAsset = AVURLAsset(url: audio)
+    let duration = videoAsset.duration
+    guard
+      let videoTrack = videoAsset.tracks(withMediaType: .video).first,
+      let musicTrack = musicAsset.tracks(withMediaType: .audio).first,
+      let formatHint = videoTrack.formatDescriptions.first,
+      duration.seconds > 0, musicAsset.duration.seconds > 0
+    else {
+      done()
+      return
+    }
+    let output = video.deletingLastPathComponent().appendingPathComponent("with-audio-\(video.lastPathComponent)")
+    try? FileManager.default.removeItem(at: output)
+    do {
+      let composition = AVMutableComposition()
+      guard let soundtrack = composition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid) else {
+        done()
+        return
+      }
+      var cursor = CMTime.zero
+      while cursor < duration {
+        let length = CMTimeMinimum(musicAsset.duration, CMTimeSubtract(duration, cursor))
+        try soundtrack.insertTimeRange(CMTimeRange(start: .zero, duration: length), of: musicTrack, at: cursor)
+        cursor = CMTimeAdd(cursor, length)
+      }
+      let ramp = AVMutableAudioMixInputParameters(track: soundtrack)
+      let fadeIn = CMTime(seconds: 0.3, preferredTimescale: 600)
+      let fadeOut = CMTime(seconds: min(fadeSeconds, duration.seconds / 2), preferredTimescale: 600)
+      ramp.setVolumeRamp(fromStartVolume: 0, toEndVolume: 1, timeRange: CMTimeRange(start: .zero, duration: fadeIn))
+      ramp.setVolumeRamp(fromStartVolume: 1, toEndVolume: 0, timeRange: CMTimeRange(start: CMTimeSubtract(duration, fadeOut), duration: fadeOut))
+      let mix = AVMutableAudioMix()
+      mix.inputParameters = [ramp]
+
+      let videoReader = try AVAssetReader(asset: videoAsset)
+      let videoOutput = AVAssetReaderTrackOutput(track: videoTrack, outputSettings: nil)
+      videoReader.add(videoOutput)
+      let audioReader = try AVAssetReader(asset: composition)
+      audioReader.timeRange = CMTimeRange(start: .zero, duration: duration)
+      let audioOutput = AVAssetReaderAudioMixOutput(
+        audioTracks: composition.tracks(withMediaType: .audio),
+        audioSettings: [
+          AVFormatIDKey: kAudioFormatLinearPCM,
+          AVLinearPCMBitDepthKey: 16,
+          AVLinearPCMIsFloatKey: false,
+          AVLinearPCMIsBigEndianKey: false,
+          AVLinearPCMIsNonInterleaved: false,
+          AVSampleRateKey: 44_100,
+          AVNumberOfChannelsKey: 2,
+        ]
+      )
+      audioOutput.audioMix = mix
+      audioReader.add(audioOutput)
+
+      let writer = try AVAssetWriter(outputURL: output, fileType: .mp4)
+      let videoInput = AVAssetWriterInput(mediaType: .video, outputSettings: nil, sourceFormatHint: (formatHint as! CMFormatDescription))
+      videoInput.expectsMediaDataInRealTime = false
+      let audioInput = AVAssetWriterInput(
+        mediaType: .audio,
+        outputSettings: [AVFormatIDKey: kAudioFormatMPEG4AAC, AVNumberOfChannelsKey: 2, AVSampleRateKey: 44_100, AVEncoderBitRateKey: 128_000]
+      )
+      audioInput.expectsMediaDataInRealTime = false
+      guard writer.canAdd(videoInput), writer.canAdd(audioInput) else {
+        done()
+        return
+      }
+      writer.add(videoInput)
+      writer.add(audioInput)
+      guard videoReader.startReading(), audioReader.startReading(), writer.startWriting() else {
+        writer.cancelWriting()
+        done()
+        return
+      }
+      writer.startSession(atSourceTime: .zero)
+
+      let group = DispatchGroup()
+      copy(from: videoOutput, to: videoInput, on: DispatchQueue(label: "com.pranav.nomadsafe.video-mux.video"), group: group)
+      copy(from: audioOutput, to: audioInput, on: DispatchQueue(label: "com.pranav.nomadsafe.video-mux.audio"), group: group)
+      group.notify(queue: .global(qos: .userInitiated)) {
+        guard videoReader.status != .failed, audioReader.status != .failed else {
+          writer.cancelWriting()
+          try? FileManager.default.removeItem(at: output)
+          done()
+          return
+        }
+        writer.finishWriting {
+          if writer.status == .completed {
+            _ = try? FileManager.default.replaceItemAt(video, withItemAt: output)
+          }
+          try? FileManager.default.removeItem(at: output)
+          done()
+        }
+      }
+    } catch {
+      try? FileManager.default.removeItem(at: output)
+      done()
+    }
+  }
+
+  private static func copy(from output: AVAssetReaderOutput, to input: AVAssetWriterInput, on queue: DispatchQueue, group: DispatchGroup) {
+    group.enter()
+    var finished = false
+    input.requestMediaDataWhenReady(on: queue) {
+      while !finished && input.isReadyForMoreMediaData {
+        guard let sample = output.copyNextSampleBuffer(), input.append(sample) else {
+          finished = true
+          input.markAsFinished()
+          group.leave()
+          return
+        }
       }
     }
   }

@@ -299,12 +299,12 @@ test("the video's card animation starts empty and ends on the static card", () =
   assert.equal(start.ticket, 0);
   assert.equal(start.route, 0);
   assert.equal(start.stamp, 0);
-  const end = timeline.cardTimeline(timeline.VIDEO_SECONDS, 4);
+  const end = timeline.cardTimeline(timeline.CARD_BUILD_SECONDS, 4);
   for (const key of ["ticket", "text", "land", "stamp", "stats", "footer"]) assert.equal(end[key], 1, key);
   assert.equal(end.route, Infinity);
   assert.equal(end.flapTime, Infinity);
   let previous = -1;
-  for (let t = 0; t <= timeline.VIDEO_SECONDS; t += 0.25) {
+  for (let t = 0; t <= timeline.CARD_BUILD_SECONDS; t += 0.25) {
     const route = Math.min(4, timeline.cardTimeline(t, 4).route);
     assert.ok(route >= previous, `route never goes backwards (t=${t})`);
     previous = route;
@@ -349,4 +349,245 @@ test("photos go to the nearest stop within range", () => {
   assert.equal(moments.nearestStop({ latitude: 35.0, longitude: 135.76 }, stops), 1);
   assert.equal(moments.nearestStop({ latitude: 43.06, longitude: 141.35 }, stops), null, "Sapporo is too far from every stop");
   assert.equal(moments.nearestStop(null, stops), null);
+});
+
+const replay = loadModule("src/features/recap/utils/replayFacts.ts");
+const curation = loadModule("src/features/recap/utils/photoCuration.ts");
+
+test("legs remember the day their transit event left", () => {
+  const facts = recap.computeRecapFacts({
+    trip: { startDate: "2026-10-18", endDate: "2026-10-27", destinations: ["Tokyo", "Kyoto", "Osaka"] },
+    coordinates: [PLACES.tokyo, PLACES.kyoto, PLACES.osaka],
+    events: [{ type: "transit", title: "Shinkansen", detail: "Tokyo → Kyoto", startAt: "2026-10-21T09:00:00" }],
+    locate,
+    countryOf: () => "JP",
+  });
+  assert.deepEqual(facts.legs.map((leg) => leg.date), ["2026-10-21", null]);
+});
+
+test("stop schedule takes leg days, then stays naming the city, then splits evenly", () => {
+  const schedule = replay.stopSchedule({
+    startDate: "2026-10-18",
+    endDate: "2026-10-27",
+    stops: [{ name: "Tokyo" }, { name: "Kyoto, Japan" }, { name: "Osaka" }],
+    legDates: ["2026-10-21", null],
+    stays: [{ title: "Hotel Osaka Bay", startAt: "2026-10-25T15:00:00" }],
+  });
+  assert.deepEqual(schedule.map((s) => [s.from, s.to, s.nights]), [
+    ["2026-10-18", "2026-10-21", 3],
+    ["2026-10-21", "2026-10-25", 4],
+    ["2026-10-25", "2026-10-27", 2],
+  ]);
+  const even = replay.stopSchedule({ startDate: "2026-10-01", endDate: "2026-10-09", stops: [{ name: "A" }, { name: "B" }, { name: "C" }], legDates: [null, null], stays: [] });
+  assert.deepEqual(even.map((s) => s.from), ["2026-10-01", "2026-10-04", "2026-10-07"]);
+  const backwards = replay.stopSchedule({ startDate: "2026-10-01", endDate: "2026-10-09", stops: [{ name: "A" }, { name: "B" }, { name: "C" }], legDates: ["2026-10-06", "2026-10-03"], stays: [] });
+  assert.deepEqual(backwards.map((s) => s.from), ["2026-10-01", "2026-10-06", "2026-10-06"], "arrivals never go backwards");
+  assert.equal(backwards[1].nights, 0);
+});
+
+test("days map to the stop the trip was at, with a day of slack", () => {
+  const schedule = replay.stopSchedule({ startDate: "2026-10-18", endDate: "2026-10-27", stops: [{ name: "Tokyo" }, { name: "Kyoto" }], legDates: ["2026-10-21"], stays: [] });
+  assert.equal(replay.stopOnDay(schedule, "2026-10-17"), 0);
+  assert.equal(replay.stopOnDay(schedule, "2026-10-20"), 0);
+  assert.equal(replay.stopOnDay(schedule, "2026-10-21"), 1, "arrival day belongs to the new stop");
+  assert.equal(replay.stopOnDay(schedule, "2026-10-28"), 1);
+  assert.equal(replay.stopOnDay(schedule, "2026-10-30"), null);
+  const best = replay.biggestWalkingDays(
+    [
+      { date: "2026-10-18", steps: 9000 },
+      { date: "2026-10-19", steps: 21000 },
+      { date: "2026-10-22", steps: 1500 },
+      { date: "2026-11-02", steps: 40000 },
+    ],
+    schedule,
+  );
+  assert.deepEqual(best, [{ date: "2026-10-19", steps: 21000 }, null]);
+});
+
+test("highlights per stop: done first, activities before food, pins before dates", () => {
+  const schedule = replay.stopSchedule({ startDate: "2026-10-18", endDate: "2026-10-27", stops: [{ name: "Tokyo" }, { name: "Kyoto" }], legDates: ["2026-10-21"], stays: [] });
+  const highlights = replay.stopHighlights(
+    [
+      { type: "food", title: "Ichiran", startAt: "2026-10-19T19:00:00" },
+      { type: "activity", title: "teamLab", startAt: "2026-10-20T10:00:00" },
+      { type: "activity", title: "Fushimi Inari", startAt: "2026-10-18T08:00:00", place: { latitude: 34.97, longitude: 135.77 }, doneAt: "2026-10-22T09:00:00" },
+      { type: "activity", title: "Not done idea", startAt: "2026-10-18T00:00:00", timing: "wishlist" },
+      { type: "transit", title: "Shinkansen", startAt: "2026-10-21T09:00:00" },
+      { type: "activity", title: "teamLab", startAt: "2026-10-20T15:00:00" },
+    ],
+    [PLACES.tokyo, PLACES.kyoto],
+    schedule,
+  );
+  assert.deepEqual(highlights, [["teamLab", "Ichiran"], ["Fushimi Inari"]]);
+});
+
+test("first-time countries get their number in the order first reached", () => {
+  const stamps = [
+    { country: "FR", date: "2019-05", tripId: null, pending: false },
+    { country: "JP", date: "2026-10-18", tripId: "t2", pending: false },
+    { country: "KR", date: "2026-10-25", tripId: "t2", pending: false },
+    { country: "FR", date: "2026-03-01", tripId: "t1", pending: false },
+    { country: "TH", date: "2027-01-01", tripId: "t3", pending: true },
+  ];
+  const milestones = replay.countryMilestones(stamps, "t2", "IN", ["JP", "KR"]);
+  assert.deepEqual(milestones.firstTime, ["JP", "KR"]);
+  assert.deepEqual(milestones.numbers, { JP: 3, KR: 4 });
+  assert.equal(milestones.total, 4, "home, France, Japan, Korea; the upcoming trip doesn't count");
+  assert.deepEqual(replay.countryMilestones(stamps, "t1", "IN", ["FR"]).firstTime, [], "France was visited before");
+});
+
+test("companions are shared members other than you, else the names typed in", () => {
+  assert.deepEqual(replay.tripCompanions({ companions: ["Asha", "Ravi ", "Asha"] }), ["Asha", "Ravi"]);
+  const shared = {
+    myMemberId: "m1",
+    members: [
+      { memberId: "m1", name: "Me", status: "active" },
+      { memberId: "m2", name: "Asha", status: "active" },
+      { memberId: "m3", name: "Left", status: "left" },
+    ],
+  };
+  assert.deepEqual(replay.tripCompanions({ companions: ["Old"], shared }), ["Asha"]);
+});
+
+test("distances get a familiar yardstick", () => {
+  assert.equal(replay.compareDistance(4), null);
+  assert.deepEqual(replay.compareDistance(130), { kind: "marathons", count: 3 });
+  assert.deepEqual(replay.compareDistance(1050), { kind: "londonParis", count: 3 });
+  assert.deepEqual(replay.compareDistance(4200), { kind: "earthFraction", fraction: "tenth" });
+  assert.deepEqual(replay.compareDistance(9500), { kind: "earthFraction", fraction: "quarter" });
+  assert.deepEqual(replay.compareDistance(11500), { kind: "londonNewYork", count: 2 });
+  assert.deepEqual(replay.compareDistance(80150), { kind: "earthTimes", times: 2 });
+});
+
+const TRIP = { startDate: "2026-10-18", endDate: "2026-10-27" };
+const photo = (id, extra = {}) => ({ id, takenAt: "2026-10-19T10:00:00", latitude: null, longitude: null, width: 4000, height: 3000, labels: [], ...extra });
+
+test("curation drops photos from outside the trip and ones that aren't moments", () => {
+  assert.equal(curation.rejectReason(photo("a", { takenAt: "2026-10-10T10:00:00" }), TRIP), "outsideTrip");
+  assert.equal(curation.rejectReason(photo("b", { takenAt: "2026-10-17T22:00:00" }), TRIP), null, "a day of slack");
+  assert.equal(curation.rejectReason(photo("c", { labels: [{ label: "Food", confidence: 0.9 }] }), TRIP), "food");
+  assert.equal(curation.rejectReason(photo("d", { labels: [{ label: "food", confidence: 0.7 }, { label: "People", confidence: 0.9 }] }), TRIP), null, "dinner with friends stays");
+  assert.equal(curation.rejectReason(photo("e", { labels: [{ label: "Asphalt", confidence: 0.8 }] }), TRIP), "ground");
+  assert.equal(curation.rejectReason(photo("f", { labels: [{ label: "road", confidence: 0.7 }, { label: "mountain", confidence: 0.85 }] }), TRIP), null);
+  assert.equal(curation.rejectReason(photo("g", { labels: [{ label: "Receipt", confidence: 0.6 }, { label: "sky", confidence: 0.9 }] }), TRIP), "utility");
+  assert.equal(curation.rejectReason(photo("h", { utility: true }), TRIP), "utility");
+  assert.equal(curation.rejectReason(photo("i", { takenAt: null }), TRIP), null, "undated photos stay, ranked lower");
+  assert.ok(curation.photoScore(photo("j")) > curation.photoScore(photo("k", { takenAt: null })));
+  assert.ok(curation.photoScore(photo("l", { labels: [{ label: "landmark", confidence: 0.9 }], sharpness: 0.9 })) > curation.photoScore(photo("m", { sharpness: 0.1 })));
+});
+
+test("curation keeps the best of a burst, three per stop, spread over days", () => {
+  const schedule = replay.stopSchedule({ startDate: TRIP.startDate, endDate: TRIP.endDate, stops: [{ name: "Tokyo" }, { name: "Kyoto" }], legDates: ["2026-10-21"], stays: [] });
+  const context = { ...TRIP, stops: [PLACES.tokyo, PLACES.kyoto], schedule };
+  const candidates = [
+    photo("burst1", { takenAt: "2026-10-19T10:00:00", sharpness: 0.2 }),
+    photo("burst2", { takenAt: "2026-10-19T10:00:20", sharpness: 0.9 }),
+    photo("burst3", { takenAt: "2026-10-19T10:00:45", sharpness: 0.5 }),
+    photo("day19b", { takenAt: "2026-10-19T18:00:00", sharpness: 0.8 }),
+    photo("day19c", { takenAt: "2026-10-19T20:00:00", sharpness: 0.85 }),
+    photo("day20", { takenAt: "2026-10-20T12:00:00", sharpness: 0.3 }),
+    photo("kyotoGps", { takenAt: "2026-10-19T12:00:00", latitude: 35.0, longitude: 135.76 }),
+    photo("food", { takenAt: "2026-10-22T13:00:00", labels: [{ label: "Dish", confidence: 0.95 }] }),
+    photo("old", { takenAt: "2025-01-01T10:00:00" }),
+  ];
+  const result = curation.curatePhotos(candidates, context);
+  const tokyo = result.chosen.filter((c) => c.stop === 0).map((c) => c.id);
+  assert.equal(tokyo.length, 3);
+  assert.ok(tokyo.includes("burst2") && !tokyo.includes("burst1") && !tokyo.includes("burst3"), "best of the burst");
+  assert.ok(tokyo.includes("day20"), "the second day gets a photo before day 19 gets a third");
+  assert.deepEqual(result.chosen.filter((c) => c.stop === 1).map((c) => c.id), ["kyotoGps"], "GPS wins over the date");
+  assert.deepEqual(result.rejected.map((r) => [r.id, r.reason]).sort(), [["food", "food"], ["old", "outsideTrip"]]);
+  assert.ok(result.alternates.some((a) => a.id === "burst1"));
+});
+
+test("curation respects kept photos and the overall cap", () => {
+  const stops = Array.from({ length: 10 }, (_, i) => ({ latitude: 10 + i * 5, longitude: 10 }));
+  const schedule = replay.stopSchedule({ startDate: "2026-10-01", endDate: "2026-10-20", stops: stops.map((_, i) => ({ name: `S${i}` })), legDates: stops.slice(1).map(() => null), stays: [] });
+  const candidates = [];
+  stops.forEach((stop, i) => {
+    for (let k = 0; k < 4; k += 1) candidates.push(photo(`s${i}p${k}`, { takenAt: `2026-10-${String(1 + i * 2).padStart(2, "0")}T${10 + k}:00:00`, latitude: stop.latitude, longitude: stop.longitude, sharpness: k / 4 }));
+  });
+  candidates.push(photo("kept", { takenAt: null, kept: { stop: 0 }, sharpness: 0 }));
+  const result = curation.curatePhotos(candidates, { startDate: "2026-10-01", endDate: "2026-10-20", stops, schedule });
+  assert.equal(result.chosen.length, curation.MAX_CHOSEN_PHOTOS);
+  assert.ok(result.chosen.some((c) => c.id === "kept"));
+  for (let i = 0; i < stops.length; i += 1) assert.ok(result.chosen.filter((c) => c.stop === i).length <= curation.PHOTOS_PER_STOP);
+});
+
+test("the shared video runs 15–20 s and ends on the static card", () => {
+  for (const counts of [[0], [3], [2, 2, 2], [1, 0, 3, 3, 3, 3, 3, 3], Array.from({ length: 14 }, () => 3)]) {
+    const plan = timeline.planVideo(counts);
+    assert.ok(plan.duration >= 14.99 && plan.duration <= 20.5, `${counts.length} stops: ${plan.duration}`);
+    plan.stops.forEach((stop, i) => assert.ok(stop.photos.length <= Math.min(2, counts[i])));
+    const end = timeline.videoFrameAt(plan, plan.duration);
+    assert.deepEqual(end.card, timeline.CARD_FINAL);
+    assert.equal(end.cardAlpha, 1);
+    assert.equal(end.photos.length, 0);
+    let previous = -1;
+    for (let t = 0; t < plan.numbers[0]; t += 1 / timeline.VIDEO_FPS) {
+      const frame = timeline.videoFrameAt(plan, t);
+      assert.ok(frame.route >= previous - 1e-9, "the route only grows");
+      previous = frame.route;
+      for (const p of frame.photos) assert.ok(p.alpha > 0 && p.alpha <= 1 && p.zoom >= 1);
+    }
+  }
+  const plan = timeline.planVideo([2, 2]);
+  const [start, end] = plan.stops[0].photos[0];
+  const mid = timeline.videoFrameAt(plan, (start + end) / 2);
+  assert.deepEqual(mid.photos.map((p) => [p.stop, p.slot]), [[0, 0]]);
+  assert.equal(mid.map, 0, "a photo covers the map");
+  assert.equal(timeline.videoFrameAt(plan, 0.5).focus, -1);
+});
+
+const chapters = loadModule("src/features/recap/utils/replayChapters.ts");
+
+test("replay chapters appear only when there is something to show, and stops grow with photos", () => {
+  const minimal = chapters.replayChapters({ photosPerStop: [0], highlightsPerStop: [0], totalKm: 5, countries: false, companions: false, stamped: false });
+  assert.deepEqual(minimal.map((c) => c.kind), ["intro", "stop", "numbers", "finale"]);
+  const full = chapters.replayChapters({ photosPerStop: [3, 0], highlightsPerStop: [0, 2], totalKm: 900, countries: true, companions: true, stamped: true });
+  assert.deepEqual(full.map((c) => c.kind), ["intro", "stop", "stop", "distance", "countries", "companions", "numbers", "stamp", "finale"]);
+  assert.ok(chapters.chapterMs(full[1]) > chapters.chapterMs(full[2]), "three photos play longer than a map-only stop");
+  assert.ok(chapters.chapterMs(full[2]) > chapters.chapterMs(minimal[1]), "highlights get time to read");
+  assert.equal(chapters.chapterMs({ kind: "finale" }), 0);
+  const phases = chapters.stopPhases(3);
+  assert.ok(Math.abs(phases.arrival + 3 * phases.photo - 1) < 1e-9);
+  assert.deepEqual(chapters.stopPhases(0), { arrival: 1, photo: 0 });
+});
+
+test("kept photos are grouped by stop: stored stop, then GPS, then date", () => {
+  const schedule = replay.stopSchedule({ startDate: "2026-10-18", endDate: "2026-10-27", stops: [{ name: "Tokyo" }, { name: "Kyoto" }], legDates: ["2026-10-21"], stays: [] });
+  const groups = curation.photosByStop(
+    [
+      { id: "a", stop: 1, score: 0.5, takenAt: "2026-10-19T10:00:00", latitude: null, longitude: null },
+      { id: "b", takenAt: "2026-10-19T10:00:00", latitude: 35.0, longitude: 135.76 },
+      { id: "c", takenAt: "2026-10-19T11:00:00", latitude: null, longitude: null },
+      { id: "d", stop: 1, score: 1.2, takenAt: "2026-10-23T10:00:00", latitude: null, longitude: null },
+      { id: "e", takenAt: null, latitude: null, longitude: null },
+    ],
+    [PLACES.tokyo, PLACES.kyoto],
+    schedule,
+  );
+  assert.deepEqual(groups.map((list) => list.map((p) => p.id)), [["c"], ["d", "a", "b"]]);
+});
+
+test("long legs with no booking count as likely flights; short ones stay road and other", () => {
+  const sapporo = { latitude: 43.06, longitude: 141.35 };
+  const facts = recap.computeRecapFacts({
+    trip: { startDate: "2026-10-18", endDate: "2026-10-27", destinations: ["Tokyo", "Sapporo", "Kyoto", "Osaka"] },
+    coordinates: [PLACES.tokyo, sapporo, PLACES.kyoto, PLACES.osaka],
+    events: [],
+    locate,
+    countryOf: () => "JP",
+  });
+  assert.ok(facts.kmByMode.likelyFlight > 1500, "Tokyo → Sapporo and Sapporo → Kyoto");
+  assert.ok(facts.kmByMode.other < 60, "Kyoto → Osaka");
+  assert.deepEqual(facts.legs.map((leg) => leg.mode), [null, null, null], "legs stay unbooked on the map");
+  assert.ok(Math.abs(facts.totalKm - facts.legs.reduce((sum, leg) => sum + leg.km, 0)) < 1e-6);
+});
+
+test("pictures covered in text are left out, and phone-shaped undated ones with a little text too", () => {
+  assert.equal(curation.rejectReason(photo("r", { textCoverage: 0.2 }), TRIP), "utility", "a receipt");
+  assert.equal(curation.rejectReason(photo("s", { takenAt: null, width: 1080, height: 2340, textCoverage: 0.03 }), TRIP), "utility", "a screenshot");
+  assert.equal(curation.rejectReason(photo("t", { textCoverage: 0.03 }), TRIP), null, "a street with a shop sign");
+  assert.equal(curation.rejectReason(photo("u", { textCoverage: null }), TRIP), null);
 });

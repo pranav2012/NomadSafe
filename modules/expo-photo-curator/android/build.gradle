@@ -1,0 +1,21 @@
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+apply plugin: 'expo-module-gradle-plugin'
+
+group = 'expo.modules.photocurator'
+version = '0.1.0'
+
+android {
+  namespace 'expo.modules.photocurator'
+  defaultConfig {
+    minSdk = 24
+    versionName "0.1.0"
+  }
+}
+
+dependencies {
+  // Bundled model: works offline and without Google Play services downloading it first.
+  implementation 'com.google.mlkit:image-labeling:17.0.9'
+  // Same text recogniser as expo-text-extractor, to spot receipts, tickets and screenshots.
+  implementation 'com.google.android.gms:play-services-mlkit-text-recognition:19.0.1'
+}

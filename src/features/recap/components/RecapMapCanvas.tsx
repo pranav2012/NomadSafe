@@ -1,11 +1,11 @@
 import React, { useMemo } from "react";
 import { StyleSheet } from "react-native";
-import { BlurMask, Canvas, Circle, DashPathEffect, Fill, Group, LinearGradient, Path, RadialGradient, vec } from "react-native-skia";
+import { BlurMask, Canvas, Circle, DashPathEffect, Fill, Group, LinearGradient, Path, RadialGradient, RoundedRect, Skia, vec } from "react-native-skia";
 import { useDerivedValue, type DerivedValue, type SharedValue } from "react-native-reanimated";
 import { auraDark } from "@/constants/aura";
 import { useBoundaryStore } from "../utils/boundaries";
 import type { GeoBox } from "../utils/countryShapes";
-import type { Camera, MapFrame } from "../utils/recapMap";
+import type { Camera, MapFrame, Point, Rect } from "../utils/recapMap";
 import type { RecapLeg, RecapStop } from "../utils/recapFacts";
 import { AURORA, AURORA_STOPS, buildRecapGeometry, legDashes } from "./recapGeometry";
 
@@ -23,7 +23,17 @@ interface Props {
   current: number;
   /** 0..1, fades the whole map (for the finale). */
   opacity: SharedValue<number>;
+  /** 0..1: the map shrinks into `insetRect`, centred on `focus` (a stop's map position), and the rest of the canvas clears. */
+  inset?: SharedValue<number>;
+  insetRect?: Rect;
+  focus?: Point | null;
 }
+
+const INSET_RADIUS = 22;
+const lerp = (a: number, b: number, k: number) => {
+  "worklet";
+  return a + (b - a) * k;
+};
 
 /** Widens a box around its centre, so zooming out past the route still shows land. */
 function grow(box: GeoBox, factor: number): GeoBox {
@@ -54,15 +64,41 @@ function Leg({ path, mode, index, reveal, zoom, gradient }: { path: RecapGeometr
 type RecapGeometryLeg = ReturnType<typeof buildRecapGeometry>["legs"][number];
 
 /** The replay's map: aurora sky, country outlines and the route, panned and zoomed by `camera`. */
-export function RecapMapCanvas({ width, height, frame, stops, legs, countries, camera, reveal, current, opacity }: Props) {
+export function RecapMapCanvas({ width, height, frame, stops, legs, countries, camera, reveal, current, opacity, inset, insetRect, focus }: Props) {
   const view = useBoundaryStore((state) => state.view);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const geometry = useMemo(() => buildRecapGeometry(frame, stops, legs, countries, grow(frame.box, 3)), [frame, stops, legs, countries, view]);
   const zoom = useDerivedValue(() => camera.get().zoom);
   const transform = useDerivedValue(() => {
     const { x, y, zoom: z } = camera.get();
-    return [{ translateX: x }, { translateY: y }, { scale: z }];
+    const k = inset?.get() ?? 0;
+    if (k <= 0 || !insetRect || !focus) return [{ translateX: x }, { translateY: y }, { scale: z }];
+    // Screen position of the focus stop, moved to the inset's centre and scaled down around it.
+    const fx = focus.x * z + x;
+    const fy = focus.y * z + y;
+    const s = lerp(1, insetRect.width / width, k) * lerp(1, 1.6, k);
+    return [
+      { translateX: lerp(fx, insetRect.x + insetRect.width / 2, k) },
+      { translateY: lerp(fy, insetRect.y + insetRect.height / 2, k) },
+      { scale: s },
+      { translateX: -fx + x },
+      { translateY: -fy + y },
+      { scale: z },
+    ];
   });
+  // The clip keeps the inset's aspect ratio all the way: it starts as that shape scaled to cover the
+  // screen (so the first frame looks full-screen) and shrinks uniformly into the corner.
+  const clip = useDerivedValue(() => {
+    const k = inset?.get() ?? 0;
+    const r = insetRect ?? { x: 0, y: 0, width, height };
+    const aspect = r.height / r.width;
+    const startWidth = Math.max(width, height / aspect);
+    const w = lerp(startWidth, r.width, k);
+    const cx = lerp(width / 2, r.x + r.width / 2, k);
+    const cy = lerp(height / 2, r.y + r.height / 2, k);
+    return Skia.RRectXY(Skia.XYWHRect(cx - w / 2, cy - (w * aspect) / 2, w, w * aspect), INSET_RADIUS * k, INSET_RADIUS * k);
+  });
+  const border = useDerivedValue(() => (inset?.get() ?? 0) * 0.5);
   const outline = useDerivedValue(() => 1.2 / zoom.get());
   const dot = useDerivedValue(() => 5 / zoom.get());
   const bigDot = useDerivedValue(() => 9 / zoom.get());
@@ -72,6 +108,7 @@ export function RecapMapCanvas({ width, height, frame, stops, legs, countries, c
 
   return (
     <Canvas style={[StyleSheet.absoluteFill, { width, height }]} pointerEvents="none">
+      <Group clip={clip}>
       <Fill color={auraDark.bg} />
       <Fill>
         <RadialGradient c={vec(width * 0.15, 0)} r={width * 0.8} colors={["rgba(34,199,184,0.30)", "rgba(34,199,184,0)"]} />
@@ -91,6 +128,8 @@ export function RecapMapCanvas({ width, height, frame, stops, legs, countries, c
           <StopDot key={i} x={p.x} y={p.y} index={i} current={current} reveal={reveal} dot={dot} bigDot={bigDot} halo={halo} />
         ))}
       </Group>
+      </Group>
+      {inset ? <RoundedRect rect={clip} style="stroke" strokeWidth={1.5} color="rgba(255,255,255,0.35)" opacity={border} /> : null}
     </Canvas>
   );
 }

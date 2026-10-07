@@ -4,6 +4,8 @@ import { countInclusiveDays, fromDateKey } from "@/features/trips/utils/dates";
 import { distanceKm, type MapPoint } from "@/features/trips/utils/mapFraming";
 
 export type RecapMode = TransitMode | "other";
+/** Distance buckets: a mode, or "likelyFlight" for long legs no booking covers. */
+export type RecapDistanceMode = RecapMode | "likelyFlight";
 
 export interface RecapStop extends MapPoint {
   name: string;
@@ -17,6 +19,8 @@ export interface RecapLeg {
   km: number;
   /** From the transit event that covers this leg; null when the itinerary has none. */
   mode: TransitMode | null;
+  /** Day the covering transit event left ("YYYY-MM-DD"); null when no event covers the leg. */
+  date: string | null;
 }
 
 export interface RecapFacts {
@@ -26,7 +30,7 @@ export interface RecapFacts {
   countries: string[];
   legs: RecapLeg[];
   totalKm: number;
-  kmByMode: Partial<Record<RecapMode, number>>;
+  kmByMode: Partial<Record<RecapDistanceMode, number>>;
   /** Transit events per mode, counted even when their route couldn't be placed. */
   tripsByMode: Partial<Record<TransitMode, number>>;
   stays: number;
@@ -45,12 +49,15 @@ export interface RecapInput {
 
 // A journey ending this close to a stop is taken to be the leg into it.
 const MATCH_KM = 80;
+/** Legs with no booking at least this long are counted as likely flights (Tokyo → Sapporo, Paris → Rome). */
+export const LIKELY_FLIGHT_KM = 700;
 
 interface Journey {
   from: MapPoint;
   to: MapPoint;
   km: number;
   mode: TransitMode | null;
+  date: string;
 }
 
 /**
@@ -75,7 +82,7 @@ export function computeRecapFacts({ trip, coordinates, events, locate, countryOf
     const from = locate(ends[0]);
     const to = locate(ends[1]);
     if (!from || !to) continue;
-    journeys.push({ from, to, km: distanceKm(from, to), mode });
+    journeys.push({ from, to, km: distanceKm(from, to), mode, date: event.startAt.slice(0, 10) });
   }
 
   const covered = new Set<Journey>();
@@ -87,15 +94,15 @@ export function computeRecapFacts({ trip, coordinates, events, locate, countryOf
       (candidate) => !covered.has(candidate) && distanceKm(candidate.from, a) <= MATCH_KM && distanceKm(candidate.to, b) <= MATCH_KM,
     );
     if (journey) covered.add(journey);
-    legs.push({ from: a.name, to: b.name, km: distanceKm(a, b), mode: journey?.mode ?? null });
+    legs.push({ from: a.name, to: b.name, km: distanceKm(a, b), mode: journey?.mode ?? null, date: journey?.date ?? null });
   }
 
-  const kmByMode: Partial<Record<RecapMode, number>> = {};
-  const addKm = (mode: RecapMode, km: number) => {
+  const kmByMode: Partial<Record<RecapDistanceMode, number>> = {};
+  const addKm = (mode: RecapDistanceMode, km: number) => {
     kmByMode[mode] = (kmByMode[mode] ?? 0) + km;
   };
   for (const journey of journeys) addKm(journey.mode ?? "other", journey.km);
-  for (const leg of legs) if (leg.mode === null) addKm("other", leg.km);
+  for (const leg of legs) if (leg.mode === null) addKm(leg.km >= LIKELY_FLIGHT_KM ? "likelyFlight" : "other", leg.km);
   const totalKm = Object.values(kmByMode).reduce((sum, km) => sum + (km ?? 0), 0);
 
   return {

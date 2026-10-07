@@ -1,37 +1,30 @@
 import React, { useState } from "react";
 import { showToast } from "@/atoms";
-import type { Trip } from "@/features/trips/store/tripsStore";
 import { useLocalization } from "@/localization";
-import { track } from "@/modules/analytics";
 import { ExplainSheet } from "../components/ExplainSheet";
-import { MAX_TRIP_PHOTOS, pickTripPhotos } from "../services/tripPhotos";
+import { MAX_PICKED_PHOTOS } from "../services/tripPhotos";
 import { useRecapStore } from "../store/recapStore";
-import { useTripPhotosStore, type TripPhoto } from "../store/tripPhotosStore";
-import { useTripWalking } from "./useTripWalking";
+import type { PhotoCuration } from "./usePhotoCuration";
+import type { useTripWalking } from "./useTripWalking";
 
-const EMPTY: TripPhoto[] = [];
 // The sheet's modal must be gone before iOS can present the picker or the Health screen.
 const SHEET_CLOSE_MS = 320;
-const afterSheet = () => new Promise((resolve) => setTimeout(resolve, SHEET_CLOSE_MS));
+export const afterSheet = () => new Promise((resolve) => setTimeout(resolve, SHEET_CLOSE_MS));
 const SOURCE_NAMES = { health_connect: "Health Connect", apple_health: "Apple Health" } as const;
 
-/** Photos and steps for a recap, each explained in a sheet before a system screen opens. Render `sheets` once. */
-export function useRecapExtras(trip: Trip | null) {
+/** Photos and steps for a replay, each explained in a sheet before a system screen opens. Render `sheets` once. */
+export function useRecapExtras(curation: PhotoCuration, walking: ReturnType<typeof useTripWalking>) {
   const { t } = useLocalization();
-  const photos = useTripPhotosStore((state) => (trip ? (state.photos[trip.id] ?? EMPTY) : EMPTY));
-  const walking = useTripWalking(trip);
   const [sheet, setSheet] = useState<"photos" | "steps" | "noSteps" | null>(null);
   const sourceName = walking.source ? SOURCE_NAMES[walking.source] : "";
 
   const choosePhotos = async () => {
     setSheet(null);
-    if (!trip) return;
     await afterSheet();
-    const added = await pickTripPhotos(trip.id);
-    if (added > 0) {
-      track("trip_photos_added", { count: added });
-      showToast(t("recap.photosAdded", { count: added }));
-    }
+    const before = curation.photos.length;
+    const kept = await curation.choose();
+    if (kept === null) return;
+    showToast(kept > before ? t("recap.photosKept", { count: kept }) : t("recap.photosNoneKept"));
   };
 
   const linkSteps = async () => {
@@ -51,8 +44,8 @@ export function useRecapExtras(trip: Trip | null) {
         visible={sheet === "photos"}
         onClose={() => setSheet(null)}
         icon="camera"
-        title={t("recap.photosExplainTitle")}
-        body={t("recap.photosExplainBody", { count: MAX_TRIP_PHOTOS })}
+        title={t("recap.curateExplainTitle")}
+        body={t("recap.curateExplainBody", { count: MAX_PICKED_PHOTOS })}
         action={t("recap.photosChoose")}
         onAction={() => void choosePhotos()}
         dismiss={t("recap.notNow")}
@@ -80,9 +73,7 @@ export function useRecapExtras(trip: Trip | null) {
   );
 
   return {
-    photos,
-    walking,
-    canAddPhotos: photos.length < MAX_TRIP_PHOTOS,
+    sourceName,
     askPhotos: () => setSheet("photos"),
     askSteps: () => setSheet("steps"),
     sheets,

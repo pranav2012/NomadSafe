@@ -87,7 +87,7 @@ export const privacyPolicy = httpAction(async () => {
 <li>Emergency contacts you pick, SMS templates and safety check-in history.</li>
 <li>Receipt photos you scan. They are read on your phone with the system's on-device text recognition (Google ML Kit on Android, Apple Vision on iOS) and are never uploaded; only the amount, shop and date you keep become an expense.</li>
 <li>AI chat history. With the on-device AI model, prompts and replies never leave your phone. When you use online AI (below), each question is sent to answer it, but the chat history is still stored only on your phone.</li>
-<li>Photos you add to a trip replay: small copies of only the photos you pick, with the time and place they were taken. They are never uploaded or backed up.</li>
+<li>Photos you add to a trip replay: your phone looks only at the photos you pick, chooses the best ones on the device, and keeps small copies of those, with the time and place they were taken. They are never uploaded or backed up.</li>
 <li>Step counts and walking distance read from Health Connect or Apple Health for a trip's dates, if you turn this on.</li>
 </ul>
 <p>This data is kept in encrypted app storage and is excluded from cloud backups. Trips, expenses, itinerary and the past travel in your passport are kept in the same encrypted storage on your device as well as in your account backup (below). Your passport's stamps and state map are worked out on your device from this data; country and state outlines are built into the app, so no location lookup is sent anywhere. If you add the NomadSafe home-screen widget, your trip names are also kept in the widget's own storage on your device so it can show them. Uninstalling the app or using <em>Settings → Wipe device data</em> removes it.</p>

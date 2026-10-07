@@ -14,6 +14,7 @@ import type { RecapCardContent } from "../components/recapCard";
 import { useBoundaryStore } from "../utils/boundaries";
 import { countryBox } from "../utils/countryShapes";
 import { computeRecapFacts, type RecapFacts, type RecapMode } from "../utils/recapFacts";
+import { stopHighlights, stopSchedule, tripCompanions } from "../utils/replayFacts";
 
 export interface RecapStat {
   key: "days" | "stops" | "distance";
@@ -61,20 +62,21 @@ export function useTripRecap(tripId: string | undefined) {
   const summary = useTripExpenseSummary(trip);
   const view = useBoundaryStore((state) => state.view);
 
+  const events = useMemo(() => (trip ? allEvents.filter((event) => event.tripId === trip.id) : []), [allEvents, trip]);
   const facts = useMemo<RecapFacts | null>(
     () =>
       trip
         ? computeRecapFacts({
             trip,
             coordinates: getDestinationCoordinates(trip),
-            events: allEvents.filter((event) => event.tripId === trip.id),
+            events,
             locate: locateRouteEnd,
             countryOf: placeCountry,
           })
         : null,
     // `view` changes which country a stop falls in.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [trip, allEvents, view],
+    [trip, events, view],
   );
 
   if (!trip || !facts) return null;
@@ -137,9 +139,22 @@ export function useTripRecap(tripId: string | undefined) {
     };
   };
 
+  const schedule = stopSchedule({
+    startDate: trip.startDate,
+    endDate: trip.endDate,
+    stops: facts.stops,
+    legDates: facts.legs.map((leg) => leg.date),
+    stays: events.filter((event) => event.type === "stay"),
+  });
+
   return {
     trip,
     facts,
+    /** When the trip reached each stop and how many nights it stayed. */
+    schedule,
+    /** Things done at each stop, from the itinerary. */
+    highlights: stopHighlights(events, facts.stops, schedule),
+    companions: tripCompanions(trip),
     places,
     title,
     via,

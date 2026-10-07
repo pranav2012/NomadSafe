@@ -152,7 +152,7 @@ export default function TripsScreen() {
     useExpensesStore.getState().removeByGroupId(tripId);
     useChatStore.getState().removeConversation(tripId);
     clearTripGmailCoverage(tripId);
-    useRecapStore.getState().setWalking(tripId, null);
+    useRecapStore.getState().clearTrip(tripId);
     void deleteTripPhotos(tripId);
     void pruneTickets();
     setDeleteTarget(null);

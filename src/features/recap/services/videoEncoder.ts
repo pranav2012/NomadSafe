@@ -7,6 +7,8 @@ interface ExpoVideoEncoderModule {
   pendingFrames(): number;
   /** Resolves the MP4's file URI. */
   finish(): Promise<string>;
+  /** Like `finish`, with a local AAC file as the soundtrack (trimmed, faded out). Missing on builds from before it was added. */
+  finishWithAudio?: (audioUri: string, fadeSeconds: number) => Promise<string>;
   cancel(): void;
 }
 

@@ -20,6 +20,8 @@ export async function shareRecapCard(content: RecapCardContent, fonts: SkTypefac
   } catch (err) {
     logger.warn("trip-recap", "share failed", err);
     return false;
+  } finally {
+    image.dispose();
   }
 }
 

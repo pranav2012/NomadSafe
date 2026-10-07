@@ -7,6 +7,12 @@ export interface WalkingTotals {
   estimated: boolean;
 }
 
+export interface DaySteps {
+  /** Local day, "YYYY-MM-DD". */
+  date: string;
+  steps: number;
+}
+
 export interface HealthApi {
   /** "Health Connect" or "Apple Health"; null where there is none. */
   source: "health_connect" | "apple_health" | null;
@@ -15,6 +21,8 @@ export interface HealthApi {
   requestAccess(): Promise<boolean>;
   /** Steps and walking distance between two instants; null when nothing could be read. */
   readWalking(start: Date, end: Date): Promise<WalkingTotals | null>;
+  /** Steps per local day between two local midnights; days without steps are left out. Null when nothing could be read. */
+  readDailySteps(start: Date, end: Date): Promise<DaySteps[] | null>;
   /** Android 13 and older: opens the Play Store to install or update Health Connect. */
   openInstall(): void;
 }

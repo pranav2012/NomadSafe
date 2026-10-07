@@ -1,8 +1,17 @@
-import { getRequestStatusForAuthorization, isHealthDataAvailable, queryStatisticsForQuantity, requestAuthorization } from "@kingstinct/react-native-healthkit";
+import {
+  getRequestStatusForAuthorization,
+  isHealthDataAvailable,
+  queryStatisticsCollectionForQuantity,
+  queryStatisticsForQuantity,
+  requestAuthorization,
+} from "@kingstinct/react-native-healthkit";
 import { logger } from "@/modules/logger";
 import { STRIDE_KM, type HealthApi } from "./types";
 
 const READ = { toRead: ["HKQuantityTypeIdentifierStepCount", "HKQuantityTypeIdentifierDistanceWalkingRunning"] } as const;
+
+const localDay = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 
 export const health: HealthApi = {
   source: "apple_health",
@@ -38,6 +47,21 @@ export const health: HealthApi = {
       return km > 0 ? { steps: count, km, estimated: false } : { steps: count, km: count * STRIDE_KM, estimated: true };
     } catch (err) {
       logger.warn("health", "read failed", err);
+      return null;
+    }
+  },
+  async readDailySteps(start, end) {
+    try {
+      const days = await queryStatisticsCollectionForQuantity("HKQuantityTypeIdentifierStepCount", ["cumulativeSum"], start, { day: 1 }, {
+        filter: { date: { startDate: start, endDate: end } },
+        unit: "count",
+      });
+      return days.flatMap((day) => {
+        const steps = day.sumQuantity?.quantity ?? 0;
+        return day.startDate && steps > 0 ? [{ date: localDay(day.startDate), steps }] : [];
+      });
+    } catch (err) {
+      logger.warn("health", "daily read failed", err);
       return null;
     }
   },

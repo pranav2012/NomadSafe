@@ -1,5 +1,5 @@
 import { Linking } from "react-native";
-import { aggregateRecord, getSdkStatus, initialize, requestPermission, SdkAvailabilityStatus } from "react-native-health-connect";
+import { aggregateGroupByPeriod, aggregateRecord, getSdkStatus, initialize, requestPermission, SdkAvailabilityStatus } from "react-native-health-connect";
 import { logger } from "@/modules/logger";
 import { STRIDE_KM, type HealthApi } from "./types";
 
@@ -50,6 +50,21 @@ export const health: HealthApi = {
       return meters > 0 ? { steps, km: meters / 1000, estimated: false } : { steps, km: steps * STRIDE_KM, estimated: true };
     } catch (err) {
       logger.warn("health", "read failed", err);
+      return null;
+    }
+  },
+  async readDailySteps(start, end) {
+    if (!(await ready())) return null;
+    try {
+      const days = await aggregateGroupByPeriod({
+        recordType: "Steps",
+        timeRangeFilter: { operator: "between", startTime: start.toISOString(), endTime: end.toISOString() },
+        timeRangeSlicer: { period: "DAYS", length: 1 },
+      });
+      // Period buckets are local days; startTime is a local date-time ("2026-10-18T00:00").
+      return days.map((day) => ({ date: day.startTime.slice(0, 10), steps: day.result.COUNT_TOTAL ?? 0 })).filter((day) => day.steps > 0);
+    } catch (err) {
+      logger.warn("health", "daily read failed", err);
       return null;
     }
   },

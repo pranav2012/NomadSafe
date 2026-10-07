@@ -67,7 +67,7 @@ const color = (value: string) => Skia.Color(value);
 const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
 
 /** Draws `draw` at `alpha` (a layer only when partly transparent; nothing at 0). */
-function withAlpha(canvas: SkCanvas, alpha: number, draw: () => void) {
+export function withAlpha(canvas: SkCanvas, alpha: number, draw: () => void) {
   if (alpha <= 0) return;
   if (alpha >= 1) {
     draw();
@@ -80,7 +80,7 @@ function withAlpha(canvas: SkCanvas, alpha: number, draw: () => void) {
   canvas.restore();
 }
 
-function text(
+export function text(
   fonts: SkTypefaceFontProvider,
   value: string,
   opts: { size: number; color: string; weight?: 400 | 500 | 600 | 700; width: number; align?: TextAlign; maxLines?: number; spacing?: number; lineHeight?: number },
@@ -114,7 +114,7 @@ function fittedText(fonts: SkTypefaceFontProvider, value: string, size: number, 
   return text(fonts, value, { ...opts, size: fitted, spacing: (opts.spacing * fitted) / size, width: 10_000 });
 }
 
-function radialGlow(canvas: SkCanvas, cx: number, cy: number, rx: number, ry: number, rgba: string, area: { w: number; h: number }) {
+export function radialGlow(canvas: SkCanvas, cx: number, cy: number, rx: number, ry: number, rgba: string, area: { w: number; h: number }) {
   const paint = Skia.Paint();
   const matrix = Skia.Matrix();
   matrix.translate(cx, cy);
@@ -212,7 +212,7 @@ export function drawFlaps(
 }
 
 /** The first `fraction` of a path, for drawing a leg partway. */
-function partial(path: SkPath, fraction: number): SkPath | null {
+export function partial(path: SkPath, fraction: number): SkPath | null {
   if (fraction >= 1) return path;
   const contour = Skia.ContourMeasureIter(path, false, 1).next();
   if (!contour) return null;
@@ -530,7 +530,9 @@ export function renderRecapCard(
   if (!surface) return null;
   drawRecapCard(surface.getCanvas(), width, content, fonts, anim, formatDistance);
   surface.flush();
-  return surface.makeImageSnapshot();
+  const image = surface.makeImageSnapshot();
+  surface.dispose();
+  return image;
 }
 
 export function encodeRecapCard(image: SkImage): string {

@@ -3,6 +3,16 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import { mmkvStateStorage } from "@/modules/storage";
 import { pickDefaultActiveTripId, useTripsStore, type Trip } from "@/features/trips/store/tripsStore";
 import { addDays, fromDateKey, getTripStatus } from "@/features/trips/utils/dates";
+import type { DailySteps } from "../utils/replayFacts";
+
+export interface TripWalking {
+  steps: number;
+  km: number;
+  estimated: boolean;
+  /** Steps per local day; missing on totals read by older versions. */
+  daily?: DailySteps[];
+  at: string;
+}
 
 interface RecapState {
   /** Trip id → when its recap was finished; Home stops offering the recap after that. */
@@ -12,11 +22,19 @@ interface RecapState {
   /** The user allowed reading steps from Health Connect / Apple Health. */
   healthLinked: boolean;
   /** Steps and walking distance per trip, read once the trip has ended (stays on this phone). */
-  walking: Record<string, { steps: number; km: number; estimated: boolean; at: string }>;
+  walking: Record<string, TripWalking>;
+  /** Trips whose "make it yours" step was done or skipped, so the replay opens straight away. */
+  prepped: Record<string, true>;
+  /** The replay's music is off. */
+  muted: boolean;
   markFinished: (tripId: string) => void;
   setReplayOpen: (open: boolean) => void;
   setHealthLinked: (linked: boolean) => void;
-  setWalking: (tripId: string, totals: { steps: number; km: number; estimated: boolean } | null) => void;
+  setWalking: (tripId: string, totals: Omit<TripWalking, "at"> | null) => void;
+  markPrepped: (tripId: string) => void;
+  setMuted: (muted: boolean) => void;
+  /** Forgets a deleted trip's steps and replay state. */
+  clearTrip: (tripId: string) => void;
   reset: () => void;
 }
 
@@ -27,6 +45,8 @@ export const useRecapStore = create<RecapState>()(
       replayOpen: false,
       healthLinked: false,
       walking: {},
+      prepped: {},
+      muted: false,
       markFinished: (tripId) => set((state) => ({ finished: { ...state.finished, [tripId]: new Date().toISOString() } })),
       setReplayOpen: (replayOpen) => set({ replayOpen }),
       setHealthLinked: (healthLinked) => set({ healthLinked }),
@@ -37,12 +57,28 @@ export const useRecapStore = create<RecapState>()(
           else delete walking[tripId];
           return { walking };
         }),
-      reset: () => set({ finished: {}, replayOpen: false, healthLinked: false, walking: {} }),
+      markPrepped: (tripId) => set((state) => ({ prepped: { ...state.prepped, [tripId]: true } })),
+      setMuted: (muted) => set({ muted }),
+      clearTrip: (tripId) =>
+        set((state) => {
+          const walking = { ...state.walking };
+          const prepped = { ...state.prepped };
+          delete walking[tripId];
+          delete prepped[tripId];
+          return { walking, prepped };
+        }),
+      reset: () => set({ finished: {}, replayOpen: false, healthLinked: false, walking: {}, prepped: {}, muted: false }),
     }),
     {
       name: "trip-recap",
       storage: createJSONStorage(() => mmkvStateStorage),
-      partialize: (state) => ({ finished: state.finished, healthLinked: state.healthLinked, walking: state.walking }),
+      // v1 added per-day steps, the replay's prep step and mute.
+      version: 1,
+      migrate: (persisted) => {
+        const state = (persisted ?? {}) as Partial<RecapState>;
+        return { ...state, walking: state.walking ?? {}, prepped: state.prepped ?? {}, muted: state.muted ?? false } as RecapState;
+      },
+      partialize: (state) => ({ finished: state.finished, healthLinked: state.healthLinked, walking: state.walking, prepped: state.prepped, muted: state.muted }),
     },
   ),
 );

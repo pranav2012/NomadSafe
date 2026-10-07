@@ -1,71 +1,45 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Image, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, {
-  Easing,
-  FadeIn,
-  FadeInDown,
-  SensorType,
-  cancelAnimation,
-  useAnimatedSensor,
-  useAnimatedStyle,
-  useDerivedValue,
-  useSharedValue,
-  withSpring,
-  withTiming,
-  type SharedValue,
-} from "react-native-reanimated";
+import Animated, { Easing, FadeIn, FadeOut, cancelAnimation, useAnimatedReaction, useDerivedValue, useReducedMotion, useSharedValue, withTiming } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
-import { useFonts } from "react-native-skia";
-import { AuraButton, AuraSwitch, Icon, PressableScale, RollingNumber, showToast } from "@/atoms";
-import { AURA_FONT_FILES, auraDark, auraFonts as f } from "@/constants/aura";
-import { TRANSIT_MODES } from "@/features/itinerary/constants/eventTypes";
+import { AuraButton, Icon, PressableScale } from "@/atoms";
 import { useTripsStore } from "@/features/trips/store/tripsStore";
 import { useLocalization } from "@/localization";
 import { PrivateView, track } from "@/modules/analytics";
-import type { WalkingTotals } from "@/modules/health";
 import { useStartNewTrip } from "@/modules/billing";
 import { selectionChanged } from "@/utils/haptics";
 import { StampingMoment, type MomentItem } from "@/features/passport/components/StampingMoment";
-import { useHomeCountry } from "@/features/passport/hooks/usePassport";
+import { useHomeCountry, usePassport } from "@/features/passport/hooks/usePassport";
 import { stampDate } from "@/features/passport/utils/passport";
 import { regionAt } from "@/features/passport/utils/regions";
 import { countryDisplayName } from "@/features/trips/data/destinations";
-import { ExplainSheet } from "../components/ExplainSheet";
-import { FlapBoard } from "../components/FlapBoard";
 import { RecapMapCanvas } from "../components/RecapMapCanvas";
-import { CARD_HEIGHT, CARD_WIDTH, RECAP_FONT_FAMILY, encodeRecapCard, renderRecapCard } from "../components/recapCard";
-import { useRecapExtras } from "../hooks/useRecapExtras";
-import { placeCode, shortPlace, useTripRecap, type TripRecap } from "../hooks/useTripRecap";
-import { shareRecapCard } from "../services/shareRecapCard";
-import { shareRecapVideo } from "../services/shareRecapVideo";
-import { removeTripPhoto } from "../services/tripPhotos";
-import { videoEncoder } from "../services/videoEncoder";
+import { Finale } from "../components/replay/Finale";
+import { IntroChapter } from "../components/replay/IntroChapter";
+import { PhotoEditorSheet } from "../components/replay/PhotoEditorSheet";
+import { PrepScreen } from "../components/replay/PrepScreen";
+import { ReplayHeader, TapZones } from "../components/replay/ReplayChrome";
+import { CompanionsChapter, CountriesChapter, DistanceChapter, NumbersChapter } from "../components/replay/StatChapters";
+import { StopChapter, StopPhotos, type StopTiming } from "../components/replay/StopChapter";
+import { c, rs } from "../components/replay/replayStyles";
+import { afterSheet, useRecapExtras } from "../hooks/useRecapExtras";
+import { recapTrack, useReplayMusic } from "../hooks/useReplayMusic";
+import { usePhotoCuration, type PhotoCuration } from "../hooks/usePhotoCuration";
+import { shortPlace, useTripRecap, type TripRecap } from "../hooks/useTripRecap";
+import { useTripWalking } from "../hooks/useTripWalking";
 import { finishRecap, useRecapStore } from "../store/recapStore";
-import type { TripPhoto } from "../store/tripPhotosStore";
-import { nearestStop } from "../utils/moments";
+import { photosByStop } from "../utils/photoCuration";
 import { cameraFor, frameRoute, type Camera, type Point, type Rect } from "../utils/recapMap";
+import { biggestWalkingDays, countryMilestones } from "../utils/replayFacts";
+import { chapterMs, replayChapters, stopPhases } from "../utils/replayChapters";
 
-type Chapter = { kind: "intro" } | { kind: "stop"; index: number } | { kind: "moments" } | { kind: "numbers" } | { kind: "stamp" } | { kind: "finale" };
 type RecapSource = "home" | "notification" | "trips";
 
-const c = auraDark;
-const DURATION_MS: Record<Exclude<Chapter["kind"], "finale">, number> = { intro: 4200, stop: 3400, moments: 5600, numbers: 5000, stamp: 4600 };
 const CAMERA_MS = 1300;
-const PREVIEW_PIXELS = 900;
-
-function buildChapters(recap: TripRecap, stamped: boolean, withPhotos: boolean): Chapter[] {
-  return [
-    { kind: "intro" },
-    ...recap.facts.stops.map((_, index): Chapter => ({ kind: "stop", index })),
-    ...(withPhotos ? [{ kind: "moments" } as const] : []),
-    { kind: "numbers" },
-    ...(stamped ? [{ kind: "stamp" } as const] : []),
-    { kind: "finale" },
-  ];
-}
+const PHOTO_FADE_MS = 450;
 
 /** New passport entries for this trip: a stamp per foreign country, a seal per home state. */
 function useMomentItems(recap: TripRecap): MomentItem[] {
@@ -99,7 +73,7 @@ function useMomentItems(recap: TripRecap): MomentItem[] {
   }, [home, locale, recap.facts.stops, recap.trip.id, recap.trip.startDate]);
 }
 
-/** Full-screen trip replay: the route draws itself stop by stop, then the numbers, then the share card. */
+/** Full-screen trip replay: "make it yours" first (photos, steps), then the film, then the share card. */
 export default function TripRecapScreen() {
   const { id, source } = useLocalSearchParams<{ id: string; source?: RecapSource }>();
   const recap = useTripRecap(id);
@@ -118,40 +92,117 @@ export default function TripRecapScreen() {
       </View>
     );
   }
-  return <Replay recap={recap} source={source ?? "home"} />;
+  return <RecapFlow recap={recap} source={source ?? "home"} />;
 }
 
-function Replay({ recap, source }: { recap: TripRecap; source: RecapSource }) {
-  const { t } = useLocalization();
+function RecapFlow({ recap, source }: { recap: TripRecap; source: RecapSource }) {
+  const router = useRouter();
+  const tripId = recap.trip.id;
+  const prepped = useRecapStore((state) => Boolean(state.prepped[tripId]));
+  const [stage, setStage] = useState<"prep" | "replay">(prepped ? "replay" : "prep");
+  const [editing, setEditing] = useState(false);
+  const curation = usePhotoCuration(recap);
+  const walking = useTripWalking(recap.trip);
+  const extras = useRecapExtras(curation, walking);
+
+  useEffect(() => {
+    track("recap_opened", { source, stops: recap.facts.stops.length });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const play = (skipped: boolean) => {
+    useRecapStore.getState().markPrepped(tripId);
+    track("recap_prepared", { action: skipped ? "skip" : "play", photos: curation.photos.length, steps: Boolean(walking.totals) });
+    setStage("replay");
+  };
+
+  const pickMore = async () => {
+    setEditing(false);
+    // Two modals in a row: wait for the editor's to be fully gone before the next one presents on iOS.
+    await afterSheet();
+    await afterSheet();
+    extras.askPhotos();
+  };
+
+  return (
+    <View style={styles.root}>
+      {stage === "prep" ? (
+        <PrepScreen
+          recap={recap}
+          curation={curation}
+          walking={walking}
+          onPickPhotos={extras.askPhotos}
+          onEditPhotos={() => setEditing(true)}
+          onLinkSteps={extras.askSteps}
+          onPlay={play}
+          onClose={() => router.back()}
+        />
+      ) : (
+        <Replay recap={recap} curation={curation} walking={walking.totals} paused={editing} onEditPhotos={() => setEditing(true)} />
+      )}
+      <PhotoEditorSheet visible={editing} onClose={() => setEditing(false)} recap={recap} curation={curation} onPickMore={() => void pickMore()} />
+      {extras.sheets}
+    </View>
+  );
+}
+
+function Replay({
+  recap,
+  curation,
+  walking,
+  paused,
+  onEditPhotos,
+}: {
+  recap: TripRecap;
+  curation: PhotoCuration;
+  walking: ReturnType<typeof useTripWalking>["totals"];
+  paused: boolean;
+  onEditPhotos: () => void;
+}) {
+  const { t, formatCompactNumber } = useLocalization();
   const router = useRouter();
   const startNewTrip = useStartNewTrip();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
+  const still = useReducedMotion();
+  const muted = useRecapStore((state) => state.muted);
+  const passport = usePassport();
+  const { code: home } = useHomeCountry();
   const momentItems = useMomentItems(recap);
-  const extras = useRecapExtras(recap.trip);
-  const { photos } = extras;
-  const chapters = useMemo(() => buildChapters(recap, momentItems.length > 0, photos.length > 0), [recap, momentItems.length, photos.length]);
+  const tripId = recap.trip.id;
+
+  const perStop = useMemo(() => photosByStop(curation.photos, recap.facts.stops, recap.schedule), [curation.photos, recap.facts.stops, recap.schedule]);
+  const walkingDays = useMemo(() => biggestWalkingDays(walking?.daily ?? [], recap.schedule), [walking?.daily, recap.schedule]);
+  const milestones = useMemo(
+    () => countryMilestones(passport.stamps, tripId, home, recap.facts.countries),
+    [passport.stamps, tripId, home, recap.facts.countries],
+  );
+  const chapters = useMemo(
+    () =>
+      replayChapters({
+        photosPerStop: perStop.map((list) => list.length),
+        highlightsPerStop: recap.highlights.map((list, i) => list.length + (walkingDays[i] ? 1 : 0)),
+        totalKm: recap.facts.totalKm,
+        countries: milestones.firstTime.length > 0 || recap.facts.countries.length >= 2,
+        companions: recap.companions.length > 0,
+        stamped: momentItems.length > 0,
+      }),
+    [perStop, recap.highlights, recap.facts.totalKm, recap.facts.countries.length, recap.companions.length, walkingDays, milestones.firstTime.length, momentItems.length],
+  );
   const last = chapters.length - 1;
   const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState(true);
+  const [held, setHeld] = useState(false);
   const shownLast = useRef(last);
-  const stopPhotos = useMemo(() => {
-    const byStop = new Map<number, TripPhoto>();
-    for (const photo of photos) {
-      const at = nearestStop(
-        photo.latitude !== null && photo.longitude !== null ? { latitude: photo.latitude, longitude: photo.longitude } : null,
-        recap.facts.stops,
-      );
-      if (at !== null && !byStop.has(at)) byStop.set(at, photo);
-    }
-    return byStop;
-  }, [photos, recap.facts.stops]);
   const progress = useSharedValue(0);
   const timedIndex = useRef(-1);
   const reachedEnd = useRef(false);
   const keepTrip = useRef(false);
-  const tripId = recap.trip.id;
-  const chapter = chapters[index];
+  const chapter = chapters[Math.min(index, last)];
+  const running = playing && !held && !paused && chapter.kind !== "finale";
+  const durationMs = chapterMs(chapter);
+
+  useReplayMusic(tripId, running && !muted);
 
   const frame = useMemo(() => frameRoute(recap.facts.stops, width, height, 60), [recap.facts.stops, width, height]);
   const points = useMemo(() => recap.facts.stops.map((stop) => frame.project(stop.longitude, stop.latitude)), [frame, recap.facts.stops]);
@@ -162,14 +213,35 @@ function Replay({ recap, source }: { recap: TripRecap; source: RecapSource }) {
   const reveal = useSharedValue(0);
   const mapOpacity = useSharedValue(1);
 
+  const stopPhotos = chapter.kind === "stop" ? perStop[chapter.index] : [];
+  const phases = stopPhases(stopPhotos.length);
+  const timing: StopTiming = { arrival: phases.arrival, photo: phases.photo, fade: durationMs > 0 ? PHOTO_FADE_MS / durationMs : 0.1 };
+  const insetWidth = width * 0.34;
+  const insetRect: Rect = { x: width - 16 - insetWidth, y: insets.top + 84, width: insetWidth, height: insetWidth * 1.15 };
+  const focus: Point | null = chapter.kind === "stop" ? points[chapter.index] : null;
+  const withPhotos = stopPhotos.length > 0;
+  const inset = useDerivedValue(() => (withPhotos ? Math.min(1, Math.max(0, (progress.get() - timing.arrival + timing.fade) / timing.fade)) : 0));
+  // The photos follow the chapter's progress, but keep their last frame when the chapter changes so
+  // they can fade out instead of blinking off.
+  const photoProgress = useSharedValue(0);
+  const followPhotos = useSharedValue(false);
+  useLayoutEffect(() => {
+    followPhotos.set(withPhotos);
+    if (withPhotos) photoProgress.set(0);
+  }, [followPhotos, index, photoProgress, withPhotos]);
+  useAnimatedReaction(
+    () => progress.get(),
+    (p) => {
+      if (followPhotos.get()) photoProgress.set(p);
+    },
+  );
+
   useEffect(() => {
-    track("recap_opened", { source, stops: recap.facts.stops.length });
-    // Leaving after the last chapter counts as done, unless the user went to settle up on this trip.
     return () => {
+      // Leaving after the last chapter counts as done, unless the user went to settle up on this trip.
       if (reachedEnd.current && !keepTrip.current) finishRecap(tripId);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [tripId]);
 
   useEffect(() => {
     if (chapter.kind !== "finale" || reachedEnd.current) return;
@@ -177,17 +249,19 @@ function Replay({ recap, source }: { recap: TripRecap; source: RecapSource }) {
     track("recap_finished", { stops: recap.facts.stops.length });
   }, [chapter.kind, recap.facts.stops.length]);
 
+  const kind = chapter.kind;
+  const stopIndex = chapter.kind === "stop" ? chapter.index : -1;
   // Camera, route reveal and map fade for the current chapter.
   useEffect(() => {
-    const ease = { duration: CAMERA_MS, easing: Easing.bezier(0.2, 0.8, 0.2, 1) };
+    const ease = { duration: still ? 0 : CAMERA_MS, easing: Easing.bezier(0.2, 0.8, 0.2, 1) };
     const fit = (pts: Point[], region: Rect, minSize: number, maxZoom: number) => cameraFor(pts, region, { padding: 24, minSize, maxZoom });
     let target: Camera;
     let shown = recap.facts.legs.length;
-    if (chapter.kind === "intro") {
+    if (kind === "intro") {
       target = fit(points, { x: 0, y: height * 0.5, width, height: height * 0.36 }, 120, 1.4);
       shown = 0;
-    } else if (chapter.kind === "stop") {
-      const i = chapter.index;
+    } else if (stopIndex >= 0) {
+      const i = stopIndex;
       target = fit(i > 0 ? [points[i - 1], points[i]] : [points[i]], { x: 0, y: insets.top + 90, width, height: height * 0.48 }, 70, 4);
       shown = i;
     } else {
@@ -196,9 +270,9 @@ function Replay({ recap, source }: { recap: TripRecap; source: RecapSource }) {
     camX.set(withTiming(target.x, ease));
     camY.set(withTiming(target.y, ease));
     camZoom.set(withTiming(target.zoom, ease));
-    reveal.set(withTiming(shown, { duration: CAMERA_MS * 1.1, easing: Easing.inOut(Easing.quad) }));
-    mapOpacity.set(withTiming(chapter.kind === "finale" || chapter.kind === "stamp" || chapter.kind === "moments" ? 0 : 1, { duration: 500 }));
-  }, [camX, camY, camZoom, chapter, height, insets.top, mapOpacity, points, recap.facts.legs.length, reveal, width]);
+    reveal.set(withTiming(shown, { duration: still ? 0 : CAMERA_MS * 1.1, easing: Easing.inOut(Easing.quad) }));
+    mapOpacity.set(withTiming(kind === "finale" || kind === "stamp" ? 0 : 1, { duration: 500 }));
+  }, [camX, camY, camZoom, kind, stopIndex, height, insets.top, mapOpacity, points, recap.facts.legs.length, reveal, still, width]);
 
   // The chapter timer: a new chapter starts from 0; resuming continues where the pause left it.
   useEffect(() => {
@@ -212,35 +286,26 @@ function Replay({ recap, source }: { recap: TripRecap; source: RecapSource }) {
       progress.set(1);
       return;
     }
-    if (!playing) {
+    if (!running) {
       cancelAnimation(progress);
       return;
     }
-    const remaining = DURATION_MS[chapter.kind] * (1 - (fresh ? 0 : progress.get()));
+    const remaining = durationMs * (1 - (fresh ? 0 : progress.get()));
     const advance = () => setIndex((current) => Math.min(current + 1, last));
     progress.set(
       withTiming(1, { duration: remaining, easing: Easing.linear }, (finished) => {
         if (finished) scheduleOnRN(advance);
       }),
     );
-  }, [chapter.kind, index, last, playing, progress]);
+  }, [chapter.kind, durationMs, index, last, progress, running]);
 
-  // Adding or removing photos changes the chapter count; stay on the finale if that's where we were.
+  // Photo edits change the chapter count; stay on the finale if that's where we were.
   useLayoutEffect(() => {
     if (shownLast.current === last) return;
     const previousLast = shownLast.current;
     shownLast.current = last;
     setIndex((current) => (current === previousLast ? last : Math.min(current, last)));
   }, [last]);
-
-  const askPhotos = () => {
-    setPlaying(false);
-    extras.askPhotos();
-  };
-  const askSteps = () => {
-    setPlaying(false);
-    extras.askSteps();
-  };
 
   const goTo = (next: number) => {
     const clamped = Math.max(0, Math.min(last, next));
@@ -249,9 +314,9 @@ function Replay({ recap, source }: { recap: TripRecap; source: RecapSource }) {
     setIndex(clamped);
   };
 
-  const done = () => {
-    finishRecap(tripId);
-    router.back();
+  const toggleMute = () => {
+    useRecapStore.getState().setMuted(!muted);
+    track("recap_music", { muted: !muted });
   };
   const planNext = () => {
     finishRecap(tripId);
@@ -265,9 +330,35 @@ function Replay({ recap, source }: { recap: TripRecap; source: RecapSource }) {
     router.navigate("/(tabs)/expenses");
   };
 
+  const statFrame = { top: insets.top + 80 + height * 0.25, bottom: insets.bottom + 48 };
+  const steps = walking ? Math.round(walking.steps) : 0;
+  const card = recap.cardContent(false);
+  const video = {
+    kicker: t("recap.introKicker"),
+    headline: recap.headline,
+    dates: recap.dates,
+    brand: card.brand,
+    stops: recap.facts.stops.map((stop, i) => {
+      const nights = recap.schedule[i]?.nights ?? 0;
+      return { name: shortPlace(stop.name), detail: nights > 0 ? t("recap.nights", { count: nights }) : "" };
+    }),
+    numbers: [
+      ...card.stats.filter((stat) => stat.count !== undefined),
+      ...(steps > 0 ? [{ value: formatCompactNumber(steps), label: t("recap.steps", { count: steps }) }] : []),
+    ],
+    photos: perStop.map((list) => list.map((photo) => photo.uri)),
+    music: recapTrack(tripId),
+  };
+
   return (
     <View style={styles.root}>
-      <PrivateView style={StyleSheet.absoluteFill}>
+      {chapter.kind === "stop" && withPhotos ? (
+        // Fades out rather than vanishing, so the map growing back never shows an empty frame.
+        <Animated.View key={`photos-${index}`} exiting={FadeOut.duration(300)} style={StyleSheet.absoluteFill}>
+          <StopPhotos photos={stopPhotos} timing={timing} progress={photoProgress} still={still} />
+        </Animated.View>
+      ) : null}
+      <PrivateView style={StyleSheet.absoluteFill} pointerEvents="none">
         <RecapMapCanvas
           width={width}
           height={height}
@@ -279,539 +370,102 @@ function Replay({ recap, source }: { recap: TripRecap; source: RecapSource }) {
           reveal={reveal}
           current={chapter.kind === "stop" ? chapter.index : -1}
           opacity={mapOpacity}
+          inset={inset}
+          insetRect={insetRect}
+          focus={focus}
         />
       </PrivateView>
-      {chapter.kind === "stop" ? (
-        <LinearGradient pointerEvents="none" colors={["rgba(11,13,18,0)", c.bg]} locations={[0, 0.42]} style={[styles.bottomFade, { height: height * 0.46 }]} />
+      {chapter.kind === "stop" && !withPhotos ? (
+        <LinearGradient pointerEvents="none" colors={["rgba(11,13,18,0)", c.bg]} locations={[0, 0.42]} style={[styles.bottomFade, { height: height * 0.5 }]} />
+      ) : null}
+      {chapter.kind !== "finale" ? (
+        <TapZones
+          onPrevious={() => goTo(index - 1)}
+          onNext={() => goTo(index + 1)}
+          onHold={setHeld}
+          onTogglePlay={() => setPlaying((value) => !value)}
+          playing={playing}
+        />
       ) : null}
 
-      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-        <View style={styles.segments}>
-          {chapters.map((item, i) => (
-            <PressableScale
-              key={`${item.kind}-${i}`}
-              onPress={() => goTo(i)}
-              haptic={false}
-              accessibilityRole="button"
-              accessibilityLabel={t("recap.chapterLabel", { n: i + 1, total: chapters.length })}
-              style={styles.segmentHit}
-            >
-              <Segment state={i < index ? "done" : i === index ? "current" : "todo"} progress={progress} />
-            </PressableScale>
-          ))}
-        </View>
-        <View style={styles.headerRow}>
-          <View style={styles.flex} />
-          <PressableScale onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={t("trip.close")} style={styles.round}>
-            <Icon name="x" size={16} color={c.text} />
-          </PressableScale>
-        </View>
-      </View>
-
-      <Animated.View key={index} entering={FadeIn.duration(380)} style={StyleSheet.absoluteFill} pointerEvents="box-none">
-        {chapter.kind === "intro" ? <Intro recap={recap} top={insets.top + 92} /> : null}
+      <Animated.View
+        key={index}
+        entering={FadeIn.duration(320)}
+        // Crossfade with the chapter before, so there's never an empty frame between them.
+        exiting={FadeOut.duration(240)}
+        style={StyleSheet.absoluteFill}
+        // Words only: taps fall through to the tap zones, except where a chapter has buttons.
+        pointerEvents={chapter.kind === "finale" || chapter.kind === "stamp" ? "box-none" : "none"}
+      >
+        {chapter.kind === "intro" ? <IntroChapter recap={recap} top={insets.top + 92} /> : null}
         {chapter.kind === "stop" ? (
-          <StopChapter recap={recap} index={chapter.index} photo={stopPhotos.get(chapter.index)} bottom={insets.bottom + 120} />
-        ) : null}
-        {chapter.kind === "moments" ? (
-          <Moments
-            tripId={tripId}
-            photos={photos}
-            width={width - 48}
-            maxHeight={height - insets.top - insets.bottom - 300}
-            top={insets.top + 84}
-            onPause={() => setPlaying(false)}
-          />
-        ) : null}
-        {chapter.kind === "numbers" ? (
-          <Numbers
+          <StopChapter
             recap={recap}
-            walking={extras.walking.totals}
-            linkSource={extras.walking.canLink ? extras.walking.source : null}
-            onLink={askSteps}
-            top={insets.top + 80 + height * 0.25}
+            index={chapter.index}
+            photos={stopPhotos.length}
+            timing={timing}
+            progress={progress}
+            walkingDay={walkingDays[chapter.index] ?? null}
+            bottom={insets.bottom + 56}
           />
         ) : null}
+        {chapter.kind === "distance" ? <DistanceChapter recap={recap} frame={statFrame} /> : null}
+        {chapter.kind === "countries" ? <CountriesChapter recap={recap} milestones={milestones} frame={statFrame} /> : null}
+        {chapter.kind === "companions" ? <CompanionsChapter recap={recap} frame={statFrame} /> : null}
+        {chapter.kind === "numbers" ? <NumbersChapter recap={recap} walking={walking} frame={statFrame} /> : null}
         {chapter.kind === "stamp" ? (
-          <View style={[styles.block, { top: insets.top + 84 }]}>
-            <StampingMoment
-              items={momentItems}
-              width={width - 48}
-              onOpenPassport={() => router.push({ pathname: "/passport", params: { source: "replay" } })}
-            />
+          <View style={[rs.block, { top: insets.top + 84 }]}>
+            <StampingMoment items={momentItems} width={width - 48} onOpenPassport={() => router.push({ pathname: "/passport", params: { source: "replay" } })} />
           </View>
         ) : null}
         {chapter.kind === "finale" ? (
           <Finale
             recap={recap}
+            video={video}
             top={insets.top + 64}
             bottom={insets.bottom + 20}
-            onDone={done}
             onPlanNext={planNext}
             onCheckBalances={checkBalances}
-            onAddPhotos={extras.canAddPhotos ? askPhotos : undefined}
+            onEditPhotos={onEditPhotos}
           />
         ) : null}
       </Animated.View>
 
-      {chapter.kind !== "finale" ? (
-        <View style={[styles.controls, { bottom: insets.bottom + 24 }]}>
-          <ControlButton icon="chevronLeft" label={t("recap.previous")} onPress={() => goTo(index - 1)} disabled={index === 0} />
-          <ControlButton
-            icon={playing ? "pause" : "play"}
-            label={playing ? t("recap.pause") : t("recap.play")}
-            onPress={() => setPlaying((value) => !value)}
-            large
-          />
-          <ControlButton icon="chevronRight" label={t("recap.next")} onPress={() => goTo(index + 1)} />
-        </View>
-      ) : null}
-      {extras.sheets}
-    </View>
-  );
-}
-
-function Intro({ recap, top }: { recap: TripRecap; top: number }) {
-  const { t } = useLocalization();
-  const { places } = recap;
-  const codes = places.length > 1 ? [placeCode(places[0]), placeCode(places[places.length - 1])] : [placeCode(places[0] ?? "")];
-  return (
-    <View style={[styles.block, { top }]}>
-      <Text style={styles.sub}>{t("recap.introKicker")}</Text>
-      <Text numberOfLines={3} style={styles.headline}>
-        {recap.headline}
-      </Text>
-      <View style={styles.board}>
-        <FlapBoard codes={codes} />
-      </View>
-      <Text style={styles.sub}>{[recap.title, recap.via].filter(Boolean).join(", ")}</Text>
-      <Text style={[styles.sub, styles.muted]}>{recap.dates}</Text>
-    </View>
-  );
-}
-
-function StopChapter({ recap, index, photo, bottom }: { recap: TripRecap; index: number; photo?: TripPhoto; bottom: number }) {
-  const { t, formatDistance } = useLocalization();
-  const stop = recap.facts.stops[index];
-  const leg = index > 0 ? recap.facts.legs[index - 1] : null;
-  const icon = leg?.mode ? TRANSIT_MODES.find((mode) => mode.id === leg.mode)?.icon : undefined;
-  const legText = leg ? t(`recap.arrivedBy.${leg.mode ?? "other"}`, { from: shortPlace(leg.from), distance: formatDistance(leg.km) }) : t("recap.firstStop");
-  return (
-    <View style={[styles.block, { bottom }]}>
-      <View style={styles.stopTop}>
-        <FlapBoard codes={[placeCode(stop.name)]} />
-        {photo ? (
-          <Animated.View entering={FadeInDown.delay(260).springify().damping(16)} style={styles.snapshot}>
-            <Image source={{ uri: photo.uri }} style={styles.snapshotImage} accessibilityIgnoresInvertColors />
-          </Animated.View>
-        ) : null}
-      </View>
-      <Text numberOfLines={2} style={[styles.headline, styles.stopName]}>
-        {shortPlace(stop.name)}
-      </Text>
-      <View style={styles.chip}>
-        <Icon name={icon ?? (leg ? "send" : "mapPin")} size={14} color="#8B97FF" />
-        <Text style={styles.chipText}>{legText}</Text>
-      </View>
-      <Text style={[styles.sub, styles.muted, styles.small]}>{t("recap.stopKicker", { n: index + 1, total: recap.facts.stops.length })}</Text>
-    </View>
-  );
-}
-
-function Numbers({
-  recap,
-  walking,
-  linkSource,
-  onLink,
-  top,
-}: {
-  recap: TripRecap;
-  walking: WalkingTotals | null;
-  linkSource: "health_connect" | "apple_health" | null;
-  onLink: () => void;
-  top: number;
-}) {
-  const { t, formatDistance, formatCompactNumber } = useLocalization();
-  const { places } = recap;
-  const rows = [
-    { value: String(recap.facts.days), label: t("recap.daysAway", { count: recap.facts.days }) },
-    ...(recap.distance ? [{ value: recap.distance, label: [t("recap.travelled"), recap.modeSummary].filter(Boolean).join(", ") }] : []),
-    {
-      value: String(places.length),
-      label:
-        places.length > 1
-          ? t("recap.citiesFromTo", { count: places.length, from: places[0], to: places[places.length - 1] })
-          : t("recap.cities", { count: places.length }),
-    },
-    ...(walking && walking.km > 0
-      ? [
-          {
-            value: formatDistance(walking.km),
-            label: t(walking.estimated ? "recap.onFootAbout" : "recap.onFoot", {
-              count: Math.round(walking.steps),
-              steps: formatCompactNumber(Math.round(walking.steps)),
-            }),
-          },
-        ]
-      : []),
-  ];
-  return (
-    <View style={[styles.block, { top }]}>
-      <Text style={styles.sub}>{t("recap.numbersKicker")}</Text>
-      {rows.map((row, i) => (
-        <Animated.View key={row.label} entering={FadeInDown.delay(180 * i).duration(420)} style={styles.numberRow}>
-          <RollingNumber value={row.value} lineHeight={60} style={styles.number} />
-          <Text style={[styles.sub, styles.muted]}>{row.label}</Text>
-        </Animated.View>
-      ))}
-      {linkSource && !walking ? (
-        <Animated.View entering={FadeInDown.delay(180 * rows.length).duration(420)}>
-          <PressableScale onPress={onLink} accessibilityRole="button" style={[styles.chip, styles.linkChip]}>
-            <Icon name="footprints" size={15} color="#8B97FF" />
-            <Text style={styles.chipText}>{t("recap.addStepsFrom", { source: linkSource === "apple_health" ? "Apple Health" : "Health Connect" })}</Text>
-          </PressableScale>
-        </Animated.View>
-      ) : null}
-    </View>
-  );
-}
-
-function Finale({
-  recap,
-  top,
-  bottom,
-  onDone,
-  onPlanNext,
-  onCheckBalances,
-  onAddPhotos,
-}: {
-  recap: TripRecap;
-  top: number;
-  bottom: number;
-  onDone: () => void;
-  onPlanNext: () => void;
-  onCheckBalances: () => void;
-  onAddPhotos?: () => void;
-}) {
-  const { t, formatDistance } = useLocalization();
-  const { width, height } = useWindowDimensions();
-  const fonts = useFonts({
-    [RECAP_FONT_FAMILY]: [
-      AURA_FONT_FILES.InstrumentSans_400Regular,
-      AURA_FONT_FILES.InstrumentSans_500Medium,
-      AURA_FONT_FILES.InstrumentSans_600SemiBold,
-      AURA_FONT_FILES.InstrumentSans_700Bold,
-    ],
-  });
-  const [includeSpend, setIncludeSpend] = useState(false);
-  const [sharing, setSharing] = useState(false);
-  const [videoProgress, setVideoProgress] = useState<number | null>(null);
-  const cancelVideo = useRef(false);
-  const contentKey = JSON.stringify(recap.cardContent(includeSpend));
-  const preview = useMemo(() => {
-    if (!fonts) return null;
-    const image = renderRecapCard(JSON.parse(contentKey), fonts, PREVIEW_PIXELS);
-    return image ? `data:image/png;base64,${encodeRecapCard(image)}` : null;
-  }, [fonts, contentKey]);
-
-  const cardHeight = Math.min(height * 0.47, (width - 96) * (CARD_HEIGHT / CARD_WIDTH));
-  const cardWidth = (cardHeight * CARD_WIDTH) / CARD_HEIGHT;
-
-  const share = async () => {
-    if (!fonts || sharing) return;
-    setSharing(true);
-    track("recap_shared", { format: "image", spend: includeSpend && recap.spend !== null });
-    const shared = await shareRecapCard(JSON.parse(contentKey), fonts, t("recap.shareDialogTitle"));
-    setSharing(false);
-    if (!shared) showToast(t("recap.shareFailed"));
-  };
-
-  const shareVideo = async () => {
-    if (!fonts || videoProgress !== null) return;
-    cancelVideo.current = false;
-    setVideoProgress(0);
-    track("recap_shared", { format: "video", spend: includeSpend && recap.spend !== null });
-    const result = await shareRecapVideo(JSON.parse(contentKey), fonts, {
-      formatDistance,
-      dialogTitle: t("recap.shareDialogTitle"),
-      onProgress: setVideoProgress,
-      isCancelled: () => cancelVideo.current,
-    });
-    setVideoProgress(null);
-    if (result === "failed") showToast(t("recap.videoFailed"));
-  };
-
-  return (
-    <View style={[styles.finale, { paddingTop: top, paddingBottom: bottom }]}>
-      <TiltCard width={cardWidth} height={cardHeight} uri={preview} label={t("recap.previewLabel")} />
-      {videoProgress !== null ? (
-        <View style={styles.making} accessibilityLiveRegion="polite">
-          <Text style={styles.makingText}>{t("recap.makingVideo", { percent: Math.round(videoProgress * 100) })}</Text>
-          <View style={styles.makingTrack}>
-            <View style={[styles.makingFill, { width: `${Math.round(videoProgress * 100)}%` }]} />
-          </View>
-        </View>
-      ) : (
-        <View style={styles.finaleText}>
-          <Text style={styles.wrap}>{t("recap.finaleTitle")}</Text>
-          <Text style={[styles.sub, styles.center]}>{t("recap.finaleBody")}</Text>
-          {onAddPhotos ? (
-            <PressableScale onPress={onAddPhotos} accessibilityRole="button" style={[styles.chip, styles.photosChip]}>
-              <Icon name="camera" size={15} color="#8B97FF" />
-              <Text style={styles.chipText}>{t("recap.addPhotosToReplay")}</Text>
-            </PressableScale>
-          ) : null}
-        </View>
-      )}
-      {recap.spend ? (
-        <View style={styles.spendRow}>
-          <Text style={[styles.sub, styles.flex]}>{t("recap.includeSpend")}</Text>
-          <AuraSwitch value={includeSpend} onValueChange={setIncludeSpend} accessibilityLabel={t("recap.includeSpend")} />
-        </View>
-      ) : null}
-      <View style={styles.actions}>
-        {videoProgress !== null ? (
-          <AuraButton label={t("common.cancel")} variant="secondary" onPress={() => (cancelVideo.current = true)} />
-        ) : (
-          <>
-            <AuraButton label={t("recap.shareStory")} icon="share" onPress={share} loading={sharing} disabled={!fonts} />
-            <View style={styles.actionRow}>
-              {videoEncoder ? (
-                <AuraButton
-                  label={t("recap.shareVideo")}
-                  icon="play"
-                  variant="secondary"
-                  size="md"
-                  onPress={shareVideo}
-                  disabled={!fonts}
-                  style={styles.flex}
-                />
-              ) : null}
-              <AuraButton label={t("recap.planNext")} variant="secondary" size="md" onPress={onPlanNext} style={styles.flex} />
-            </View>
-            <View style={styles.actionRow}>
-              {recap.hasSplits ? <AuraButton label={t("recap.checkBalances")} variant="ghost" size="md" onPress={onCheckBalances} style={styles.flex} /> : null}
-              <AuraButton label={t("recap.done")} variant="ghost" size="md" onPress={onDone} style={styles.flex} />
-            </View>
-          </>
-        )}
-      </View>
-    </View>
-  );
-}
-
-/** The photos the user picked for this trip, laid out like prints on a table. Long-press one to remove it. */
-function Moments({
-  tripId,
-  photos,
-  width,
-  maxHeight,
-  top,
-  onPause,
-}: {
-  tripId: string;
-  photos: TripPhoto[];
-  width: number;
-  maxHeight: number;
-  top: number;
-  onPause: () => void;
-}) {
-  const { t } = useLocalization();
-  const columns = photos.length === 1 ? 1 : photos.length <= 4 ? 2 : 3;
-  const rowsCount = Math.ceil(photos.length / columns);
-  const gap = 8;
-  const tile = (width - gap * (columns - 1)) / columns;
-  const tileHeight =
-    columns === 1
-      ? Math.min(maxHeight, tile * (photos[0].height / photos[0].width))
-      : Math.min(tile * (columns === 2 ? 1.2 : 1), (maxHeight - gap * (rowsCount - 1)) / rowsCount);
-
-  // A sheet, not showAlert: the root alert modal can't present over this full-screen route on iOS.
-  const [removing, setRemoving] = useState<TripPhoto | null>(null);
-
-  return (
-    <View style={[styles.block, { top }]}>
-      <Text style={styles.sub}>{t("recap.momentsKicker")}</Text>
-      <Text style={[styles.headline, styles.momentsTitle]}>{t("recap.momentsTitle", { count: photos.length })}</Text>
-      <PrivateView style={[styles.grid, { gap }]}>
-        {photos.map((photo, i) => (
-          <Animated.View
-            key={photo.id}
-            entering={FadeInDown.delay(90 * i)
-              .springify()
-              .damping(18)}
-            style={{ width: columns === 2 && i === photos.length - 1 && i % 2 === 0 ? width : tile, height: tileHeight }}
-          >
-            <PressableScale
-              onLongPress={() => {
-                onPause();
-                setRemoving(photo);
-              }}
-              haptic={false}
-              accessibilityRole="image"
-              accessibilityHint={t("recap.removePhotoHint")}
-              style={styles.flex}
-            >
-              <Image source={{ uri: photo.uri }} style={styles.photo} accessibilityIgnoresInvertColors />
-            </PressableScale>
-          </Animated.View>
-        ))}
-      </PrivateView>
-      <ExplainSheet
-        visible={removing !== null}
-        onClose={() => setRemoving(null)}
-        icon="trash"
-        title={t("recap.removePhotoTitle")}
-        body={t("recap.removePhotoBody")}
-        action={t("recap.removePhoto")}
-        danger
-        onAction={() => {
-          if (removing) void removeTripPhoto(tripId, removing);
-          setRemoving(null);
-        }}
-        dismiss={t("common.cancel")}
+      <ReplayHeader
+        count={chapters.length}
+        index={index}
+        progress={progress}
+        top={insets.top}
+        hidden={held}
+        muted={muted}
+        onJump={goTo}
+        onToggleMute={toggleMute}
+        onClose={() => router.back()}
       />
+      {!playing && chapter.kind !== "finale" ? (
+        <PressableScale onPress={() => setPlaying(true)} accessibilityRole="button" accessibilityLabel={t("recap.play")} style={[styles.paused, { bottom: insets.bottom + 18 }]}>
+          <Icon name="play" size={14} color={c.onInverse} />
+          <Text style={styles.pausedText}>{t("recap.paused")}</Text>
+        </PressableScale>
+      ) : null}
     </View>
-  );
-}
-
-/** The card on screen, tilting with the phone so its foil catches the light; the shared image stays flat. */
-function TiltCard({ width, height, uri, label }: { width: number; height: number; uri: string | null; label: string }) {
-  const gravity = useAnimatedSensor(SensorType.GRAVITY, { interval: 33 });
-  const enter = useSharedValue(0);
-  useEffect(() => {
-    enter.set(withSpring(1, { damping: 14, stiffness: 120 }));
-  }, [enter]);
-  const tilt = useAnimatedStyle(() => {
-    const g = gravity.sensor.get();
-    const len = Math.hypot(g.x, g.y, g.z) || 1;
-    const x = Math.max(-0.4, Math.min(0.4, g.x / len));
-    const y = Math.max(-0.4, Math.min(0.4, g.y / len + 0.6));
-    const e = enter.get();
-    return {
-      opacity: e,
-      transform: [
-        { perspective: 900 },
-        { translateY: (1 - e) * 60 },
-        { rotateY: `${x * 16}deg` },
-        { rotateX: `${-y * 12}deg` },
-        { rotateZ: `${(1 - e) * -6 - 1.2}deg` },
-      ],
-    };
-  });
-  const sheen = useAnimatedStyle(() => {
-    const g = gravity.sensor.get();
-    const len = Math.hypot(g.x, g.y, g.z) || 1;
-    return { transform: [{ translateX: (g.x / len) * width * 1.6 }] };
-  });
-  return (
-    <Animated.View style={[styles.card, { width, height }, tilt]}>
-      {uri ? <Image source={{ uri }} style={StyleSheet.absoluteFill} accessibilityLabel={label} /> : null}
-      <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, sheen]}>
-        <LinearGradient
-          colors={["rgba(255,255,255,0)", "rgba(255,150,220,0.10)", "rgba(140,210,255,0.16)", "rgba(160,255,210,0.10)", "rgba(255,255,255,0)"]}
-          locations={[0.3, 0.42, 0.5, 0.58, 0.7]}
-          start={{ x: 0, y: 0.2 }}
-          end={{ x: 1, y: 0.8 }}
-          style={StyleSheet.absoluteFill}
-        />
-      </Animated.View>
-    </Animated.View>
-  );
-}
-
-function Segment({ state, progress }: { state: "done" | "current" | "todo"; progress: SharedValue<number> }) {
-  const animated = useAnimatedStyle(() => ({ width: `${(state === "done" ? 1 : state === "current" ? progress.get() : 0) * 100}%` }));
-  return (
-    <View style={styles.segment}>
-      <Animated.View style={[styles.segmentFill, animated]} />
-    </View>
-  );
-}
-
-function ControlButton({
-  icon,
-  label,
-  onPress,
-  disabled,
-  large,
-}: {
-  icon: "chevronLeft" | "chevronRight" | "play" | "pause";
-  label: string;
-  onPress: () => void;
-  disabled?: boolean;
-  large?: boolean;
-}) {
-  const size = large ? 60 : 46;
-  return (
-    <PressableScale
-      onPress={onPress}
-      disabled={disabled}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      style={[
-        styles.control,
-        { width: size, height: size, borderRadius: size / 2, backgroundColor: large ? c.inverse : c.surfaceStrong, opacity: disabled ? 0.4 : 1 },
-      ]}
-    >
-      <Icon name={icon} size={large ? 22 : 18} color={large ? c.onInverse : c.text} />
-    </PressableScale>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: c.bg },
-  center: { alignItems: "center", justifyContent: "center", textAlign: "center" },
-  flex: { flex: 1 },
+  center: { alignItems: "center", justifyContent: "center" },
   bottomFade: { position: "absolute", left: 0, right: 0, bottom: 0 },
-  header: { position: "absolute", top: 0, left: 0, right: 0, paddingHorizontal: 16, gap: 8 },
-  segments: { flexDirection: "row", gap: 4 },
-  segmentHit: { flex: 1, paddingVertical: 6 },
-  segment: { height: 3, borderRadius: 2, overflow: "hidden", backgroundColor: c.hairline },
-  segmentFill: { height: 3, borderRadius: 2, backgroundColor: c.text },
-  headerRow: { flexDirection: "row", alignItems: "center" },
-  round: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: c.surfaceStrong },
-  block: { position: "absolute", left: 24, right: 24, gap: 10 },
-  sub: { fontFamily: f.regular, fontSize: 16, lineHeight: 23, color: c.textSoft },
-  muted: { color: c.textMuted },
-  small: { fontSize: 14 },
-  headline: { fontFamily: f.semibold, fontSize: 46, lineHeight: 50, letterSpacing: -1.4, color: c.text },
-  stopName: { fontSize: 52, lineHeight: 58, marginTop: 6 },
-  board: { marginVertical: 12 },
-  chip: {
+  paused: {
+    position: "absolute",
+    alignSelf: "center",
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    alignSelf: "flex-start",
-    paddingHorizontal: 13,
-    paddingVertical: 8,
-    borderRadius: 16,
-    backgroundColor: c.surfaceStrong,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: c.hairline,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: c.inverse,
   },
-  chipText: { fontFamily: f.medium, fontSize: 14, color: c.text },
-  linkChip: { marginTop: 10 },
-  photosChip: { alignSelf: "center", marginTop: 12 },
-  stopTop: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" },
-  snapshot: { padding: 4, paddingBottom: 14, borderRadius: 6, backgroundColor: "#F4F2EE", transform: [{ rotate: "4deg" }] },
-  snapshotImage: { width: 78, height: 92, borderRadius: 3 },
-  momentsTitle: { fontSize: 38, lineHeight: 42, marginBottom: 10 },
-  grid: { flexDirection: "row", flexWrap: "wrap" },
-  photo: { flex: 1, borderRadius: 14, backgroundColor: c.card },
-  numberRow: { marginTop: 4 },
-  number: { fontFamily: f.semibold, fontSize: 58, letterSpacing: -2.4, color: c.text },
-  finale: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", paddingHorizontal: 20 },
-  card: { borderRadius: 20, overflow: "hidden", backgroundColor: c.card, marginTop: 8 },
-  finaleText: { marginTop: 14, alignItems: "center", gap: 2 },
-  wrap: { fontFamily: f.semibold, fontSize: 28, letterSpacing: -0.8, color: c.text },
-  spendRow: { alignSelf: "stretch", flexDirection: "row", alignItems: "center", gap: 12, marginTop: 10 },
-  actions: { alignSelf: "stretch", marginTop: "auto", gap: 10 },
-  making: { alignSelf: "stretch", alignItems: "center", gap: 12, marginTop: 22, paddingHorizontal: 24 },
-  makingText: { fontFamily: f.semibold, fontSize: 16, color: c.text, textAlign: "center" },
-  makingTrack: { alignSelf: "stretch", height: 4, borderRadius: 2, backgroundColor: c.hairline, overflow: "hidden" },
-  makingFill: { height: 4, borderRadius: 2, backgroundColor: c.text },
-  actionRow: { flexDirection: "row", gap: 10 },
-  controls: { position: "absolute", left: 0, right: 0, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 22 },
-  control: { alignItems: "center", justifyContent: "center" },
+  pausedText: { fontFamily: rs.chipText.fontFamily, fontSize: 14, color: c.onInverse },
 });

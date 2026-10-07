@@ -6,5 +6,6 @@ export const health: HealthApi = {
   availability: async () => "unsupported",
   requestAccess: async () => false,
   readWalking: async () => null,
+  readDailySteps: async () => null,
   openInstall: () => {},
 };

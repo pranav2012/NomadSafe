@@ -1,11 +1,19 @@
 import { useEffect, useState } from "react";
-import { health, type HealthAvailability, type WalkingTotals } from "@/modules/health";
+import { health, type HealthAvailability } from "@/modules/health";
 import { track } from "@/modules/analytics";
 import { withSystemPrompt } from "@/utils/systemPrompt";
 import type { Trip } from "@/features/trips/store/tripsStore";
 import { getTripStatus } from "@/features/trips/utils/dates";
-import { useRecapStore } from "../store/recapStore";
+import { useRecapStore, type TripWalking } from "../store/recapStore";
 import { walkingStale, walkingWindow } from "../utils/moments";
+
+/** Reads a trip's totals and per-day steps and stores them; null when there was nothing. */
+async function readTrip(trip: Trip): Promise<TripWalking | null> {
+  const { start, end } = walkingWindow(trip);
+  const [totals, daily] = await Promise.all([health.readWalking(start, end), health.readDailySteps(start, end)]);
+  useRecapStore.getState().setWalking(trip.id, totals ? { ...totals, daily: daily ?? undefined } : null);
+  return useRecapStore.getState().walking[trip.id] ?? null;
+}
 
 /**
  * Steps and walking distance for an ended trip, from Health Connect / Apple Health once the user has
@@ -25,25 +33,24 @@ export function useTripWalking(trip: Trip | null) {
     };
   }, []);
 
+  const stale = !cached || !cached.daily || walkingStale(cached.at, trip?.endDate ?? "");
   useEffect(() => {
-    if (!trip || !ended || !linked || availability !== "available" || !walkingStale(cached?.at, trip.endDate)) return;
-    const { start, end } = walkingWindow(trip);
-    void health.readWalking(start, end).then((totals) => useRecapStore.getState().setWalking(trip.id, totals));
-  }, [availability, cached?.at, ended, linked, trip]);
+    if (!trip || !ended || !linked || availability !== "available" || !stale) return;
+    void readTrip(trip);
+  }, [availability, ended, linked, stale, trip]);
 
-  const link = async (): Promise<WalkingTotals | null> => {
+  const link = async (): Promise<TripWalking | null> => {
     const granted = await withSystemPrompt(() => health.requestAccess());
     track("steps_linked", { source: health.source ?? "none", granted });
     useRecapStore.getState().setHealthLinked(granted);
     if (!granted || !trip) return null;
-    const { start, end } = walkingWindow(trip);
-    const totals = await health.readWalking(start, end);
-    useRecapStore.getState().setWalking(trip.id, totals);
-    return totals;
+    return readTrip(trip);
   };
 
   return {
     totals: cached ?? null,
+    /** A health store exists on this phone (Health Connect may need installing first). */
+    available: availability === "available" || availability === "needs_update",
     /** Offer "Add steps" only for ended trips, where a health store exists and isn't linked yet. */
     canLink: ended && !linked && (availability === "available" || availability === "needs_update"),
     needsInstall: availability === "needs_update",

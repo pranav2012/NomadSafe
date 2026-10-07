@@ -1,0 +1,17 @@
+{
+  "platforms": [
+    "android",
+    "apple"
+  ],
+  "apple": {
+    "modules": [
+      "ExpoPhotoCuratorModule"
+    ],
+    "podspecPath": "ExpoPhotoCurator.podspec"
+  },
+  "android": {
+    "modules": [
+      "expo.modules.photocurator.ExpoPhotoCuratorModule"
+    ]
+  }
+}
