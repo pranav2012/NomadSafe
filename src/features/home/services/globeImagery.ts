@@ -93,15 +93,21 @@ async function buildLayer(layer: Layer, tiles: TileBox, path: string) {
   const images = await Promise.all(
     cells.map(({ c, r }) => limited(() => fetchTile(tileUrls(layer, tiles.level, tiles.row + r, (tiles.col + c) % total)))),
   );
-  if (images.some((image) => !image)) return false;
-  images.forEach((image, i) => canvas.drawImage(image!, cells[i].c * TILE_PX, cells[i].r * TILE_PX));
-
-  const part = `${path}.part`;
-  await FileSystem.writeAsStringAsync(part, surface.makeImageSnapshot().encodeToBase64(ImageFormat.JPEG, 90), {
-    encoding: FileSystem.EncodingType.Base64,
-  });
-  await FileSystem.moveAsync({ from: part, to: path });
-  return true;
+  // Tiles, the stitched surface and its snapshot are freed here, not left to the GC (~20 MB per layer).
+  try {
+    if (images.some((image) => !image)) return false;
+    images.forEach((image, i) => canvas.drawImage(image!, cells[i].c * TILE_PX, cells[i].r * TILE_PX));
+    const snapshot = surface.makeImageSnapshot();
+    const base64 = snapshot.encodeToBase64(ImageFormat.JPEG, 90);
+    snapshot.dispose();
+    const part = `${path}.part`;
+    await FileSystem.writeAsStringAsync(part, base64, { encoding: FileSystem.EncodingType.Base64 });
+    await FileSystem.moveAsync({ from: part, to: path });
+    return true;
+  } finally {
+    images.forEach((image) => image?.dispose());
+    surface.dispose();
+  }
 }
 
 function readUsed(): Record<string, number> {

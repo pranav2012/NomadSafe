@@ -1,4 +1,4 @@
-import { Platform } from "react-native";
+import { AppState, Platform } from "react-native";
 import { initLlama, type LlamaContext } from "llama.rn";
 import { useSettingsStore } from "@/features/settings/store/settingsStore";
 import { storage } from "@/modules/storage";
@@ -180,6 +180,16 @@ function enqueue<T>(task: () => Promise<T>): Promise<T> {
 
 const IDLE_RELEASE_MS = 3 * 60_000;
 let idleTimer: ReturnType<typeof setTimeout> | null = null;
+// Shorter idle delay requested by releaseAfter(); cleared when the next job starts.
+let nextIdleMs: number | null = null;
+
+function armIdleRelease(delayMs: number) {
+  if (idleTimer) clearTimeout(idleTimer);
+  idleTimer = setTimeout(() => {
+    idleTimer = null;
+    if (pendingJobs === 0) void enqueue(releaseContext);
+  }, delayMs);
+}
 
 /**
  * Runs a model job exclusively. A release() requested while jobs are pending
@@ -189,6 +199,7 @@ function runExclusive<T>(task: () => Promise<T>): Promise<T> {
   pendingJobs += 1;
   if (idleTimer) clearTimeout(idleTimer);
   idleTimer = null;
+  nextIdleMs = null;
   return enqueue(task).finally(() => {
     pendingJobs -= 1;
     if (pendingJobs > 0) return;
@@ -198,10 +209,7 @@ function runExclusive<T>(task: () => Promise<T>): Promise<T> {
       return;
     }
     // Free the model's memory once nothing has used it for a while; the next job reloads it.
-    idleTimer = setTimeout(() => {
-      idleTimer = null;
-      if (pendingJobs === 0) void enqueue(releaseContext);
-    }, IDLE_RELEASE_MS);
+    armIdleRelease(nextIdleMs ?? IDLE_RELEASE_MS);
   });
 }
 
@@ -327,6 +335,15 @@ export const localModelService = {
       return;
     }
     await enqueue(releaseContext);
+  },
+
+  /**
+   * Frees the model `delayMs` after the current work finishes, unless a new job
+   * starts first (e.g. when the chat screen is left; coming back reuses it).
+   */
+  releaseAfter(delayMs: number): void {
+    nextIdleMs = delayMs;
+    if (pendingJobs === 0 && activeContext) armIdleRelease(delayMs);
   },
 
   async getReadyModel(): Promise<AiModel | null> {
@@ -579,3 +596,8 @@ export const localModelService = {
     return parseTripName(text);
   },
 };
+
+// A loaded model holds GBs; in the background that makes the app the first one Android kills.
+AppState.addEventListener("change", (next) => {
+  if (next === "background") void localModelService.release();
+});

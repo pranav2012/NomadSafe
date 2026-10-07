@@ -9,6 +9,8 @@ export const aiRuntime = {
   preload: () => localModelService.preload(),
   /** Frees the loaded model's memory; deferred while a completion runs, so safe to call at any time. */
   release: () => localModelService.release(),
+  /** Frees the model `delayMs` after current work, unless something uses it again first. */
+  releaseAfter: (delayMs: number) => localModelService.releaseAfter(delayMs),
   ensureProvisioned,
   registerBackgroundDownload: registerModelDownloadTask,
   /** Deletes every downloaded model file. */

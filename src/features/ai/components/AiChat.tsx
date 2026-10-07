@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { BlurTargetView } from "expo-blur";
+import { useFocusEffect } from "expo-router";
 import Animated, {
   Extrapolation,
   FadeIn,
@@ -38,6 +39,7 @@ const EMPTY_CONVERSATION = { messages: [], summary: null, contextMessages: [] };
 const NEAR_BOTTOM_PX = 80;
 const COMPOSER_FALLBACK_HEIGHT = 150;
 const HERO_SIZE = 84;
+const LEFT_TAB_RELEASE_MS = 20_000;
 /** Scroll distance over which the chat's hero orb shrinks away and docks into the header. */
 export const HERO_DOCK_DISTANCE = 110;
 
@@ -118,10 +120,15 @@ export function AiChat({
   const busyElsewhere = busy && !isGenerating;
   const composerBottom = tabBarInset > 0 ? tabBarInset + 2 : 8;
 
+  // Warm the on-device model while this tab is open; it holds GBs, so free it soon after leaving.
   const preloadLocal = ai.configured === null;
-  useEffect(() => {
-    if (preloadLocal) void aiRuntime.preload();
-  }, [preloadLocal]);
+  useFocusEffect(
+    useCallback(() => {
+      if (!preloadLocal) return;
+      void aiRuntime.preload();
+      return () => aiRuntime.releaseAfter(LEFT_TAB_RELEASE_MS);
+    }, [preloadLocal]),
+  );
 
   const onScroll = useAnimatedScrollHandler((event) => {
     scrollY.set(event.contentOffset.y);
