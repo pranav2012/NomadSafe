@@ -5,6 +5,8 @@ import { mmkvStateStorage } from "@/modules/storage";
 import type { EventTiming, EventType, TransitMode } from "@/features/itinerary/constants/eventTypes";
 import { consolidateEmailBookings, mergeBooking, sameBooking } from "@/features/itinerary/utils/bookings";
 import { normalizeWallClock } from "@/features/itinerary/utils/wallClock";
+import { trimStoredEmailRecord } from "@/features/expenses/utils/emailText";
+import { nextRecordId } from "@/utils/recordId";
 
 export type EventSource = "manual" | "email";
 
@@ -118,6 +120,8 @@ interface EventsState {
   addEvent: (input: CreateEventInput) => TripEvent;
   addEvents: (inputs: CreateEventInput[]) => TripEvent[];
   updateEvent: (id: string, input: UpdateEventInput) => TripEvent | null;
+  /** Applies several updates in one store write. */
+  updateEvents: (updates: { id: string; input: UpdateEventInput }[]) => void;
   deleteEvent: (id: string) => void;
   deleteEvents: (ids: string[]) => void;
   /** Scoped to `tripId` when given, so the same booking can exist in two trips. */
@@ -131,17 +135,10 @@ interface EventsState {
   reset: () => void;
 }
 
-let idCounter = 0;
-// The random part keeps ids unique across phones, since shared trips mix records from several members.
-function nextId(): string {
-  idCounter += 1;
-  return `${Date.now()}-${idCounter}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
 function buildEvent(input: CreateEventInput): TripEvent {
   return {
     ...input,
-    id: nextId(),
+    id: nextRecordId(),
     createdAt: new Date().toISOString(),
   };
 }
@@ -170,6 +167,16 @@ export const useEventsStore = create<EventsState>()(
           }),
         }));
         return updated;
+      },
+      updateEvents: (updates) => {
+        if (updates.length === 0) return;
+        const byId = new Map(updates.map(({ id, input }) => [id, input]));
+        set((state) => ({
+          events: state.events.map((event) => {
+            const input = byId.get(event.id);
+            return input ? { ...event, ...input } : event;
+          }),
+        }));
       },
       deleteEvent: (id) =>
         set((state) => ({
@@ -237,7 +244,7 @@ export const useEventsStore = create<EventsState>()(
     {
       name: "itinerary-store",
       storage: createJSONStorage(() => mmkvStateStorage),
-      version: 4,
+      version: 5,
       migrate: (persisted, version) => {
         let state = persisted as { events?: TripEvent[] };
         // v2: one event per booking instead of check-in/check-out pairs and per-email copies.
@@ -255,6 +262,8 @@ export const useEventsStore = create<EventsState>()(
         }
         // v4: events an older sync moved out of their trip (tripId renamed to groupId).
         if (version < 4 && state.events) state = { ...state, events: state.events.map(repairEventTripId) };
+        // v5: email bookings keep only the start of the email.
+        if (version < 5 && state.events) state = { ...state, events: state.events.map(trimStoredEmailRecord) };
         return state;
       },
     },

@@ -21,6 +21,7 @@ import {
 } from "@/features/sync";
 import { clearServerCheckIn } from "@/features/safety/services/safetyServerAlerts";
 import { clearAiUsageLog, clearByokConfig, clearCloudExhaustion, resetAiPreference } from "@/modules/ai";
+import { flushPendingWrites } from "@/modules/storage";
 import { withSystemPrompt } from "@/utils/systemPrompt";
 
 /** Revokes the Google grant (best-effort) and forgets the local tokens. */
@@ -105,4 +106,5 @@ export async function signOutAndCleanup() {
     await authClient.signOut();
   } catch {}
   useAuthStore.getState().signOut();
+  flushPendingWrites();
 }

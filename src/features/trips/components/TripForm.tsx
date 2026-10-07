@@ -18,6 +18,7 @@ import { useAuthStore } from "@/features/auth/store/authStore";
 import { shareGroup } from "@/features/sync";
 import { aiRuntime, aiService, useAiAvailability, type TripBudgetEstimate } from "@/modules/ai";
 import { normalizeSearchText } from "@/features/trips/data/destinations";
+import { auraHitSlop, auraSignal } from "@/constants/aura";
 import {
   type CreateTripInput,
   getDestinationCoordinates,
@@ -158,8 +159,7 @@ export function TripForm({ editingTrip, onSave, onCancel, destinations, knownCoo
   const confirmPlannedTrip = useTripsStore((state) => state.confirmPlannedTrip);
 
   const fromGroup = useTripsStore((state) => (fromGroupId ? (state.groups.find((group) => group.id === fromGroupId) ?? null) : null));
-  const initialForm = useMemo(
-    () =>
+  const [initialForm] = useState(() =>
       editingTrip
         ? tripToFormState(editingTrip)
         : makeInitialForm(fromGroup?.currency ?? defaultCurrency, {
@@ -169,8 +169,6 @@ export function TripForm({ editingTrip, onSave, onCancel, destinations, knownCoo
               : {}),
             ...(fromGroup && fromGroup.companions.length > 0 ? { mode: "group" as const, companions: fromGroup.companions } : {}),
           }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [editingTrip, defaultCurrency],
   );
 
   const [form, setForm] = useState<FormState>(initialForm);
@@ -617,8 +615,8 @@ export function TripForm({ editingTrip, onSave, onCancel, destinations, knownCoo
             style={[styles.aiCard, { backgroundColor: c.surface, borderColor: c.hairline }]}
           >
             <View style={styles.aiHeader}>
-              <View style={[styles.aiIcon, { backgroundColor: "#FFB54722" }]}>
-                {isEstimatingBudget ? <ActivityIndicator size="small" color="#FFB547" /> : <Icon name="sparkle" size={16} color="#FFB547" />}
+              <View style={[styles.aiIcon, { backgroundColor: `${auraSignal.amber}22` }]}>
+                {isEstimatingBudget ? <ActivityIndicator size="small" color={auraSignal.amber} /> : <Icon name="sparkle" size={16} color={auraSignal.amber} />}
               </View>
               <View style={styles.flex}>
                 <Text style={[styles.aiTitle, { color: c.text, fontFamily: f.semibold }]}>{t("trip.aiBudgetTitle")}</Text>
@@ -654,7 +652,7 @@ export function TripForm({ editingTrip, onSave, onCancel, destinations, knownCoo
                 hitSlop={8}
                 style={[styles.currency, { backgroundColor: c.surfaceStrong }]}
               >
-                {isGeneratingName ? <ActivityIndicator size="small" color={c.textSoft} /> : <Icon name="sparkle" size={12} color="#FFB547" />}
+                {isGeneratingName ? <ActivityIndicator size="small" color={c.textSoft} /> : <Icon name="sparkle" size={12} color={auraSignal.amber} />}
                 <Text style={[styles.currencyText, { color: c.text, fontFamily: f.semibold }]}>
                   {hasGeneratedName ? t("trip.aiNameRegenerate") : t("trip.aiNameGenerate")}
                 </Text>
@@ -684,7 +682,7 @@ export function TripForm({ editingTrip, onSave, onCancel, destinations, knownCoo
               onSubmitEditing={handleAddTraveler}
               returnKeyType="done"
               suffix={
-                <PressableScale onPress={handleAddTraveler} accessibilityRole="button" accessibilityLabel={t("itinerary.add")} style={[styles.addTraveler, { backgroundColor: c.inverse }]}>
+                <PressableScale onPress={handleAddTraveler} accessibilityRole="button" accessibilityLabel={t("itinerary.add")} hitSlop={auraHitSlop(34)} style={[styles.addTraveler, { backgroundColor: c.inverse }]}>
                   <Icon name="plus" size={16} color={c.onInverse} strokeWidth={2.2} />
                 </PressableScale>
               }

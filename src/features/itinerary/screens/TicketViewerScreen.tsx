@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useEffectEvent, useState } from "react";
 import { Image, Platform, StyleSheet, Text, View } from "react-native";
 import * as Brightness from "expo-brightness";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -84,10 +84,14 @@ export default function TicketViewerScreen() {
     };
   }, []);
 
+  const trackOpened = useEffectEvent((id: string | undefined) => {
+    const opened = tickets.find((item) => item.id === id);
+    if (opened) track("ticket_opened", { kind: opened.kind, count: tickets.length });
+  });
+  const openedId = ticket?.id;
   useEffect(() => {
-    if (ticket) track("ticket_opened", { kind: ticket.kind, count: tickets.length });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ticket?.id]);
+    trackOpened(openedId);
+  }, [openedId]);
 
   useEffect(() => {
     if (!ticket) router.back();

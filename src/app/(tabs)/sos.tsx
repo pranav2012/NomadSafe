@@ -1,1 +1,4 @@
-export { default } from "@/features/safety/screens/SafetyScreen";
+import SafetyScreen from "@/features/safety/screens/SafetyScreen";
+import { freezeWhenBlurred } from "@/providers/FreezeWhenBlurred";
+
+export default freezeWhenBlurred(SafetyScreen);

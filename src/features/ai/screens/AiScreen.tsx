@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { ZoomIn, ZoomOut, useAnimatedReaction, useSharedValue } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import { AuraButton, AuraOptionSheet, Icon, LiveDot, PressableScale, showAlert, useAura, type AuraOption, type IconName } from "@/atoms";
-import { auraStatusAccent } from "@/constants/aura";
+import { auraSignal, auraStatusAccent } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { useSettingsStore } from "@/features/settings";
 import { isArchivedGroup, findMoneyGroup, isTrip, selectMoneyGroups, useTripsStore } from "@/features/trips/store/tripsStore";
@@ -26,7 +26,7 @@ import { provisionPercent } from "../utils/provisionCopy";
 
 const AD_MIN_CHAT_REPLIES = 3;
 
-const READY = "#3DDC97";
+const READY = auraSignal.ready;
 // Lets the models sheet finish closing before the key sheet's modal opens.
 const SHEET_SWAP_MS = 260;
 
@@ -66,7 +66,7 @@ export default function AiScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const localAiEnabled = useSettingsStore((s) => s.localAiEnabled);
-  const provisioning = useAiProvisioning();
+  const provisioning = useAiProvisioning(["phase", "activeModelId", "progress"]);
   const [modelsOpen, setModelsOpen] = useState(false);
   const [keyOpen, setKeyOpen] = useState(false);
   // Remounts the key sheet on each open so it starts from what's saved.

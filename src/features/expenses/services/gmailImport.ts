@@ -11,6 +11,7 @@ import {
 import { translate } from "@/localization/translate";
 import type { GmailFetchProgress } from "@/features/expenses/store/gmailSyncStatusStore";
 import { logger } from "@/modules/logger";
+import { trimStoredEmailText } from "@/features/expenses/utils/emailText";
 
 export const GMAIL_SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"];
 
@@ -103,13 +104,13 @@ function toRawMessage(message: GmailMessage): RawMessage {
     body,
     date,
     sender,
-    note: [
+    note: trimStoredEmailText([
       `${translate("expenses.emailNote.from")}: ${sender || translate("expenses.emailNote.unknownSender")}`,
       `${translate("expenses.emailNote.subject")}: ${subject || translate("expenses.emailNote.noSubject")}`,
       `${translate("expenses.emailNote.received")}: ${date}`,
       "",
       bodyText,
-    ].join("\n"),
+    ].join("\n")),
     externalId: message.id ? `gmail:${message.id}` : undefined,
     attachments: pdfAttachments(message),
   };

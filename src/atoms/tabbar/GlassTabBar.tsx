@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import React, { useEffect, useEffectEvent, useMemo, useRef, useState, type RefObject } from "react";
 import { PixelRatio, StyleSheet, View, useWindowDimensions, type StyleProp, type ViewStyle } from "react-native";
 import {
   Canvas,
@@ -416,6 +416,7 @@ export function GlassTabBar({
     setHighFrameRate(true);
   };
   useEffect(() => () => setHighFrameRate(false), []);
+  const startLiquidFromEffect = useEffectEvent(startLiquid);
 
   // Moves the drop when the tab changes from outside (links, first layout). A release already
   // sent it there, so that case doesn't restart it mid-flight.
@@ -437,9 +438,8 @@ export function GlassTabBar({
       goal.set(target);
       liquidRunning.set(true);
     });
-    startLiquid();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- startLiquid only touches stable refs
-  }, [activeIndex, dragging, goal, lastIndex, liquidRunning, restIndex, settledOn, slot, x]);
+    startLiquidFromEffect();
+  }, [INSET, activeIndex, dragging, goal, lastIndex, liquidRunning, restIndex, settledOn, slot, x]);
 
   const indexAt = (px: number) => {
     "worklet";
@@ -597,9 +597,8 @@ export function GlassTabBar({
   const canvasH = HEIGHT + BLEED * 2;
   const [rows, setRows] = useState<{ plain: SkImage; selected: SkImage; key: string } | null>(null);
   const rowsKey = `${canvasW}x${canvasH}:${activeColor}:${inactiveColor}:${isDark}:${items.map((item) => item.key).join()}`;
-  useEffect(() => {
-    if (!labels || slot === 0) return;
-    let cancelled = false;
+  // Reads the latest layout; `rowsKey` and `labels` cover everything that changes the images.
+  const drawRows = useEffectEvent((rowLabels: NonNullable<typeof labels>, key: string, isCancelled: () => boolean) => {
     const size = { width: Math.ceil(canvasW * PD), height: Math.ceil(canvasH * PD) };
     const rim = (
       <RoundedRect x={BLEED + 0.5} y={BLEED + 0.5} width={width - 1} height={HEIGHT - 1} r={HEIGHT / 2} style="stroke" strokeWidth={1}>
@@ -615,17 +614,21 @@ export function GlassTabBar({
       drawAsImage(
         <Group transform={[{ scale: PD }]}>
           {rim}
-          {renderRow(() => selected, selected ? labels.selected : labels.plain)}
+          {renderRow(() => selected, selected ? rowLabels.selected : rowLabels.plain)}
         </Group>,
         size,
       );
     Promise.all([draw(false), draw(true)]).then(([plain, selected]) => {
-      if (!cancelled && plain && selected) setRows({ plain, selected, key: rowsKey });
+      if (!isCancelled() && plain && selected) setRows({ plain, selected, key });
     });
+  });
+  useEffect(() => {
+    if (!labels) return;
+    let cancelled = false;
+    drawRows(labels, rowsKey, () => cancelled);
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- rowsKey covers what renderRow reads
   }, [labels, rowsKey]);
   const canvasReady = slot > 0 && rows !== null;
   // Android can drop the canvas's first frame on a cold start (the surface isn't attached yet), and

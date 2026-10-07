@@ -27,7 +27,7 @@ import { useTripsStore } from "@/features/trips/store/tripsStore";
 import { syncWidgets } from "@/features/widget/syncWidgets";
 import { resetAnalytics } from "@/modules/analytics";
 import { signOutAndCleanup } from "@/features/auth/services/session";
-import { storage } from "@/modules/storage";
+import { clearAllStorage } from "@/modules/storage";
 
 async function attempt(step: () => unknown) {
   try {
@@ -80,7 +80,7 @@ export async function wipeAllDeviceData({ keepModels = false }: { keepModels?: b
   await attempt(deleteAllTickets);
   await attempt(deleteAllIdeaThumbs);
 
-  storage.clearAll();
+  clearAllStorage();
   // Rewrites the widgets (and the iOS App Group copy of trip names) from the now-empty trip store.
   await attempt(syncWidgets);
   // PostHog keeps its IDs in memory, so rotate them after its stored copy is gone.

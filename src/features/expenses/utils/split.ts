@@ -356,3 +356,10 @@ export function isEqualSplit(shares: ExpenseShare[], currency: string): boolean 
   const minors = shares.map((share) => toMinor(share.amount, digits));
   return Math.max(...minors) - Math.min(...minors) <= 1;
 }
+
+/** Your net from `computeNetBalances` in `currency`; a single leftover minor unit (rounding in other apps' exports) counts as settled. */
+export function myNetOf(net: Map<string, number>, currency: string): number {
+  const minorUnit = 10 ** -currencyFractionDigits(currency);
+  const raw = roundMoney(net.get(SELF_ID) ?? 0, currency);
+  return Math.abs(raw) <= minorUnit + 1e-9 ? 0 : raw;
+}

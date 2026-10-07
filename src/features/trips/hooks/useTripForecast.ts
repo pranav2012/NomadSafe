@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 import { useLocalization } from "@/localization";
 import { geocodeDestination } from "@/features/trips/services/geocoding";
 import { getDestinationCoordinates, type LatLng, type Trip } from "@/features/trips/store/tripsStore";
@@ -67,39 +67,40 @@ export function buildOutlook(days: DailyForecast[], { locale, t, formatRain }: R
  * is the one nearest the user; `select` switches it.
  */
 export function useTripForecast(trip: Trip, userLocation: { latitude?: number; longitude?: number } | null) {
-  const [state, setState] = useState<LoadState>({ status: "loading" });
   const [selectedName, setSelectedName] = useState<string | null>(null);
   const { startDate, endDate, destinations } = trip;
   const destinationsKey = destinations.join("|");
   const coordinates = getDestinationCoordinates(trip);
   const coordsKey = coordinates.map((c) => (c ? `${c.latitude},${c.longitude}` : "-")).join("|");
+  const requestKey = `${startDate}|${endDate}|${destinationsKey}|${coordsKey}`;
+  const forecastWindow = clampToForecastWindow(startDate, endDate);
+  const [loaded, setLoaded] = useState<{ key: string; state: LoadState } | null>(null);
+  const state: LoadState = !forecastWindow ? { status: "outside" } : loaded?.key === requestKey ? loaded.state : { status: "loading" };
+
+  // Reads the latest destinations and coordinates; reruns only when the request key changes.
+  const fetchForecasts = useEffectEvent(async (): Promise<LoadState> => {
+    if (!forecastWindow) return { status: "outside" };
+    const results = await Promise.all(
+      destinations.map(async (name, index): Promise<DestinationForecast | null> => {
+        const coords = coordinates[index] ?? (await geocodeDestination(name));
+        if (!coords) return null;
+        const days = await getDailyForecast(coords, forecastWindow.start, forecastWindow.end);
+        return days?.length ? { name, index, coords, days } : null;
+      }),
+    );
+    const ready = results.filter((r): r is DestinationForecast => r !== null);
+    return ready.length ? { status: "ready", destinations: ready } : { status: "unavailable" };
+  });
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      const window = clampToForecastWindow(startDate, endDate);
-      if (!window) {
-        if (!cancelled) setState({ status: "outside" });
-        return;
-      }
-      if (!cancelled) setState({ status: "loading" });
-      const results = await Promise.all(
-        destinations.map(async (name, index): Promise<DestinationForecast | null> => {
-          const coords = coordinates[index] ?? (await geocodeDestination(name));
-          if (!coords) return null;
-          const days = await getDailyForecast(coords, window.start, window.end);
-          return days?.length ? { name, index, coords, days } : null;
-        }),
-      );
-      if (cancelled) return;
-      const ready = results.filter((r): r is DestinationForecast => r !== null);
-      setState(ready.length ? { status: "ready", destinations: ready } : { status: "unavailable" });
-    })();
+    void fetchForecasts().then((result) => {
+      if (!cancelled) setLoaded({ key: requestKey, state: result });
+    });
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startDate, endDate, destinationsKey, coordsKey]);
+  }, [requestKey]);
 
   const ready = state.status === "ready" ? state.destinations : [];
   let defaultName: string | null = ready[0]?.name ?? null;

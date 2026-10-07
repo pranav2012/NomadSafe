@@ -35,6 +35,25 @@ export function periodTotals(items: { amount: number; date: string }[], period: 
   });
 }
 
+/**
+ * Totals for this month and each of `months` months back, and this year and `years` years back, in
+ * one pass (`months[n]` matches `periodTotals(items, "month", 1, n)`).
+ */
+export function totalsByOffset(items: { amount: number; date: string }[], months: number, years: number, now: Date = new Date()) {
+  const monthTotals = new Array<number>(months + 1).fill(0);
+  const yearTotals = new Array<number>(years + 1).fill(0);
+  for (const item of items) {
+    const date = new Date(item.date);
+    const time = date.getTime();
+    if (Number.isNaN(time)) continue;
+    const yearBack = now.getFullYear() - date.getFullYear();
+    const monthBack = yearBack * 12 + now.getMonth() - date.getMonth();
+    if (monthBack >= 0 && monthBack <= months) monthTotals[monthBack] += item.amount;
+    if (yearBack >= 0 && yearBack <= years) yearTotals[yearBack] += item.amount;
+  }
+  return { months: monthTotals, years: yearTotals };
+}
+
 /** Spend per trip day up to today (weeks for trips over a month); spends before the start are returned apart. */
 export function tripDailyTotals(items: InsightItem[], trip: { startDate: string; endDate: string }, now: Date = new Date()) {
   const start = fromDateKey(trip.startDate);

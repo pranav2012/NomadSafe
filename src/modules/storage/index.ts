@@ -6,6 +6,7 @@ import * as SecureStore from "expo-secure-store";
 import * as Updates from "expo-updates";
 import type { StateStorage } from "zustand/middleware";
 import { logger } from "@/modules/logger";
+import { createWriteCoalescer } from "./writeCoalescer";
 
 const STORAGE_ID = "nomadsafe-main";
 // Written only after the store is encrypted with it.
@@ -145,10 +146,31 @@ export const storage = opened.store;
 /** False when this session fell back to in-memory storage. */
 export const isStoragePersistent = opened.persistent;
 
+// Coalesces only while the app is in the foreground; headless and backgrounded runs write through.
+const coalescer = createWriteCoalescer(
+  { get: (name) => storage.getString(name), set: (name, value) => storage.set(name, value), remove: (name) => storage.remove(name) },
+  { delayMs: 300, shouldDefer: () => AppState.currentState === "active" },
+);
+
+AppState.addEventListener("change", (state) => {
+  if (state !== "active") coalescer.flush();
+});
+
+/** Writes any coalesced store updates now. Call before clearing data, sign-out or wiping. */
+export function flushPendingWrites() {
+  coalescer.flush();
+}
+
+/** Clears all of MMKV, dropping coalesced writes first so none land afterwards. */
+export function clearAllStorage() {
+  coalescer.discard();
+  storage.clearAll();
+}
+
 export const mmkvStateStorage: StateStorage = {
-  getItem: (name: string) => storage.getString(name) ?? null,
-  setItem: (name: string, value: string) => storage.set(name, value),
-  removeItem: (name: string) => storage.remove(name),
+  getItem: coalescer.getItem,
+  setItem: coalescer.setItem,
+  removeItem: coalescer.removeItem,
 };
 
 export { credentials, secureStore, type SecureStoreOptions } from "./secure";

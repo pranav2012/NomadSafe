@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useEffectEvent, useRef, useState } from "react";
 import { ActivityIndicator, Linking, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -37,9 +37,11 @@ export default function IdeaPlayerScreen() {
   const link = event?.link;
   const embed = link ? embedFor(link) : null;
 
-  useEffect(() => {
+  const trackPlayed = useEffectEvent(() => {
     if (link) track("idea_played", { provider: link.provider });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  });
+  useEffect(() => {
+    trackPlayed();
   }, []);
 
   const onLoaded = () => {

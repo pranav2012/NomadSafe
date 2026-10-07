@@ -133,12 +133,11 @@ function ImportBody({ groupId, onClose, onDone }: { groupId: string | null; onCl
       const store = useExpensesStore.getState();
       const added = store.addExpenses(built.expenses.map((expense) => ({ ...expense, groupId: targetId, source: "import" as const })));
       const known = new Set(store.settlements.map((settlement) => settlement.externalId).filter(Boolean));
-      let payments = 0;
-      for (const settlement of built.settlements) {
-        if (known.has(settlement.externalId) || settlement.from === settlement.to) continue;
-        store.addSettlement({ ...settlement, groupId: targetId!, source: "import" });
-        payments += 1;
-      }
+      const payments = store.addSettlements(
+        built.settlements
+          .filter((settlement) => !known.has(settlement.externalId) && settlement.from !== settlement.to)
+          .map((settlement) => ({ ...settlement, groupId: targetId!, source: "import" as const })),
+      ).length;
       track("app_import_completed", { source: parsed.source, mode, expenses: added.length, payments });
       onClose();
       onDone(targetId!);

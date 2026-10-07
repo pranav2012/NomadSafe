@@ -1,20 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { AppState } from "react-native";
+import { useEffect, useMemo } from "react";
 import { useFocusEffect } from "expo-router";
 import type { ExpenseCategory } from "@/features/expenses/constants/categories";
 import { useExpensesStore, type Expense } from "@/features/expenses/store/expensesStore";
-import {
-  fetchExchangeRate,
-  getCachedExchangeRate,
-} from "@/features/expenses/services/currencyConversion";
+import { requestRates, retryRates, useRatesStore, type RateRequest } from "@/features/expenses/store/ratesStore";
 import { toLocalDayKey } from "@/features/expenses/utils/dateKey";
+import { rateKey, type ConvertibleAmount } from "@/features/expenses/utils/rates";
 import type { Trip } from "@/features/trips/store/tripsStore";
 
-export interface ConvertibleAmount {
-  amount: number;
-  currency: string;
-  date: string;
-}
+export type { ConvertibleAmount };
 
 export interface ConvertedExpense<T extends ConvertibleAmount = Expense> {
   expense: T;
@@ -27,67 +20,37 @@ export interface UnconvertedTotal {
   count: number;
 }
 
-function rateKey(expense: ConvertibleAmount, targetCurrency: string): string {
-  return `${expense.currency}|${targetCurrency}|${toLocalDayKey(expense.date)}`;
+/**
+ * Loads the exchange rates `requests` need into the shared rates store and returns its rates and
+ * failures (kept in a store, not the module cache, so compiled renders update when a rate arrives).
+ * Failed and offline rates are asked for again on focus and app foreground.
+ */
+export function useRateRequests(requests: RateRequest[]) {
+  const rates = useRatesStore((state) => state.rates);
+  const failed = useRatesStore((state) => state.failed);
+  const generation = useRatesStore((state) => state.generation);
+  useFocusEffect(retryRates);
+  useEffect(() => {
+    requestRates(requests);
+  }, [requests, generation]);
+  return { rates, failed };
 }
 
 /**
  * Converts expenses into `targetCurrency`. Expenses without a rate are left out
- * of totals and reported in `unconvertedTotals`; failed fetches retry on focus
- * and app foreground.
+ * of totals and reported in `unconvertedTotals`.
  */
 export function useConvertedExpenses<T extends ConvertibleAmount = Expense>(expenses: T[], targetCurrency: string) {
-  const [failedRates, setFailedRates] = useState<Set<string>>(new Set());
-  // Rates live in state (not just the module cache) so memoized renders — the
-  // React Compiler is on — recompute when a rate arrives.
-  const [rates, setRates] = useState<Record<string, number>>({});
-  const [retryToken, setRetryToken] = useState(0);
-
-  const retry = useCallback(() => setRetryToken((token) => token + 1), []);
-  useFocusEffect(retry);
-  useEffect(() => {
-    const subscription = AppState.addEventListener("change", (state) => {
-      if (state === "active") retry();
-    });
-    return () => subscription.remove();
-  }, [retry]);
-
-  useEffect(() => {
-    const needed = expenses.filter((expense) => expense.currency !== targetCurrency);
-    if (needed.length === 0) return;
-
-    let mounted = true;
-    const unique = [...new Map(needed.map((expense) => [rateKey(expense, targetCurrency), expense])).values()];
-    void Promise.all(
-      unique.map(async (expense) => {
-        const key = rateKey(expense, targetCurrency);
-        try {
-          const rate =
-            getCachedExchangeRate(expense.currency, targetCurrency, expense.date) ??
-            (await fetchExchangeRate(expense.currency, targetCurrency, expense.date));
-          if (!mounted) return;
-          setRates((current) => (current[key] === rate.rate ? current : { ...current, [key]: rate.rate }));
-          setFailedRates((current) => {
-            if (!current.has(key)) return current;
-            const next = new Set(current);
-            next.delete(key);
-            return next;
-          });
-        } catch {
-          if (mounted) setFailedRates((current) => (current.has(key) ? current : new Set([...current, key])));
-        }
-      }),
-    );
-
-    return () => {
-      mounted = false;
-    };
-  }, [expenses, targetCurrency, retryToken]);
+  const requests = useMemo(
+    () => expenses.map((expense) => ({ currency: expense.currency, target: targetCurrency, date: expense.date })),
+    [expenses, targetCurrency],
+  );
+  const { rates, failed } = useRateRequests(requests);
 
   const convertedExpenses: ConvertedExpense<T>[] = [];
   const unavailableExpenses: T[] = [];
   for (const expense of expenses) {
-    const rate = expense.currency === targetCurrency ? 1 : rates[rateKey(expense, targetCurrency)];
+    const rate = expense.currency === targetCurrency ? 1 : rates[rateKey(expense.currency, targetCurrency, expense.date)];
     if (rate === undefined) {
       unavailableExpenses.push(expense);
       continue;
@@ -103,12 +66,13 @@ export function useConvertedExpenses<T extends ConvertibleAmount = Expense>(expe
     unconverted.set(expense.currency, entry);
   }
 
+  const isFailed = (expense: T) => Boolean(failed[rateKey(expense.currency, targetCurrency, expense.date)]);
   return {
     convertedExpenses,
     unavailableExpenses,
     unconvertedTotals: [...unconverted.values()],
-    isConverting: unavailableExpenses.some((expense) => !failedRates.has(rateKey(expense, targetCurrency))),
-    hasConversionFailures: unavailableExpenses.some((expense) => failedRates.has(rateKey(expense, targetCurrency))),
+    isConverting: unavailableExpenses.some((expense) => !isFailed(expense)),
+    hasConversionFailures: unavailableExpenses.some(isFailed),
   };
 }
 

@@ -46,7 +46,7 @@ export function PlannedTripCard({ planned, compact = false, onInvite }: { planne
   const discard = async (moveTo: string | null) => {
     const ideas = ideasOf(useEventsStore.getState().events.filter((event) => event.tripId === planned.id));
     if (moveTo) {
-      ideas.forEach((idea) => useEventsStore.getState().updateEvent(idea.id, { tripId: moveTo }));
+      useEventsStore.getState().updateEvents(ideas.map((idea) => ({ id: idea.id, input: { tripId: moveTo } })));
       const target = targets.find((item) => item.value === moveTo);
       showToast(t("planned.movedToast", { count: ideas.length, name: target?.label ?? "" }));
     }
@@ -157,7 +157,7 @@ export function PlannedTripCard({ planned, compact = false, onInvite }: { planne
 }
 
 const styles = StyleSheet.create({
-  card: { borderRadius: 22, borderWidth: 1.4, borderStyle: "dashed", padding: 16, gap: 6 },
+  card: { borderRadius: 24, borderWidth: 1.4, borderStyle: "dashed", padding: 18, gap: 6 },
   compact: { width: 210, padding: 14 },
   head: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 },
   badge: { borderWidth: 1, borderRadius: 9, paddingHorizontal: 7, paddingVertical: 2 },

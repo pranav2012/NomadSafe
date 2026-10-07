@@ -1,10 +1,12 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { mmkvStateStorage } from "@/modules/storage";
+import { nextRecordId } from "@/utils/recordId";
 import type { ExpenseCategory } from "@/features/expenses/constants/categories";
 import { toLocalDayKey } from "@/features/expenses/utils/dateKey";
 import type { ExpensePayer, ExpenseShare, ExpenseSplit } from "@/features/expenses/utils/split";
 import type { SplitHint } from "@/features/expenses/utils/party";
+import { trimStoredEmailRecord } from "@/features/expenses/utils/emailText";
 
 /** "sms" is legacy (device SMS import, removed); kept so stored expenses stay valid. */
 export type ExpenseSource = "manual" | "paste" | "sms" | "email" | "voice" | "recurring" | "import";
@@ -117,9 +119,13 @@ interface ExpensesState {
   addExpense: (input: CreateExpenseInput) => Expense;
   addExpenses: (inputs: CreateExpenseInput[]) => Expense[];
   updateExpense: (id: string, input: UpdateExpenseInput) => Expense | null;
+  /** Applies several updates in one store write. */
+  updateExpenses: (updates: { id: string; input: UpdateExpenseInput }[]) => void;
   deleteExpense: (id: string) => void;
+  removeExpenses: (ids: string[]) => void;
   removeByGroupId: (groupId: string) => void;
   addSettlement: (input: CreateSettlementInput) => Settlement;
+  addSettlements: (inputs: CreateSettlementInput[]) => Settlement[];
   deleteSettlement: (id: string) => void;
   reset: () => void;
 }
@@ -132,17 +138,10 @@ export function withGroupId<T>(record: T): T {
   return { ...rest, groupId: tripId ?? null } as T;
 }
 
-let idCounter = 0;
-// The random part keeps ids unique across phones, since shared trips mix records from several members.
-function nextId(): string {
-  idCounter += 1;
-  return `${Date.now()}-${idCounter}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
 function buildExpense(input: CreateExpenseInput): Expense {
   return {
-    ...input,
-    id: nextId(),
+    ...trimStoredEmailRecord(input),
+    id: nextRecordId(),
     createdAt: new Date().toISOString(),
   };
 }
@@ -183,19 +182,40 @@ export const useExpensesStore = create<ExpensesState>()(
         }));
         return updated;
       },
+      updateExpenses: (updates) => {
+        if (updates.length === 0) return;
+        const byId = new Map(updates.map(({ id, input }) => [id, input]));
+        set((state) => ({
+          expenses: state.expenses.map((expense) => {
+            const input = byId.get(expense.id);
+            return input ? { ...expense, ...input } : expense;
+          }),
+        }));
+      },
       deleteExpense: (id) =>
         set((state) => ({
           expenses: state.expenses.filter((expense) => expense.id !== id),
         })),
+      removeExpenses: (ids) => {
+        if (ids.length === 0) return;
+        const remove = new Set(ids);
+        set((state) => ({ expenses: state.expenses.filter((expense) => !remove.has(expense.id)) }));
+      },
       removeByGroupId: (groupId) =>
         set((state) => ({
           expenses: state.expenses.filter((expense) => expense.groupId !== groupId),
           settlements: state.settlements.filter((settlement) => settlement.groupId !== groupId),
         })),
       addSettlement: (input) => {
-        const settlement: Settlement = { ...input, id: nextId(), createdAt: new Date().toISOString() };
+        const settlement: Settlement = { ...input, id: nextRecordId(), createdAt: new Date().toISOString() };
         set((state) => ({ settlements: [settlement, ...state.settlements] }));
         return settlement;
+      },
+      addSettlements: (inputs) => {
+        const createdAt = new Date().toISOString();
+        const created: Settlement[] = inputs.map((input) => ({ ...input, id: nextRecordId(), createdAt }));
+        if (created.length > 0) set((state) => ({ settlements: [...[...created].reverse(), ...state.settlements] }));
+        return created;
       },
       deleteSettlement: (id) =>
         set((state) => ({
@@ -206,16 +226,19 @@ export const useExpensesStore = create<ExpensesState>()(
     {
       name: "expenses-store",
       storage: createJSONStorage(() => mmkvStateStorage),
-      version: 2,
-      migrate: (persistedState) => {
-        const state = persistedState as { expenses?: unknown[]; settlements?: unknown[] } | undefined;
+      version: 3,
+      migrate: (persistedState, version) => {
+        const state = persistedState as { expenses?: Expense[]; settlements?: Settlement[] } | undefined;
         if (!state) return persistedState;
-        // v2 renamed tripId to groupId (a trip is a kind of group).
-        return {
-          ...state,
-          expenses: (state.expenses ?? []).map(withGroupId),
-          settlements: (state.settlements ?? []).map(withGroupId),
-        };
+        // v2 renamed tripId to groupId (a trip is a kind of group); v3 trims stored email text.
+        let expenses = state.expenses ?? [];
+        let settlements = state.settlements ?? [];
+        if (version < 2) {
+          expenses = expenses.map(withGroupId);
+          settlements = settlements.map(withGroupId);
+        }
+        if (version < 3) expenses = expenses.map(trimStoredEmailRecord);
+        return { ...state, expenses, settlements };
       },
     },
   ),

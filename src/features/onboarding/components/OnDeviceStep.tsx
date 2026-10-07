@@ -13,6 +13,7 @@ import { auraStatusAccent, auraStatusColors } from "@/constants/aura";
 import { AiPlasmaOrb, AiProvisionCard } from "@/features/ai";
 import { modelNotifications, useAiProvisioning, type ProvisionPhase } from "@/modules/ai";
 import { useLocalization } from "@/localization";
+import { useAnimationsActive } from "@/hooks/useAnimationsActive";
 import { logger } from "@/modules/logger";
 import { StepHeader } from "./StepHeader";
 
@@ -39,9 +40,10 @@ function orbFillFor(phase: ProvisionPhase, progress: number): number {
 export function OnDeviceStep() {
   const { c, f, isDark } = useAura();
   const { t } = useLocalization();
-  const { deviceSupported, phase, progress } = useAiProvisioning();
+  const { deviceSupported, phase, progress } = useAiProvisioning(["deviceSupported", "phase", "progress"]);
   const [bursting, setBursting] = useState(false);
   const previousPhase = useRef(phase);
+  const animating = useAnimationsActive();
 
   // The corona flares briefly when the model finishes, not when the step opens already ready.
   useEffect(() => {
@@ -69,7 +71,7 @@ export function OnDeviceStep() {
     <View style={styles.root}>
       {supported ? (
         <View style={styles.orb} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-          <AiPlasmaOrb size={ORB_SIZE} mode={bursting ? "thinking" : "idle"} isDark={isDark} fill={orbFillFor(phase, progress)} />
+          <AiPlasmaOrb size={ORB_SIZE} mode={bursting ? "thinking" : "idle"} isDark={isDark} fill={orbFillFor(phase, progress)} paused={!animating} />
         </View>
       ) : null}
 

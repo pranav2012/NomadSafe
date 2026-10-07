@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useEffectEvent, useRef } from "react";
 import { AppState } from "react-native";
 import { usePathname, useRouter } from "expo-router";
 import { SESSION_TIMEOUT_MS } from "@/modules/ads";
@@ -43,22 +43,23 @@ export function useLandingTab() {
     storage.set(SESSION_KEY, JSON.stringify(next));
   };
 
-  useEffect(() => {
-    const startSession = () => {
-      const state = nextLanding(read<LandingState>(STATE_KEY, INITIAL_LANDING), read<LandingSession>(SESSION_KEY, EMPTY_SESSION));
-      storage.set(STATE_KEY, JSON.stringify(state));
+  const startSession = useEffectEvent(() => {
+    const state = nextLanding(read<LandingState>(STATE_KEY, INITIAL_LANDING), read<LandingSession>(SESSION_KEY, EMPTY_SESSION));
+    storage.set(STATE_KEY, JSON.stringify(state));
+    useMoneyViewStore.getState().resetUsed();
+    const hasTrip = useTripsStore.getState().activeTripId !== null;
+    const toMoney = !hasTrip && state.landOnMoney && pathRef.current === "/";
+    landedAt.current = toMoney ? Date.now() : null;
+    save({ ...EMPTY_SESSION, hadTrip: hasTrip, landedOnMoney: toMoney, visitedMoney: toMoney });
+    track("app_landing", { tab: toMoney ? "money" : pathRef.current === "/" ? "home" : "other", reason: hasTrip ? "trip" : pathRef.current !== "/" ? "link" : "habit" });
+    if (toMoney) {
+      useMoneyViewStore.getState().select(OVERVIEW);
       useMoneyViewStore.getState().resetUsed();
-      const hasTrip = useTripsStore.getState().activeTripId !== null;
-      const toMoney = !hasTrip && state.landOnMoney && pathRef.current === "/";
-      landedAt.current = toMoney ? Date.now() : null;
-      save({ ...EMPTY_SESSION, hadTrip: hasTrip, landedOnMoney: toMoney, visitedMoney: toMoney });
-      track("app_landing", { tab: toMoney ? "money" : pathRef.current === "/" ? "home" : "other", reason: hasTrip ? "trip" : pathRef.current !== "/" ? "link" : "habit" });
-      if (toMoney) {
-        useMoneyViewStore.getState().select(OVERVIEW);
-        useMoneyViewStore.getState().resetUsed();
-        router.navigate("/(tabs)/expenses");
-      }
-    };
+      router.navigate("/(tabs)/expenses");
+    }
+  });
+
+  useEffect(() => {
     startSession();
     let backgroundAt: number | null = null;
     const subscription = AppState.addEventListener("change", (next) => {
@@ -67,7 +68,6 @@ export function useLandingTab() {
       if (next === "active") backgroundAt = null;
     });
     return () => subscription.remove();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const activeTripId = useTripsStore((state) => state.activeTripId);

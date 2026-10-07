@@ -2,10 +2,9 @@ import React, { useMemo, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { AuraButton, AuraCard, AuraOptionSheet, AuraSection, Icon, PressableScale, useAura, type AuraOption } from "@/atoms";
 import { useLocalization } from "@/localization";
-import { isArchivedGroup, isTrip, selectMoneyGroups, useTripsStore, type MoneyGroup } from "@/features/trips/store/tripsStore";
+import { isTrip, selectMoneyGroups, useTripsStore } from "@/features/trips/store/tripsStore";
 import { useExpensesStore, type Expense } from "@/features/expenses/store/expensesStore";
 import { useConvertedExpenses } from "@/features/expenses/hooks/useTripExpenseSummary";
-import { useGroupBalances } from "@/features/expenses/hooks/useGroupBalances";
 import { useOverallBalance, type GroupBalanceRow } from "@/features/expenses/hooks/useOverallBalance";
 import { categoryBreakdown, sumAmount } from "@/features/expenses/utils/aggregate";
 import { formatMoney } from "@/features/expenses/utils/money";
@@ -15,7 +14,7 @@ import { RecurringList } from "@/features/expenses/components/RecurringList";
 import { OWED, OWES } from "@/features/expenses/components/GroupBalances";
 import { SpendHero } from "@/features/expenses/components/SpendHero";
 import { BiggestSpends, OverviewTrend, PeriodInsights, type OverviewPeriod } from "@/features/expenses/components/SpendInsights";
-import { periodTotals } from "@/features/expenses/utils/spendInsights";
+import { totalsByOffset } from "@/features/expenses/utils/spendInsights";
 import { usePlusGate } from "@/modules/billing";
 import { ExportSheet } from "@/features/expenses/components/ExportSheet";
 
@@ -45,22 +44,15 @@ export function MoneyOverview({
   const plus = usePlusGate();
   const [showSettled, setShowSettled] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
-  const archivedGroups = groups.filter(isArchivedGroup);
   const [now] = useState(() => Date.now());
   const money = (amount: number) => formatMoney(formatCurrency, amount, homeCurrency);
 
-  const range = periodRange(period.kind, period.offset);
-  const inPeriod = useMemo(
-    () => expenses.filter((expense) => inRange(expense.date, range)).map((expense) => ({ ...expense, amount: myShareOf(expense) })),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [expenses, period],
-  );
+  const periodExpenses = useMemo(() => {
+    const range = periodRange(period.kind, period.offset);
+    return expenses.filter((expense) => inRange(expense.date, range));
+  }, [expenses, period.kind, period.offset]);
+  const inPeriod = useMemo(() => periodExpenses.map((expense) => ({ ...expense, amount: myShareOf(expense) })), [periodExpenses]);
   const spendConversion = useConvertedExpenses(inPeriod, homeCurrency);
-  const periodExpenses = useMemo(
-    () => expenses.filter((expense) => inRange(expense.date, range)),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [expenses, period],
-  );
   const mine: Expense[] = spendConversion.convertedExpenses.map(({ expense, amount }) => ({ ...expense, amount, currency: homeCurrency }));
   const spent = sumAmount(mine);
   const allMine = useMemo(() => expenses.map((expense) => ({ ...expense, amount: myShareOf(expense) })), [expenses]);
@@ -75,7 +67,7 @@ export function MoneyOverview({
     group: groupName(expense.groupId),
   }));
 
-  const { rows, overall, ready: overallReady } = useOverallBalance();
+  const { rows, archivedRows, overall, ready: overallReady } = useOverallBalance();
   const isSettled = (row: GroupBalanceRow) => row.unconverted === 0 && Math.abs(row.net) < 0.005 && now - row.lastActivity > SETTLED_AFTER_MS;
   const active = rows.filter((row) => !isSettled(row));
   const settled = rows.filter(isSettled);
@@ -90,8 +82,9 @@ export function MoneyOverview({
   const firstDate = new Date(expenses.reduce((min, expense) => Math.min(min, new Date(expense.date).getTime()), Date.now()));
   const monthsBack = Math.min(MAX_MONTHS_BACK, Math.max(0, (thisYear - firstDate.getFullYear()) * 12 + new Date().getMonth() - firstDate.getMonth()));
   const yearsBack = Math.max(0, thisYear - firstDate.getFullYear());
+  const totals = useMemo(() => totalsByOffset(insightItems, monthsBack, yearsBack), [insightItems, monthsBack, yearsBack]);
   const totalOf = (kind: OverviewPeriod["kind"], offsetBack: number) => {
-    const total = periodTotals(insightItems, kind, 1, offsetBack)[0].total;
+    const total = (kind === "year" ? totals.years : totals.months)[offsetBack] ?? 0;
     return total > 0 ? money(total) : undefined;
   };
   const key = (value: OverviewPeriod) => `${value.kind}:${value.offset}`;
@@ -107,7 +100,7 @@ export function MoneyOverview({
   };
   const unconvertedLabel = spendConversion.unconvertedTotals.map((entry) => formatMoney(formatCurrency, entry.amount, entry.currency)).join(" + ");
 
-  const row = ({ group }: GroupBalanceRow) => <GroupListRow key={group.id} group={group} onPress={() => onOpenGroup(group.id)} />;
+  const row = (balance: GroupBalanceRow) => <GroupListRow key={balance.group.id} row={balance} onPress={() => onOpenGroup(balance.group.id)} />;
 
   return (
     <View>
@@ -176,13 +169,13 @@ export function MoneyOverview({
         </>
       ) : null}
 
-      {archivedGroups.length > 0 ? (
+      {archivedRows.length > 0 ? (
         <>
           <PressableScale haptic={false} onPress={() => setShowArchived(!showArchived)} accessibilityRole="button" style={styles.settledToggle}>
-            <Text style={[styles.settledLabel, { color: c.textMuted, fontFamily: f.medium }]}>{t("groupSettings.archivedSection", { count: archivedGroups.length })}</Text>
+            <Text style={[styles.settledLabel, { color: c.textMuted, fontFamily: f.medium }]}>{t("groupSettings.archivedSection", { count: archivedRows.length })}</Text>
             <Icon name={showArchived ? "chevronDown" : "chevronRight"} size={14} color={c.textMuted} />
           </PressableScale>
-          {showArchived ? archivedGroups.map((group) => <GroupListRow key={group.id} group={group} onPress={() => onOpenGroup(group.id)} />) : null}
+          {showArchived ? archivedRows.map(row) : null}
         </>
       ) : null}
 
@@ -199,13 +192,11 @@ export function MoneyOverview({
   );
 }
 
-/** One trip or group with your balance in its own currency (exact, no conversion needed). */
-function GroupListRow({ group, onPress }: { group: MoneyGroup; onPress: () => void }) {
+/** One trip or group with your balance in its own currency. */
+function GroupListRow({ row: { group, myNet, hasSplits: splits }, onPress }: { row: GroupBalanceRow; onPress: () => void }) {
   const { c, f } = useAura();
   const { t, formatCurrency } = useLocalization();
-  const { myNet, splitExpenses, settlements } = useGroupBalances(group);
   const money = (amount: number) => formatMoney(formatCurrency, amount, group.currency);
-  const splits = splitExpenses.length > 0 || settlements.length > 0;
   return (
     <PressableScale haptic={false} pressedScale={0.98} onPress={onPress} accessibilityRole="button" style={styles.groupRow}>
       <View style={[styles.groupIcon, { backgroundColor: c.surfaceStrong }]}>

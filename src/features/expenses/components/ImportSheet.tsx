@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useEffectEvent, useRef, useState } from "react";
 import { ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { AuraButton, AuraSegmented, AuraSheet, Icon, PressableScale, useAura } from "@/atoms";
 import { auraCategoryColors, auraStatusAccent } from "@/constants/aura";
@@ -78,15 +78,17 @@ function ImportBody({ groupId, trip, initialTab = "paste", onImported, onFromApp
     }
   };
 
-  // Once Gmail finishes connecting, scan automatically — no second tap needed.
-  useEffect(() => {
+  const autoScan = useEffectEvent((open: Tab, connected: boolean) => {
     // A dropped grant flips back to "Connect"; scan again once it reconnects.
-    if (!gmail.connected) autoScannedRef.current = false;
-    if (tab === "gmail" && gmail.connected && !autoScannedRef.current && candidates === null && !isWorking) {
+    if (!connected) autoScannedRef.current = false;
+    if (open === "gmail" && connected && !autoScannedRef.current && candidates === null && !isWorking) {
       autoScannedRef.current = true;
       void scanGmail();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  });
+  // Once Gmail finishes connecting, scan automatically — no second tap needed.
+  useEffect(() => {
+    autoScan(tab, gmail.connected);
   }, [tab, gmail.connected]);
 
   const handleParsePaste = async () => {

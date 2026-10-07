@@ -81,7 +81,7 @@ async function runSync(trip: Trip): Promise<TripGmailSyncResult | null> {
     if (reparse) await pruneTickets();
     const expensesRemoved =
       removeCancelledExpenses([...removedSourceIds, ...cancelledIds], trip.id) + removeGenericDuplicates(trip.id);
-    if (reparse) autoSplitExisting(trip);
+    if (reparse) autoSplitExisting(trip, messages);
 
     // A trip deleted mid-sync must not leave coverage behind.
     if (useTripsStore.getState().trips.some((item) => item.id === trip.id)) {
@@ -196,14 +196,20 @@ function autoSplitFields(
   return plan.kind === "split" ? { paidBy: SELF_ID, shares: plan.shares } : { splitHint: plan.hint };
 }
 
-/** One pass over the trip's earlier Gmail spends that were never split, using their stored email text. */
-function autoSplitExisting(trip: Trip): void {
-  const { expenses, updateExpense } = useExpensesStore.getState();
-  for (const expense of expenses) {
+/**
+ * One pass over the trip's earlier Gmail spends that were never split, using the email from this scan
+ * when it was fetched again, else the start of the email kept on the spend.
+ */
+function autoSplitExisting(trip: Trip, messages: RawMessage[]): void {
+  const bodies = new Map(messages.map((message) => [message.externalId, message.body]));
+  const updates: { id: string; input: Partial<CreateExpenseInput> }[] = [];
+  for (const expense of useExpensesStore.getState().expenses) {
     if (expense.groupId !== trip.id || expense.source !== "email" || expense.shares?.length || expense.splitHint) continue;
-    const fields = autoSplitFields(expense.note ?? expense.rawText ?? "", expense, trip);
-    if (fields.shares || fields.splitHint) updateExpense(expense.id, fields);
+    const text = (expense.externalId && bodies.get(expense.externalId)) || expense.note || expense.rawText || "";
+    const fields = autoSplitFields(text, expense, trip);
+    if (fields.shares || fields.splitHint) updates.push({ id: expense.id, input: fields });
   }
+  useExpensesStore.getState().updateExpenses(updates);
 }
 
 /**
@@ -211,12 +217,12 @@ function autoSplitExisting(trip: Trip): void {
  * ("Maple Leaf Hostel", ¥17,367, same day); keeps the named one.
  */
 function removeGenericDuplicates(tripId: string): number {
-  const { expenses, deleteExpense } = useExpensesStore.getState();
+  const { expenses, removeExpenses } = useExpensesStore.getState();
   const email = expenses.filter((expense) => expense.groupId === tripId && expense.source === "email");
   const key = (expense: (typeof email)[number]) => `${expense.currency}|${expense.amount.toFixed(2)}|${toLocalDayKey(expense.date)}`;
   const named = new Set(email.filter((expense) => !isGenericTitle(expense.merchant)).map(key));
   const duplicates = email.filter((expense) => isGenericTitle(expense.merchant) && named.has(key(expense)));
-  for (const expense of duplicates) deleteExpense(expense.id);
+  removeExpenses(duplicates.map((expense) => expense.id));
   return duplicates.length;
 }
 
@@ -236,10 +242,10 @@ function removeCancelledExpenses(sourceIds: string[], tripId: string): number {
   // Event source ids are "gmail:<message>#<n>"; the spend from that email is "gmail:<message>".
   const messageIds = new Set(sourceIds.map((id) => id.replace(/#\d+$/, "")));
   if (messageIds.size === 0) return 0;
-  const { expenses, deleteExpense } = useExpensesStore.getState();
+  const { expenses, removeExpenses } = useExpensesStore.getState();
   const cancelled = expenses.filter(
     (expense) => expense.groupId === tripId && expense.source === "email" && expense.externalId && messageIds.has(expense.externalId),
   );
-  for (const expense of cancelled) deleteExpense(expense.id);
+  removeExpenses(cancelled.map((expense) => expense.id));
   return cancelled.length;
 }

@@ -2,6 +2,7 @@ import { isArchivedGroup, findMoneyGroup, isTrip, selectMoneyGroups, useTripsSto
 import { useAiContextStore } from "@/features/ai/store/aiContextStore";
 import { myShareOf, periodRange, inRange } from "@/features/expenses/utils/myMoney";
 import { toLocalDayKey } from "@/features/expenses/utils/dateKey";
+import { rateKey } from "@/features/expenses/utils/rates";
 import { computeNetBalances, isSplitExpense, pairwiseDebts, roundMoney, SELF_ID, simplifyDebts } from "@/features/expenses/utils/split";
 import { getDefaultCurrency } from "@/localization";
 import { useExpensesStore } from "@/features/expenses/store/expensesStore";
@@ -112,17 +113,15 @@ export function resolveChatContext(): string {
   return chooseChatContext({ picked: useAiContextStore.getState().picked, activeTripId, trips, groups, expenses, settlements });
 }
 
-const rateKey = (currency: string, date: string) => `${currency}|${toLocalDayKey(date)}`;
-
 async function ratesTo(target: string, items: { currency: string; date: string }[]) {
   const rates = new Map<string, number>();
   for (const item of items) {
-    const key = rateKey(item.currency, item.date);
+    const key = rateKey(item.currency, target, item.date);
     if (item.currency === target || rates.has(key)) continue;
     const rate = await rateWithin(item.currency, target, item.date);
     if (rate !== null) rates.set(key, rate);
   }
-  return (currency: string, date: string) => (currency === target ? 1 : rates.get(rateKey(currency, date)) ?? null);
+  return (currency: string, date: string) => (currency === target ? 1 : rates.get(rateKey(currency, target, date)) ?? null);
 }
 
 const who = (person: string) => (person === SELF_ID ? "you" : person);

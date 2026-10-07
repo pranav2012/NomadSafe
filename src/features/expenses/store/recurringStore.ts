@@ -47,6 +47,6 @@ export const useRecurringStore = create<RecurringState>()(
       removeByGroupId: (groupId) => set((state) => ({ rules: state.rules.filter((rule) => rule.groupId !== groupId) })),
       reset: () => set({ rules: [] }),
     }),
-    { name: "recurring-store", storage: createJSONStorage(() => mmkvStateStorage) },
+    { name: "recurring-store", storage: createJSONStorage(() => mmkvStateStorage), version: 1, migrate: (persisted) => persisted as RecurringState },
   ),
 );

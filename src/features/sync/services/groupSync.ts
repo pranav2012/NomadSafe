@@ -16,7 +16,7 @@ import {
 } from "@/features/trips/store/tripsStore";
 import { syncWidgets } from "@/features/widget/syncWidgets";
 import { logger } from "@/modules/logger";
-import { storage } from "@/modules/storage";
+import { flushPendingWrites, storage } from "@/modules/storage";
 import { groupDetails, mergeDetails } from "../utils/groupDetails";
 import { hashOf } from "../utils/hash";
 import { clearGroupLedgers, groupLedgerKey, keepLocalOnly, makeSharedScope, stripRaw, type SharedKind } from "../utils/sharedScope";
@@ -79,6 +79,7 @@ function readLedger(uid: string, groupId: string): GroupLedger {
 }
 
 function writeLedger(uid: string, groupId: string, ledger: GroupLedger) {
+  flushPendingWrites();
   storage.set(groupLedgerKey(uid, groupId), JSON.stringify(ledger));
 }
 
@@ -560,6 +561,7 @@ export function clearSharedLocalData(owner: string | null) {
   for (const trip of allGroups()) {
     if (trip.shared) dropLocalGroup(trip.id, trip.shared.groupId, owner ?? "", true);
   }
+  flushPendingWrites();
   clearGroupLedgers();
   awaitingList.clear();
 }

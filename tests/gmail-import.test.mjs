@@ -241,3 +241,17 @@ test("a new start date, destination or Gmail account rescans the whole trip", ()
 test("a trip more than 60 days away has nothing to scan yet", () => {
   assert.equal(coverage.nextGmailScanWindow(tokyo, null, account, tokyoStart - 61 * DAY), null);
 });
+
+test("stored email text keeps only its start, on a code point boundary", () => {
+  const { trimStoredEmailText, trimStoredEmailRecord, MAX_STORED_EMAIL_CHARS } = loadModule("src/features/expenses/utils/emailText.ts");
+  assert.equal(trimStoredEmailText("short"), "short");
+  const long = `${"a".repeat(MAX_STORED_EMAIL_CHARS - 2)}😀${"b".repeat(50)}`;
+  const trimmed = trimStoredEmailText(long);
+  assert.ok(trimmed.length <= MAX_STORED_EMAIL_CHARS);
+  assert.ok(trimmed.endsWith("…"));
+  assert.ok(!/[\uD800-\uDBFF]…$/.test(trimmed));
+  const manual = { source: "manual", note: "x".repeat(5000) };
+  assert.equal(trimStoredEmailRecord(manual), manual);
+  const email = trimStoredEmailRecord({ source: "email", note: "x".repeat(5000), rawText: "y".repeat(5000) });
+  assert.ok(email.note.length <= MAX_STORED_EMAIL_CHARS && email.rawText.length <= MAX_STORED_EMAIL_CHARS);
+});

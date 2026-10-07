@@ -62,6 +62,7 @@ export const useChatStreamStore = create<ChatStreamState>()(() => ({
 }));
 
 const STREAM_UPDATE_INTERVAL_MS = 50;
+const MAX_SAVED_MESSAGES = 200;
 
 let stopRequested = false;
 // Bumped when a conversation is cleared so an in-flight reply doesn't write into the emptied chat.
@@ -290,9 +291,21 @@ export const useChatStore = create<ChatState>()(
     {
       name: "ai-chat-store",
       storage: createJSONStorage(() => mmkvStateStorage),
+      version: 1,
+      migrate: (persisted) => persisted,
+      // Only the latest messages are saved; older context lives on in each conversation's summary.
       partialize: (state) => {
         const { [TEMP_CHAT_KEY]: _temporary, ...conversations } = state.conversations;
-        return { conversations };
+        return {
+          conversations: Object.fromEntries(
+            Object.entries(conversations).map(([key, conversation]) => [
+              key,
+              conversation.messages.length > MAX_SAVED_MESSAGES
+                ? { ...conversation, messages: conversation.messages.slice(-MAX_SAVED_MESSAGES) }
+                : conversation,
+            ]),
+          ),
+        };
       },
       merge: (persisted, current) => {
         const stored = persisted as (Partial<ChatState> & Partial<ChatConversation>) | undefined;

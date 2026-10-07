@@ -24,6 +24,7 @@ import {
 import { translate } from "@/localization/translate";
 import { isPreTripBooking, tripMatchReason } from "@/features/expenses/services/tripEmailFilter";
 import { countAttributes, logger } from "@/modules/logger";
+import { trimStoredEmailText } from "@/features/expenses/utils/emailText";
 
 // Local model calls are slow; only unmatched candidates use it, capped per import.
 const MAX_MODEL_CALLS = 20;
@@ -139,7 +140,7 @@ export async function buildImportCandidates(
       category,
       date,
       source,
-      rawText: parsed.raw,
+      rawText: source === "email" ? trimStoredEmailText(parsed.raw) : parsed.raw,
       note: message.note,
       preview: parsed.raw.slice(0, 120),
       externalId: message.externalId,

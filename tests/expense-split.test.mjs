@@ -459,4 +459,10 @@ test("period totals and top places", () => {
   assert.deepEqual(insights.periodTotals(items, "month", 2, 0, now).map((month) => [month.offset, month.total]), [[1, 50], [0, 700]]);
   assert.deepEqual(insights.periodTotals(items, "month", 2, 1, now).map((month) => [month.offset, month.total]), [[2, 0], [1, 50]]);
   assert.deepEqual(insights.topPlaces(items, 5).map((place) => [place.name, place.amount, place.count]), [["Uber", 400, 1], ["Cafe", 300, 2]]);
+  const byOffset = insights.totalsByOffset([...items, { amount: 30, date: at(2025, 11, 31) }, { amount: 9, date: at(2026, 10, 1) }], 3, 1, now);
+  assert.deepEqual(byOffset.months, [700, 50, 0, 0]);
+  assert.deepEqual(byOffset.years, [759, 30]);
+  for (let offset = 0; offset <= 3; offset += 1) {
+    assert.equal(byOffset.months[offset], insights.periodTotals(items, "month", 1, offset, now)[0].total);
+  }
 });

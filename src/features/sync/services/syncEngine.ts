@@ -13,7 +13,7 @@ import { normalizePlanned, pickDefaultActiveTripId, selectShareables, useTripsSt
 import { useRecurringStore, type RecurringRule } from "@/features/expenses/store/recurringStore";
 import { syncWidgets } from "@/features/widget/syncWidgets";
 import { logger } from "@/modules/logger";
-import { storage } from "@/modules/storage";
+import { flushPendingWrites, storage } from "@/modules/storage";
 import { hashOf } from "../utils/hash";
 import { clearGroupLedgers, keepLocalOnly, makeSharedScope, stripRaw } from "../utils/sharedScope";
 
@@ -88,7 +88,9 @@ function readLedger(userId: string): Ledger {
   return { cursor: 0, entries: {} };
 }
 
+// Stores are saved first, so the ledger never runs ahead of the data it describes.
 function writeLedger(userId: string, ledger: Ledger) {
+  flushPendingWrites();
   storage.set(ledgerKey(userId), JSON.stringify(ledger));
 }
 
@@ -312,6 +314,7 @@ export function clearSyncedLocalData() {
   void deleteAllTickets();
   void deleteAllIdeaThumbs();
   useTravelInfoStore.getState().reset();
+  flushPendingWrites();
   if (owner) storage.remove(ledgerKey(owner));
   storage.remove(OWNER_KEY);
   clearGroupLedgers();
