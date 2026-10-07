@@ -42,6 +42,6 @@ export const usePassportStore = create<PassportState>()(
       removeEntry: (id) => set((state) => ({ entries: state.entries.filter((entry) => entry.id !== id) })),
       reset: () => set({ entries: [] }),
     }),
-    { name: "passport", storage: createJSONStorage(() => mmkvStateStorage), version: 1, migrate: (persisted) => persisted as PassportState },
+    { name: "passport", storage: createJSONStorage(() => mmkvStateStorage) },
   ),
 );

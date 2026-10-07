@@ -54,16 +54,7 @@ export const useSharingStore = create<SharingState>()(
     {
       name: "sharing-store",
       storage: createJSONStorage(() => mmkvStateStorage),
-      version: 2,
-      // v2 drops the unused local recipients, geofences, battery and publish time.
-      migrate: (persisted) => {
-        const old = (persisted ?? {}) as Partial<SharingState>;
-        return {
-          isBroadcasting: old.isBroadcasting ?? false,
-          mode: old.mode ?? DEFAULT_MODE,
-          shareDuration: old.shareDuration === undefined ? DEFAULT_SHARE_DURATION : old.shareDuration,
-        } as SharingState;
-      },
+      version: 1,
     },
   ),
 );

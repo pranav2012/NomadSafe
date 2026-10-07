@@ -291,8 +291,6 @@ export const useChatStore = create<ChatState>()(
     {
       name: "ai-chat-store",
       storage: createJSONStorage(() => mmkvStateStorage),
-      version: 1,
-      migrate: (persisted) => persisted,
       // Only the latest messages are saved; older context lives on in each conversation's summary.
       partialize: (state) => {
         const { [TEMP_CHAT_KEY]: _temporary, ...conversations } = state.conversations;

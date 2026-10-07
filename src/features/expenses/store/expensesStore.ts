@@ -226,19 +226,16 @@ export const useExpensesStore = create<ExpensesState>()(
     {
       name: "expenses-store",
       storage: createJSONStorage(() => mmkvStateStorage),
-      version: 3,
-      migrate: (persistedState, version) => {
-        const state = persistedState as { expenses?: Expense[]; settlements?: Settlement[] } | undefined;
+      version: 2,
+      migrate: (persistedState) => {
+        const state = persistedState as { expenses?: unknown[]; settlements?: unknown[] } | undefined;
         if (!state) return persistedState;
-        // v2 renamed tripId to groupId (a trip is a kind of group); v3 trims stored email text.
-        let expenses = state.expenses ?? [];
-        let settlements = state.settlements ?? [];
-        if (version < 2) {
-          expenses = expenses.map(withGroupId);
-          settlements = settlements.map(withGroupId);
-        }
-        if (version < 3) expenses = expenses.map(trimStoredEmailRecord);
-        return { ...state, expenses, settlements };
+        // v2 renamed tripId to groupId (a trip is a kind of group).
+        return {
+          ...state,
+          expenses: (state.expenses ?? []).map(withGroupId),
+          settlements: (state.settlements ?? []).map(withGroupId),
+        };
       },
     },
   ),

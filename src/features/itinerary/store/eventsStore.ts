@@ -244,7 +244,7 @@ export const useEventsStore = create<EventsState>()(
     {
       name: "itinerary-store",
       storage: createJSONStorage(() => mmkvStateStorage),
-      version: 5,
+      version: 4,
       migrate: (persisted, version) => {
         let state = persisted as { events?: TripEvent[] };
         // v2: one event per booking instead of check-in/check-out pairs and per-email copies.
@@ -262,8 +262,6 @@ export const useEventsStore = create<EventsState>()(
         }
         // v4: events an older sync moved out of their trip (tripId renamed to groupId).
         if (version < 4 && state.events) state = { ...state, events: state.events.map(repairEventTripId) };
-        // v5: email bookings keep only the start of the email.
-        if (version < 5 && state.events) state = { ...state, events: state.events.map(trimStoredEmailRecord) };
         return state;
       },
     },
