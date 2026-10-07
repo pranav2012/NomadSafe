@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { Image } from "expo-image";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AuraButton, AuraField, Icon, PressableScale, showToast, useAura, type IconName } from "@/atoms";
 import { useLocalization } from "@/localization";
@@ -11,7 +11,6 @@ import { useSheetTopInset } from "@/hooks/useSheetTopInset";
 import { SELF_ID } from "@/features/expenses/utils/split";
 import { fetchLinkPreview, type LinkPreview } from "@/features/itinerary/services/linkPreview";
 import { useEventsStore } from "@/features/itinerary/store/eventsStore";
-import { useIncomingShareStore } from "@/features/itinerary/store/incomingShareStore";
 import { useSavedSheetStore } from "@/features/itinerary/store/savedSheetStore";
 import { saveTargets, type DetectedPlace, type SaveChoice, type SaveTarget } from "@/features/itinerary/utils/saveTargets";
 import { captionOf, classifyLink, extractLink, type LinkProvider } from "@/features/itinerary/utils/sharedLinks";
@@ -33,7 +32,8 @@ export default function SaveLinkScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const sheetTop = useSheetTopInset();
-  const [shared] = useState(() => useIncomingShareStore.getState().text ?? "");
+  const params = useLocalSearchParams<{ text?: string }>();
+  const [shared] = useState(() => params.text ?? "");
   const raw = extractLink(shared);
   const link = raw ? classifyLink(raw) : null;
   const caption = captionOf(shared, raw);
@@ -47,7 +47,10 @@ export default function SaveLinkScreen() {
   const activeTripId = useTripsStore((state) => state.activeTripId);
 
   useEffect(() => {
-    useIncomingShareStore.getState().clear();
+    if (!shared.trim()) {
+      router.back();
+      return;
+    }
     if (!link) return;
     let live = true;
     void fetchLinkPreview(link).then((result) => {

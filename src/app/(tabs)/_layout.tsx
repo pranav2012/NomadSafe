@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from "react";
-import { Platform, StyleSheet, View } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { AppState, Platform, StyleSheet, View } from "react-native";
 import { BlurTargetView } from "expo-blur";
 import { useRouter } from "expo-router";
 import { NativeTabs } from "expo-router/unstable-native-tabs";
@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { GlassTabBar, type GlassTabItem, TAB_BAR_GAP, TAB_BAR_HEIGHT, useKeyboardVisible } from "@/atoms";
 import { AURA_FONT_FILES, auraDark, auraLight } from "@/constants/aura";
 import { usePendingJoinStore } from "@/features/trips/store/pendingJoinStore";
+import { useAuthStore } from "@/features/auth";
 import { useIncomingShareStore } from "@/features/itinerary/store/incomingShareStore";
 import { useTripGmailSync } from "@/features/expenses/hooks/useTripGmailSync";
 import { useLandingTab } from "@/features/home/hooks/useLandingTab";
@@ -44,13 +45,28 @@ function usePendingInvite() {
   }, [code, router]);
 }
 
-/** Opens "Save idea" for a link shared from another app once the user is in the app. */
+// Lets the lock gate's modal (privacy cover or lock screen) finish closing first: iOS can't present
+// "Save idea" while another presentation is still on its way out, and shows a blank sheet instead.
+const SHARE_OPEN_DELAY_MS = 450;
+
+/** Opens "Save idea" for a link shared from another app once the user is in the app, active and unlocked. */
 function usePendingShare() {
   const router = useRouter();
   const text = useIncomingShareStore((s) => s.text);
+  const unlocked = useAuthStore((s) => !s.isPinSet || s.isUnlocked);
+  const [active, setActive] = useState(AppState.currentState === "active");
   useEffect(() => {
-    if (text) router.push("/save-link");
-  }, [text, router]);
+    const subscription = AppState.addEventListener("change", (state) => setActive(state === "active"));
+    return () => subscription.remove();
+  }, []);
+  useEffect(() => {
+    if (!text || !unlocked || !active) return;
+    const timer = setTimeout(() => {
+      const shared = useIncomingShareStore.getState().take();
+      if (shared) router.push({ pathname: "/save-link", params: { text: shared } });
+    }, SHARE_OPEN_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [active, text, unlocked, router]);
 }
 
 /** The system UITabBar (Liquid Glass on iOS 26), minimizing while scrolling down. */
