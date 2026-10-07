@@ -67,7 +67,8 @@ export function usePerfGovernor(active: boolean) {
   }, false);
 
   useEffect(() => {
-    if (!active || usePerfStore.getState().governorRan) return;
+    // Dev builds run far slower than release, so their frame times would wrongly drop the tier.
+    if (__DEV__ || !active || usePerfStore.getState().governorRan) return;
     let stopTimer: ReturnType<typeof setTimeout> | null = null;
     const startTimer = setTimeout(() => {
       slow.value = 0;

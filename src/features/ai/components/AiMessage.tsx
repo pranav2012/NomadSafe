@@ -10,10 +10,10 @@ import { AiPlasmaOrb } from "./AiPlasmaOrb";
 import { AiThinking } from "./AiThinking";
 
 const MONO = Platform.select({ ios: "Menlo", default: "monospace" });
-// Each step re-parses the markdown, so text lands in ~15 steps a second (~10 on low-tier phones);
-// the fading tail keeps it reading as smooth typing. Catch-up stays ~200 ms either way.
-const REVEAL_FRAME_MS = { high: 64, mid: 64, low: 96 } as const;
-const REVEAL_FRAMES = { high: 3, mid: 3, low: 2 } as const;
+// Each step re-parses the markdown: ~30 steps a second on flagships, fewer on weaker phones (the fading
+// tail keeps it reading as smooth typing). Catch-up stays ~200 ms on every tier.
+const REVEAL_FRAME_MS = { high: 32, mid: 64, low: 96 } as const;
+const REVEAL_FRAMES = { high: 6, mid: 3, low: 2 } as const;
 const TAIL_CHARS = 10;
 const CURSOR_MS = 420;
 

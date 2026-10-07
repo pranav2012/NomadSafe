@@ -13,14 +13,15 @@ import {
 } from "react-native-reanimated";
 import { auraStatusColors } from "@/constants/aura";
 import { useAppActive } from "@/hooks/useAnimationsActive";
+import { usePerfTier, type PerfTier } from "@/hooks/usePerfTier";
 
 export type VoiceOrbMode = "idle" | "listening" | "thinking" | "done";
 
 const DONE = "#3DDC97";
 const DISC_RADIUS = 0.25;
 const PHASE_WRAP = 1000;
-// The bars redraw at ~30 fps; the mic level is sampled on the same tick.
-const TICK_S = 0.033;
+// The bars redraw at the display rate on flagships and ~30 fps on mid/low tiers; the mic level is sampled on the same tick.
+const TICK_S: Record<PerfTier, number> = { high: 0, mid: 0.033, low: 0.033 };
 
 function rgb(hex: string): [number, number, number] {
   const value = parseInt(hex.slice(1), 16);
@@ -164,9 +165,11 @@ export function VoiceOrb({
     [listening, level],
   );
 
+  const tickS = TICK_S[usePerfTier()];
+
   const clock = useFrameCallback((frame) => {
     const elapsed = pending.get() + (frame.timeSincePreviousFrame ?? 16) / 1000;
-    if (elapsed < TICK_S) {
+    if (elapsed < tickS) {
       pending.set(elapsed);
       return;
     }

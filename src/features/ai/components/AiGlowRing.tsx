@@ -4,6 +4,7 @@ import { BlurMask, Canvas, Group, RoundedRect, SweepGradient, vec } from "react-
 import { useDerivedValue, useFrameCallback, useReducedMotion, useSharedValue, withTiming } from "react-native-reanimated";
 import { auraStatusColors } from "@/constants/aura";
 import { useAnimationsActive } from "@/hooks/useAnimationsActive";
+import { usePerfTier, type PerfTier } from "@/hooks/usePerfTier";
 
 export type AiGlowMode = "off" | "focus" | "active";
 
@@ -13,8 +14,8 @@ const COLORS = [BLUE, TEAL, VIOLET, BLUE];
 export const GLOW_BLEED = 44;
 const BLEED = GLOW_BLEED;
 const STROKE = 1.5;
-// The soft gradient turns at ~30 fps rather than the display rate.
-const TICK_S = 0.033;
+// Flagships tick at the display rate; mid and low tiers at ~30 fps.
+const TICK_S: Record<PerfTier, number> = { high: 0, mid: 0.033, low: 0.033 };
 
 /**
  * Aura-coloured gradient ring that hugs a rounded panel: faint and slow while `focus`,
@@ -38,9 +39,11 @@ export function AiGlowRing({ mode, radius }: { mode: AiGlowMode; radius: number 
     glow.set(withTiming(mode === "active" ? 0.75 : 0, { duration: 450 }));
   }, [glow, mode, ring, speed]);
 
+  const tickS = TICK_S[usePerfTier()];
+
   const spin = useFrameCallback((frame) => {
     const elapsed = pending.get() + (frame.timeSincePreviousFrame ?? 16) / 1000;
-    if (elapsed < TICK_S) {
+    if (elapsed < tickS) {
       pending.set(elapsed);
       return;
     }

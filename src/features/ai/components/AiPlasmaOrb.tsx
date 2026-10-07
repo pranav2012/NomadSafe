@@ -13,6 +13,7 @@ import {
 import { scheduleOnRN } from "react-native-worklets";
 import { auraStatusColors } from "@/constants/aura";
 import { useAppActive } from "@/hooks/useAnimationsActive";
+import { usePerfTier, type PerfTier } from "@/hooks/usePerfTier";
 import { lightImpact, mediumImpact, selectionChanged } from "@/utils/haptics";
 
 export type AiPlasmaOrbMode = "idle" | "thinking";
@@ -38,8 +39,8 @@ const NO_RIPPLE = [0, 0, 99, 0];
 const NO_TRAIL = [0, 0, 0, 0];
 const NO_TRAIL_AGES_A = [99, 99, 99, 99];
 const NO_TRAIL_AGES_B = [99, 99];
-// The plasma drifts slowly, so its clock ticks at ~30 fps; touches still animate at the display rate.
-const TICK_S = 0.033;
+// The plasma clock ticks at the display rate on flagships and ~30 fps on mid/low tiers; touches always animate at the display rate.
+const TICK_S: Record<PerfTier, number> = { high: 0, mid: 0.033, low: 0.033 };
 
 type Ripple = [x: number, y: number, start: number, amp: number];
 type TrailPoint = [x: number, y: number, vx: number, vy: number, start: number];
@@ -316,9 +317,10 @@ export function AiPlasmaOrb({
 
   // Flow and corona phases advance faster while boosted; integrating them (instead of scaling
   // time) keeps speed changes smooth, and wrapping keeps the shader's inputs small.
+  const tickS = TICK_S[usePerfTier()];
   const clock = useFrameCallback((frame) => {
     const elapsed = pending.get() + (frame.timeSincePreviousFrame ?? 16) / 1000;
-    if (elapsed < TICK_S) {
+    if (elapsed < tickS) {
       pending.set(elapsed);
       return;
     }

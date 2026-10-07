@@ -13,6 +13,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { auraSignal, auraStatusColors } from "@/constants/aura";
 import { useAppActive } from "@/hooks/useAnimationsActive";
+import { usePerfTier, type PerfTier } from "@/hooks/usePerfTier";
 
 export type SecurityRingState = "idle" | "scanning" | "success";
 
@@ -21,8 +22,8 @@ const DANGER = auraSignal.danger;
 const RING_RADIUS = 0.36;
 const PHASE_WRAP = 1000;
 const NO_BURST = 99;
-// The ring redraws at ~30 fps rather than the display rate.
-const TICK_S = 0.033;
+// Flagships tick at the display rate; mid and low tiers at ~30 fps.
+const TICK_S: Record<PerfTier, number> = { high: 0, mid: 0.033, low: 0.033 };
 
 function rgb(hex: string): [number, number, number] {
   const value = parseInt(hex.slice(1), 16);
@@ -160,9 +161,11 @@ export function SecurityRing({
     }
   }, [error, errorKey, reduceMotion, shake]);
 
+  const tickS = TICK_S[usePerfTier()];
+
   const clock = useFrameCallback((frame) => {
     const elapsed = pending.get() + (frame.timeSincePreviousFrame ?? 16) / 1000;
-    if (elapsed < TICK_S) {
+    if (elapsed < tickS) {
       pending.set(elapsed);
       return;
     }
