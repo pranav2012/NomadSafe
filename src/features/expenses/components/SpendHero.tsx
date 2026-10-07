@@ -25,26 +25,32 @@ export interface SpendHeroProps {
 const BAR_H = 10;
 const NUMBER_SIZE = 50;
 const NUMBER_LINE = 58;
+const MIN_NUMBER_SIZE = 30;
+// Rough width of one InstrumentSans semibold glyph per point of font size, to shrink long totals to fit.
+const GLYPH_WIDTH = 0.62;
 
 /** Total spent so far, with a category breakdown bar and legend. */
 export function SpendHero({ label, currency, total, daysLeft, breakdown, note, caption, detail, children }: SpendHeroProps) {
   const { c, f } = useAura();
   const { t, formatCurrency } = useLocalization();
+  const [width, setWidth] = useState(0);
   const money = (amount: number) => formatMoney(formatCurrency, amount, currency);
+  const totalLabel = money(total);
+  const numberSize = width > 0 ? Math.max(MIN_NUMBER_SIZE, Math.min(NUMBER_SIZE, width / (totalLabel.length * GLYPH_WIDTH))) : NUMBER_SIZE;
 
   const meta = [label ?? t("expenses.allTime"), daysLeft > 0 ? t("expenses.daysLeft", { count: daysLeft }) : null]
     .filter(Boolean)
     .join(" · ");
 
   return (
-    <View style={styles.root}>
+    <View style={styles.root} onLayout={(event) => setWidth(event.nativeEvent.layout.width)}>
       <Text style={[styles.meta, { color: c.textMuted, fontFamily: f.medium }]} numberOfLines={1}>
         {meta}
       </Text>
       <RollingNumber
-        value={money(total)}
-        lineHeight={NUMBER_LINE}
-        style={[styles.number, { color: c.text, fontFamily: f.semibold }]}
+        value={totalLabel}
+        lineHeight={Math.round((numberSize * NUMBER_LINE) / NUMBER_SIZE)}
+        style={[styles.number, { fontSize: numberSize, color: c.text, fontFamily: f.semibold }]}
       />
       <Text style={[styles.caption, { color: c.textSoft, fontFamily: f.regular }]}>{caption ?? t("expenses.spentSoFar")}</Text>
       {detail ? <Text style={[styles.note, { color: c.textMuted, fontFamily: f.regular }]}>{detail}</Text> : null}
@@ -57,8 +63,8 @@ export function SpendHero({ label, currency, total, daysLeft, breakdown, note, c
             {breakdown.slice(0, 4).map((entry) => (
               <View key={entry.category} style={styles.legendItem}>
                 <View style={[styles.dot, { backgroundColor: auraCategoryColors[entry.category] }]} />
-                <Text style={[styles.small, { color: c.textMuted, fontFamily: f.regular }]}>{t(`expenses.category.${entry.category}`)}</Text>
-                <Text style={[styles.small, { color: c.text, fontFamily: f.medium }]}>{money(entry.amount)}</Text>
+                <Text numberOfLines={1} style={[styles.small, { color: c.textMuted, fontFamily: f.regular }]}>{t(`expenses.category.${entry.category}`)}</Text>
+                <Text numberOfLines={1} style={[styles.small, { color: c.text, fontFamily: f.medium }]}>{money(entry.amount)}</Text>
               </View>
             ))}
           </View>

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { AuraListGroup, AuraListRow, AuraProgressBar, AuraSheet, useAura } from "@/atoms";
+import { AuraCard, AuraListGroup, AuraListRow, AuraProgressBar, AuraSheet, AuraSkeleton, AuraSkeletonGroup, useAura } from "@/atoms";
 import { auraStatusColors } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { api, useQuery } from "@/modules/backend";
@@ -75,7 +75,7 @@ export function AiUsageSheet({ visible, onClose }: { visible: boolean; onClose: 
   const meter = (label: string, used: number, limit: number, tone: string) => (
     <View style={styles.meter}>
       <View style={styles.meterHead}>
-        <Text style={[styles.meterLabel, { color: c.text, fontFamily: f.medium }]}>{label}</Text>
+        <Text numberOfLines={1} style={[styles.meterLabel, { color: c.text, fontFamily: f.medium }]}>{label}</Text>
         <Text style={[styles.meterValue, { color: c.textMuted, fontFamily: f.regular }]}>{t("aiUsage.usedOfLimit", { used, limit })}</Text>
       </View>
       <AuraProgressBar value={limit > 0 ? used / limit : 0} tone={tone} accessibilityLabel={label} />
@@ -92,9 +92,20 @@ export function AiUsageSheet({ visible, onClose }: { visible: boolean; onClose: 
         {plan.cloudAi ? (
           <>
             <Text style={[styles.sectionTitle, { color: c.textMuted, fontFamily: f.medium }]}>{t("aiUsage.cloudSection")}</Text>
-            <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.hairline }]}>
+            <AuraCard style={styles.card}>
               {usage === undefined ? (
-                <Text style={[styles.note, { color: c.textMuted, fontFamily: f.regular }]}>{t("aiUsage.cloudLoading")}</Text>
+                <AuraSkeletonGroup label={t("aiUsage.cloudLoading")} style={styles.card}>
+                  {[0, 1].map((i) => (
+                    <View key={i} style={styles.meter}>
+                      <View style={styles.meterHead}>
+                        <AuraSkeleton width="40%" height={14} />
+                        <AuraSkeleton width={64} height={12} radius={6} />
+                      </View>
+                      <AuraSkeleton height={8} radius={4} />
+                    </View>
+                  ))}
+                  <Text style={[styles.note, { color: c.textMuted, fontFamily: f.regular }]}>{t("aiUsage.cloudLoading")}</Text>
+                </AuraSkeletonGroup>
               ) : usage === null ? (
                 <Text style={[styles.note, { color: c.textMuted, fontFamily: f.regular }]}>{t("aiUsage.cloudSignedOut")}</Text>
               ) : (
@@ -106,7 +117,7 @@ export function AiUsageSheet({ visible, onClose }: { visible: boolean; onClose: 
                   </Text>
                 </>
               )}
-            </View>
+            </AuraCard>
             {usage ? <FeatureCounts title={t("aiUsage.cloudByFeature")} counts={usage.byTask} /> : null}
           </>
         ) : null}
@@ -139,10 +150,10 @@ export function AiUsageSheet({ visible, onClose }: { visible: boolean; onClose: 
 const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, paddingBottom: 16 },
   sectionTitle: { fontSize: 13, marginTop: 8, marginBottom: 8, marginLeft: 4 },
-  card: { borderRadius: 22, borderWidth: StyleSheet.hairlineWidth, padding: 16, gap: 14 },
+  card: { gap: 14 },
   meter: { gap: 8 },
   meterHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", gap: 12 },
-  meterLabel: { fontSize: 15 },
+  meterLabel: { flexShrink: 1, fontSize: 15 },
   meterValue: { fontSize: 13.5 },
   note: { fontSize: 12.5, lineHeight: 18 },
   privacy: { fontSize: 12.5, lineHeight: 18, marginTop: 18, marginHorizontal: 4 },

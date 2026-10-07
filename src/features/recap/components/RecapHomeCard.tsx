@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import { AuraButton, Icon, PressableScale, useAura } from "@/atoms";
-import { auraStatusColors } from "@/constants/aura";
+import { auraHitSlop, auraRadius, auraStatusColors } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { useTripRecap } from "../hooks/useTripRecap";
 import { useTripWalking } from "../hooks/useTripWalking";
@@ -20,7 +20,7 @@ export function RecapHomeCard({ tripId, onWatch, onExtend, onDismiss }: { tripId
   const highlights = recap.stats.slice(0, 3);
 
   return (
-    <Animated.View entering={FadeInDown.duration(380)} style={[styles.card, { backgroundColor: c.card, borderColor: c.highlight }]}>
+    <Animated.View entering={FadeInDown.duration(380)} style={[styles.card, { backgroundColor: c.card, borderColor: c.hairline }]}>
       <LinearGradient
         colors={[`${tint[0]}${isDark ? "48" : "30"}`, `${tint[1]}${isDark ? "2A" : "1C"}`, `${tint[2]}${isDark ? "1C" : "12"}`]}
         start={{ x: 0, y: 0 }}
@@ -34,7 +34,7 @@ export function RecapHomeCard({ tripId, onWatch, onExtend, onDismiss }: { tripId
             {t("recap.homeTitle", { name: recap.trip.name })}
           </Text>
         </View>
-        <PressableScale onPress={onDismiss} accessibilityRole="button" accessibilityLabel={t("recap.homeDismiss")} style={[styles.round, { backgroundColor: c.surfaceStrong }]}>
+        <PressableScale onPress={onDismiss} accessibilityRole="button" accessibilityLabel={t("recap.homeDismiss")} hitSlop={auraHitSlop(30)} style={[styles.round, { backgroundColor: c.surfaceStrong }]}>
           <Icon name="x" size={14} color={c.textSoft} />
         </PressableScale>
       </View>
@@ -58,7 +58,7 @@ export function RecapHomeCard({ tripId, onWatch, onExtend, onDismiss }: { tripId
 }
 
 const styles = StyleSheet.create({
-  card: { marginHorizontal: 20, marginTop: 12, borderRadius: 26, borderWidth: StyleSheet.hairlineWidth, padding: 18, gap: 14, overflow: "hidden" },
+  card: { marginHorizontal: 20, marginTop: 12, borderRadius: auraRadius.card, borderWidth: StyleSheet.hairlineWidth, padding: 18, gap: 14, overflow: "hidden" },
   head: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
   flex: { flex: 1 },
   kicker: { fontSize: 12.5, letterSpacing: 1.1, textTransform: "uppercase" },

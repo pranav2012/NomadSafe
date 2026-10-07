@@ -103,7 +103,7 @@ export function GroupActivity({
                       ? t("split.youPaid", { to: personLabel(item.settlement.to, t) })
                       : t("split.paid", { from: personLabel(item.settlement.from, t), to: personLabel(item.settlement.to, t) })}
                 </Text>
-                <Text style={[styles.paymentAmount, { color: c.textSoft, fontFamily: f.semibold }]}>
+                <Text numberOfLines={1} style={[styles.paymentAmount, { color: c.textSoft, fontFamily: f.semibold }]}>
                   {formatMoney(formatCurrency, item.settlement.amount, item.settlement.currency)}
                 </Text>
               </PressableScale>
@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
   dayLabel: { fontSize: 12.5, letterSpacing: 0.2, textTransform: "uppercase", marginBottom: 2 },
   payment: { flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 11 },
   icon: { width: 42, height: 42, borderRadius: 14, alignItems: "center", justifyContent: "center" },
-  paymentWho: { flex: 1, fontSize: 15 },
-  paymentAmount: { fontSize: 15, fontVariant: ["tabular-nums"] },
+  paymentWho: { flex: 1, minWidth: 0, fontSize: 15 },
+  paymentAmount: { maxWidth: "48%", fontSize: 15, fontVariant: ["tabular-nums"] },
   more: { alignSelf: "center", marginTop: 12 },
 });

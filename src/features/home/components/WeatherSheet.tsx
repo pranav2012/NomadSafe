@@ -5,6 +5,7 @@ import { AuraChip, AuraSheet, useAura } from "@/atoms";
 import { describeWeather } from "@/features/trips/services/weatherService";
 import { buildOutlook, dayRain, todayKey, weekday, type DestinationForecast } from "@/features/trips/hooks/useTripForecast";
 import { useLocalization } from "@/localization";
+import { auraSignal } from "@/constants/aura";
 
 interface WeatherSheetProps {
   visible: boolean;
@@ -15,7 +16,7 @@ interface WeatherSheetProps {
 }
 
 const RAIN = "#5B8CFF";
-const WARM = "#FFB547";
+const WARM = auraSignal.amber;
 
 /** Trip forecast in a sheet: destination switcher, today's detail, and a day list with low/high range bars. */
 export function WeatherSheet({ visible, onClose, destinations, active, onSelect }: WeatherSheetProps) {
@@ -51,7 +52,6 @@ export function WeatherSheet({ visible, onClose, destinations, active, onSelect 
         ) : null}
 
         <View style={[styles.hero, { backgroundColor: c.surface, borderColor: c.hairline }]}>
-          <View style={[styles.highlight, { backgroundColor: c.highlight }]} />
           <View style={styles.heroRow}>
             <Text style={styles.emoji}>{condition.emoji}</Text>
             <View style={styles.heroText}>
@@ -114,7 +114,6 @@ const styles = StyleSheet.create({
   bleed: { marginHorizontal: -20 },
   places: { paddingHorizontal: 20, gap: 8 },
   hero: { borderRadius: 24, borderWidth: StyleSheet.hairlineWidth, padding: 16, gap: 12, overflow: "hidden" },
-  highlight: { position: "absolute", top: 0, left: 28, right: 28, height: StyleSheet.hairlineWidth },
   heroRow: { flexDirection: "row", alignItems: "center", gap: 14 },
   emoji: { fontSize: 46 },
   heroText: { flex: 1 },

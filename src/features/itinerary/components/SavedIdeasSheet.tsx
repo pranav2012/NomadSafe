@@ -2,8 +2,8 @@ import React, { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { Image } from "expo-image";
 import Animated, { FadeIn, FadeOut, LinearTransition } from "react-native-reanimated";
-import { AuraButton, AuraChip, AuraSheet, Icon, PressableScale, useAura } from "@/atoms";
-import { auraEventColors } from "@/constants/aura";
+import { AuraButton, AuraChip, AuraEmptyState, AuraSheet, Icon, PressableScale, useAura } from "@/atoms";
+import { auraEventColors, auraHitSlop, auraSignal } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { PrivateView, track } from "@/modules/analytics";
 import { SELF_ID } from "@/features/expenses/utils/split";
@@ -127,7 +127,7 @@ function SheetBody({ trip, stops }: { trip: Trip | PlannedTrip; stops: Stop[] })
     return (
       <Animated.View entering={FadeIn.duration(180)} style={styles.flex}>
         <View style={styles.actingHead}>
-          <PressableScale onPress={() => setActing(null)} accessibilityRole="button" accessibilityLabel={t("common.back")} style={[styles.back, { backgroundColor: c.surfaceStrong }]}>
+          <PressableScale onPress={() => setActing(null)} hitSlop={auraHitSlop(34)} accessibilityRole="button" accessibilityLabel={t("common.back")} style={[styles.back, { backgroundColor: c.surfaceStrong }]}>
             <Icon name="chevronLeft" size={16} color={c.text} />
           </PressableScale>
           <Text numberOfLines={2} style={[styles.actingTitle, { color: c.text, fontFamily: f.semibold }]}>
@@ -183,7 +183,7 @@ function SheetBody({ trip, stops }: { trip: Trip | PlannedTrip; stops: Stop[] })
       </View>
       {notice ? (
         <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(150)} style={styles.notice}>
-          <Icon name="check" size={14} color="#3DDC97" />
+          <Icon name="check" size={14} color={auraSignal.ready} />
           <Text numberOfLines={2} style={[styles.noticeText, { color: c.textSoft, fontFamily: f.medium }]}>
             {notice}
           </Text>
@@ -223,7 +223,7 @@ function SheetBody({ trip, stops }: { trip: Trip | PlannedTrip; stops: Stop[] })
                       {idea.link ? (
                         <View style={[styles.media, { backgroundColor: c.surfaceStrong }]}>
                           {thumbs[idea.id] || idea.link.thumbnail ? (
-                            <Image source={{ uri: thumbs[idea.id] ?? idea.link.thumbnail }} style={StyleSheet.absoluteFill} contentFit="cover" />
+                            <Image source={{ uri: thumbs[idea.id] ?? idea.link.thumbnail }} style={StyleSheet.absoluteFill} contentFit="cover" recyclingKey={idea.id} cachePolicy="memory-disk" />
                           ) : (
                             <Icon name={idea.link.provider === "web" ? "globe" : "play"} size={26} color={c.textSoft} />
                           )}
@@ -264,11 +264,12 @@ function SheetBody({ trip, stops }: { trip: Trip | PlannedTrip; stops: Stop[] })
               })}
             </View>
           ) : (
-            <View style={styles.empty}>
-              <Icon name="bookmark" size={22} color={c.textMuted} />
-              <Text style={[styles.emptyText, { color: c.textSoft, fontFamily: f.regular }]}>{t("ideas.empty")}</Text>
-              {popularCount > 0 ? <AuraButton label={t("ideas.seePopular")} variant="secondary" size="md" onPress={() => setTab("popular")} /> : null}
-            </View>
+            <AuraEmptyState
+              plain
+              icon="bookmark"
+              body={t("ideas.empty")}
+              action={popularCount > 0 ? <AuraButton label={t("ideas.seePopular")} variant="secondary" size="md" onPress={() => setTab("popular")} /> : undefined}
+            />
           )
         ) : (
           popular.map((group) => (
@@ -316,8 +317,6 @@ const styles = StyleSheet.create({
   cardText: { padding: 10, gap: 3 },
   cardTitle: { fontSize: 14, lineHeight: 18 },
   cardMeta: { fontSize: 12 },
-  empty: { alignItems: "center", gap: 12, paddingVertical: 32, paddingHorizontal: 12 },
-  emptyText: { fontSize: 14, lineHeight: 20, textAlign: "center" },
   popularGroup: { gap: 14 },
   label: { fontSize: 11.5, letterSpacing: 0.8, textTransform: "uppercase" },
   actingHead: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, paddingBottom: 12 },

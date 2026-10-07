@@ -17,7 +17,7 @@ import {
   useAura,
   AuraTopFade,
 } from "@/atoms";
-import { auraStatusAccent, auraStatusColors } from "@/constants/aura";
+import { auraHitSlop, auraStatusAccent, auraStatusColors } from "@/constants/aura";
 import { LEGAL_URLS, openLegalPage } from "@/constants/legal";
 import { LANGUAGE_OPTIONS, useLocalization, type SupportedLocale } from "@/localization";
 import { currencyCodes, currencyDisplayName } from "@/utils/currency";
@@ -421,6 +421,7 @@ export default function SettingsScreen() {
             onPress={() => router.back()}
             accessibilityRole="button"
             accessibilityLabel={t("common.close")}
+            hitSlop={auraHitSlop(38)}
             style={[styles.close, { backgroundColor: c.surfaceStrong }]}
           >
             <Icon name="x" size={16} color={c.text} />

@@ -157,7 +157,9 @@ export function PeriodInsights({ items, currency, period }: { items: InsightItem
               <Text style={[styles.categoryName, { color: c.text, fontFamily: f.regular }]} numberOfLines={1}>
                 {t(`expenses.category.${entry.category}`)}
               </Text>
-              <Text style={[styles.categoryAmount, { color: c.text, fontFamily: f.medium }]}>{money(entry.amount)}</Text>
+              <Text numberOfLines={1} style={[styles.categoryAmount, { color: c.text, fontFamily: f.medium }]}>
+                {money(entry.amount)}
+              </Text>
               {change ? (
                 <Text
                   style={[styles.categoryChange, { color: change.key === "above" ? OWES : change.key === "below" ? OWED : c.textMuted, fontFamily: f.regular }]}
@@ -211,7 +213,7 @@ export function BiggestSpends({ items, currency, period }: { items: InsightItem[
             accessibilityLabel={[money(item.amount), item.merchant, item.group, day(item.date)].filter(Boolean).join(", ")}
             style={[styles.spendCard, { backgroundColor: c.card, borderColor: c.hairline }]}
           >
-            <Text style={[styles.spendAmount, { color: c.text, fontFamily: f.semibold }]} numberOfLines={1}>
+            <Text style={[styles.spendAmount, { color: c.text, fontFamily: f.semibold }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
               {money(item.amount)}
             </Text>
             <Text style={[styles.spendName, { color: c.text, fontFamily: f.regular }]} numberOfLines={1}>
@@ -244,8 +246,8 @@ const styles = StyleSheet.create({
   categoryTrack: { height: 4, borderRadius: 2, marginLeft: 18, overflow: "hidden" },
   categoryFill: { height: 4, borderRadius: 2 },
   dot: { width: 8, height: 8, borderRadius: 4 },
-  categoryName: { flex: 1, fontSize: 14.5 },
-  categoryAmount: { fontSize: 14.5, fontVariant: ["tabular-nums"] },
+  categoryName: { flex: 1, minWidth: 0, fontSize: 14.5 },
+  categoryAmount: { flexShrink: 1, fontSize: 14.5, fontVariant: ["tabular-nums"] },
   categoryChange: { fontSize: 12.5, minWidth: 92, textAlign: "right" },
   weekend: { flexDirection: "row", alignItems: "center", gap: 8, paddingTop: 12, marginTop: 6 },
   weekendText: { flex: 1, fontSize: 13.5, lineHeight: 19 },

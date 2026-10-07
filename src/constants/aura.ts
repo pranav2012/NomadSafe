@@ -81,3 +81,58 @@ export const auraEventColors = { transit: "#FFB547", stay: "#22C7B8", activity: 
 
 /** Expense category colours in the Aura palette. */
 export const auraCategoryColors = { food: "#FF7A6B", stays: "#22C7B8", travel: "#FFB547", shopping: "#5B8CFF", other: "#9AA0B4" } as const;
+
+/** Signal colours repeated across features: ready/live green, danger red, teal and amber. */
+export const auraSignal = {
+  ready: "#3DDC97",
+  danger: auraStatusAccent.alert,
+  teal: "#22C7B8",
+  amber: auraStatusAccent.live,
+} as const;
+
+/** Type scale for cards, sheets and empty states; tuned one-offs (hero amounts, replay) keep their own sizes. */
+export const auraType = {
+  micro: 11,
+  caption: 12.5,
+  footnote: 13.5,
+  body: 15,
+  bodyStrong: 15.5,
+  title: 17,
+  section: 19,
+  sheetTitle: 22,
+  display: 30,
+} as const;
+
+/** Spacing scale; `cardPad` is AuraCard's padding and `screen` the horizontal screen margin. */
+export const auraSpace = {
+  xxs: 4,
+  xs: 6,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  cardPad: 18,
+  xl: 20,
+  screen: 20,
+  xxl: 24,
+  section: 32,
+} as const;
+
+/** Corner radii; `group` is AuraListGroup's grouped list. */
+export const auraRadius = {
+  card: 24,
+  group: 22,
+  sheet: 30,
+  tile: 16,
+  iconTile: 11,
+  chip: 17,
+  pill: 999,
+} as const;
+
+/** Minimum touch target in points; pad smaller controls up to it with `hitSlop`. */
+export const AURA_MIN_TOUCH = 44;
+
+/** hitSlop that grows a square control of `size` points to the minimum touch target. */
+export function auraHitSlop(size: number) {
+  const pad = Math.max(0, Math.ceil((AURA_MIN_TOUCH - size) / 2));
+  return { top: pad, bottom: pad, left: pad, right: pad };
+}

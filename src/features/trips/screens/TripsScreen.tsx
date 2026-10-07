@@ -5,8 +5,8 @@ import Animated, { FadeIn, FadeInDown, FadeOut, LinearTransition } from "react-n
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { isSettledUp, setGroupArchived } from "@/features/sync";
-import { AuraButton, AuraField, AuraSheet, Icon, PressableScale, showAlert, useAura, AuraTopFade } from "@/atoms";
-import { auraStatusColors } from "@/constants/aura";
+import { AuraButton, AuraEmptyState, AuraField, AuraSheet, Icon, PressableScale, showAlert, useAura, AuraTopFade } from "@/atoms";
+import { auraHitSlop, auraStatusColors } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { FREE_PLANNED_LIMIT, ownedTripCount, usePlan, useStartNewTrip } from "@/modules/billing";
 import { PlannedTripCard } from "@/features/trips/components/PlannedTripCard";
@@ -208,7 +208,7 @@ export default function TripsScreen() {
             <Text style={[styles.count, { color: c.textMuted, fontFamily: f.medium }]}>{t("trip.tripsCount", { count: trips.length })}</Text>
             <Text style={[styles.title, { color: c.text, fontFamily: f.semibold }]}>{t("trip.tripsTitle")}</Text>
           </View>
-          <PressableScale onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={t("trip.close")} style={[styles.close, { backgroundColor: c.surfaceStrong }]}>
+          <PressableScale onPress={() => router.back()} hitSlop={auraHitSlop(38)} accessibilityRole="button" accessibilityLabel={t("trip.close")} style={[styles.close, { backgroundColor: c.surfaceStrong }]}>
             <Icon name="x" size={16} color={c.text} />
           </PressableScale>
         </View>
@@ -216,10 +216,8 @@ export default function TripsScreen() {
         <PassportCard onPress={() => router.push({ pathname: "/passport", params: { source: "trips" } })} />
 
         {trips.length === 0 && plannedTrips.length === 0 ? (
-          <Animated.View entering={FadeIn.duration(300)} style={[styles.empty, { backgroundColor: c.surface, borderColor: c.hairline }]}>
-            <Icon name="compass" size={22} color={c.textSoft} />
-            <Text style={[styles.emptyTitle, { color: c.text, fontFamily: f.semibold }]}>{t("trip.noTripsTitle")}</Text>
-            <Text style={[styles.emptyBody, { color: c.textSoft, fontFamily: f.regular }]}>{t("trip.noTripsBody")}</Text>
+          <Animated.View entering={FadeIn.duration(300)} style={styles.empty}>
+            <AuraEmptyState icon="compass" title={t("trip.noTripsTitle")} body={t("trip.noTripsBody")} />
           </Animated.View>
         ) : null}
 
@@ -370,7 +368,7 @@ function TripPass({
       layout={LinearTransition.springify().damping(18).stiffness(180)}
       style={[styles.passWrap, { marginTop: overlap && !expanded ? -OVERLAP : 12, zIndex: index }]}
     >
-      <PressableScale onPress={onPress} pressedScale={0.985} accessibilityRole="button" accessibilityLabel={trip.name} accessibilityState={{ expanded }} style={[styles.pass, { backgroundColor: c.card, borderColor: c.highlight }]}>
+      <PressableScale onPress={onPress} pressedScale={0.985} accessibilityRole="button" accessibilityLabel={trip.name} accessibilityState={{ expanded }} style={[styles.pass, { backgroundColor: c.card, borderColor: c.hairline }]}>
         <LinearGradient
           colors={[`${tint[0]}${isDark ? "40" : "30"}`, `${tint[1]}${isDark ? "26" : "1C"}`, `${tint[2]}${isDark ? "1A" : "12"}`]}
           start={{ x: 0, y: 0 }}
@@ -451,9 +449,7 @@ const styles = StyleSheet.create({
   sectionRow: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between" },
   sectionCount: { fontSize: 12.5 },
   plannedList: { gap: 10, marginTop: 12 },
-  empty: { borderRadius: 24, borderWidth: StyleSheet.hairlineWidth, padding: 20, gap: 8, marginTop: 16 },
-  emptyTitle: { fontSize: 18 },
-  emptyBody: { fontSize: 14.5, lineHeight: 21 },
+  empty: { marginTop: 16 },
   passWrap: {},
   pass: { borderRadius: 24, borderWidth: StyleSheet.hairlineWidth, padding: 16, gap: 12, overflow: "hidden" },
   passTop: { flexDirection: "row", alignItems: "center", gap: 10 },

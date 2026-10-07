@@ -4,7 +4,7 @@ import { AuraButton, AuraChip, AuraDateField, AuraField, AuraSegmented, AuraShee
 import { track } from "@/modules/analytics";
 import { attachFiles, attachPhotos, sendTicket, setTicketShared } from "@/features/itinerary/services/tickets";
 import { useTicketsStore } from "@/features/itinerary/store/ticketsStore";
-import { auraEventColors } from "@/constants/aura";
+import { auraEventColors, auraHitSlop } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { SELF_ID } from "@/features/expenses/utils/split";
 import { EVENT_TYPES, TRANSIT_MODES, canBeUntimed, type EventTiming, type EventType, type TransitMode } from "@/features/itinerary/constants/eventTypes";
@@ -244,6 +244,7 @@ export function EventForm({
                     </Text>
                     <PressableScale
                       onPress={() => void sendTicket(ticket)}
+                      hitSlop={auraHitSlop(32)}
                       accessibilityRole="button"
                       accessibilityLabel={t("tickets.send")}
                       style={[styles.send, { backgroundColor: c.surfaceStrong }]}

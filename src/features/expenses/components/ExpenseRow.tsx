@@ -1,7 +1,7 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Icon, PressableScale, useAura } from "@/atoms";
-import { auraCategoryColors, auraStatusAccent } from "@/constants/aura";
+import { auraCategoryColors, auraSignal, auraStatusAccent } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { getCategoryMeta } from "@/features/expenses/constants/categories";
 import type { Expense } from "@/features/expenses/store/expensesStore";
@@ -9,7 +9,7 @@ import { personLabel } from "@/features/expenses/components/SplitEditor";
 import { myLentOf } from "@/features/expenses/utils/myMoney";
 import { payersOf } from "@/features/expenses/utils/split";
 
-const OWED_COLOR = "#3DDC97";
+const OWED_COLOR = auraSignal.ready;
 
 const SOURCE_KEYS: Partial<Record<Expense["source"], string>> = {
   sms: "expenses.sourceSms",
@@ -96,7 +96,7 @@ export function ExpenseRow({
         {expense.splitHint ? (
           <View style={[styles.hint, { backgroundColor: `${auraStatusAccent.live}22` }]}>
             <Icon name="users" size={11} color={auraStatusAccent.live} />
-            <Text style={[styles.hintText, { color: auraStatusAccent.live, fontFamily: f.medium }]}>
+            <Text numberOfLines={1} style={[styles.hintText, { color: auraStatusAccent.live, fontFamily: f.medium }]}>
               {expense.splitHint.shares ? t("split.reviewBadge") : t("split.suggestFor", { count: expense.splitHint.pax })}
             </Text>
           </View>
@@ -105,15 +105,15 @@ export function ExpenseRow({
       <View style={styles.amounts}>
         {displayCurrency && expense.currency !== displayCurrency && convertedAmount !== undefined ? (
           <>
-            <Text style={[styles.amount, { color: c.text, fontFamily: f.semibold }]}>
+            <Text numberOfLines={1} style={[styles.amount, { color: c.text, fontFamily: f.semibold }]}>
               {formatCurrency(convertedAmount, displayCurrency, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
             </Text>
-            <Text style={[styles.original, { color: c.textMuted, fontFamily: f.regular }]}>{formatCurrency(expense.amount, expense.currency, {})}</Text>
+            <Text numberOfLines={1} style={[styles.original, { color: c.textMuted, fontFamily: f.regular }]}>{formatCurrency(expense.amount, expense.currency, {})}</Text>
           </>
         ) : (
-          <Text style={[styles.amount, { color: c.text, fontFamily: f.semibold }]}>{formatCurrency(expense.amount, expense.currency, {})}</Text>
+          <Text numberOfLines={1} style={[styles.amount, { color: c.text, fontFamily: f.semibold }]}>{formatCurrency(expense.amount, expense.currency, {})}</Text>
         )}
-        {yourPart ? <Text style={[styles.original, { color: yourPart.color, fontFamily: f.medium }]}>{yourPart.text}</Text> : null}
+        {yourPart ? <Text numberOfLines={1} style={[styles.original, { color: yourPart.color, fontFamily: f.medium }]}>{yourPart.text}</Text> : null}
       </View>
     </PressableScale>
   );
@@ -122,12 +122,12 @@ export function ExpenseRow({
 const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 11 },
   icon: { width: 42, height: 42, borderRadius: 14, alignItems: "center", justifyContent: "center" },
-  body: { flex: 1, gap: 3 },
+  body: { flex: 1, minWidth: 0, gap: 3 },
   merchant: { fontSize: 15.5 },
   metaRow: { flexDirection: "row", alignItems: "center", gap: 5 },
   meta: { fontSize: 12.5, flexShrink: 1 },
   amount: { fontSize: 15.5, fontVariant: ["tabular-nums"] },
-  amounts: { alignItems: "flex-end", gap: 2 },
+  amounts: { alignItems: "flex-end", gap: 2, maxWidth: "48%" },
   hint: { flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "flex-start", paddingHorizontal: 7, height: 20, borderRadius: 10, marginTop: 2 },
   hintText: { fontSize: 11.5 },
   original: { fontSize: 12, fontVariant: ["tabular-nums"] },

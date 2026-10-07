@@ -1,9 +1,22 @@
 import React, { useState } from "react";
-import { ActivityIndicator, Linking, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Linking, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { useRouter } from "expo-router";
-import { AuraButton, AuraCard, Icon, PressableScale, showAlert, useAura, AuraTopFade, type AuraAlertButton } from "@/atoms";
+import {
+  AuraButton,
+  AuraCard,
+  AuraEmptyState,
+  AuraSkeletonGroup,
+  AuraSkeletonRow,
+  Icon,
+  PressableScale,
+  showAlert,
+  useAura,
+  AuraTopFade,
+  type AuraAlertButton,
+} from "@/atoms";
+import { auraHitSlop, auraRadius, auraSignal } from "@/constants/aura";
 import { distanceKm } from "@/features/home/components/aura/globe/sun";
 import { readLastKnownFix } from "@/features/safety/services/lastKnownLocation";
 import { useLocalization } from "@/localization";
@@ -13,8 +26,10 @@ import { CircleAvatar } from "../components/CircleAvatar";
 import { useCircle } from "../hooks/useCircle";
 import type { CirclePerson } from "../utils/circle";
 
-const LIVE = "#3DDC97";
-const DANGER = "#FF4D5E";
+const LIVE = auraSignal.ready;
+const DANGER = auraSignal.danger;
+const BACK_SIZE = 38;
+const PILL_SLOP = { top: 5, bottom: 5, left: 4, right: 4 };
 
 /** The people who get your alerts and see you while you share, plus requests from others. */
 export default function CircleScreen() {
@@ -71,6 +86,7 @@ export default function CircleScreen() {
       >
         <PressableScale
           onPress={() => router.back()}
+          hitSlop={auraHitSlop(BACK_SIZE)}
           accessibilityRole="button"
           accessibilityLabel={t("common.back")}
           style={[styles.back, { backgroundColor: c.surfaceStrong }]}
@@ -105,15 +121,15 @@ export default function CircleScreen() {
           ) : null}
 
           {!circle.loaded ? (
-            <ActivityIndicator color={c.textMuted} style={styles.loading} />
+            <AuraSkeletonGroup>
+              <AuraCard style={styles.list}>
+                {[0, 1, 2].map((i) => (
+                  <AuraSkeletonRow key={i} style={[styles.row, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.hairline }]} />
+                ))}
+              </AuraCard>
+            </AuraSkeletonGroup>
           ) : circle.people.length === 0 ? (
-            <AuraCard style={styles.empty}>
-              <View style={[styles.emptyIcon, { backgroundColor: `${LIVE}1F` }]}>
-                <Icon name="users" size={24} color={LIVE} />
-              </View>
-              <Text style={[styles.emptyTitle, { color: c.text, fontFamily: f.semibold }]}>{t("circle.emptyTitle")}</Text>
-              <Text style={[styles.emptyBody, { color: c.textSoft, fontFamily: f.regular }]}>{t("circle.emptyBody")}</Text>
-            </AuraCard>
+            <AuraEmptyState icon="users" tone={LIVE} title={t("circle.emptyTitle")} body={t("circle.emptyBody")} style={styles.empty} />
           ) : (
             <AuraCard style={styles.list}>
               {circle.people.map((person, i) => {
@@ -183,7 +199,7 @@ function Pill({ label, filled, onPress }: { label: string; filled?: boolean; onP
     <PressableScale
       onPress={onPress}
       accessibilityRole="button"
-      hitSlop={4}
+      hitSlop={PILL_SLOP}
       style={[styles.pill, { backgroundColor: filled ? c.inverse : c.surfaceStrong, borderColor: c.hairline }]}
     >
       <Text style={[styles.pillText, { color: filled ? c.onInverse : c.text, fontFamily: f.semibold }]}>{label}</Text>
@@ -194,24 +210,20 @@ function Pill({ label, filled, onPress }: { label: string; filled?: boolean; onP
 const styles = StyleSheet.create({
   root: { flex: 1 },
   scroll: { paddingHorizontal: 20 },
-  back: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center" },
+  back: { width: BACK_SIZE, height: BACK_SIZE, borderRadius: BACK_SIZE / 2, alignItems: "center", justifyContent: "center" },
   title: { fontSize: 34, letterSpacing: -1.2, marginTop: 18 },
   lede: { fontSize: 15, lineHeight: 22, marginTop: 6, marginBottom: 18 },
   group: { fontSize: 13, marginBottom: 8, marginLeft: 4 },
   list: { paddingVertical: 4, paddingHorizontal: 14, marginBottom: 16 },
-  loading: { paddingVertical: 24 },
   row: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12 },
-  rowText: { flex: 1, gap: 2 },
+  rowText: { flex: 1, minWidth: 0, gap: 2 },
   name: { fontSize: 15.5 },
   sub: { fontSize: 12.5, lineHeight: 17 },
   trailing: { flexDirection: "row", gap: 8 },
   battery: { fontSize: 12.5, fontVariant: ["tabular-nums"] },
-  pill: { height: 32, paddingHorizontal: 12, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, alignItems: "center", justifyContent: "center" },
+  pill: { height: 34, paddingHorizontal: 13, borderRadius: auraRadius.chip, borderWidth: StyleSheet.hairlineWidth, alignItems: "center", justifyContent: "center" },
   pillText: { fontSize: 12.5 },
-  empty: { alignItems: "center", paddingVertical: 28, marginBottom: 16 },
-  emptyIcon: { width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center" },
-  emptyTitle: { fontSize: 17, marginTop: 14, textAlign: "center" },
-  emptyBody: { fontSize: 14, lineHeight: 20, marginTop: 6, textAlign: "center" },
+  empty: { marginBottom: 16 },
   add: { marginTop: 4 },
   note: { flexDirection: "row", gap: 8, marginTop: 16, paddingHorizontal: 4 },
   noteText: { flex: 1, fontSize: 12.5, lineHeight: 18 },

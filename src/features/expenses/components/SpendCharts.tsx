@@ -60,7 +60,7 @@ export function TripPaceCard({ trip, items }: { trip: Trip; items: InsightItem[]
     <AuraCard style={styles.card}>
       <Text style={[styles.title, { color: c.textMuted, fontFamily: f.medium }]}>{t("money.pace.title")}</Text>
       <View style={styles.paceRow}>
-        <Text style={[styles.pace, { color: c.text, fontFamily: f.semibold }]}>{t("money.pace.perDay", { amount: money(pace.perDay) })}</Text>
+        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[styles.pace, { color: c.text, fontFamily: f.semibold }]}>{t("money.pace.perDay", { amount: money(pace.perDay) })}</Text>
         {pace.plannedPerDay !== null ? (
           <Text style={[styles.planned, { color: c.textMuted, fontFamily: f.regular }]}>{t("money.pace.budgetPerDay", { amount: money(pace.plannedPerDay) })}</Text>
         ) : null}
@@ -112,9 +112,11 @@ export function GroupPlaces({ items, currency }: { items: InsightItem[]; currenc
             <Text style={[styles.placeName, { color: c.text, fontFamily: f.regular }]} numberOfLines={1}>
               {place.name}
             </Text>
-            <Text style={[styles.placeMeta, { color: c.textMuted, fontFamily: f.regular }]}>{t("money.placeCount", { count: place.count })}</Text>
+            <Text numberOfLines={1} style={[styles.placeMeta, { color: c.textMuted, fontFamily: f.regular }]}>{t("money.placeCount", { count: place.count })}</Text>
           </View>
-          <Text style={[styles.placeAmount, { color: c.text, fontFamily: f.medium }]}>{money(place.amount)}</Text>
+          <Text numberOfLines={1} style={[styles.placeAmount, { color: c.text, fontFamily: f.medium }]}>
+            {money(place.amount)}
+          </Text>
         </View>
       ))}
     </AuraCard>
@@ -122,11 +124,11 @@ export function GroupPlaces({ items, currency }: { items: InsightItem[]; currenc
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
+  flex: { flex: 1, minWidth: 0 },
   card: { marginTop: 18, gap: 6 },
   title: { fontSize: 13.5 },
   paceRow: { flexDirection: "row", alignItems: "baseline", gap: 10, flexWrap: "wrap" },
-  pace: { fontSize: 24, letterSpacing: -0.6 },
+  pace: { flexShrink: 1, fontSize: 24, letterSpacing: -0.6 },
   planned: { fontSize: 13.5 },
   outlook: { fontSize: 14.5, lineHeight: 20 },
   line: { fontSize: 13.5, lineHeight: 19 },
@@ -138,7 +140,7 @@ const styles = StyleSheet.create({
   place: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 10 },
   placeName: { fontSize: 14.5 },
   placeMeta: { fontSize: 12, marginTop: 2 },
-  placeAmount: { fontSize: 14.5, fontVariant: ["tabular-nums"] },
+  placeAmount: { maxWidth: "45%", fontSize: 14.5, fontVariant: ["tabular-nums"] },
   lockedWrap: { marginTop: 18 },
   locked: { flexDirection: "row", alignItems: "center", gap: 10 },
   lockedText: { flex: 1, fontSize: 14 },

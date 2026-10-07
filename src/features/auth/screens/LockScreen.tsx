@@ -10,9 +10,10 @@ import { BiometricGlyph } from "@/features/auth/components/BiometricGlyph";
 import { SecurityRing } from "@/features/auth/components/SecurityRing";
 import { errorNotification, successNotification } from "@/utils/haptics";
 import { useLocalization } from "@/localization";
+import { auraSignal } from "@/constants/aura";
 
-const DANGER = "#FF4D5E";
-const SUCCESS = "#3DDC97";
+const DANGER = auraSignal.danger;
+const SUCCESS = auraSignal.ready;
 const AUTO_PROMPT_DELAY_MS = 650;
 
 type Phase = "idle" | "scanning" | "success";

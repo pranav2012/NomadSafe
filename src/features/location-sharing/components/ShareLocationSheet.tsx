@@ -120,7 +120,7 @@ export function ShareLocationSheet({
                       <Text style={[styles.sub, { color: c.textMuted, fontFamily: f.regular }]}>{t("circle.pending")}</Text>
                     ) : null}
                   </View>
-                  <View style={[styles.box, { borderColor: on ? accent : c.highlight, backgroundColor: on ? accent : "transparent" }]}>
+                  <View style={[styles.box, { borderColor: on ? accent : c.hairline, backgroundColor: on ? accent : "transparent" }]}>
                     {on ? <Icon name="check" size={14} color="#FFFFFF" strokeWidth={2.6} /> : null}
                   </View>
                 </PressableScale>

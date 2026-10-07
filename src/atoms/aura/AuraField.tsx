@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { StyleSheet, Text, TextInput, View, type TextInputProps } from "react-native";
 import Animated, { useAnimatedStyle, useDerivedValue, withTiming } from "react-native-reanimated";
+import { auraSignal } from "@/constants/aura";
 import { useAura } from "./useAura";
 
 interface AuraFieldProps extends TextInputProps {
@@ -28,7 +29,7 @@ export function AuraField({ label, labelAction, prefix, suffix, error, large, st
           {labelAction}
         </View>
       ) : null}
-      <View style={[styles.box, large && styles.boxLarge, { backgroundColor: c.surface, borderColor: error ? "#FF4D5E" : c.hairline }]}>
+      <View style={[styles.box, large && styles.boxLarge, { backgroundColor: c.surface, borderColor: error ? auraSignal.danger : c.hairline }]}>
         <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.ring, { borderColor: accent }, ringStyle]} />
         {prefix}
         <TextInput
@@ -61,5 +62,5 @@ const styles = StyleSheet.create({
   ring: { borderRadius: 16, borderWidth: 1.5 },
   input: { flex: 1, fontSize: 16, paddingVertical: 12 },
   inputLarge: { fontSize: 30, letterSpacing: -0.8 },
-  error: { color: "#FF4D5E", fontSize: 12.5 },
+  error: { color: auraSignal.danger, fontSize: 12.5 },
 });

@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Icon } from "@/atoms/nomad/Icon";
 import { PressableScale } from "@/atoms/motion/PressableScale";
 import { springs } from "@/atoms/motion/springs";
+import { auraHitSlop, auraRadius } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { lightImpact } from "@/utils/haptics";
 import { useAura } from "./useAura";
@@ -27,6 +28,7 @@ interface AuraSheetProps {
 }
 
 const DISMISS_DISTANCE = 120;
+const CLOSE_SIZE = 34;
 const DISMISS_VELOCITY = 900;
 
 /**
@@ -34,7 +36,7 @@ const DISMISS_VELOCITY = 900;
  * a dimmed backdrop, drags down to dismiss from its header, and stays above the keyboard.
  */
 export function AuraSheet({ visible, onClose, title, subtitle, headerAction, footer, maxHeight = 0.92, full = false, children }: AuraSheetProps) {
-  const { c, f } = useAura();
+  const { c, f, isDark } = useAura();
   const { t } = useLocalization();
   const { height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -91,10 +93,9 @@ export function AuraSheet({ visible, onClose, title, subtitle, headerAction, foo
               sheetStyle,
             ]}
           >
-            <View style={[styles.highlight, { backgroundColor: c.highlight }]} />
             <GestureDetector gesture={drag}>
               <View style={styles.header}>
-                <View style={[styles.grabber, { backgroundColor: c.highlight }]} />
+                <View style={[styles.grabber, { backgroundColor: isDark ? c.highlight : `${c.textMuted}4D` }]} />
                 {title ? (
                   <View style={styles.titleRow}>
                     <View style={styles.titleText}>
@@ -104,6 +105,7 @@ export function AuraSheet({ visible, onClose, title, subtitle, headerAction, foo
                     {headerAction}
                     <PressableScale
                       onPress={onClose}
+                      hitSlop={auraHitSlop(CLOSE_SIZE)}
                       accessibilityRole="button"
                       accessibilityLabel={t("common.close")}
                       style={[styles.close, { backgroundColor: c.surfaceStrong }]}
@@ -127,15 +129,14 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   scrim: { backgroundColor: "rgba(4,5,9,0.55)" },
   avoider: { flex: 1, justifyContent: "flex-end" },
-  sheet: { borderTopLeftRadius: 30, borderTopRightRadius: 30, borderWidth: StyleSheet.hairlineWidth, borderBottomWidth: 0, overflow: "hidden" },
-  highlight: { position: "absolute", top: 0, left: 40, right: 40, height: StyleSheet.hairlineWidth },
+  sheet: { borderTopLeftRadius: auraRadius.sheet, borderTopRightRadius: auraRadius.sheet, borderWidth: StyleSheet.hairlineWidth, borderBottomWidth: 0, overflow: "hidden" },
   header: { paddingTop: 10, paddingHorizontal: 20, paddingBottom: 6 },
   grabber: { alignSelf: "center", width: 38, height: 4, borderRadius: 2, marginBottom: 12 },
   titleRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 6 },
   titleText: { flex: 1 },
   title: { fontSize: 22, letterSpacing: -0.5 },
   subtitle: { fontSize: 13.5, marginTop: 2 },
-  close: { width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center" },
+  close: { width: CLOSE_SIZE, height: CLOSE_SIZE, borderRadius: CLOSE_SIZE / 2, alignItems: "center", justifyContent: "center" },
   flex: { flex: 1 },
   shrink: { flexShrink: 1 },
   footer: { paddingHorizontal: 20, paddingTop: 10 },

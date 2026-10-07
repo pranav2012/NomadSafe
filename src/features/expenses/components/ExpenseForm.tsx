@@ -14,7 +14,7 @@ import {
   useAura,
   showToast,
 } from "@/atoms";
-import { auraCategoryColors } from "@/constants/aura";
+import { auraCategoryColors, auraHitSlop, auraSignal } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { CURRENCY_OPTIONS } from "@/utils/currency";
 import { isArchivedGroup, findMoneyGroup, isTrip, selectMoneyGroups, useTripsStore } from "@/features/trips/store/tripsStore";
@@ -118,6 +118,7 @@ export function ExpenseForm({ visible, ...props }: ExpenseSheetProps) {
           props.onSpeak && !editing ? (
             <PressableScale
               onPress={props.onSpeak}
+              hitSlop={auraHitSlop(34)}
               accessibilityRole="button"
               accessibilityLabel={t("voiceExpense.speakToAdd")}
               style={[styles.mic, { backgroundColor: c.surfaceStrong }]}
@@ -527,16 +528,16 @@ function ExpenseFormBody({
           pressedScale={0.98}
           accessibilityRole="switch"
           accessibilityState={{ checked: Boolean(location) }}
-          style={[styles.locationRow, { backgroundColor: c.surface, borderColor: location ? "#22C7B8" : c.hairline }]}
+          style={[styles.locationRow, { backgroundColor: c.surface, borderColor: location ? auraSignal.teal : c.hairline }]}
         >
-          <Icon name="mapPin" size={16} color={location ? "#22C7B8" : c.textSoft} />
+          <Icon name="mapPin" size={16} color={location ? auraSignal.teal : c.textSoft} />
           <Text style={[styles.locationText, { color: c.text, fontFamily: f.medium }]}>
             {isLocating ? t("expenses.locating") : location ? (location.label ?? t("expenses.locationTagged")) : t("expenses.tagLocation")}
           </Text>
           {isLocating ? (
             <ActivityIndicator size="small" color={c.textSoft} />
           ) : (
-            <View style={[styles.toggle, { backgroundColor: location ? "#22C7B8" : "transparent", borderColor: location ? "#22C7B8" : c.highlight }]}>
+            <View style={[styles.toggle, { backgroundColor: location ? auraSignal.teal : "transparent", borderColor: location ? auraSignal.teal : c.textMuted }]}>
               {location ? <Icon name="check" size={12} color="#FFFFFF" strokeWidth={3} /> : null}
             </View>
           )}

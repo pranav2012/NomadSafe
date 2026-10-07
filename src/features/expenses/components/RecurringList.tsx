@@ -42,8 +42,8 @@ export function RecurringList({ groupId }: { groupId: string | null }) {
               {t(`expenses.repeatOption.${rule.frequency}`)} · {t("expenses.nextOn", { date: dayLabel(nextDueDay(rule.startDate, rule.frequency, today)) })}
             </Text>
           </View>
-          <Text style={[styles.amount, { color: c.text, fontFamily: f.semibold }]}>{formatMoney(formatCurrency, rule.template.amount, rule.template.currency)}</Text>
-          <PressableScale onPress={() => stop(rule.id, rule.template.merchant)} hitSlop={10} accessibilityRole="button" accessibilityLabel={t("expenses.stopRepeat")}>
+          <Text numberOfLines={1} style={[styles.amount, { color: c.text, fontFamily: f.semibold }]}>{formatMoney(formatCurrency, rule.template.amount, rule.template.currency)}</Text>
+          <PressableScale onPress={() => stop(rule.id, rule.template.merchant)} hitSlop={14} accessibilityRole="button" accessibilityLabel={t("expenses.stopRepeat")}>
             <Icon name="x" size={16} color={c.textMuted} />
           </PressableScale>
         </View>
@@ -57,8 +57,8 @@ const styles = StyleSheet.create({
   paused: { fontSize: 13, marginBottom: 4 },
   row: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10 },
   icon: { width: 36, height: 36, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  flex: { flex: 1 },
+  flex: { flex: 1, minWidth: 0 },
   name: { fontSize: 15 },
   meta: { fontSize: 12.5, marginTop: 2 },
-  amount: { fontSize: 15, fontVariant: ["tabular-nums"] },
+  amount: { maxWidth: "40%", fontSize: 15, fontVariant: ["tabular-nums"] },
 });

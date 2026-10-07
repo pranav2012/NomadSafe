@@ -2,6 +2,7 @@ import React from "react";
 import { ActivityIndicator, StyleSheet, Text, type StyleProp, type ViewStyle } from "react-native";
 import { Icon, type IconName } from "@/atoms/nomad/Icon";
 import { PressableScale } from "@/atoms/motion/PressableScale";
+import { auraSignal } from "@/constants/aura";
 import { useAura } from "./useAura";
 
 export type AuraButtonVariant = "primary" | "secondary" | "danger" | "ghost";
@@ -20,7 +21,7 @@ interface AuraButtonProps {
   pressedScale?: number;
 }
 
-const DANGER = "#FF4D5E";
+const DANGER = auraSignal.danger;
 
 export function AuraButton({ label, onPress, variant = "primary", icon, loading, disabled, size = "lg", style, accessibilityHint, pressedScale = 0.97 }: AuraButtonProps) {
   const { c, f } = useAura();

@@ -20,7 +20,7 @@ export function PassportCard({ onPress }: { onPress: () => void }) {
           .filter(Boolean)
           .join(", ");
   return (
-    <PressableScale onPress={onPress} accessibilityRole="button" accessibilityLabel={t("passport.cardTitle")} style={[styles.card, { backgroundColor: c.card, borderColor: c.highlight }]}>
+    <PressableScale onPress={onPress} accessibilityRole="button" accessibilityLabel={t("passport.cardTitle")} style={[styles.card, { backgroundColor: c.card, borderColor: c.hairline }]}>
       <LinearGradient
         colors={isDark ? ["rgba(91,108,255,0.30)", "rgba(155,123,255,0.14)", "rgba(34,199,184,0.10)"] : ["rgba(91,108,255,0.16)", "rgba(155,123,255,0.08)", "rgba(34,199,184,0.06)"]}
         start={{ x: 0, y: 0 }}

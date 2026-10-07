@@ -7,6 +7,7 @@ import { create } from "zustand";
 import { Icon } from "@/atoms/nomad/Icon";
 import { translate } from "@/localization/translate";
 import { AuraButton, type AuraButtonVariant } from "./AuraButton";
+import { auraSignal } from "@/constants/aura";
 import { useAura } from "./useAura";
 
 export interface AuraAlertButton {
@@ -250,7 +251,7 @@ const styles = StyleSheet.create({
     borderRadius: 13,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#22C7B8",
+    backgroundColor: auraSignal.teal,
   },
   // With a button the text would otherwise push the toast past the screen edges.
   toastWide: { alignSelf: "stretch", paddingRight: 10 },

@@ -1,7 +1,7 @@
 import React from "react";
 import { Linking, StyleSheet, Text, View } from "react-native";
 import { AuraButton, Icon, PressableScale, type IconName } from "@/atoms";
-import { auraFonts as f, type AuraPalette } from "@/constants/aura";
+import { auraFonts as f, auraSignal, type AuraPalette } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import type { EmergencyKind, EmergencyTile } from "@/features/trips/utils/countryFacts";
 import { SAFETY_KIND_META } from "./safety/kinds";
@@ -30,7 +30,7 @@ function Tiles({ tiles, palette: c }: { tiles: EmergencyTile[]; palette: AuraPal
     <View style={styles.tiles}>
       {tiles.map((tile) => {
         const label = tile.kinds.map((kind) => t(`passBack.${kind}`)).join(" · ");
-        const tone = tile.kinds.includes("police") ? SAFETY_KIND_META.police.color : tile.kinds.includes("general") ? "#FF4D5E" : SAFETY_KIND_META.hospital.color;
+        const tone = tile.kinds.includes("police") ? SAFETY_KIND_META.police.color : tile.kinds.includes("general") ? auraSignal.danger : SAFETY_KIND_META.hospital.color;
         return (
           <PressableScale
             key={tile.number}
@@ -53,6 +53,8 @@ function Tiles({ tiles, palette: c }: { tiles: EmergencyTile[]; palette: AuraPal
   );
 }
 
+const CALL_SLOP = { top: 8, bottom: 8, left: 10, right: 10 };
+
 function Row({ row, palette: c }: { row: PassBackRow; palette: AuraPalette }) {
   const { t } = useLocalization();
   const press = row.onPress ?? (row.url ? () => void Linking.openURL(row.url!) : undefined);
@@ -72,6 +74,7 @@ function Row({ row, palette: c }: { row: PassBackRow; palette: AuraPalette }) {
       {row.phone ? (
         <PressableScale
           onPress={() => void Linking.openURL(`tel:${row.phone}`)}
+          hitSlop={CALL_SLOP}
           accessibilityRole="button"
           accessibilityLabel={t("home.callPlace", { name: row.text })}
           style={[styles.call, { backgroundColor: c.inverse }]}
@@ -116,7 +119,7 @@ export function PassBack({ content, palette: c }: { content: PassBackContent; pa
           <Row
             row={{
               icon: "phone",
-              tone: "#FF4D5E",
+              tone: auraSignal.danger,
               text: content.tiles.map((tile) => `${tile.kinds.map((kind) => t(`passBack.${kind}`)).join("/")} ${tile.number}`).join(" · "),
             }}
             palette={c}

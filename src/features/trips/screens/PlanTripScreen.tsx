@@ -20,7 +20,7 @@ import { scheduleOnRN } from "react-native-worklets";
 import { LinearGradient } from "expo-linear-gradient";
 import { PrivateView } from "@/modules/analytics";
 import { AuraButton, AuraChip, Icon, PressableScale, useAura } from "@/atoms";
-import { auraStatusAccent } from "@/constants/aura";
+import { auraHitSlop, auraSignal, auraStatusAccent } from "@/constants/aura";
 import { Globe } from "@/features/home/components/aura/globe/Globe";
 import { useGlobeContext } from "@/features/home/hooks/useGlobeContext";
 import type { HomeStop } from "@/features/home/types";
@@ -164,7 +164,7 @@ export default function PlanTripScreen() {
               topInset={insets.top}
               origin={globe.origin}
               contacts={[]}
-              contactColor="#3DDC97"
+              contactColor={auraSignal.ready}
               accent={auraStatusAccent.calm}
               isDark={isDark}
               overview={stops.length === 0}
@@ -180,6 +180,7 @@ export default function PlanTripScreen() {
             onPress={step === "details" ? goToCities : () => router.back()}
             accessibilityRole="button"
             accessibilityLabel={step === "details" ? t("common.back") : t("common.close")}
+            hitSlop={auraHitSlop(36)}
             style={[styles.roundButton, { backgroundColor: c.surfaceStrong }]}
           >
             <Icon name={step === "details" ? "chevronLeft" : "x"} size={16} color={c.text} />

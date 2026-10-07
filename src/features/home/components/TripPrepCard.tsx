@@ -8,6 +8,7 @@ import { tripPrep } from "@/features/home/utils/tripPrep";
 import type { HomeStop } from "@/features/home/types";
 import type { Trip } from "@/features/trips/store/tripsStore";
 import { useLocalization } from "@/localization";
+import { auraSignal } from "@/constants/aura";
 
 const GAP_ROWS = 2;
 
@@ -68,7 +69,7 @@ export function TripPrepCard({ trip, events, stops }: { trip: Trip; events: Trip
               "stays",
             )
           : null}
-        {prep.gaps.slice(0, GAP_ROWS).map((gap) => row("alertTriangle", t("home.prep.gap", { range: range(gap) }), "#FFB547", `gap-${gap[0].getTime()}`))}
+        {prep.gaps.slice(0, GAP_ROWS).map((gap) => row("alertTriangle", t("home.prep.gap", { range: range(gap) }), auraSignal.amber, `gap-${gap[0].getTime()}`))}
         {mustDoCount > 0
           ? link(
               "star",

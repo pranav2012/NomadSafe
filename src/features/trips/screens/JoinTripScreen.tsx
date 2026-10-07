@@ -3,7 +3,8 @@ import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { api, useMutation, useQuery } from "@/modules/backend";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { AuraButton, AuraCard, AuraChip, AuraField, AuraLoader, Icon, PressableScale, useAura } from "@/atoms";
+import { AuraButton, AuraCard, AuraChip, AuraField, AuraSkeleton, AuraSkeletonGroup, Icon, PressableScale, useAura } from "@/atoms";
+import { auraHitSlop, auraSignal } from "@/constants/aura";
 import { useAuthStore } from "@/features/auth/store/authStore";
 import { registerGroupPush } from "@/features/sync";
 import { useMoneyViewStore } from "@/features/expenses/store/moneyViewStore";
@@ -15,6 +16,7 @@ import { useLocalization } from "@/localization";
 
 const NEW_MEMBER = "__new__";
 const ARRIVAL_TIMEOUT_MS = 8000;
+const CLOSE_SIZE = 38;
 
 /** Waits for the joined trip, group or planned trip to arrive through live sync; a trip becomes the active trip. */
 function openWhenSynced(serverTripId: string): Promise<Shareable | null> {
@@ -105,13 +107,19 @@ export default function JoinTripScreen() {
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 32 }]}>
         <View style={styles.header}>
           <Text style={[styles.title, { color: c.text, fontFamily: f.semibold }]}>{t(k("joinTitle"))}</Text>
-          <PressableScale onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={t("common.close")} style={[styles.close, { backgroundColor: c.surfaceStrong }]}>
+          <PressableScale onPress={() => router.back()} hitSlop={auraHitSlop(CLOSE_SIZE)} accessibilityRole="button" accessibilityLabel={t("common.close")} style={[styles.close, { backgroundColor: c.surfaceStrong }]}>
             <Icon name="x" size={16} color={c.text} />
           </PressableScale>
         </View>
 
         {preview === undefined ? (
-          <AuraLoader style={styles.loading} />
+          <AuraSkeletonGroup>
+            <AuraCard style={styles.card}>
+              <AuraSkeleton width="65%" height={24} radius={8} />
+              <AuraSkeleton width="45%" height={13} style={styles.skeletonLine} />
+              <AuraSkeleton width="70%" height={13} style={styles.skeletonLine} />
+            </AuraCard>
+          </AuraSkeletonGroup>
         ) : preview === null ? (
           <AuraCard style={styles.card}>
             <Text style={[styles.cardTitle, { color: c.text, fontFamily: f.semibold }]}>{t("groupTrip.joinNotFoundTitle")}</Text>
@@ -120,7 +128,9 @@ export default function JoinTripScreen() {
         ) : (
           <>
             <AuraCard style={styles.card}>
-              <Text style={[styles.tripName, { color: c.text, fontFamily: f.semibold }]}>{preview.name}</Text>
+              <Text numberOfLines={2} style={[styles.tripName, { color: c.text, fontFamily: f.semibold }]}>
+                {preview.name}
+              </Text>
               {dates ? <Text style={[styles.body, { color: c.textSoft, fontFamily: f.regular }]}>{dates}</Text> : null}
               <Text style={[styles.body, { color: c.textSoft, fontFamily: f.regular }]}>
                 {t("groupTrip.joinInvitedBy", { name: preview.ownerName })} · {t("groupTrip.joinPeople", { count: preview.memberCount })}
@@ -173,14 +183,14 @@ const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 20, gap: 4 },
   header: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 12 },
   title: { flex: 1, fontSize: 30, letterSpacing: -0.9 },
-  close: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center" },
-  loading: { marginTop: 40 },
+  close: { width: CLOSE_SIZE, height: CLOSE_SIZE, borderRadius: CLOSE_SIZE / 2, alignItems: "center", justifyContent: "center" },
+  skeletonLine: { marginTop: 4 },
   card: { gap: 6 },
   tripName: { fontSize: 22, letterSpacing: -0.4 },
   cardTitle: { fontSize: 17 },
   body: { fontSize: 14.5, lineHeight: 21 },
   section: { marginTop: 18, gap: 6 },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 10 },
-  error: { color: "#FF4D5E", fontSize: 13.5, marginTop: 10 },
+  error: { color: auraSignal.danger, fontSize: 13.5, marginTop: 10 },
   note: { fontSize: 12.5, lineHeight: 18, marginTop: 14 },
 });

@@ -5,6 +5,8 @@ import { auraEventColors } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import type { MustDo } from "@/features/itinerary/utils/mustDos";
 
+const DISMISS_SLOP = { top: 7, bottom: 7, left: 5, right: 7 };
+
 /** One suggested sight: its name, an add button and a dismiss "×". */
 export function MustDoRow({ item, actionLabel, onAdd, onDismiss }: { item: MustDo; actionLabel: string; onAdd: () => void; onDismiss: () => void }) {
   const { c, f } = useAura();
@@ -18,6 +20,7 @@ export function MustDoRow({ item, actionLabel, onAdd, onDismiss }: { item: MustD
       <AuraButton size="md" variant="secondary" label={actionLabel} onPress={onAdd} />
       <PressableScale
         onPress={onDismiss}
+        hitSlop={DISMISS_SLOP}
         accessibilityRole="button"
         accessibilityLabel={t("itinerary.mustDo.dismiss", { name: item.name })}
         style={[styles.dismiss, { backgroundColor: c.surfaceStrong }]}

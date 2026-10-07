@@ -2,6 +2,7 @@ import React from "react";
 import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import { Icon, type IconName } from "@/atoms/nomad/Icon";
 import { PressableScale } from "@/atoms/motion/PressableScale";
+import { auraSignal } from "@/constants/aura";
 import { useAura } from "./useAura";
 
 /** Rounded group of list rows with an optional caption above and footnote below. */
@@ -53,7 +54,7 @@ interface AuraListRowProps {
 /** One settings-style row: icon tile, label and detail, then a value, control or chevron. */
 export function AuraListRow({ icon, tone, label, detail, value, trailing, onPress, destructive, disabled, accessibilityHint }: AuraListRowProps) {
   const { c, f } = useAura();
-  const fg = destructive ? "#FF4D5E" : c.text;
+  const fg = destructive ? auraSignal.danger : c.text;
   const content = (
     <>
       {icon ? (

@@ -81,6 +81,6 @@ const styles = StyleSheet.create({
   wrap: { alignItems: "center", gap: 8 },
   kicker: { fontFamily: f.regular, fontSize: 16, color: c.textSoft },
   title: { fontFamily: f.semibold, fontSize: 34, letterSpacing: -1, color: c.text, textAlign: "center", marginBottom: 12 },
-  page: { borderRadius: 26, overflow: "hidden", borderWidth: 1, borderColor: c.highlight, paddingVertical: 26, paddingHorizontal: 14, minHeight: 260, justifyContent: "center" },
+  page: { borderRadius: 26, overflow: "hidden", borderWidth: 1, borderColor: c.hairline, paddingVertical: 26, paddingHorizontal: 14, minHeight: 260, justifyContent: "center" },
   grid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", alignItems: "center", gap: 12 },
 });

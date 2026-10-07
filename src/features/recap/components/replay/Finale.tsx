@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: "#2A2F3D",
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: c.highlight,
+    borderColor: c.hairline,
   },
   editText: { fontFamily: f.semibold, fontSize: 13, color: c.text },
   finaleText: { marginTop: 8, alignItems: "center", gap: 2 },

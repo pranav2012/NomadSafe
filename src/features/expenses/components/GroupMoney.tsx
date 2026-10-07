@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { AuraButton, AuraCard, AuraSection, Icon, useAura } from "@/atoms";
+import { AuraButton, AuraCard, AuraEmptyState, AuraSection, Icon, useAura } from "@/atoms";
+import { auraSpace } from "@/constants/aura";
 import { ExportSheet } from "@/features/expenses/components/ExportSheet";
 import { useLocalization } from "@/localization";
 import { isTrip, type MoneyGroup } from "@/features/trips/store/tripsStore";
@@ -124,12 +125,13 @@ export function GroupMoney({
       <RecurringList groupId={group.id} />
 
       {expenses.length === 0 && settlements.length === 0 ? (
-        <AuraCard style={styles.empty}>
-          <Icon name="wallet" size={22} color={c.textSoft} />
-          <Text style={[styles.emptyTitle, { color: c.text, fontFamily: f.semibold }]}>{t("expenses.noExpensesTitle")}</Text>
-          <Text style={[styles.emptyBody, { color: c.textSoft, fontFamily: f.regular }]}>{t("expenses.noExpensesBody")}</Text>
-          <AuraButton label={t("expenses.importTitle")} icon="download" variant="secondary" size="md" onPress={onImport} style={styles.emptyButton} />
-        </AuraCard>
+        <AuraEmptyState
+          icon="wallet"
+          title={t("expenses.noExpensesTitle")}
+          body={t("expenses.noExpensesBody")}
+          action={<AuraButton label={t("expenses.importTitle")} icon="download" variant="secondary" size="md" onPress={onImport} />}
+          style={styles.empty}
+        />
       ) : (
         <>
           <AuraSection title={t("money.activity")} style={styles.section} />
@@ -163,14 +165,11 @@ const styles = StyleSheet.create({
   keep: { marginBottom: 22, gap: 8 },
   keepTitle: { fontSize: 17 },
   keepActions: { flexDirection: "row", gap: 8, marginTop: 6 },
-  spendAfterBalances: { marginTop: 28 },
-  addPeople: { marginTop: 22, gap: 12 },
+  spendAfterBalances: { marginTop: auraSpace.xxl },
+  addPeople: { marginTop: auraSpace.xxl, gap: auraSpace.md },
   addPeopleRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   addPeopleText: { flex: 1, fontSize: 14, lineHeight: 20 },
   addPeopleButton: { alignSelf: "flex-start" },
   section: { marginTop: 26 },
-  empty: { marginTop: 28, gap: 8 },
-  emptyTitle: { fontSize: 18, marginTop: 4 },
-  emptyBody: { fontSize: 14.5, lineHeight: 21 },
-  emptyButton: { alignSelf: "flex-start", marginTop: 8 },
+  empty: { marginTop: auraSpace.xxl },
 });

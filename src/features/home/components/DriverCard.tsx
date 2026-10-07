@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Linking, ScrollView, StyleSheet, Text, View } from "react-native";
-import { AuraButton, AuraSheet, useAura } from "@/atoms";
+import { Linking, ScrollView, StyleSheet, Text } from "react-native";
+import { AuraButton, AuraSheet, AuraSkeleton, AuraSkeletonGroup, AuraSkeletonText, useAura } from "@/atoms";
 import { api, useAction } from "@/modules/backend";
 import { withAppCheck } from "@/modules/appCheck";
 import { PrivateView } from "@/modules/analytics";
@@ -50,7 +50,9 @@ export function DriverCard({ stay, stop, language, onClose }: { stay: TripEvent 
         <ScrollView contentContainerStyle={styles.content}>
           {cached ? (
             <>
-              <Text style={[styles.name, { color: c.text, fontFamily: f.semibold }]}>{cached.name}</Text>
+              <Text numberOfLines={3} adjustsFontSizeToFit minimumFontScale={0.6} style={[styles.name, { color: c.text, fontFamily: f.semibold }]}>
+                {cached.name}
+              </Text>
               <Text selectable style={[styles.address, { color: c.text, fontFamily: f.medium }]}>
                 {cached.address}
               </Text>
@@ -65,9 +67,10 @@ export function DriverCard({ stay, stop, language, onClose }: { stay: TripEvent 
               <Text style={[styles.hint, { color: c.textMuted, fontFamily: f.regular }]}>{t("passBack.addressUnavailable")}</Text>
             </>
           ) : (
-            <View style={styles.loading}>
-              <ActivityIndicator color={c.textSoft} />
-            </View>
+            <AuraSkeletonGroup style={styles.loading}>
+              <AuraSkeleton width="75%" height={32} radius={10} />
+              <AuraSkeletonText lines={3} lineHeight={24} gap={12} />
+            </AuraSkeletonGroup>
           )}
         </ScrollView>
       </PrivateView>
@@ -81,5 +84,5 @@ const styles = StyleSheet.create({
   name: { fontSize: 32, lineHeight: 40, letterSpacing: -0.5 },
   address: { fontSize: 26, lineHeight: 36 },
   hint: { fontSize: 15, lineHeight: 21 },
-  loading: { paddingVertical: 60, alignItems: "center" },
+  loading: { gap: 22, paddingTop: 4 },
 });

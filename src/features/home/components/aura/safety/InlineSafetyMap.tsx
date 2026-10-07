@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Linking, Platform, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeInDown, FadeOutDown } from "react-native-reanimated";
 import { Icon, PressableScale } from "@/atoms";
-import { auraFonts as f, type AuraPalette } from "@/constants/aura";
+import { auraFonts as f, auraSignal, type AuraPalette } from "@/constants/aura";
 import type { HomeStop } from "@/features/home/types";
 import type { PlacePin, SafetyPlace } from "@/features/home/hooks/useTripSafety";
 import { isCompactFrame, regionForPoints } from "@/features/trips/utils/mapFraming";
@@ -232,7 +232,9 @@ export function InlineSafetyMap({
           {legend.map((item) => (
             <View key={item.key} style={styles.legendItem}>
               <View style={[styles.legendDot, { backgroundColor: item.color }]} />
-              <Text style={[styles.legendText, { color: c.text }]}>{item.label}</Text>
+              <Text numberOfLines={1} style={[styles.legendText, { color: c.text }]}>
+                {item.label}
+              </Text>
             </View>
           ))}
         </View>
@@ -240,6 +242,7 @@ export function InlineSafetyMap({
 
       <PressableScale
         onPress={() => onBackToGlobe(from.center)}
+        hitSlop={4}
         accessibilityRole="button"
         accessibilityLabel={t("home.backToGlobe")}
         style={[styles.globeButton, { backgroundColor: c.surfaceStrong, borderColor: c.hairline }]}
@@ -258,9 +261,9 @@ export function InlineSafetyMap({
             <View style={[styles.kindDot, { backgroundColor: SAFETY_KIND_META[selected.kind].color }]}>
               <Icon name={SAFETY_KIND_META[selected.kind].icon} size={12} color="#FFFFFF" strokeWidth={2.4} />
             </View>
-            <Text style={[styles.kind, { color: c.textSoft }]}>{t(SAFETY_KIND_META[selected.kind].labelKey)}</Text>
+            <Text numberOfLines={1} style={[styles.kind, { color: c.textSoft }]}>{t(SAFETY_KIND_META[selected.kind].labelKey)}</Text>
             {selectedKm !== null ? <Text style={[styles.km, { color: c.textMuted }]}>{formatDistance(selectedKm)}</Text> : null}
-            <PressableScale onPress={() => setSelected(null)} accessibilityRole="button" accessibilityLabel={t("common.close")} hitSlop={10}>
+            <PressableScale onPress={() => setSelected(null)} accessibilityRole="button" accessibilityLabel={t("common.close")} hitSlop={14}>
               <Icon name="x" size={16} color={c.textMuted} />
             </PressableScale>
           </View>
@@ -292,7 +295,7 @@ const styles = StyleSheet.create({
   stopHalo: { width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center" },
   stopDot: { width: 14, height: 14, borderRadius: 7, borderWidth: 2.5, borderColor: "#FFFFFF" },
   pin: { width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: "#FFFFFF" },
-  contact: { width: 30, height: 30, borderRadius: 15, borderWidth: 2.5, borderColor: "#3DDC97", backgroundColor: "#0E1018", alignItems: "center", justifyContent: "center" },
+  contact: { width: 30, height: 30, borderRadius: 15, borderWidth: 2.5, borderColor: auraSignal.ready, backgroundColor: "#0E1018", alignItems: "center", justifyContent: "center" },
   contactInitial: { color: "#FFFFFF", fontFamily: f.semibold, fontSize: 13 },
   globeButton: {
     position: "absolute",
@@ -319,9 +322,9 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: StyleSheet.hairlineWidth,
   },
-  legendItem: { flexDirection: "row", alignItems: "center", gap: 5 },
+  legendItem: { flexDirection: "row", alignItems: "center", gap: 5, maxWidth: "100%" },
   legendDot: { width: 8, height: 8, borderRadius: 4, borderWidth: 1, borderColor: "#FFFFFF" },
-  legendText: { fontFamily: f.medium, fontSize: 11.5 },
+  legendText: { fontFamily: f.medium, fontSize: 11.5, flexShrink: 1 },
   card: {
     position: "absolute",
     left: 16,

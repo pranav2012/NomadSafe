@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useEffectEvent, useMemo, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { AuraButton, AuraField, Icon, PressableScale, showToast, useAura, type IconName } from "@/atoms";
+import { AuraButton, AuraField, AuraSkeleton, AuraSkeletonGroup, AuraSkeletonText, Icon, PressableScale, showToast, useAura, type IconName } from "@/atoms";
+import { auraHitSlop } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { PrivateView, track } from "@/modules/analytics";
 import { canCreatePlannedTrip, usePlanStore } from "@/modules/billing";
@@ -44,20 +45,23 @@ export default function SaveLinkScreen() {
   const plannedTrips = useTripsStore((state) => state.plannedTrips);
   const activeTripId = useTripsStore((state) => state.activeTripId);
 
-  useEffect(() => {
+  // Runs once for the shared text this screen opened with.
+  const loadPreview = useEffectEvent((isLive: () => boolean) => {
     if (!shared.trim()) {
       router.back();
       return;
     }
     if (!link) return;
-    let live = true;
     void fetchLinkPreview(link).then((result) => {
-      if (live) setPreview(result);
+      if (isLive()) setPreview(result);
     });
+  });
+  useEffect(() => {
+    let live = true;
+    loadPreview(() => live);
     return () => {
       live = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const detected = useMemo(() => findPlaceInText([preview?.title, caption].filter(Boolean).join(" · "), locale), [caption, locale, preview?.title]);
@@ -157,23 +161,31 @@ export default function SaveLinkScreen() {
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 120 }]}>
         <View style={styles.header}>
           <Text style={[styles.title, { color: c.text, fontFamily: f.semibold }]}>{t("saveLink.title")}</Text>
-          <PressableScale onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={t("common.close")} style={[styles.close, { backgroundColor: c.surfaceStrong }]}>
+          <PressableScale onPress={() => router.back()} hitSlop={auraHitSlop(38)} accessibilityRole="button" accessibilityLabel={t("common.close")} style={[styles.close, { backgroundColor: c.surfaceStrong }]}>
             <Icon name="x" size={16} color={c.text} />
           </PressableScale>
         </View>
 
         <PrivateView style={[styles.preview, { borderColor: c.textMuted }]}>
-          {preview?.thumbnail ? (
-            <Image source={{ uri: preview.thumbnail }} style={styles.thumb} contentFit="cover" />
+          {preview === null ? (
+            <AuraSkeleton width={64} height={86} radius={12} />
+          ) : preview.thumbnail ? (
+            <Image source={{ uri: preview.thumbnail }} style={styles.thumb} contentFit="cover" cachePolicy="memory-disk" />
           ) : (
             <View style={[styles.thumb, styles.thumbEmpty, { backgroundColor: c.surfaceStrong }]}>
               <Icon name={link ? PROVIDER_ICON[link.provider] : "bookmark"} size={22} color={c.textSoft} />
             </View>
           )}
           <View style={styles.flex}>
-            <Text numberOfLines={3} style={[styles.previewTitle, { color: c.text, fontFamily: f.semibold }]}>
-              {preview === null ? t("saveLink.loading") : title || t("saveLink.noLink")}
-            </Text>
+            {preview === null ? (
+              <AuraSkeletonGroup label={t("saveLink.loading")}>
+                <AuraSkeletonText lines={2} lineHeight={13} />
+              </AuraSkeletonGroup>
+            ) : (
+              <Text numberOfLines={3} style={[styles.previewTitle, { color: c.text, fontFamily: f.semibold }]}>
+                {title || t("saveLink.noLink")}
+              </Text>
+            )}
             {source ? (
               <Text numberOfLines={1} style={[styles.rowDetail, { color: c.textMuted, fontFamily: f.regular }]}>
                 {[source, author].filter(Boolean).join(" · ")}

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { Image, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useAura } from "@/atoms";
 import { PrivateView } from "@/modules/analytics";
@@ -17,12 +18,13 @@ export function SettingsProfileHeader({ name, email, avatarUrl, stats }: { name:
 
   return (
     <PrivateView style={[styles.card, { backgroundColor: c.surface, borderColor: c.hairline }]}>
-      <View style={[styles.highlight, { backgroundColor: c.highlight }]} />
       <View style={styles.avatarWrap}>
         <LinearGradient colors={[CALM_A, CALM_C, CALM_B]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.ring}>
           {showImage ? (
             <Image
               source={{ uri: avatarUrl }}
+              recyclingKey={avatarUrl}
+              cachePolicy="memory-disk"
               onError={() => setImageFailed(true)}
               style={[styles.photo, { borderColor: c.card }]}
               accessibilityIgnoresInvertColors
@@ -60,7 +62,6 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     overflow: "hidden",
   },
-  highlight: { position: "absolute", top: 0, left: 28, right: 28, height: StyleSheet.hairlineWidth },
   avatarWrap: {
     shadowColor: CALM_A,
     shadowOpacity: 0.45,

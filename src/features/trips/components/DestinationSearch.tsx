@@ -1,7 +1,7 @@
 import React, { useDeferredValue, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
-import { AuraField, Icon, PressableScale, useAura } from "@/atoms";
+import { AuraField, AuraSkeletonGroup, AuraSkeletonRow, Icon, PressableScale, useAura } from "@/atoms";
 import { useLocalization } from "@/localization";
 import {
   DESTINATION_RESULT_LIMIT,
@@ -48,9 +48,9 @@ export function DestinationSearch({ selected, onSelect, label, placeholder, auto
 
   const typed = query.trim().length >= 2;
   const empty = options.length === 0;
+  const searching = empty && online.status === "loading";
   const message =
     !empty ? null
-    : online.status === "loading" ? t("trip.searchingDestinations")
     : online.status === "error" ? t("trip.destinationSearchUnavailable")
     : online.status === "done" ? t("trip.noDestinationMatches")
     : null;
@@ -80,15 +80,22 @@ export function DestinationSearch({ selected, onSelect, label, placeholder, auto
         }}
         prefix={<Icon name="search" size={large ? 20 : 16} color={c.textMuted} />}
       />
-      {typed && (!empty || message) ? (
+      {typed && (!empty || message || searching) ? (
         <Animated.View entering={FadeIn.duration(160)} exiting={FadeOut.duration(120)} style={[styles.dropdown, { backgroundColor: c.card, borderColor: c.hairline }]}>
           {options.map((option) => (
             <OptionRow key={option.id} option={option} onPress={() => pick(option)} />
           ))}
+          {searching ? (
+            <AuraSkeletonGroup label={t("trip.searchingDestinations")}>
+              {[0, 1].map((i) => (
+                <AuraSkeletonRow key={i} leading="square" size={34} style={styles.row} />
+              ))}
+            </AuraSkeletonGroup>
+          ) : null}
           {message ? (
             <View style={styles.row}>
               <View style={[styles.rowIcon, { backgroundColor: c.surfaceStrong }]}>
-                {online.status === "loading" ? <ActivityIndicator size="small" color={c.textSoft} /> : <Icon name="globe" size={16} color={c.textSoft} />}
+                <Icon name="globe" size={16} color={c.textSoft} />
               </View>
               <Text numberOfLines={2} style={[styles.rowSub, styles.rowText, { color: c.textMuted, fontFamily: f.regular }]}>
                 {message}
@@ -134,7 +141,7 @@ const styles = StyleSheet.create({
   dropdown: { borderRadius: 18, borderWidth: StyleSheet.hairlineWidth, paddingVertical: 4, overflow: "hidden" },
   row: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 12, paddingVertical: 9 },
   rowIcon: { width: 34, height: 34, borderRadius: 11, alignItems: "center", justifyContent: "center" },
-  rowText: { flex: 1 },
+  rowText: { flex: 1, minWidth: 0 },
   rowTitle: { fontSize: 15, flexShrink: 1 },
   rowSub: { fontSize: 12.5 },
   attribution: { fontSize: 11, textAlign: "right", paddingHorizontal: 14, paddingBottom: 8 },

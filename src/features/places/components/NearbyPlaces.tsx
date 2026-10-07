@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Linking, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Linking, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { api, useAction } from "@/modules/backend";
 import { withAppCheck } from "@/modules/appCheck";
-import { AuraButton, AuraChip, AuraSection, Icon, type IconName, PressableScale, useAura } from "@/atoms";
+import { AuraButton, AuraChip, AuraSection, AuraSkeleton, AuraSkeletonGroup, Icon, type IconName, PressableScale, useAura } from "@/atoms";
+import { auraSignal } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { isSafeMapsUrl } from "@/utils/safeUrl";
 import type { NearbyCategory, NearbyPlace } from "@/features/places/services/nearbyPlaces";
@@ -21,15 +22,15 @@ interface UserLocation {
 type LoadState = { status: "ready"; places: NearbyPlace[] } | { status: "unavailable" };
 
 const CATEGORIES: { key: NearbyCategory; icon: IconName; tint: string }[] = [
-  { key: "food", icon: "utensils", tint: "#FFB547" },
+  { key: "food", icon: "utensils", tint: auraSignal.amber },
   { key: "coffee", icon: "coffee", tint: "#C98B5B" },
   { key: "sights", icon: "camera", tint: "#7C8CFF" },
-  { key: "essentials", icon: "wallet", tint: "#3DDC97" },
+  { key: "essentials", icon: "wallet", tint: auraSignal.ready },
 ];
 
 const CARD_WIDTH = 236;
 const PHOTO_HEIGHT = 136;
-const OPEN = "#3DDC97";
+const OPEN = auraSignal.ready;
 // Straight-line distance undercounts real streets; ~1.3x at 80 m/min is a fair walking estimate.
 const WALK_DETOUR = 1.3;
 const WALK_METERS_PER_MIN = 80;
@@ -108,10 +109,20 @@ export function NearbyPlaces({ userLocation }: { userLocation: UserLocation | nu
       </ScrollView>
 
       {!state ? (
-        <View style={[styles.status, { backgroundColor: c.surface, borderColor: c.hairline }]}>
-          <ActivityIndicator size="small" color={c.textSoft} />
-          <Text style={[styles.statusText, { color: c.textSoft, fontFamily: f.regular }]}>{t("places.loading")}</Text>
-        </View>
+        <AuraSkeletonGroup label={t("places.loading")}>
+          <ScrollView horizontal scrollEnabled={false} showsHorizontalScrollIndicator={false} style={styles.bleed} contentContainerStyle={styles.cards}>
+            {[0, 1].map((i) => (
+              <View key={i} style={[styles.card, { backgroundColor: c.card, borderColor: c.hairline }]}>
+                <AuraSkeleton height={PHOTO_HEIGHT} radius={0} />
+                <View style={styles.cardBody}>
+                  <AuraSkeleton width="70%" height={15} />
+                  <AuraSkeleton width="50%" height={11} radius={5.5} />
+                  <AuraSkeleton width="35%" height={11} radius={5.5} style={styles.walkRow} />
+                </View>
+              </View>
+            ))}
+          </ScrollView>
+        </AuraSkeletonGroup>
       ) : state.status === "unavailable" || placeDistances.length === 0 ? (
         <View style={[styles.status, { backgroundColor: c.surface, borderColor: c.hairline }]}>
           <Icon name={active.icon} size={18} color={c.textMuted} />
@@ -190,7 +201,7 @@ export function NearbyPlaces({ userLocation }: { userLocation: UserLocation | nu
                     </Text>
                     {place.rating !== null ? (
                       <View style={styles.ratingRow}>
-                        <Icon name="star" size={12} color="#FFB547" />
+                        <Icon name="star" size={12} color={auraSignal.amber} />
                         <Text style={[styles.rating, { color: c.text, fontFamily: f.semibold }]}>{ratingFormat.format(place.rating)}</Text>
                       </View>
                     ) : null}

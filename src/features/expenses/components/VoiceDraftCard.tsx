@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { AuraButton, Icon, PressableScale, useAura } from "@/atoms";
-import { auraCategoryColors, auraStatusAccent } from "@/constants/aura";
+import { auraCategoryColors, auraRadius, auraSpace, auraStatusAccent } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { getCategoryMeta } from "@/features/expenses/constants/categories";
 import { personLabel } from "@/features/expenses/components/SplitEditor";
@@ -10,6 +10,7 @@ import type { ShareResolution } from "@/features/expenses/utils/split";
 import type { VoiceExpenseDraft, VoiceSettlementDraft } from "@/features/expenses/services/voiceExpense";
 
 export const AUTO_SAVE_SECONDS = 6;
+const ACTION_SLOP = { top: 14, bottom: 14, left: 4, right: 4 };
 
 export interface VoiceDraftCardProps {
   draft: VoiceExpenseDraft | VoiceSettlementDraft;
@@ -64,17 +65,18 @@ export function VoiceDraftCard({
 
   return (
     <Pressable onPress={pause} style={[styles.card, { backgroundColor: c.card, borderColor: c.hairline }]}>
-      <View style={[styles.highlight, { backgroundColor: c.highlight }]} />
       {draft.kind === "expense" ? (
         <>
           <View style={styles.amountRow}>
-            <Text style={[styles.amount, { color: c.text, fontFamily: f.semibold }]}>{amount}</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5} style={[styles.amount, styles.amountShrink, { color: c.text, fontFamily: f.semibold }]}>
+              {amount}
+            </Text>
             <View style={[styles.categoryPill, { backgroundColor: `${tone}1F` }]}>
               <Icon name={getCategoryMeta(draft.category).icon} size={13} color={tone} />
-              <Text style={[styles.categoryText, { color: c.text, fontFamily: f.medium }]}>{t(`expenses.category.${draft.category}`)}</Text>
+              <Text numberOfLines={1} style={[styles.categoryText, { color: c.text, fontFamily: f.medium }]}>{t(`expenses.category.${draft.category}`)}</Text>
             </View>
           </View>
-          <Text style={[styles.merchant, { color: c.text, fontFamily: f.medium }]}>
+          <Text numberOfLines={2} style={[styles.merchant, { color: c.text, fontFamily: f.medium }]}>
             {draft.merchant || t(`expenses.category.${draft.category}`)}
           </Text>
           <Text style={[styles.meta, { color: c.textMuted, fontFamily: f.regular }]}>
@@ -85,7 +87,7 @@ export function VoiceDraftCard({
             <View style={[styles.shares, { borderColor: c.hairline }]}>
               {shares.shares.map((share) => (
                 <View key={share.person} style={styles.shareRow}>
-                  <Text style={[styles.shareText, { color: c.textSoft, fontFamily: f.regular }]}>{personLabel(share.person, t)}</Text>
+                  <Text numberOfLines={1} style={[styles.shareText, styles.shareName, { color: c.textSoft, fontFamily: f.regular }]}>{personLabel(share.person, t)}</Text>
                   <Text style={[styles.shareText, { color: c.text, fontFamily: f.medium }]}>
                     {formatMoney(formatCurrency, share.amount, draft.currency)}
                   </Text>
@@ -100,8 +102,10 @@ export function VoiceDraftCard({
         </>
       ) : (
         <>
-          <Text style={[styles.amount, { color: c.text, fontFamily: f.semibold }]}>{amount}</Text>
-          <Text style={[styles.merchant, { color: c.text, fontFamily: f.medium }]}>
+          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5} style={[styles.amount, { color: c.text, fontFamily: f.semibold }]}>
+            {amount}
+          </Text>
+          <Text numberOfLines={2} style={[styles.merchant, { color: c.text, fontFamily: f.medium }]}>
             {t("split.paid", { from: personLabel(draft.from, t), to: personLabel(draft.to, t) })}
           </Text>
           <Text style={[styles.meta, { color: c.textMuted, fontFamily: f.regular }]}>
@@ -122,11 +126,11 @@ export function VoiceDraftCard({
           <Icon name="users" size={15} color={auraStatusAccent.live} />
           <Text style={[styles.noticeText, { color: c.text, fontFamily: f.regular }]}>{t("voiceExpense.notOnTrip", { name })}</Text>
           {canAddPeople ? (
-            <PressableScale onPress={() => onAddPerson(name)} hitSlop={6} accessibilityRole="button">
+            <PressableScale onPress={() => onAddPerson(name)} hitSlop={ACTION_SLOP} accessibilityRole="button">
               <Text style={[styles.noticeAction, { color: c.text, fontFamily: f.semibold }]}>{t("voiceExpense.addToTrip")}</Text>
             </PressableScale>
           ) : null}
-          <PressableScale onPress={() => onLeaveOut(name)} hitSlop={6} accessibilityRole="button">
+          <PressableScale onPress={() => onLeaveOut(name)} hitSlop={ACTION_SLOP} accessibilityRole="button">
             <Text style={[styles.noticeAction, { color: c.textSoft, fontFamily: f.semibold }]}>{t("voiceExpense.leaveOut")}</Text>
           </PressableScale>
         </View>
@@ -155,16 +159,17 @@ export function VoiceDraftCard({
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  card: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 26, padding: 18, gap: 8, overflow: "hidden" },
-  highlight: { position: "absolute", top: 0, left: 28, right: 28, height: StyleSheet.hairlineWidth },
+  card: { borderWidth: StyleSheet.hairlineWidth, borderRadius: auraRadius.card, padding: auraSpace.cardPad, gap: 8, overflow: "hidden" },
   amountRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
   amount: { fontSize: 38, letterSpacing: -1.2 },
+  amountShrink: { flexShrink: 1 },
   categoryPill: { flexDirection: "row", alignItems: "center", gap: 5, height: 28, borderRadius: 14, paddingHorizontal: 10 },
   categoryText: { fontSize: 12.5 },
   merchant: { fontSize: 16.5 },
   meta: { fontSize: 13 },
   shares: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 10, marginTop: 4, gap: 6 },
-  shareRow: { flexDirection: "row", justifyContent: "space-between" },
+  shareRow: { flexDirection: "row", justifyContent: "space-between", gap: 12 },
+  shareName: { flexShrink: 1 },
   shareText: { fontSize: 14, fontVariant: ["tabular-nums"] },
   warning: { color: auraStatusAccent.alert, fontSize: 13 },
   notice: { flexDirection: "row", alignItems: "center", gap: 8, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 10 },

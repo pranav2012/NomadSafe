@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
 import { AuraButton, Icon, type IconName, showAlert, useAura } from "@/atoms";
-import { auraStatusAccent } from "@/constants/aura";
+import { auraSignal, auraStatusAccent } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { aiRuntime, findModel, formatBytes, useAiProvisioning, type ProvisionPhase } from "@/modules/ai";
 import { provisionCopy, provisionPercent, provisionProgressText } from "../utils/provisionCopy";
@@ -33,7 +33,7 @@ function phaseIcon(phase: ProvisionPhase): IconName {
   }
 }
 
-const READY = "#3DDC97";
+const READY = auraSignal.ready;
 
 export function AiProvisionCard({ mode, busy = false }: Props) {
   const { c, f, accent: calm } = useAura();
@@ -68,8 +68,10 @@ export function AiProvisionCard({ mode, busy = false }: Props) {
             <Icon name="sparkle" size={17} color={calm} strokeWidth={2} />
           </View>
           <View style={styles.flex}>
-            <Text style={[styles.modelName, { color: c.text, fontFamily: f.semibold }]}>{model.name}</Text>
-            <Text style={[styles.modelMeta, { color: c.textMuted, fontFamily: f.regular }]}>
+            <Text numberOfLines={1} style={[styles.modelName, { color: c.text, fontFamily: f.semibold }]}>
+              {model.name}
+            </Text>
+            <Text numberOfLines={2} style={[styles.modelMeta, { color: c.textMuted, fontFamily: f.regular }]}>
               {t("aiTab.provision.pickedForPhone")} · {t("aiTab.provision.modelMeta", { size: formatBytes(model.sizeBytes, locale) })}
             </Text>
           </View>
@@ -139,7 +141,7 @@ export function AiProvisionCard({ mode, busy = false }: Props) {
 
 const styles = StyleSheet.create({
   root: { gap: 12 },
-  flex: { flex: 1 },
+  flex: { flex: 1, minWidth: 0 },
   modelRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   modelIcon: { width: 40, height: 40, borderRadius: 13, alignItems: "center", justifyContent: "center" },
   modelName: { fontSize: 16 },

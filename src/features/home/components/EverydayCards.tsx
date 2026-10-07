@@ -2,7 +2,7 @@ import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Icon, PressableScale, useAura, type IconName } from "@/atoms";
-import { auraStatusAccent } from "@/constants/aura";
+import { auraRadius, auraSignal, auraSpace, auraStatusAccent } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { track } from "@/modules/analytics";
 import { OVERVIEW, useMoneyViewStore } from "@/features/expenses/store/moneyViewStore";
@@ -11,7 +11,7 @@ import { formatMoney } from "@/features/expenses/utils/money";
 import { useSafetyIntentStore } from "@/features/safety/store/safetyIntentStore";
 import { useSafetyStore } from "@/features/safety/store/safetyStore";
 
-const OWED = "#3DDC97";
+const OWED = auraSignal.ready;
 
 /** Home with no trip: your balance across groups (opens Money) and "Get home safe" (opens the safe-arrival timer). */
 export function EverydayCards() {
@@ -93,9 +93,9 @@ function Card({ icon, tone, title, detail, onPress }: { icon: IconName; tone?: s
 
 const styles = StyleSheet.create({
   root: { gap: 10, marginTop: 18 },
-  card: { flexDirection: "row", alignItems: "center", gap: 14, borderRadius: 20, borderWidth: StyleSheet.hairlineWidth, padding: 16 },
+  card: { flexDirection: "row", alignItems: "center", gap: 14, borderRadius: auraRadius.card, borderWidth: StyleSheet.hairlineWidth, padding: auraSpace.cardPad },
   icon: { width: 40, height: 40, borderRadius: 14, alignItems: "center", justifyContent: "center" },
-  text: { flex: 1, gap: 3 },
+  text: { flex: 1, minWidth: 0, gap: 3 },
   title: { fontSize: 15.5 },
   detail: { fontSize: 13, lineHeight: 18 },
 });

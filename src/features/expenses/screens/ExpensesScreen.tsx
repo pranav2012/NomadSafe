@@ -16,7 +16,7 @@ import {
   useTabBarInset,
   AuraTopFade,
 } from "@/atoms";
-import { auraStatusAccent } from "@/constants/aura";
+import { auraHitSlop, auraStatusAccent } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { PrivateView, track } from "@/modules/analytics";
 import { usePlusGate, useStartNewGroup, useStartNewTrip } from "@/modules/billing";
@@ -58,7 +58,7 @@ export default function ExpensesScreen() {
   const group = selected === OVERVIEW ? null : (chosen ?? activeTrip);
   const viewId = group?.id ?? OVERVIEW;
   const expenses = useExpensesStore((state) => state.expenses);
-  const updateExpense = useExpensesStore((state) => state.updateExpense);
+  const updateExpenses = useExpensesStore((state) => state.updateExpenses);
   const startNewGroup = useStartNewGroup();
   const startNewTrip = useStartNewTrip();
   const [formOpen, setFormOpen] = useState(false);
@@ -79,7 +79,7 @@ export default function ExpensesScreen() {
 
   const reviewable = group ? expenses.filter((expense) => expense.groupId === group.id && expense.splitHint?.shares) : [];
   const confirmSplits = () => {
-    for (const expense of reviewable) updateExpense(expense.id, { paidBy: SELF_ID, shares: expense.splitHint?.shares, splitHint: undefined });
+    updateExpenses(reviewable.map((expense) => ({ id: expense.id, input: { paidBy: SELF_ID, shares: expense.splitHint?.shares, splitHint: undefined } })));
   };
 
   const markUsed = useMoneyViewStore((state) => state.markUsed);
@@ -162,6 +162,7 @@ export default function ExpensesScreen() {
               onPress={() => setMenuOpen(true)}
               accessibilityRole="button"
               accessibilityLabel={t("money.moreActions")}
+              hitSlop={auraHitSlop(38)}
               style={[styles.headerButton, { backgroundColor: c.surfaceStrong }]}
             >
               <Icon name="more" size={18} color={c.text} />

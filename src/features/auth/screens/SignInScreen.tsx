@@ -14,8 +14,9 @@ import { useSettingsStore } from "@/features/settings/store/settingsStore";
 import { useLocalization } from "@/localization";
 import { track } from "@/modules/analytics";
 import { withSystemPrompt } from "@/utils/systemPrompt";
+import { auraSignal } from "@/constants/aura";
 
-const DANGER = "#FF4D5E";
+const DANGER = auraSignal.danger;
 const AMBIENCE = require("../../../../assets/audio/aurora-ambience.m4a");
 
 function GoogleGlyph() {

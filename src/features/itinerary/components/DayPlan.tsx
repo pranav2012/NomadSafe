@@ -14,6 +14,10 @@ import { isForEveryone, isForMe } from "@/features/itinerary/utils/people";
 import type { TimelineEntry } from "@/features/itinerary/utils/timeline";
 import { transitModeOf } from "@/features/itinerary/utils/transit";
 
+// Rows place these side by side 10 pt apart, so the slop grows them vertically and only 5 pt sideways.
+const ROUND_SLOP = { top: 6, bottom: 6, left: 5, right: 5 };
+const CHECK_SLOP = { top: 10, bottom: 10, left: 5, right: 5 };
+
 type Entry = TimelineEntry<TripEvent>;
 type Row = { kind: "mine"; entry: Entry; together: boolean } | { kind: "theirs"; entries: Entry[] };
 
@@ -88,6 +92,7 @@ export function DayPlan({
   const doneCircle = (event: TripEvent) => (
     <PressableScale
       onPress={() => onToggleDone(event)}
+      hitSlop={CHECK_SLOP}
       accessibilityRole="checkbox"
       accessibilityState={{ checked: Boolean(event.doneAt) }}
       accessibilityLabel={t("itinerary.day.markDone", { title: localizeEventTitle(event.title, t) })}
@@ -106,6 +111,7 @@ export function DayPlan({
         }}
         accessibilityRole="link"
         accessibilityLabel={t("itinerary.day.openMaps", { place: localizeEventTitle(event.title, t) })}
+        hitSlop={ROUND_SLOP}
         style={[styles.round, { backgroundColor: c.surfaceStrong }]}
       >
         <Icon name="mapPin" size={14} color={c.text} />
@@ -157,6 +163,7 @@ export function DayPlan({
             onPress={() => onOpenTickets(event.id)}
             accessibilityRole="button"
             accessibilityLabel={t("tickets.show")}
+            hitSlop={ROUND_SLOP}
             style={[styles.round, { backgroundColor: c.surfaceStrong }]}
           >
             <Icon name="ticket" size={14} color={c.text} />
@@ -166,6 +173,7 @@ export function DayPlan({
             onPress={() => onAskForTicket(event)}
             accessibilityRole="button"
             accessibilityLabel={t("tickets.heldBy", { names: (event.ticketHolders ?? []).filter((person) => person !== SELF_ID).join(", ") })}
+            hitSlop={ROUND_SLOP}
             style={[styles.round, styles.remote, { borderColor: c.textMuted }]}
           >
             <Icon name="ticket" size={14} color={c.textMuted} />
@@ -281,7 +289,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, paddingVertical: 12 },
   time: { width: 54, fontSize: 12.5, fontVariant: ["tabular-nums"] },
   icon: { width: 36, height: 36, borderRadius: 11, alignItems: "center", justifyContent: "center" },
-  text: { flex: 1, gap: 2 },
+  text: { flex: 1, minWidth: 0, gap: 2 },
   label: { fontSize: 11, letterSpacing: 0.8, textTransform: "uppercase" },
   title: { fontSize: 15 },
   sub: { fontSize: 13 },

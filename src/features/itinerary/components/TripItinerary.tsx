@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { AuraButton, AuraSection, AuraSheet, Icon, PressableScale, showAlert, showToast, useAura } from "@/atoms";
+import { auraRadius, auraSpace, auraType } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { PrivateView, track } from "@/modules/analytics";
 import { aiRuntime, aiService, useAiAvailability } from "@/modules/ai";
@@ -422,10 +423,10 @@ function ItineraryEmpty({ trip, onAdd }: { trip: Trip; onAdd: () => void }) {
 const styles = StyleSheet.create({
   planned: { marginTop: 24, marginBottom: 12 },
   viewAll: { alignSelf: "center", marginTop: 6 },
-  empty: { gap: 14, padding: 16, borderRadius: 22, borderWidth: StyleSheet.hairlineWidth },
+  empty: { gap: 14, padding: auraSpace.cardPad, borderRadius: auraRadius.card, borderWidth: StyleSheet.hairlineWidth },
   emptyHead: { flexDirection: "row", alignItems: "center", gap: 12 },
   emptyIcon: { width: 38, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  emptyTitle: { fontSize: 15.5 },
+  emptyTitle: { fontSize: auraType.bodyStrong },
   emptyText: { fontSize: 13.5, lineHeight: 19, marginTop: 2, fontVariant: ["tabular-nums"] },
   reviewActions: { flexDirection: "row", gap: 10 },
   reviewBody: { fontSize: 15, lineHeight: 22, paddingHorizontal: 20, paddingBottom: 8 },

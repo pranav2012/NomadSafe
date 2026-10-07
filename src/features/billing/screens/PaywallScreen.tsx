@@ -2,8 +2,8 @@ import React, { useEffect, useState } from "react";
 import { Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { AuraButton, AuraCard, AuraLoader, AuraSegmented, Icon, PressableScale, showAlert, showToast, useAura } from "@/atoms";
-import { auraStatusColors } from "@/constants/aura";
+import { AuraButton, AuraCard, AuraSegmented, AuraSkeleton, AuraSkeletonGroup, Icon, PressableScale, showAlert, showToast, useAura } from "@/atoms";
+import { auraHitSlop, auraStatusColors } from "@/constants/aura";
 import { LEGAL_URLS, openLegalPage } from "@/constants/legal";
 import { useLocalization } from "@/localization";
 import { logger } from "@/modules/logger";
@@ -28,6 +28,7 @@ type PaidTier = Exclude<PlanTier, "free">;
 type Reason = "trips" | "groups" | "planned" | "plus" | "ai" | "settings";
 
 const [INDIGO, TEAL, VIOLET] = auraStatusColors.calm;
+const LINK_SLOP = { top: 12, bottom: 12, left: 4, right: 4 };
 const TIER_RANK: Record<PlanTier, number> = { free: 0, plus: 1, pro: 2 };
 
 const STORE_COPY =
@@ -174,6 +175,7 @@ export default function PaywallScreen() {
           </View>
           <PressableScale
             onPress={() => router.back()}
+            hitSlop={auraHitSlop(38)}
             accessibilityRole="button"
             accessibilityLabel={t("common.close")}
             style={[styles.close, { backgroundColor: c.surfaceStrong }]}
@@ -220,7 +222,17 @@ export default function PaywallScreen() {
         ) : loadFailed || (packages !== null && PACKAGES_BY_TIER[tier].every((id) => !packages[id])) ? (
           <Text style={[styles.note, { color: c.textMuted, fontFamily: f.regular }]}>{t(STORE_COPY.unavailable)}</Text>
         ) : packages === null ? (
-          <AuraLoader size={56} style={styles.loading} />
+          <AuraSkeletonGroup style={styles.options}>
+            {PACKAGES_BY_TIER[tier].map((id) => (
+              <View key={id} style={[styles.option, { backgroundColor: c.surface, borderColor: c.hairline, borderWidth: StyleSheet.hairlineWidth }]}>
+                <View style={[styles.flex, styles.skeletonText]}>
+                  <AuraSkeleton width="40%" height={16} radius={8} />
+                  <AuraSkeleton width="60%" height={12} radius={6} />
+                </View>
+                <AuraSkeleton width={64} height={16} radius={8} />
+              </View>
+            ))}
+          </AuraSkeletonGroup>
         ) : (
           <View style={styles.options} accessibilityRole="radiogroup">
             {PACKAGES_BY_TIER[tier].map((id) => {
@@ -275,7 +287,7 @@ export default function PaywallScreen() {
         <View style={styles.links}>
           {plan.billingAvailable ? (
             <>
-              <PressableScale onPress={() => void handleRestore()} disabled={busy !== null} accessibilityRole="button">
+              <PressableScale onPress={() => void handleRestore()} disabled={busy !== null} hitSlop={LINK_SLOP} accessibilityRole="button">
                 <Text style={[styles.link, { color: c.textSoft, fontFamily: f.medium }]}>
                   {busy === "restore" ? t("paywall.restoring") : t("paywall.restore")}
                 </Text>
@@ -283,13 +295,13 @@ export default function PaywallScreen() {
               <Text style={[styles.link, { color: c.textMuted }]}>·</Text>
             </>
           ) : null}
-          <PressableScale onPress={() => openLegalPage(LEGAL_URLS.privacy)} accessibilityRole="link">
+          <PressableScale onPress={() => openLegalPage(LEGAL_URLS.privacy)} hitSlop={LINK_SLOP} accessibilityRole="link">
             <Text style={[styles.link, { color: c.textSoft, fontFamily: f.medium }]}>{t("settings.privacyPolicy")}</Text>
           </PressableScale>
           {Platform.OS === "ios" ? (
             <>
               <Text style={[styles.link, { color: c.textMuted }]}>·</Text>
-              <PressableScale onPress={() => openLegalPage(LEGAL_URLS.appleEula)} accessibilityRole="link">
+              <PressableScale onPress={() => openLegalPage(LEGAL_URLS.appleEula)} hitSlop={LINK_SLOP} accessibilityRole="link">
                 <Text style={[styles.link, { color: c.textSoft, fontFamily: f.medium }]}>{t("paywall.termsOfUse")}</Text>
               </PressableScale>
             </>
@@ -317,7 +329,7 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 17, letterSpacing: -0.2, marginBottom: 2 },
   feature: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
   featureText: { flex: 1, fontSize: 14.5, lineHeight: 20 },
-  loading: { marginTop: 24 },
+  skeletonText: { gap: 6 },
   options: { marginTop: 14, gap: 10 },
   option: { flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 18, paddingHorizontal: 16, paddingVertical: 14 },
   optionTitleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
