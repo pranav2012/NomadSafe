@@ -6,7 +6,6 @@ import { useExpensesStore } from "@/features/expenses/store/expensesStore";
 import { useEventsStore } from "@/features/itinerary/store/eventsStore";
 import { usePassportStore } from "@/features/passport/store/passportStore";
 import { useSafetyStore } from "@/features/safety/store/safetyStore";
-import { useSharingStore } from "@/features/location-sharing/store/sharingStore";
 import { useSettingsStore } from "@/features/settings/store/settingsStore";
 import { emergencyContactsStorage } from "@/features/onboarding/services/emergencyContactsStorage";
 import { aiRuntime } from "@/modules/ai";
@@ -23,8 +22,6 @@ export interface NomadSafeExport {
   pastTravel: ReturnType<typeof usePassportStore.getState>["entries"];
   safetyEvents: ReturnType<typeof useSafetyStore.getState>["events"];
   trustedContacts: ReturnType<typeof useSafetyStore.getState>["trustedContacts"];
-  shareRecipients: ReturnType<typeof useSharingStore.getState>["recipients"];
-  geofences: ReturnType<typeof useSharingStore.getState>["geofences"];
   settings: {
     themeMode: string;
     defaultCurrency: string;
@@ -57,8 +54,6 @@ function buildExport(): NomadSafeExport {
     pastTravel: usePassportStore.getState().entries,
     safetyEvents: useSafetyStore.getState().events,
     trustedContacts: useSafetyStore.getState().trustedContacts,
-    shareRecipients: useSharingStore.getState().recipients,
-    geofences: useSharingStore.getState().geofences,
     settings: {
       themeMode: settings.themeMode,
       defaultCurrency: getDefaultCurrency(),

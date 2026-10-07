@@ -4,7 +4,9 @@ import { api, type Id, useMutation, useQuery } from "@/modules/backend";
 import { showAlert } from "@/atoms";
 import { registerGroupPush } from "@/features/sync";
 import { useLocalization } from "@/localization";
-import { buildCircle, type Circle, type CirclePerson, type IncomingShareInput } from "../utils/circle";
+import { useAppActive } from "@/hooks/useAnimationsActive";
+import { buildCircle, nextStaleAt, type Circle, type CirclePerson, type IncomingShareInput } from "../utils/circle";
+import { useLastLoaded } from "./useSharingQueries";
 
 const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.pranav.nomadsafe";
 const EMPTY = { outgoing: [], incoming: [], invites: [] };
@@ -28,15 +30,25 @@ export function useCircle(): Circle & {
   sendInvite: (person: { name: string; email: string | null }) => void;
 } {
   const { t } = useLocalization();
+  const appActive = useAppActive();
   const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 30_000);
-    return () => clearInterval(id);
-  }, []);
 
-  const links = useQuery(api.sharing.getContactLinks) as ContactLinks | undefined;
-  const incomingShares = useQuery(api.sharing.getIncomingShares) as IncomingShareInput[] | undefined;
-  const outgoingShares = useQuery(api.sharing.getOutgoingShares);
+  // Subscriptions pause in the background; the last values stay on screen.
+  const links = useLastLoaded(useQuery(api.sharing.getContactLinks, appActive ? {} : "skip") as ContactLinks | undefined);
+  const incomingShares = useLastLoaded(
+    useQuery(api.sharing.getIncomingShares, appActive ? {} : "skip") as IncomingShareInput[] | undefined,
+  );
+  const outgoingShares = useLastLoaded(useQuery(api.sharing.getOutgoingShares, appActive ? {} : "skip"));
+
+  // Re-render only when someone's location turns stale (and on return to the app), not on a fixed tick.
+  const staleAt = nextStaleAt(incomingShares ?? [], now);
+  useEffect(() => {
+    if (!appActive) return;
+    const delay = staleAt !== null ? Math.max(0, staleAt - Date.now()) + 50 : Date.now() - now > 1000 ? 0 : null;
+    if (delay === null) return;
+    const id = setTimeout(() => setNow(Date.now()), delay);
+    return () => clearTimeout(id);
+  }, [appActive, now, staleAt]);
 
   const requestContactLink = useMutation(api.sharing.requestContactLink);
   const respondToContactLink = useMutation(api.sharing.respondToContactLink);

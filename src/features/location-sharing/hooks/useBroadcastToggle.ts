@@ -1,6 +1,5 @@
 import { useCallback, useState } from "react";
 import { Linking } from "react-native";
-import { api, useQuery } from "@/modules/backend";
 import { useLocalization } from "@/localization";
 import { track } from "@/modules/analytics";
 import { heavyImpact, successNotification } from "@/utils/haptics";
@@ -12,6 +11,7 @@ import {
   stopLocationBroadcast,
 } from "../services/locationBroadcastTask";
 import { useSharingStore } from "../store/sharingStore";
+import { useSeesYouCount } from "./useSharingQueries";
 import { showAlert } from "@/atoms";
 
 /**
@@ -30,14 +30,7 @@ export function useBroadcastToggle() {
   const [busy, setBusy] = useState(false);
   const [disclosureVisible, setDisclosureVisible] = useState(false);
 
-  const contactLinks = useQuery(api.sharing.getContactLinks) as
-    | { outgoing: { linkedUserId: string; status: string }[] }
-    | undefined;
-  const outgoingShares = useQuery(api.sharing.getOutgoingShares) as { recipientUserId: string; paused: boolean }[] | undefined;
-  const paused = new Set((outgoingShares ?? []).filter((s) => s.paused).map((s) => s.recipientUserId));
-  const activeRecipientCount = (contactLinks?.outgoing ?? []).filter(
-    (link) => link.status === "accepted" && !paused.has(link.linkedUserId),
-  ).length;
+  const { count: activeRecipientCount, loaded: linksLoaded } = useSeesYouCount();
 
   // Normal mode; the task drops to low power on its own when the battery runs low.
   const begin = useCallback(async () => {
@@ -78,8 +71,8 @@ export function useBroadcastToggle() {
   // Pass the recipient count when the caller just changed who sees you, before the query catches up.
   const start = useCallback(async (recipients = activeRecipientCount) => {
     if (busy || isBroadcasting) return;
-    // Sharing with nobody would keep location running for no one; contactLinks is undefined while loading.
-    if (contactLinks && recipients === 0) {
+    // Sharing with nobody would keep location running for no one; the count isn't known until the links load.
+    if (linksLoaded && recipients === 0) {
       showAlert(t("sharing.noRecipientsTitle"), t("sharing.noRecipientsBody"));
       return;
     }
@@ -88,7 +81,7 @@ export function useBroadcastToggle() {
       return;
     }
     await begin();
-  }, [activeRecipientCount, begin, busy, contactLinks, isBroadcasting, t]);
+  }, [activeRecipientCount, begin, busy, isBroadcasting, linksLoaded, t]);
 
   const toggle = useCallback(() => (isBroadcasting ? stop() : start()), [isBroadcasting, start, stop]);
 

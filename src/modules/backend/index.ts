@@ -5,5 +5,5 @@ export { api } from "@convex/_generated/api";
 export type { Id } from "@convex/_generated/dataModel";
 export { authClient } from "./authClient";
 export { BackendProvider } from "./BackendProvider";
-export { backendSiteUrl, convex, createBackendHttpClient } from "./client";
+export { backendSiteUrl, convex, getBackendHttpClient } from "./client";
 export { clearConvexJwt, getConvexJwt } from "./jwt";

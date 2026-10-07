@@ -19,9 +19,15 @@ export const convex = new ConvexReactClient(convexUrl, {
   unsavedChangesWarning: false,
 });
 
-/** Stateless client for code outside React (background tasks), authenticated with a Convex JWT. */
-export function createBackendHttpClient(jwt: string) {
-  const client = new ConvexHttpClient(convexUrl);
-  client.setAuth(jwt);
-  return client;
+let httpClient: ConvexHttpClient | null = null;
+let httpClientJwt: string | null = null;
+
+/** The one HTTP client for code outside React (background tasks), authenticated with this Convex JWT. */
+export function getBackendHttpClient(jwt: string) {
+  httpClient ??= new ConvexHttpClient(convexUrl);
+  if (httpClientJwt !== jwt) {
+    httpClient.setAuth(jwt);
+    httpClientJwt = jwt;
+  }
+  return httpClient;
 }

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo } from "react";
 import { Modal, ScrollView, StyleSheet, Text, View } from "react-native";
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from "react-native-reanimated";
+import Animated, { Easing, cancelAnimation, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
@@ -9,6 +9,8 @@ import { MapView, Marker } from "@/modules/location";
 import { AuraButton, AuraCard, Icon, LiveDot, useAura, useTabBarInset } from "@/atoms";
 import { auraStatusAccent, auraStatusColors } from "@/constants/aura";
 import { useAppLocked } from "@/features/auth";
+import { useIsFocused } from "expo-router";
+import { useAppActive } from "@/hooks/useAnimationsActive";
 import { quietMapStyle } from "@/features/home/components/aura/mapStyles";
 import { useLocalization } from "@/localization";
 
@@ -139,9 +141,18 @@ export function EmergencyTakeover({
 
 function Pulse() {
   const ripple = useSharedValue(0);
+  // Not useAnimationsActive: the takeover shows over the app lock, which would pause it.
+  const focused = useIsFocused();
+  const appActive = useAppActive();
+  const visible = focused && appActive;
   useEffect(() => {
+    if (!visible) {
+      cancelAnimation(ripple);
+      return;
+    }
+    ripple.set(0);
     ripple.set(withRepeat(withTiming(1, { duration: 1800, easing: Easing.out(Easing.quad) }), -1, false));
-  }, [ripple]);
+  }, [ripple, visible]);
   const ringStyle = useAnimatedStyle(() => ({
     opacity: 0.5 * (1 - ripple.get()),
     transform: [{ scale: 1 + ripple.get() * 0.7 }],

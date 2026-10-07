@@ -7,14 +7,21 @@ export {
   type LocationPermission,
   type LocationPermissionStatus,
 } from "./permissions";
-export { getCurrentPosition, getLastKnownPosition, type LocationAccuracy, type Position } from "./position";
+export { getCurrentPosition, getLastKnownPosition, getRecentPosition, type LocationAccuracy, type Position } from "./position";
 export { reverseGeocode, type GeocodedPlace } from "./geocoding";
 export {
+  defineGeofenceExitTask,
   defineLocationTask,
+  definePeriodicTask,
   hasStartedLocationUpdates,
+  registerPeriodicTask,
+  startGeofence,
   startLocationUpdates,
+  stopGeofence,
   stopLocationUpdates,
+  unregisterPeriodicTask,
   type BackgroundUpdateOptions,
+  type GeofenceRegion,
 } from "./background";
 export {
   MapView,

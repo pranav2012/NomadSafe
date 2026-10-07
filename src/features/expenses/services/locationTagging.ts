@@ -1,6 +1,6 @@
 import type { ExpenseLocation } from "@/features/expenses/store/expensesStore";
 import {
-  getCurrentPosition,
+  getRecentPosition,
   getForegroundPermission,
   requestForegroundPermission,
   reverseGeocode,
@@ -32,7 +32,7 @@ export async function getCurrentExpenseLocation(): Promise<ExpenseLocation | nul
     }
     if (!granted) return null;
 
-    const position = await getCurrentPosition("balanced");
+    const position = await getRecentPosition("balanced");
 
     const location: ExpenseLocation = {
       latitude: position.latitude,

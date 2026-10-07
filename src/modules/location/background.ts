@@ -1,5 +1,6 @@
+import * as BackgroundTask from "expo-background-task";
 import * as Location from "expo-location";
-import { defineTask } from "expo-task-manager";
+import { defineTask, isTaskRegisteredAsync } from "expo-task-manager";
 import { ACCURACY, toPosition, type LocationAccuracy, type Position } from "./position";
 
 export interface BackgroundUpdateOptions {
@@ -53,4 +54,63 @@ export function stopLocationUpdates(name: string): Promise<void> {
 
 export function hasStartedLocationUpdates(name: string): Promise<boolean> {
   return Location.hasStartedLocationUpdatesAsync(name);
+}
+
+export interface GeofenceRegion {
+  latitude: number;
+  longitude: number;
+  radius: number;
+}
+
+/**
+ * Registers the handler for a geofencing task that reports leaving a region. Define it at module
+ * scope like defineLocationTask. Needs "Allow all the time" location, which background updates
+ * already require.
+ */
+export function defineGeofenceExitTask(name: string, onExit: () => Promise<void>) {
+  defineTask(name, async ({ data, error }) => {
+    if (error) return;
+    const eventType = (data as { eventType?: Location.GeofencingEventType } | undefined)?.eventType;
+    if (eventType === Location.GeofencingEventType.Exit) await onExit();
+  });
+}
+
+/** Watches one region (replacing any the task watched before) and wakes the task when the phone leaves it. */
+export function startGeofence(name: string, region: GeofenceRegion): Promise<void> {
+  return Location.startGeofencingAsync(name, [
+    { identifier: name, ...region, notifyOnEnter: false, notifyOnExit: true },
+  ]);
+}
+
+export async function stopGeofence(name: string): Promise<void> {
+  if (await Location.hasStartedGeofencingAsync(name)) await Location.stopGeofencingAsync(name);
+}
+
+/**
+ * Registers the handler for an OS-scheduled task (Android WorkManager, iOS BGTaskScheduler) that
+ * runs about every `registerPeriodicTask` interval while registered, even with no location fix.
+ */
+export function definePeriodicTask(name: string, run: () => Promise<void>) {
+  defineTask(name, async () => {
+    try {
+      await run();
+      return BackgroundTask.BackgroundTaskResult.Success;
+    } catch {
+      return BackgroundTask.BackgroundTaskResult.Failed;
+    }
+  });
+}
+
+/** The OS treats the interval as a minimum (15 min at least) and may run it later. Never throws. */
+export async function registerPeriodicTask(name: string, minutes: number): Promise<void> {
+  try {
+    if ((await BackgroundTask.getStatusAsync()) === BackgroundTask.BackgroundTaskStatus.Restricted) return;
+    if (!(await isTaskRegisteredAsync(name))) await BackgroundTask.registerTaskAsync(name, { minimumInterval: minutes });
+  } catch {}
+}
+
+export async function unregisterPeriodicTask(name: string): Promise<void> {
+  try {
+    if (await isTaskRegisteredAsync(name)) await BackgroundTask.unregisterTaskAsync(name);
+  } catch {}
 }

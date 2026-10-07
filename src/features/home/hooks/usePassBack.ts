@@ -5,6 +5,7 @@ import type { TripEvent } from "@/features/itinerary";
 import { tonightStay } from "@/features/itinerary/utils/dayPlan";
 import { localizeEventTitle } from "@/features/itinerary/utils/eventText";
 import { useSharingStore } from "@/features/location-sharing";
+import { useSeesYouCount } from "@/features/location-sharing/hooks/useSharingQueries";
 import { useHomeCountry } from "@/features/passport/hooks/usePassport";
 import { countryAt } from "@/features/recap/utils/countryShapes";
 import { countryDisplayName, nearestCityCountry } from "@/features/trips/data/destinations";
@@ -49,7 +50,9 @@ export function usePassBack({ trip, data, stage, stop, here, places, events, now
   const destination = stop ? (countryAt(stop.latitude, stop.longitude) ?? nearestCityCountry(stop.latitude, stop.longitude)) : null;
   const international = Boolean(home && destination && home !== destination);
   const embassy = useEmbassy(international ? home : null, international ? destination : null);
-  const sharingCount = useSharingStore((state) => (state.isBroadcasting ? state.recipients.filter((person) => person.sharing).length : 0));
+  const isSharing = useSharingStore((state) => state.isBroadcasting);
+  const seesYou = useSeesYouCount(isSharing).count;
+  const sharingCount = isSharing ? seesYou : 0;
   const [rate, setRate] = useState<{ pair: string; rate: number } | null>(null);
   const local = countryFacts(destination)?.currency ?? null;
   const pair = `${local}:${currency}`;

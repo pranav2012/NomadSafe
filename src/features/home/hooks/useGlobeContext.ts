@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { api, useQuery } from "@/modules/backend";
-import { getCurrentPosition, getForegroundPermission, getLastKnownPosition } from "@/modules/location";
+import { getForegroundPermission, getLastKnownPosition, getRecentPosition } from "@/modules/location";
+import { useAppActive } from "@/hooks/useAnimationsActive";
+import { useLastLoaded } from "@/features/location-sharing/hooks/useSharingQueries";
 import { useLocalization } from "@/localization";
 import type { HomeStop } from "@/features/home/types";
 import { daylightAt, distanceKm } from "@/features/home/components/aura/globe/sun";
@@ -19,14 +21,21 @@ export interface GlobeContact {
 export function useGlobeContext(focus: HomeStop | undefined) {
   const { t, formatDistance, formatApproxDuration } = useLocalization();
   const [origin, setOrigin] = useState<HomeStop | null>(null);
-  const incoming = useQuery(api.sharing.getIncomingShares) as GlobeContact[] | undefined;
+  const appActive = useAppActive();
+  // Paused in the background; the last contacts stay on the globe.
+  const incoming = useLastLoaded(
+    useQuery(api.sharing.getIncomingShares, appActive ? {} : "skip") as
+      | { ownerName: string; latitude: number; longitude: number }[]
+      | undefined,
+  );
 
   useEffect(() => {
     let mounted = true;
     (async () => {
       const permission = await getForegroundPermission();
       if (!permission.granted) return;
-      const position = (await getLastKnownPosition()) ?? (await getCurrentPosition());
+      // Any cached fix will do for a globe; a fresh one is shared with other screens asking at launch.
+      const position = (await getLastKnownPosition()) ?? (await getRecentPosition("balanced"));
       if (mounted && position) setOrigin({ name: "", latitude: position.latitude, longitude: position.longitude });
     })().catch(() => {});
     return () => {
@@ -35,7 +44,7 @@ export function useGlobeContext(focus: HomeStop | undefined) {
   }, []);
 
   const now = new Date();
-  const contacts: GlobeContact[] = (incoming ?? []).map(({ name, latitude, longitude }) => ({ name, latitude, longitude }));
+  const contacts: GlobeContact[] = (incoming ?? []).map(({ ownerName, latitude, longitude }) => ({ name: ownerName, latitude, longitude }));
 
   let distanceLabel: string | null = null;
   if (origin && focus) {

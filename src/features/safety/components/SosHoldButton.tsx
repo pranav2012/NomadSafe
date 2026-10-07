@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Canvas, Path, Skia } from "react-native-skia";
-import { Easing, useSharedValue, withTiming } from "react-native-reanimated";
+import { Easing, cancelAnimation, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
+import { scheduleOnRN } from "react-native-worklets";
 import { auraFonts, auraStatusAccent, auraStatusColors, type AuraPalette } from "@/constants/aura";
 
 const SIZE = 74;
@@ -9,34 +10,68 @@ const RING = 5;
 const CANVAS = SIZE + RING * 4;
 const ALERT = auraStatusAccent.alert;
 const [GLOW] = auraStatusColors.alert;
+const SPRING_BACK = { damping: 22, stiffness: 320, overshootClamping: true };
 
 interface SosHoldButtonProps {
-  /** How far through the hold the user is, 0 to 1. */
-  progress: number;
-  label: string;
+  /** How long the button must be held, in ms. */
+  holdMs: number;
+  idleLabel: string;
+  holdingLabel: string;
   palette: AuraPalette;
-  onPressIn: () => void;
-  onPressOut: () => void;
+  /** Return false to ignore a press (e.g. a countdown is already running). */
+  canHold: () => boolean;
+  onHoldComplete: () => void;
   accessibilityLabel: string;
   accessibilityHint: string;
   onAccessibilityActivate: () => void;
 }
 
-/** Floating round SOS button with its label beside it; a ring fills around it while held. */
+/**
+ * Floating round SOS button with its label beside it. Holding fills a ring on the UI thread and
+ * calls `onHoldComplete` once full; letting go early springs it back. No React state per frame.
+ */
 export function SosHoldButton({
-  progress,
-  label,
+  holdMs,
+  idleLabel,
+  holdingLabel,
   palette,
-  onPressIn,
-  onPressOut,
+  canHold,
+  onHoldComplete,
   accessibilityLabel,
   accessibilityHint,
   onAccessibilityActivate,
 }: SosHoldButtonProps) {
   const fill = useSharedValue(0);
-  useEffect(() => {
-    fill.set(withTiming(progress, { duration: progress === 0 ? 180 : 110, easing: Easing.linear }));
-  }, [fill, progress]);
+  const [holding, setHolding] = useState(false);
+  const holdingRef = useRef(false);
+
+  const complete = useCallback(() => {
+    if (!holdingRef.current) return;
+    holdingRef.current = false;
+    setHolding(false);
+    fill.set(withTiming(0, { duration: 180 }));
+    onHoldComplete();
+  }, [fill, onHoldComplete]);
+
+  const pressIn = useCallback(() => {
+    if (!canHold()) return;
+    holdingRef.current = true;
+    setHolding(true);
+    fill.set(0);
+    fill.set(withTiming(1, { duration: holdMs, easing: Easing.linear }, (finished) => {
+      if (finished) scheduleOnRN(complete);
+    }));
+  }, [canHold, complete, fill, holdMs]);
+
+  const pressOut = useCallback(() => {
+    if (!holdingRef.current) return;
+    holdingRef.current = false;
+    setHolding(false);
+    cancelAnimation(fill);
+    fill.set(withSpring(0, SPRING_BACK));
+  }, [fill]);
+
+  useEffect(() => () => cancelAnimation(fill), [fill]);
 
   const ring = useMemo(() => {
     const r = SIZE / 2 + RING;
@@ -45,13 +80,11 @@ export function SosHoldButton({
       .detach();
   }, []);
 
-  const holding = progress > 0;
-
   return (
     <View style={styles.root} pointerEvents="box-none">
       <View style={[styles.label, { backgroundColor: holding ? ALERT : palette.card, borderColor: holding ? ALERT : palette.hairline }]}>
         <Text numberOfLines={1} style={[styles.labelText, { color: holding ? "#FFFFFF" : palette.text }]}>
-          {label}
+          {holding ? holdingLabel : idleLabel}
         </Text>
       </View>
       <View style={styles.stage}>
@@ -60,8 +93,8 @@ export function SosHoldButton({
           <Path path={ring} style="stroke" strokeWidth={3.5} strokeCap="round" color={ALERT} start={0} end={fill} />
         </Canvas>
         <Pressable
-          onPressIn={onPressIn}
-          onPressOut={onPressOut}
+          onPressIn={pressIn}
+          onPressOut={pressOut}
           accessibilityRole="button"
           accessibilityLabel={accessibilityLabel}
           accessibilityHint={accessibilityHint}

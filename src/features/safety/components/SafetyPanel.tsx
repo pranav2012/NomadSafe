@@ -6,6 +6,7 @@ import { useAnimationsActive } from "@/hooks/useAnimationsActive";
 import { CircleAvatar } from "@/features/location-sharing/components/CircleAvatar";
 import type { CirclePerson } from "@/features/location-sharing/utils/circle";
 import { useLocalization } from "@/localization";
+import { useBriefPulse } from "../hooks/useBriefPulse";
 import { formatCountdown, useSecondTicker } from "../utils/countdown";
 
 const ALERT = auraStatusAccent.alert;
@@ -31,6 +32,7 @@ export function SafetyTile({
 }) {
   const { c, f } = useAura();
   const color = tone ?? (live ? accent : c.text);
+  const pulse = useBriefPulse(live);
   return (
     <PressableScale
       onPress={onPress}
@@ -41,7 +43,7 @@ export function SafetyTile({
     >
       <View style={styles.tileHead}>
         <Icon name={icon} size={20} color={color} strokeWidth={1.9} />
-        {live ? <LiveDot color={accent} size={7} /> : null}
+        {live ? <LiveDot color={accent} size={7} active={pulse} /> : null}
       </View>
       <Text numberOfLines={2} style={[styles.tileLabel, { color: c.text, fontFamily: f.semibold }]}>
         {label}
@@ -121,10 +123,11 @@ export function SharingLiveCard({
 }) {
   const { c, f } = useAura();
   const { t } = useLocalization();
+  const pulse = useBriefPulse(true);
   return (
     <View style={[styles.live, { backgroundColor: `${accent}17`, borderColor: `${accent}66` }]}>
       <PressableScale onPress={onManage} haptic={false} pressedScale={0.99} accessibilityRole="button" style={styles.liveHead}>
-        <LiveDot color={accent} />
+        <LiveDot color={accent} active={pulse} />
         <View style={styles.flex}>
           <Text numberOfLines={1} style={[styles.shareTitle, { color: c.text, fontFamily: f.semibold }]} accessibilityLiveRegion="polite">
             {title}

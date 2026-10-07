@@ -17,7 +17,7 @@ import { TripFormSheet } from "@/features/trips/components/TripForm";
 import { selectActiveTrip, useTripsStore } from "@/features/trips/store/tripsStore";
 import { useTheme } from "@/hooks/useTheme";
 import { useStartNewTrip } from "@/modules/billing";
-import { getCurrentPosition, getLastKnownPosition, requestForegroundPermission, reverseGeocode } from "@/modules/location";
+import { getLastKnownPosition, getRecentPosition, requestForegroundPermission, reverseGeocode } from "@/modules/location";
 import { track } from "@/modules/analytics";
 import { heavyImpact, successNotification } from "@/utils/haptics";
 
@@ -35,7 +35,7 @@ async function resolveUserLocation(): Promise<UserLocation | null> {
 
   let coords: { latitude: number; longitude: number } | null = null;
   try {
-    coords = await getCurrentPosition("balanced");
+    coords = await getRecentPosition("balanced");
   } catch {
     // Android throws when location services are off; try the cached fix.
   }

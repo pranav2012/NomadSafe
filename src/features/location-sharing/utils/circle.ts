@@ -15,6 +15,16 @@ export function batteryMode(mode: BroadcastMode, battery: number | null | undefi
   return mode;
 }
 
+/** When the next fresh incoming share turns stale after `now`, or null when none will. */
+export function nextStaleAt(shares: { updatedAt: number }[], now: number): number | null {
+  let next: number | null = null;
+  for (const share of shares) {
+    const at = share.updatedAt + SHARE_STALE_AFTER_MS;
+    if (at > now && (next === null || at < next)) next = at;
+  }
+  return next;
+}
+
 export type LinkStatus = "pending" | "accepted" | "declined";
 
 export interface OutgoingLinkInput {

@@ -6,8 +6,9 @@ import { BlurTargetView } from "expo-blur";
 import { useNetworkState } from "expo-network";
 import { useFocusEffect, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { getCurrentPosition, getLastKnownPosition, requestForegroundPermission } from "@/modules/location";
+import { getLastKnownPosition, getRecentPosition, requestForegroundPermission } from "@/modules/location";
 import { GlassSurface, LiveDot, showAlert, useAura, useTabBarInset } from "@/atoms";
+import { useAnimationsActive, useAppActive } from "@/hooks/useAnimationsActive";
 import { auraStatusAccent, type AuraStatus } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { useSettingsStore } from "@/features/settings";
@@ -52,6 +53,7 @@ import { SafeArrivalSheet } from "@/features/safety/components/SafeArrivalSheet"
 import { SafetyMap } from "@/features/safety/components/SafetyMap";
 import { CircleRow, FixBanner, SafetyTile, SharingLiveCard, TimerLiveCard } from "@/features/safety/components/SafetyPanel";
 import { SosHoldButton } from "@/features/safety/components/SosHoldButton";
+import { useBriefPulse } from "@/features/safety/hooks/useBriefPulse";
 import { isCheckInMissed, useSafetyStore, type ContactAlert } from "../store/safetyStore";
 import { useSafetyIntentStore } from "../store/safetyIntentStore";
 import { errorNotification, heavyImpact, lightImpact, successNotification } from "@/utils/haptics";
@@ -60,7 +62,7 @@ import { logger } from "@/modules/logger";
 
 const PRESETS = [15 * 60, 30 * 60, 60 * 60, 2 * 60 * 60, 4 * 60 * 60, 8 * 60 * 60];
 
-const SOS_HOLD_SECONDS = 2;
+const SOS_HOLD_MS = 2000;
 const SOS_CANCEL_WINDOW_SECONDS = 5;
 const WARN = "#FFB547";
 const READY = "#3DDC97";
@@ -130,7 +132,6 @@ export default function SafetyScreen() {
 
   const [now, setNow] = useState(() => Date.now());
   const [location, setLocation] = useState<Coords | null>(() => readLastKnownFix());
-  const [sosHoldSeconds, setSosHoldSeconds] = useState(0);
   const [emergency, setEmergency] = useState<EmergencyNumbers | null>(() => readLastEmergencyNumbers());
   const [scheduleFailed, setScheduleFailed] = useState(false);
   const [sosCountdown, setSosCountdown] = useState<number | null>(null);
@@ -142,6 +143,16 @@ export default function SafetyScreen() {
   const [sheet, setSheet] = useState<Sheet | null>(null);
   const [panelHeight, setPanelHeight] = useState(0);
   const [broadcastInfo, setBroadcastInfo] = useState(() => readBroadcastState());
+  const visible = useAnimationsActive();
+  const appActive = useAppActive();
+
+  // Only the fields the screen shows, so an unchanged poll doesn't re-render the map.
+  const refreshBroadcastInfo = useCallback(() => {
+    const next = readBroadcastState();
+    setBroadcastInfo((prev) =>
+      prev.expiresAt === next.expiresAt && prev.lastError === next.lastError && prev.mode === next.mode ? prev : next,
+    );
+  }, []);
 
   const network = useNetworkState();
   const isOffline = network.isConnected === false || network.isInternetReachable === false;
@@ -156,7 +167,6 @@ export default function SafetyScreen() {
   } = useSafetyReadiness(t("safety.notifChannelName"));
   const issueCount = countReadinessIssues(readiness);
 
-  const holdTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sosInFlightRef = useRef(false);
   const fromWidgetRef = useRef(false);
@@ -183,44 +193,46 @@ export default function SafetyScreen() {
       isLocationBroadcastRunning().then((running) => {
         if (active && running !== useSharingStore.getState().isBroadcasting) setBroadcasting(running);
       });
-      setBroadcastInfo(readBroadcastState());
+      refreshBroadcastInfo();
       return () => {
         active = false;
       };
-    }, [setBroadcasting]),
+    }, [refreshBroadcastInfo, setBroadcasting]),
   );
 
+  // Polls the task's state only while this screen is on screen, and re-renders only when it changed.
   useEffect(() => {
-    const refresh = setTimeout(() => setBroadcastInfo(readBroadcastState()), 0);
+    if (!visible) return;
+    const refresh = setTimeout(refreshBroadcastInfo, 0);
     if (!share.isBroadcasting) return () => clearTimeout(refresh);
-    const id = setInterval(() => setBroadcastInfo(readBroadcastState()), 15_000);
+    const id = setInterval(refreshBroadcastInfo, 15_000);
     return () => {
       clearTimeout(refresh);
       clearInterval(id);
     };
-  }, [share.isBroadcasting]);
+  }, [refreshBroadcastInfo, share.isBroadcasting, visible]);
 
-  // Coarse clock while a timer or SOS runs, plus an exact tick when the timer runs out; the
-  // per-second countdown lives in TimerLiveCard so the screen (and its map) doesn't re-render.
+  // Coarse clock while a timer or SOS runs and the screen is visible, plus an exact tick when the
+  // timer runs out; the per-second countdown lives in TimerLiveCard so the screen (and its map)
+  // doesn't re-render.
   useEffect(() => {
     if (status === "idle") return;
     const tick = () => setNow(Date.now());
-    tick();
-    const id = setInterval(tick, 15_000);
+    const first = setTimeout(tick, 0);
+    // The SOS takeover also shows over the app lock, where `visible` is false.
+    const id = visible || (status === "emergency" && appActive) ? setInterval(tick, 15_000) : undefined;
     const dueIn = status === "active" && checkInEndsAt ? checkInEndsAt - Date.now() : -1;
     const dueTimer = dueIn > 0 ? setTimeout(tick, dueIn + 50) : undefined;
-    const sub = AppState.addEventListener("change", (next) => {
-      if (next === "active") tick();
-    });
     return () => {
+      clearTimeout(first);
       clearInterval(id);
       clearTimeout(dueTimer);
-      sub.remove();
     };
-  }, [status, checkInEndsAt]);
+  }, [appActive, status, checkInEndsAt, visible]);
 
   const isMissed = isCheckInMissed({ status, checkInEndsAt }, now);
   const isActive = status === "active" && !isMissed;
+  const statusPulse = useBriefPulse(isMissed || isActive || share.isBroadcasting);
 
   useEffect(() => {
     if (isMissed) markCheckInMissed();
@@ -272,7 +284,7 @@ export default function SafetyScreen() {
             },
           );
         }
-        const loc = await getCurrentPosition("balanced");
+        const loc = await getRecentPosition("balanced");
         const fix = {
           latitude: loc.latitude,
           longitude: loc.longitude,
@@ -321,7 +333,6 @@ export default function SafetyScreen() {
   }, [status, sosBroadcast]);
 
   useEffect(() => () => {
-    if (holdTimerRef.current) clearInterval(holdTimerRef.current);
     if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
   }, []);
 
@@ -411,14 +422,6 @@ export default function SafetyScreen() {
     });
   }, [alertCount, location, recordSosBroadcast, runEmergencyBroadcast, sendSosPush, triggerSos]);
 
-  const clearHold = useCallback(() => {
-    if (holdTimerRef.current) {
-      clearInterval(holdTimerRef.current);
-      holdTimerRef.current = null;
-    }
-    setSosHoldSeconds(0);
-  }, []);
-
   const clearCountdown = useCallback(() => {
     if (countdownTimerRef.current) {
       clearInterval(countdownTimerRef.current);
@@ -469,20 +472,7 @@ export default function SafetyScreen() {
     };
   }, [beginSosCountdown]);
 
-  const handleSosPressIn = useCallback(() => {
-    clearHold();
-    if (countdownTimerRef.current || sosInFlightRef.current) return;
-    const start = Date.now();
-    holdTimerRef.current = setInterval(() => {
-      const held = (Date.now() - start) / 1000;
-      if (held >= SOS_HOLD_SECONDS) {
-        clearHold();
-        beginSosCountdown();
-        return;
-      }
-      setSosHoldSeconds(held);
-    }, 100);
-  }, [beginSosCountdown, clearHold]);
+  const canHoldSos = useCallback(() => !countdownTimerRef.current && !sosInFlightRef.current, []);
 
   const handleCancelCountdown = useCallback(() => {
     clearCountdown();
@@ -726,18 +716,19 @@ export default function SafetyScreen() {
           {t("safety.title")}
         </Text>
         <View style={[styles.pill, { backgroundColor: c.card, borderColor: c.hairline }]} accessibilityLiveRegion="polite">
-          <LiveDot color={statusDot} active={auraStatus !== "calm"} size={7} />
+          <LiveDot color={statusDot} active={statusPulse} size={7} />
           <Text style={[styles.pillText, { color: c.text, fontFamily: f.medium }]}>{statusLabel}</Text>
         </View>
       </View>
 
       <View style={[styles.sos, { bottom: panelBottom + panelHeight + 14 }]} pointerEvents="box-none">
         <SosHoldButton
-          progress={Math.min(1, sosHoldSeconds / SOS_HOLD_SECONDS)}
-          label={sosHoldSeconds > 0 ? t("safety.keepHolding") : t("safety.holdForSos")}
+          holdMs={SOS_HOLD_MS}
+          idleLabel={t("safety.holdForSos")}
+          holdingLabel={t("safety.keepHolding")}
           palette={c}
-          onPressIn={handleSosPressIn}
-          onPressOut={clearHold}
+          canHold={canHoldSos}
+          onHoldComplete={beginSosCountdown}
           accessibilityLabel={t("safety.sosA11yLabel")}
           accessibilityHint={t("safety.sosHoldHint")}
           onAccessibilityActivate={beginSosCountdown}

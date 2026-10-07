@@ -1,22 +1,47 @@
+import { Platform } from "react-native";
 import * as Battery from "expo-battery";
-import { api, clearConvexJwt, createBackendHttpClient, getConvexJwt } from "@/modules/backend";
+import * as Network from "expo-network";
+import { api, clearConvexJwt, getBackendHttpClient, getConvexJwt } from "@/modules/backend";
 import {
+  defineGeofenceExitTask,
   defineLocationTask,
+  definePeriodicTask,
   getCurrentPosition,
   hasStartedLocationUpdates,
+  registerPeriodicTask,
   requestBackgroundPermission,
   requestForegroundPermission,
+  startGeofence,
   startLocationUpdates,
+  stopGeofence,
   stopLocationUpdates,
+  unregisterPeriodicTask,
   type BackgroundUpdateOptions,
 } from "@/modules/location";
 import { storage } from "@/modules/storage";
 import { translate } from "@/localization/translate";
 import { logger } from "@/modules/logger";
-import { getIntervalForMode, type BroadcastMode } from "../store/sharingStore";
+import type { BroadcastMode } from "../store/sharingStore";
+import {
+  chooseProfile,
+  initialProfile,
+  isAuthError,
+  MAX_FIX_ACCURACY_M,
+  profileSpec,
+  publishDecision,
+  roundBattery,
+  STILL_MOTION,
+  STILL_RADIUS_M,
+  updateMotion,
+  type BroadcastProfile,
+  type Motion,
+  type ProfileSpec,
+} from "../utils/broadcastPolicy";
 import { batteryMode } from "../utils/circle";
 
 export const BROADCAST_TASK_NAME = "nomadsafe-location-broadcast";
+const GEOFENCE_TASK_NAME = "nomadsafe-location-still-fence";
+const WATCHDOG_TASK_NAME = "nomadsafe-location-watchdog";
 
 const STATE_KEY = "sharing-broadcast-state";
 // Manually picked emergency mode drops back to normal after this long (an active SOS is exempt).
@@ -24,6 +49,9 @@ export const EMERGENCY_LIMIT_MS = 60 * 60_000;
 // Consecutive publishes that reached nobody before sharing stops itself.
 const MAX_IDLE_PUBLISHES = 3;
 const LAST_BROADCAST_KEY = "sharing-last-broadcast";
+const PLATFORM = Platform.OS === "ios" ? "ios" : "android";
+// Android reports an exit right away if its own estimate starts outside the fence; fixes cover that window.
+const FENCE_SETTLE_MS = 2 * 60_000;
 
 interface BroadcastState {
   isBroadcasting: boolean;
@@ -35,11 +63,20 @@ interface BroadcastState {
   /** Emergency mode steps down to normal at this time; null when not limited (normal/low, or SOS). */
   emergencyUntil: number | null;
   idlePublishes: number;
+  /** The location profile the OS updates were last started with. */
+  profile: BroadcastProfile | null;
+  motion: Motion;
+  lastAttemptAt: number | null;
+  /** Failed publishes in a row, for the retry backoff. */
+  failures: number;
+  fenceStartedAt: number | null;
 }
 
+/** The last position that reached the server. */
 export interface LastBroadcast {
   latitude: number;
   longitude: number;
+  accuracy?: number | null;
   timestamp: number;
   mode: BroadcastMode;
   ok: boolean;
@@ -53,6 +90,11 @@ const DEFAULT_STATE: BroadcastState = {
   expiresAt: null,
   emergencyUntil: null,
   idlePublishes: 0,
+  profile: null,
+  motion: STILL_MOTION,
+  lastAttemptAt: null,
+  failures: 0,
+  fenceStartedAt: null,
 };
 
 // Kept under its own key so the background task never overwrites UI store state.
@@ -89,9 +131,20 @@ async function readBattery(): Promise<number | undefined> {
   }
 }
 
+async function isOffline(): Promise<boolean> {
+  try {
+    return (await Network.getNetworkStateAsync()).isConnected === false;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Sends one position to everyone who sees you. Failures are counted for the retry backoff; the
+ * cached token is dropped only when the server rejected it.
+ */
 export async function publishLocation(
-  latitude: number,
-  longitude: number,
+  position: { latitude: number; longitude: number; accuracy?: number | null },
   mode: BroadcastMode,
 ): Promise<boolean> {
   const now = Date.now();
@@ -105,45 +158,53 @@ export async function publishLocation(
     if (!jwt) {
       error = "not_authenticated";
     } else {
-      const client = createBackendHttpClient(jwt);
-      const result = await client.mutation(api.sharing.publishLocation, {
-        latitude,
-        longitude,
+      const result = await getBackendHttpClient(jwt).mutation(api.sharing.publishLocation, {
+        latitude: position.latitude,
+        longitude: position.longitude,
         mode,
-        battery: await readBattery(),
+        battery: roundBattery(await readBattery()),
         endsAt: readBroadcastState().expiresAt ?? undefined,
       });
       recipients = result.recipients;
       ok = true;
     }
   } catch (err) {
-    clearConvexJwt();
     error = err instanceof Error ? err.message : "network_error";
     failure = err;
+    if (isAuthError(error)) clearConvexJwt();
   }
+  const state = readBroadcastState();
   // Only the first failure of a streak, so a long offline stretch doesn't log every interval.
-  if (!ok && !readBroadcastState().lastError) {
+  if (!ok && !state.lastError) {
     logger.warn("location-broadcast", "publish failed", failure, { mode, authenticated: error !== "not_authenticated" });
   }
 
+  if (!ok) {
+    writeBroadcastState({ lastError: error, lastAttemptAt: now, failures: state.failures + 1 });
+    return false;
+  }
   storage.set(
     LAST_BROADCAST_KEY,
-    JSON.stringify({ latitude, longitude, timestamp: now, mode, ok } satisfies LastBroadcast),
+    JSON.stringify({
+      latitude: position.latitude,
+      longitude: position.longitude,
+      accuracy: position.accuracy ?? null,
+      timestamp: now,
+      mode,
+      ok,
+    } satisfies LastBroadcast),
   );
-  const idle = recipients === 0 ? readBroadcastState().idlePublishes + 1 : recipients === null ? readBroadcastState().idlePublishes : 0;
-  writeBroadcastState(ok ? { lastPublishedAt: now, lastError: null, idlePublishes: idle } : { lastError: error });
-  return ok;
+  const idle = recipients === 0 ? state.idlePublishes + 1 : 0;
+  writeBroadcastState({ lastPublishedAt: now, lastError: null, idlePublishes: idle, lastAttemptAt: now, failures: 0 });
+  return true;
 }
 
-function locationOptions(mode: BroadcastMode): BackgroundUpdateOptions {
-  const interval = getIntervalForMode(mode) * 1000;
+function locationOptions(spec: ProfileSpec): BackgroundUpdateOptions {
   return {
-    // GPS only for emergencies; normal and low use network/Wi-Fi fixes, which cost far less power.
-    accuracy: mode === "emergency" ? "navigation" : mode === "low" ? "low" : "balanced",
-    timeInterval: interval,
-    distanceInterval: mode === "emergency" ? 10 : mode === "low" ? 200 : 50,
-    // Batches fixes so the JS task wakes about once per interval instead of once per fix.
-    deferredUpdatesInterval: mode === "emergency" ? undefined : interval,
+    accuracy: spec.accuracy,
+    timeInterval: spec.timeInterval,
+    distanceInterval: spec.distanceInterval,
+    deferredUpdatesInterval: spec.deferredUpdatesInterval,
     foregroundService: {
       title: translate("sharing.serviceTitle"),
       body: translate("sharing.serviceBody"),
@@ -156,13 +217,47 @@ function locationOptions(mode: BroadcastMode): BackgroundUpdateOptions {
 }
 
 /**
+ * (Re)starts the OS updates for the profile that fits the mode and motion, and the geofence that
+ * notices leaving a still point. Does nothing when the profile hasn't changed, unless `force`.
+ */
+async function applyProfile(mode: BroadcastMode, motion: Motion, force = false) {
+  const profile = chooseProfile(mode, motion);
+  if (!force && profile === readBroadcastState().profile) return;
+  writeBroadcastState({ profile, motion });
+  const spec = profileSpec(profile, PLATFORM);
+  try {
+    await startLocationUpdates(BROADCAST_TASK_NAME, locationOptions(spec));
+  } catch (err) {
+    // Publishing still follows the new profile; the next foreground start applies the options.
+    logger.warn("location-broadcast", "profile restart failed", err, { profile });
+  }
+  try {
+    if (spec.geofence && motion.anchor) {
+      await startGeofence(GEOFENCE_TASK_NAME, {
+        latitude: motion.anchor.latitude,
+        longitude: motion.anchor.longitude,
+        radius: STILL_RADIUS_M,
+      });
+      writeBroadcastState({ fenceStartedAt: Date.now() });
+    } else {
+      await stopGeofence(GEOFENCE_TASK_NAME);
+    }
+  } catch (err) {
+    logger.warn("location-broadcast", "geofence update failed", err, { profile });
+  }
+}
+
+/**
  * Applies the share's time limits: stops it once expired or once it has reached nobody for a while,
  * steps emergency mode down to normal, and switches between normal and low with the battery.
  * Returns false when sharing has stopped.
  */
 export async function enforceBroadcastLimits(): Promise<boolean> {
   const state = readBroadcastState();
-  if (!state.isBroadcasting) return false;
+  if (!state.isBroadcasting) {
+    void unregisterPeriodicTask(WATCHDOG_TASK_NAME);
+    return false;
+  }
   const now = Date.now();
   if ((state.expiresAt && now >= state.expiresAt) || state.idlePublishes >= MAX_IDLE_PUBLISHES) {
     await stopLocationBroadcast();
@@ -179,23 +274,46 @@ export async function enforceBroadcastLimits(): Promise<boolean> {
 
 async function switchMode(mode: BroadcastMode, patch: Partial<BroadcastState> = {}) {
   writeBroadcastState({ ...patch, mode });
-  try {
-    await startLocationUpdates(BROADCAST_TASK_NAME, locationOptions(mode));
-  } catch {
-    // Publishing still uses the new interval; the next foreground start applies the options.
-  }
+  await applyProfile(mode, readBroadcastState().motion);
 }
 
 defineLocationTask(BROADCAST_TASK_NAME, async (positions) => {
   if (!(await enforceBroadcastLimits())) return;
+  const fixes = positions.filter((p) => p.accuracy == null || p.accuracy <= MAX_FIX_ACCURACY_M);
+  if (!fixes.length) return;
+
+  const before = readBroadcastState();
+  const motion = fixes.reduce(updateMotion, before.motion);
+  writeBroadcastState({ motion });
+  await applyProfile(before.mode, motion);
+
   const state = readBroadcastState();
+  const fix = fixes[fixes.length - 1];
+  const decision = publishDecision({
+    fix,
+    last: readLastBroadcast(),
+    lastPublishedAt: state.lastPublishedAt,
+    lastAttemptAt: state.lastAttemptAt,
+    // During an SOS the offline check alone keeps retries in check; never wait out a backoff.
+    failures: state.mode === "emergency" ? 0 : state.failures,
+    spec: profileSpec(state.profile ?? initialProfile(state.mode), PLATFORM),
+    now: Date.now(),
+  });
+  if (decision !== "publish" || (await isOffline())) return;
+  await publishLocation(fix, state.mode);
+});
 
-  const intervalMs = getIntervalForMode(state.mode) * 1000;
-  // Small tolerance so OS batching jitter doesn't skip every other update.
-  if (state.lastPublishedAt && Date.now() - state.lastPublishedAt < intervalMs * 0.8) return;
+// Leaving the still point: back to the moving profile right away instead of waiting for a slow fix.
+defineGeofenceExitTask(GEOFENCE_TASK_NAME, async () => {
+  if (!(await enforceBroadcastLimits())) return;
+  const state = readBroadcastState();
+  if (!state.motion.still || (state.fenceStartedAt && Date.now() - state.fenceStartedAt < FENCE_SETTLE_MS)) return;
+  await applyProfile(state.mode, STILL_MOTION);
+});
 
-  const last = positions[positions.length - 1];
-  await publishLocation(last.latitude, last.longitude, state.mode);
+// Ends expired or idle shares even when no fix arrives (e.g. a still phone).
+definePeriodicTask(WATCHDOG_TASK_NAME, async () => {
+  await enforceBroadcastLimits();
 });
 
 export class BackgroundLocationDeniedError extends Error {
@@ -232,13 +350,19 @@ export async function startLocationBroadcast(
     expiresAt,
     emergencyUntil: mode === "emergency" && !sos ? Date.now() + EMERGENCY_LIMIT_MS : null,
     idlePublishes: 0,
+    profile: null,
+    motion: STILL_MOTION,
+    lastAttemptAt: null,
+    failures: 0,
   });
 
-  await startLocationUpdates(BROADCAST_TASK_NAME, locationOptions(mode));
+  await applyProfile(mode, STILL_MOTION, true);
+  void registerPeriodicTask(WATCHDOG_TASK_NAME, 15);
 
+  // The first publish skips every gate (accuracy, backoff, offline), so an SOS goes out at once.
   try {
     const current = await getCurrentPosition(mode === "emergency" ? "high" : "balanced");
-    await publishLocation(current.latitude, current.longitude, mode);
+    await publishLocation(current, mode);
   } catch {
     // The task will publish on the next OS location update.
   }
@@ -246,8 +370,21 @@ export async function startLocationBroadcast(
 
 /** Stops the task and marks shares inactive server-side (best-effort). */
 export async function stopLocationBroadcast() {
-  writeBroadcastState({ isBroadcasting: false, expiresAt: null, emergencyUntil: null, idlePublishes: 0 });
+  writeBroadcastState({
+    isBroadcasting: false,
+    expiresAt: null,
+    emergencyUntil: null,
+    idlePublishes: 0,
+    profile: null,
+    motion: STILL_MOTION,
+    failures: 0,
+    lastAttemptAt: null,
+  });
   try {
+    await Promise.all([
+      stopGeofence(GEOFENCE_TASK_NAME).catch(() => {}),
+      unregisterPeriodicTask(WATCHDOG_TASK_NAME),
+    ]);
     if (await hasStartedLocationUpdates(BROADCAST_TASK_NAME)) {
       await stopLocationUpdates(BROADCAST_TASK_NAME);
     }
@@ -255,7 +392,7 @@ export async function stopLocationBroadcast() {
     try {
       const jwt = await getConvexJwt();
       if (jwt) {
-        await createBackendHttpClient(jwt).mutation(api.sharing.stopSharing, {});
+        await getBackendHttpClient(jwt).mutation(api.sharing.stopSharing, {});
       }
     } catch {}
   }

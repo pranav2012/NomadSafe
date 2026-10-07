@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { DAY, HOUR, RateLimiter } from "@convex-dev/rate-limiter";
 import { components } from "./_generated/api";
+import type { Doc } from "./_generated/dataModel";
 import { query, mutation } from "./_generated/server";
 import {
   findAuthUserByEmail,
@@ -283,6 +284,32 @@ export const removeInvite = mutation({
   },
 });
 
+// A repeat of the same position is skipped this long after the last write; later it refreshes updatedAt.
+const REPEAT_PUBLISH_MS = 5 * 60_000;
+
+const round5 = (value: number) => Math.round(value * 1e5);
+const roundBattery = (value: number | undefined) => (value === undefined ? undefined : Math.round(value * 20));
+
+/**
+ * Whether a publish carries nothing new for an active share: the same position (~1 m), battery
+ * (5 %), mode and end time, written recently. Skipping it spares every subscriber a re-render.
+ */
+function isRepeatPublish(
+  share: Doc<"locationShares">,
+  next: { latitude: number; longitude: number; battery: number | undefined; mode: Doc<"locationShares">["mode"]; endsAt: number | undefined },
+  now: number,
+) {
+  return (
+    share.active &&
+    now - share.updatedAt < REPEAT_PUBLISH_MS &&
+    round5(share.latitude) === round5(next.latitude) &&
+    round5(share.longitude) === round5(next.longitude) &&
+    roundBattery(share.battery) === roundBattery(next.battery) &&
+    share.mode === next.mode &&
+    share.endsAt === next.endsAt
+  );
+}
+
 /**
  * Publishes the caller's location to every accepted link, skipping recipients
  * the caller paused. Called by the foreground app and the background task.
@@ -327,6 +354,9 @@ export const publishLocation = mutation({
 
       if (existing?.paused) continue;
       recipients += 1;
+      if (existing && isRepeatPublish(existing, { latitude, longitude, battery: safeBattery, mode, endsAt: safeEndsAt }, now)) {
+        continue;
+      }
       if (existing) {
         await ctx.db.patch(existing._id, {
           latitude,
@@ -458,12 +488,10 @@ export const getOutgoingShares = query({
       .withIndex("by_owner", (q) => q.eq("ownerUserId", user.id))
       .collect();
 
+    // Only what the app reads, so the result (and every subscriber) stays unchanged on each publish.
     return shares.map((share) => ({
       recipientUserId: share.recipientUserId,
-      active: share.active,
       paused: share.paused ?? false,
-      mode: share.mode,
-      updatedAt: share.updatedAt,
     }));
   },
 });
