@@ -91,8 +91,6 @@
       "save": "Salvar",
       "mustDos_one": "{{count}} imperdível em {{place}}",
       "mustDos_other": "{{count}} imperdíveis em {{place}}",
-      "ideas_one": "{{count}} ideia salva",
-      "ideas_other": "{{count}} ideias salvas",
       "mustDosRoute_one": "{{count}} imperdível no seu roteiro",
       "mustDosRoute_other": "{{count}} imperdíveis no seu roteiro"
     },
@@ -2079,15 +2077,15 @@
     "seePopular": "Ver populares",
     "inCity": "Suas ideias em {{city}}",
     "yourIdeasTitle": "Suas ideias",
-    "seeAll_one": "Ver {{count}} ideia salva",
-    "seeAll_other": "Ver todas as {{count}} ideias salvas",
     "savedBy": "Salvo por {{name}}",
     "savedByYou": "Salvo por você",
     "popularHere": "Popular aqui",
     "cardHintLink": "Reproduz aqui; toque e segure para planejar ou remover",
     "openIn": "Abrir no {{app}}",
     "cantPlay": "Isso não pode ser reproduzido no NomadSafe.",
-    "openLink": "Abrir link"
+    "openLink": "Abrir link",
+    "savedSection": "Salvos",
+    "seeAllShort": "Ver tudo"
   },
   "planned": {
     "anyTime": "Qualquer época",

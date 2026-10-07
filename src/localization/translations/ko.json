@@ -91,8 +91,6 @@
       "save": "저장",
       "mustDos_one": "{{place}}의 필수 코스 {{count}}곳",
       "mustDos_other": "{{place}}의 필수 코스 {{count}}곳",
-      "ideas_one": "저장한 아이디어 {{count}}개",
-      "ideas_other": "저장한 아이디어 {{count}}개",
       "mustDosRoute_one": "경로의 필수 코스 {{count}}곳",
       "mustDosRoute_other": "경로의 필수 코스 {{count}}곳"
     },
@@ -2079,15 +2077,15 @@
     "seePopular": "인기 코스 보기",
     "inCity": "{{city}}의 내 아이디어",
     "yourIdeasTitle": "내 아이디어",
-    "seeAll_one": "저장한 아이디어 {{count}}개 보기",
-    "seeAll_other": "저장한 아이디어 {{count}}개 모두 보기",
     "savedBy": "{{name}}님이 저장",
     "savedByYou": "내가 저장",
     "popularHere": "이 근처 인기 코스",
     "cardHintLink": "여기서 재생돼요. 길게 눌러 날짜를 정하거나 삭제하세요",
     "openIn": "{{app}}에서 열기",
     "cantPlay": "NomadSafe 안에서는 재생할 수 없어요.",
-    "openLink": "링크 열기"
+    "openLink": "링크 열기",
+    "savedSection": "저장됨",
+    "seeAllShort": "모두 보기"
   },
   "planned": {
     "anyTime": "언제든",

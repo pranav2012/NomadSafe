@@ -1,3 +1,4 @@
+import { repairEventTripId } from "@/features/itinerary/utils/eventRepair";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { mmkvStateStorage } from "@/modules/storage";
@@ -236,7 +237,7 @@ export const useEventsStore = create<EventsState>()(
     {
       name: "itinerary-store",
       storage: createJSONStorage(() => mmkvStateStorage),
-      version: 3,
+      version: 4,
       migrate: (persisted, version) => {
         let state = persisted as { events?: TripEvent[] };
         // v2: one event per booking instead of check-in/check-out pairs and per-email copies.
@@ -252,6 +253,8 @@ export const useEventsStore = create<EventsState>()(
             })),
           };
         }
+        // v4: events an older sync moved out of their trip (tripId renamed to groupId).
+        if (version < 4 && state.events) state = { ...state, events: state.events.map(repairEventTripId) };
         return state;
       },
     },

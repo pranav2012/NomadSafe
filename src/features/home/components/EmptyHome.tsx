@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PrivateView } from "@/modules/analytics";
@@ -101,11 +101,9 @@ export function EmptyHome({
                   </Text>
                 )}
               </View>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.planningRow} style={styles.planningScroll}>
-                {plannedTrips.map((planned) => (
-                  <PlannedTripCard key={planned.id} planned={planned} compact />
-                ))}
-              </ScrollView>
+              {plannedTrips.map((planned) => (
+                <PlannedTripCard key={planned.id} planned={planned} />
+              ))}
             </View>
           ) : null}
           {tripCount > 0 ? (
@@ -138,6 +136,5 @@ const styles = StyleSheet.create({
   planningHead: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between" },
   planningTitle: { fontSize: 17, letterSpacing: -0.2 },
   planningCount: { fontSize: 12.5 },
-  planningScroll: { marginHorizontal: -20 },
-  planningRow: { paddingHorizontal: 20, gap: 10 },
+
 });

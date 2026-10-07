@@ -6,6 +6,7 @@ import { useLocalization } from "@/localization";
 import { track } from "@/modules/analytics";
 import { api, useMutation, type Id } from "@/modules/backend";
 import { ideasOf, useEventsStore, useSavedSheetStore } from "@/features/itinerary";
+import { IdeaStrip } from "@/features/itinerary/components/IdeaStrip";
 import { isArchivedGroup, useTripsStore, type PlannedTrip } from "@/features/trips/store/tripsStore";
 
 /** "Sometime in March" for a planned trip's month, else "No dates yet". */
@@ -24,7 +25,9 @@ export function PlannedTripCard({ planned, compact = false, onInvite }: { planne
   const { c, f } = useAura();
   const { t, locale } = useLocalization();
   const router = useRouter();
-  const ideaCount = useEventsStore((state) => ideasOf(state.events.filter((event) => event.tripId === planned.id)).length);
+  const events = useEventsStore((state) => state.events);
+  const ideas = ideasOf(events.filter((event) => event.tripId === planned.id));
+  const ideaCount = ideas.length;
   const showSaved = useSavedSheetStore((state) => state.show);
   const deleteShared = useMutation(api.groups.deleteSharedGroup);
   const leaveShared = useMutation(api.groups.leaveGroup);
@@ -120,6 +123,11 @@ export function PlannedTripCard({ planned, compact = false, onInvite }: { planne
           .filter(Boolean)
           .join(" · ")}
       </Text>
+      {ideaCount > 0 && !compact ? (
+        <View style={styles.strip}>
+          <IdeaStrip tripId={planned.id} ideas={ideas} size="sm" inset={16} />
+        </View>
+      ) : null}
       {compact ? null : (
         <>
           {isMember ? (
@@ -158,5 +166,6 @@ const styles = StyleSheet.create({
   nameCompact: { fontSize: 19 },
   meta: { fontSize: 13 },
   actions: { flexDirection: "row", gap: 8, marginTop: 10 },
+  strip: { marginTop: 10 },
   waiting: { fontSize: 13.5, marginTop: 6 },
 });

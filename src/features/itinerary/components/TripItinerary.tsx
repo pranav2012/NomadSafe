@@ -13,7 +13,6 @@ import { PlannedList, TimelineList, UpNextList } from "@/features/itinerary/comp
 import { DayPlan } from "@/features/itinerary/components/DayPlan";
 import { DayIdeas } from "@/features/itinerary/components/DayIdeas";
 import { useSaveMustDo } from "@/features/itinerary/hooks/useSaveMustDo";
-import { useSavedSheetStore } from "@/features/itinerary/store/savedSheetStore";
 import { ideasNear, ideasOf } from "@/features/itinerary/utils/ideas";
 import { formatters } from "@/features/itinerary/utils/entryText";
 import { toWallClock } from "@/features/itinerary/utils/wallClock";
@@ -126,7 +125,6 @@ export function TripItinerary({
   const mustDos = place ? (mustDosNear(place, locale, [...ordered.map((event) => event.title), ...(dismissed ?? [])])?.items ?? []) : [];
 
   const saveMustDo = useSaveMustDo();
-  const showSaved = useSavedSheetStore((state) => state.show);
   const ideas = ideasOf(ordered);
   const dayIdeas = place ? ideasNear(ideas, place) : [];
   const planned = ordered.filter((event) => event.timing === "anytime" && !event.doneAt);
@@ -223,16 +221,6 @@ export function TripItinerary({
                 onPress={() => void handleRefine()}
               />
             ) : null}
-            {ideas.length > 0 ? (
-              <AuraButton
-                label={String(ideas.length)}
-                icon="bookmark"
-                variant="secondary"
-                size="md"
-                accessibilityHint={t("ideas.seeAll", { count: ideas.length })}
-                onPress={() => showSaved(trip.id, "ideas", "header")}
-              />
-            ) : null}
             <AuraButton label={t("itinerary.add")} icon="plus" variant="secondary" size="md" onPress={() => setEditing("new")} />
           </>
         }
@@ -291,10 +279,8 @@ export function TripItinerary({
         <DayIdeas
           city={city}
           ideas={dayIdeas}
-          totalIdeas={ideas.length}
           mustDos={mustDos}
           onAddToDay={(idea) => scheduleOn(idea, day)}
-          onSeeAll={() => showSaved(trip.id, "ideas", "day")}
           onSaveMustDo={(item) => saveMustDo(trip, item, "day_ideas")}
           onDismissMustDo={(item) => {
             track("must_do_suggestion", { action: "dismissed", where: "day_ideas" });

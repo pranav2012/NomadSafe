@@ -91,8 +91,6 @@
       "save": "सहेजें",
       "mustDos_one": "{{place}} में {{count}} ज़रूर देखने वाली जगह",
       "mustDos_other": "{{place}} में {{count}} ज़रूर देखने वाली जगहें",
-      "ideas_one": "{{count}} सेव आइडिया",
-      "ideas_other": "{{count}} सेव आइडिया",
       "mustDosRoute_one": "आपके रास्ते में {{count}} ज़रूर देखने वाली जगह",
       "mustDosRoute_other": "आपके रास्ते में {{count}} ज़रूर देखने वाली जगहें"
     },
@@ -2079,15 +2077,15 @@
     "seePopular": "लोकप्रिय जगहें देखें",
     "inCity": "{{city}} में आपके आइडिया",
     "yourIdeasTitle": "आपके आइडिया",
-    "seeAll_one": "{{count}} सेव आइडिया देखें",
-    "seeAll_other": "सभी {{count}} सेव आइडिया देखें",
     "savedBy": "{{name}} ने सेव किया",
     "savedByYou": "आपने सेव किया",
     "popularHere": "यहाँ लोकप्रिय",
     "cardHintLink": "यहीं चलेगा; किसी दिन प्लान करने या हटाने के लिए देर तक दबाएँ",
     "openIn": "{{app}} में खोलें",
     "cantPlay": "यह NomadSafe में नहीं चल सकता।",
-    "openLink": "लिंक खोलें"
+    "openLink": "लिंक खोलें",
+    "savedSection": "सेव किए गए",
+    "seeAllShort": "सभी देखें"
   },
   "planned": {
     "anyTime": "कभी भी",

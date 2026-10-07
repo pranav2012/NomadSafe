@@ -13,6 +13,7 @@ import { useHotelPin, useSafetyPlaces } from "@/features/home/hooks/useTripSafet
 import type { HomeData } from "@/features/home/types";
 import { todayStopIndex } from "@/features/home/utils/globeTiles";
 import { TripItinerary, useEventsStore } from "@/features/itinerary";
+import { SavedSection } from "@/features/itinerary/components/SavedSection";
 import { useTicketsStore } from "@/features/itinerary/store/ticketsStore";
 import { localizeEventTitle } from "@/features/itinerary/utils/eventText";
 import { useRouter } from "expo-router";
@@ -484,12 +485,16 @@ export function TripHome({
           {stage === "upcoming" ? (
             <PrivateView>
               <TripPrepCard trip={trip} events={tripEvents} stops={data.stops} />
+              <SavedSection tripId={trip.id} />
             </PrivateView>
           ) : null}
 
           {liveMode ? (
             <View style={styles.dayPlan}>
               <TripItinerary trip={trip} accent={accent} day={selectedDate} now={now} place={selectedStop} />
+              <PrivateView>
+                <SavedSection tripId={trip.id} />
+              </PrivateView>
             </View>
           ) : null}
           {liveMode ? quickActions : moneyCard}

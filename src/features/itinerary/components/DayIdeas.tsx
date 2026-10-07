@@ -21,19 +21,15 @@ const POPULAR_ROWS = 2;
 export function DayIdeas({
   city,
   ideas,
-  totalIdeas,
   mustDos,
   onAddToDay,
-  onSeeAll,
   onSaveMustDo,
   onDismissMustDo,
 }: {
   city?: string;
   ideas: TripEvent[];
-  totalIdeas: number;
   mustDos: MustDo[];
   onAddToDay: (idea: TripEvent) => void;
-  onSeeAll: () => void;
   onSaveMustDo: (item: MustDo) => void;
   onDismissMustDo: (item: MustDo) => void;
 }) {
@@ -41,7 +37,7 @@ export function DayIdeas({
   const { t } = useLocalization();
   const openIdea = useOpenIdea();
   const thumbs = useIdeaThumbsStore((state) => state.thumbs);
-  if (ideas.length === 0 && mustDos.length === 0 && totalIdeas === 0) return null;
+  if (ideas.length === 0 && mustDos.length === 0) return null;
   const saver = (idea: TripEvent) => (idea.savedBy === undefined ? null : idea.savedBy === SELF_ID ? t("ideas.savedByYou") : t("ideas.savedBy", { name: idea.savedBy }));
 
   return (
@@ -77,9 +73,6 @@ export function DayIdeas({
           </View>
         </>
       ) : null}
-      {totalIdeas > 0 ? (
-        <AuraButton label={t("ideas.seeAll", { count: totalIdeas })} icon="bookmark" variant="ghost" size="md" onPress={onSeeAll} style={styles.seeAll} />
-      ) : null}
       {mustDos.length > 0 ? (
         <>
           <AuraSection title={t("ideas.popularHere")} style={styles.section} />
@@ -105,5 +98,4 @@ const styles = StyleSheet.create({
   text: { flex: 1, gap: 2 },
   title: { fontSize: 14.5 },
   meta: { fontSize: 12.5 },
-  seeAll: { alignSelf: "flex-start", marginTop: 8 },
 });

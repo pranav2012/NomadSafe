@@ -91,7 +91,10 @@ function SheetBody({ trip, stops }: { trip: Trip | PlannedTrip; stops: Stop[] })
     void pruneIdeaThumbs();
   }, []);
   const [filter, setFilter] = useState<PlaceFilter>("all");
-  const [acting, setActing] = useState<TripEvent | null>(null);
+  const [acting, setActing] = useState<TripEvent | null>(() => {
+    const id = useSavedSheetStore.getState().open?.actingId;
+    return id ? (useEventsStore.getState().events.find((event) => event.id === id) ?? null) : null;
+  });
   const [notice, setNotice] = useState<string | null>(null);
   const format = formatters(locale, hour12);
 

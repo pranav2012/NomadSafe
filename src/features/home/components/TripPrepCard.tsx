@@ -1,7 +1,7 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { AuraSection, Icon, PressableScale, useAura, type IconName } from "@/atoms";
-import { ideasOf, mustDosAlong, useMustDoStore, useSavedSheetStore, type TripEvent } from "@/features/itinerary";
+import { mustDosAlong, useMustDoStore, useSavedSheetStore, type TripEvent } from "@/features/itinerary";
 import { formatters } from "@/features/itinerary/utils/entryText";
 import { localizeEventTitle } from "@/features/itinerary/utils/eventText";
 import { tripPrep } from "@/features/home/utils/tripPrep";
@@ -22,7 +22,6 @@ export function TripPrepCard({ trip, events, stops }: { trip: Trip; events: Trip
   const showSaved = useSavedSheetStore((state) => state.show);
   const format = formatters(locale, hour12);
   const prep = tripPrep(events, trip);
-  const ideas = ideasOf(events);
   const popular = mustDosAlong(stops, locale, [...events.map((event) => event.title), ...(dismissed ?? [])]);
   const mustDoCount = popular.reduce((sum, group) => sum + group.items.length, 0);
   const range = ([from, to]: [Date, Date]) =>
@@ -48,7 +47,7 @@ export function TripPrepCard({ trip, events, stops }: { trip: Trip; events: Trip
   );
 
   const first = prep.first;
-  if (!first && prep.bookedNights === 0 && ideas.length === 0 && mustDoCount === 0) return null;
+  if (!first && prep.bookedNights === 0 && mustDoCount === 0) return null;
   return (
     <View>
       <AuraSection title={t("home.prep.title")} style={styles.section} />
@@ -70,7 +69,6 @@ export function TripPrepCard({ trip, events, stops }: { trip: Trip; events: Trip
             )
           : null}
         {prep.gaps.slice(0, GAP_ROWS).map((gap) => row("alertTriangle", t("home.prep.gap", { range: range(gap) }), "#FFB547", `gap-${gap[0].getTime()}`))}
-        {ideas.length > 0 ? link("bookmark", t("home.prep.ideas", { count: ideas.length }), () => showSaved(trip.id, "ideas", "prep")) : null}
         {mustDoCount > 0
           ? link(
               "star",

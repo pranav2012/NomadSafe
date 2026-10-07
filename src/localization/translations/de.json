@@ -91,8 +91,6 @@
       "save": "Merken",
       "mustDos_one": "{{count}} Highlight in {{place}}",
       "mustDos_other": "{{count}} Highlights in {{place}}",
-      "ideas_one": "{{count}} gespeicherte Idee",
-      "ideas_other": "{{count}} gespeicherte Ideen",
       "mustDosRoute_one": "{{count}} Highlight auf deiner Route",
       "mustDosRoute_other": "{{count}} Highlights auf deiner Route"
     },
@@ -2079,15 +2077,15 @@
     "seePopular": "Beliebte Tipps ansehen",
     "inCity": "Deine Ideen in {{city}}",
     "yourIdeasTitle": "Deine Ideen",
-    "seeAll_one": "{{count}} gespeicherte Idee ansehen",
-    "seeAll_other": "Alle {{count}} gespeicherten Ideen ansehen",
     "savedBy": "Gespeichert von {{name}}",
     "savedByYou": "Von dir gespeichert",
     "popularHere": "Beliebt hier",
     "cardHintLink": "Spielt es hier ab; lange drücken, um es einzuplanen oder zu entfernen",
     "openIn": "In {{app}} öffnen",
     "cantPlay": "Das lässt sich nicht in NomadSafe abspielen.",
-    "openLink": "Link öffnen"
+    "openLink": "Link öffnen",
+    "savedSection": "Gespeichert",
+    "seeAllShort": "Alle ansehen"
   },
   "planned": {
     "anyTime": "Jederzeit",

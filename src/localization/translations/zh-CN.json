@@ -91,8 +91,6 @@
       "save": "保存",
       "mustDos_one": "{{place}}必去 {{count}} 处",
       "mustDos_other": "{{place}}必去 {{count}} 处",
-      "ideas_one": "{{count}} 个已存想法",
-      "ideas_other": "{{count}} 个已存想法",
       "mustDosRoute_one": "沿途必去 {{count}} 处",
       "mustDosRoute_other": "沿途必去 {{count}} 处"
     },
@@ -2079,15 +2077,15 @@
     "seePopular": "查看热门推荐",
     "inCity": "我在{{city}}的想法",
     "yourIdeasTitle": "我的想法",
-    "seeAll_one": "查看 {{count}} 个已存想法",
-    "seeAll_other": "查看全部 {{count}} 个已存想法",
     "savedBy": "{{name}} 保存",
     "savedByYou": "你保存的",
     "popularHere": "附近热门",
     "cardHintLink": "在这里播放；长按可安排到某天或移除",
     "openIn": "在 {{app}} 中打开",
     "cantPlay": "无法在 NomadSafe 内播放。",
-    "openLink": "打开链接"
+    "openLink": "打开链接",
+    "savedSection": "已保存",
+    "seeAllShort": "查看全部"
   },
   "planned": {
     "anyTime": "随时",

@@ -5,11 +5,12 @@ import { ideasOf } from "@/features/itinerary/utils/ideas";
 import { useEventsStore } from "./eventsStore";
 
 export type SavedTab = "ideas" | "popular";
-type OpenedFrom = "prep" | "must_dos" | "day" | "header" | "toast" | "join" | "push";
+type OpenedFrom = "prep" | "must_dos" | "day" | "header" | "toast" | "join" | "push" | "strip";
 
 interface SavedSheetState {
-  open: { tripId: string; tab: SavedTab } | null;
-  show: (tripId: string, tab: SavedTab, from: OpenedFrom) => void;
+  /** `actingId` opens straight on one idea's "plan for a day / remove" view. */
+  open: { tripId: string; tab: SavedTab; actingId?: string } | null;
+  show: (tripId: string, tab: SavedTab, from: OpenedFrom, actingId?: string) => void;
   setTab: (tab: SavedTab) => void;
   /** Shown as a toast once the sheet closes; toasts drawn while it's open sit under it on Android. */
   confirmOnClose: string | null;
@@ -20,10 +21,10 @@ interface SavedSheetState {
 /** Which trip's Saved sheet is open (one sheet, mounted on Home), so rows, buttons and toasts anywhere can open it. */
 export const useSavedSheetStore = create<SavedSheetState>((set, get) => ({
   open: null,
-  show: (tripId, tab, from) => {
+  show: (tripId, tab, from, actingId) => {
     const ideas = ideasOf(useEventsStore.getState().events.filter((event) => event.tripId === tripId)).length;
     track("saved_ideas_opened", { from, ideas });
-    set({ open: { tripId, tab }, confirmOnClose: null });
+    set({ open: { tripId, tab, actingId }, confirmOnClose: null });
   },
   setTab: (tab) => set((state) => (state.open ? { open: { ...state.open, tab } } : state)),
   confirmOnClose: null,

@@ -91,8 +91,6 @@
       "save": "സേവ് ചെയ്യുക",
       "mustDos_one": "{{place}}-ൽ {{count}} കണ്ടിരിക്കേണ്ടത്",
       "mustDos_other": "{{place}}-ൽ {{count}} കണ്ടിരിക്കേണ്ടവ",
-      "ideas_one": "സേവ് ചെയ്ത {{count}} ആശയം",
-      "ideas_other": "സേവ് ചെയ്ത {{count}} ആശയങ്ങൾ",
       "mustDosRoute_one": "നിങ്ങളുടെ വഴിയിൽ {{count}} കണ്ടിരിക്കേണ്ടത്",
       "mustDosRoute_other": "നിങ്ങളുടെ വഴിയിൽ {{count}} കണ്ടിരിക്കേണ്ടവ"
     },
@@ -2079,15 +2077,15 @@
     "seePopular": "ജനപ്രിയമായവ കാണുക",
     "inCity": "{{city}}-ലെ നിങ്ങളുടെ ആശയങ്ങൾ",
     "yourIdeasTitle": "നിങ്ങളുടെ ആശയങ്ങൾ",
-    "seeAll_one": "സേവ് ചെയ്ത {{count}} ആശയം കാണുക",
-    "seeAll_other": "സേവ് ചെയ്ത {{count}} ആശയങ്ങളും കാണുക",
     "savedBy": "{{name}} സേവ് ചെയ്തത്",
     "savedByYou": "നിങ്ങൾ സേവ് ചെയ്തത്",
     "popularHere": "ഇവിടെ ജനപ്രിയം",
     "cardHintLink": "ഇവിടെ പ്ലേ ചെയ്യും; ഒരു ദിവസത്തേക്ക് പ്ലാൻ ചെയ്യാനോ നീക്കാനോ അമർത്തിപ്പിടിക്കുക",
     "openIn": "{{app}}-ൽ തുറക്കുക",
     "cantPlay": "ഇത് NomadSafe-ൽ പ്ലേ ചെയ്യാനാകില്ല.",
-    "openLink": "ലിങ്ക് തുറക്കുക"
+    "openLink": "ലിങ്ക് തുറക്കുക",
+    "savedSection": "സേവ് ചെയ്തവ",
+    "seeAllShort": "എല്ലാം കാണുക"
   },
   "planned": {
     "anyTime": "എപ്പോൾ വേണമെങ്കിലും",

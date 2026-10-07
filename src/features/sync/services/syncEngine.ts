@@ -4,6 +4,7 @@ import { useIncomingShareStore } from "@/features/itinerary/store/incomingShareS
 import { api, convex } from "@/modules/backend";
 import { useExpensesStore, withGroupId, type Expense, type Settlement } from "@/features/expenses/store/expensesStore";
 import { useEventsStore, type TripEvent } from "@/features/itinerary/store/eventsStore";
+import { repairEventTripId } from "@/features/itinerary/utils/eventRepair";
 import { usePassportStore, type PastTravel } from "@/features/passport/store/passportStore";
 import { deleteAllTripPhotos } from "@/features/recap/services/tripPhotos";
 import { deleteAllTickets } from "@/features/itinerary/services/tickets";
@@ -188,7 +189,7 @@ async function pullChanges(uid: string): Promise<boolean> {
   // Records that now belong to a shared trip are owned by that trip's sync; never touch them here.
   const scope = makeSharedScope(uid, selectShareables(useTripsStore.getState()));
   for (const [key, record] of incoming) {
-    const local = { id: record.clientId, ...(withGroupId(record.data) as { groupId?: string | null; tripId?: string | null }) };
+    const local = { id: record.clientId, ...((record.kind === "event" ? repairEventTripId(record.data as { tripId?: string | null }) : withGroupId(record.data)) as { groupId?: string | null; tripId?: string | null }) };
     const ownedByTrip =
       record.kind === "passport" || record.kind === "recurring"
         ? false
@@ -225,7 +226,9 @@ function merge<T extends { id: string; rawText?: string; note?: string; source?:
       continue;
     }
     const previous = byId.get(record.clientId);
-    byId.set(record.clientId, keepLocalOnly({ ...withGroupId(record.data as T) }, previous));
+    // Only expenses and settlements had their trip renamed to a group; events keep `tripId`.
+    const data = kind === "expense" || kind === "settlement" ? withGroupId(record.data as T) : kind === "event" ? repairEventTripId(record.data as T & { tripId?: string | null }) : (record.data as T);
+    byId.set(record.clientId, keepLocalOnly({ ...data }, previous));
   }
   return [...byId.values()].sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
 }

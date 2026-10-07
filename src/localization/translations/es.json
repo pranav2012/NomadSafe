@@ -91,8 +91,6 @@
       "save": "Guardar",
       "mustDos_one": "{{count}} imprescindible en {{place}}",
       "mustDos_other": "{{count}} imprescindibles en {{place}}",
-      "ideas_one": "{{count}} idea guardada",
-      "ideas_other": "{{count}} ideas guardadas",
       "mustDosRoute_one": "{{count}} imprescindible en tu ruta",
       "mustDosRoute_other": "{{count}} imprescindibles en tu ruta"
     },
@@ -2079,15 +2077,15 @@
     "seePopular": "Ver populares",
     "inCity": "Tus ideas en {{city}}",
     "yourIdeasTitle": "Tus ideas",
-    "seeAll_one": "Ver {{count}} idea guardada",
-    "seeAll_other": "Ver las {{count}} ideas guardadas",
     "savedBy": "Guardado por {{name}}",
     "savedByYou": "Guardado por ti",
     "popularHere": "Popular aquí",
     "cardHintLink": "Se reproduce aquí; mantén pulsado para planearlo o quitarlo",
     "openIn": "Abrir en {{app}}",
     "cantPlay": "Esto no se puede reproducir dentro de NomadSafe.",
-    "openLink": "Abrir enlace"
+    "openLink": "Abrir enlace",
+    "savedSection": "Guardado",
+    "seeAllShort": "Ver todo"
   },
   "planned": {
     "anyTime": "Cuando sea",

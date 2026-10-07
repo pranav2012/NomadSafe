@@ -66,3 +66,12 @@ test("a country matches a trip to one of its cities", () => {
   const list = [trip("t1", "Tokyo", ["Tokyo, Japan"], [TOKYO], "2026-10-18")];
   assert.deepEqual(targets.saveTargets(list, null, { label: "Japan", kind: "country" }).choice, { kind: "existing", id: "t1" });
 });
+
+const repair = loadModule("src/features/itinerary/utils/eventRepair.ts");
+
+test("events an older sync moved out of their trip get it back", () => {
+  assert.deepEqual(repair.repairEventTripId({ id: "e1", title: "Skytree", groupId: "t1" }), { id: "e1", title: "Skytree", tripId: "t1" });
+  assert.deepEqual(repair.repairEventTripId({ id: "e2", groupId: null }), { id: "e2", tripId: null });
+  const fine = { id: "e3", tripId: "t1" };
+  assert.equal(repair.repairEventTripId(fine), fine);
+});

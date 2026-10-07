@@ -91,8 +91,6 @@
       "save": "సేవ్ చేయి",
       "mustDos_one": "{{place}}లో {{count}} తప్పక చూడాల్సినది",
       "mustDos_other": "{{place}}లో {{count}} తప్పక చూడాల్సినవి",
-      "ideas_one": "{{count}} సేవ్ చేసిన ఆలోచన",
-      "ideas_other": "{{count}} సేవ్ చేసిన ఆలోచనలు",
       "mustDosRoute_one": "మీ దారిలో {{count}} తప్పక చూడాల్సినది",
       "mustDosRoute_other": "మీ దారిలో {{count}} తప్పక చూడాల్సినవి"
     },
@@ -2079,15 +2077,15 @@
     "seePopular": "ప్రసిద్ధమైనవి చూడండి",
     "inCity": "{{city}}లో మీ ఆలోచనలు",
     "yourIdeasTitle": "మీ ఆలోచనలు",
-    "seeAll_one": "{{count}} సేవ్ చేసిన ఆలోచన చూడండి",
-    "seeAll_other": "మొత్తం {{count}} సేవ్ చేసిన ఆలోచనలు చూడండి",
     "savedBy": "{{name}} సేవ్ చేశారు",
     "savedByYou": "మీరు సేవ్ చేశారు",
     "popularHere": "ఇక్కడ ప్రసిద్ధి",
     "cardHintLink": "ఇక్కడే ప్లే అవుతుంది; రోజుకు ప్లాన్ చేయడానికి లేదా తీసివేయడానికి నొక్కి పట్టుకోండి",
     "openIn": "{{app}}లో తెరవండి",
     "cantPlay": "ఇది NomadSafeలో ప్లే కాదు.",
-    "openLink": "లింక్ తెరవండి"
+    "openLink": "లింక్ తెరవండి",
+    "savedSection": "సేవ్ చేసినవి",
+    "seeAllShort": "అన్నీ చూడండి"
   },
   "planned": {
     "anyTime": "ఎప్పుడైనా",

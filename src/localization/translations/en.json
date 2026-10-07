@@ -91,8 +91,6 @@
       "save": "Save",
       "mustDos_one": "{{count}} must-do in {{place}}",
       "mustDos_other": "{{count}} must-dos in {{place}}",
-      "ideas_one": "{{count}} saved idea",
-      "ideas_other": "{{count}} saved ideas",
       "mustDosRoute_one": "{{count}} must-do on your route",
       "mustDosRoute_other": "{{count}} must-dos on your route"
     },
@@ -2079,15 +2077,15 @@
     "seePopular": "See popular picks",
     "inCity": "Your ideas in {{city}}",
     "yourIdeasTitle": "Your ideas",
-    "seeAll_one": "See {{count}} saved idea",
-    "seeAll_other": "See all {{count}} saved ideas",
     "savedBy": "Saved by {{name}}",
     "savedByYou": "Saved by you",
     "popularHere": "Popular here",
     "cardHintLink": "Plays it here; long-press to plan it for a day or remove it",
     "openIn": "Open in {{app}}",
     "cantPlay": "This one can't play inside NomadSafe.",
-    "openLink": "Open link"
+    "openLink": "Open link",
+    "savedSection": "Saved",
+    "seeAllShort": "See all"
   },
   "planned": {
     "anyTime": "Any time",

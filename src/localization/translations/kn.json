@@ -91,8 +91,6 @@
       "save": "ಉಳಿಸಿ",
       "mustDos_one": "{{place}}ನಲ್ಲಿ {{count}} ನೋಡಲೇಬೇಕಾದದ್ದು",
       "mustDos_other": "{{place}}ನಲ್ಲಿ {{count}} ನೋಡಲೇಬೇಕಾದವು",
-      "ideas_one": "{{count}} ಉಳಿಸಿದ ಐಡಿಯಾ",
-      "ideas_other": "{{count}} ಉಳಿಸಿದ ಐಡಿಯಾಗಳು",
       "mustDosRoute_one": "ನಿಮ್ಮ ಮಾರ್ಗದಲ್ಲಿ {{count}} ನೋಡಲೇಬೇಕಾದದ್ದು",
       "mustDosRoute_other": "ನಿಮ್ಮ ಮಾರ್ಗದಲ್ಲಿ {{count}} ನೋಡಲೇಬೇಕಾದವು"
     },
@@ -2079,15 +2077,15 @@
     "seePopular": "ಜನಪ್ರಿಯವನ್ನು ನೋಡಿ",
     "inCity": "{{city}}ನಲ್ಲಿ ನಿಮ್ಮ ಐಡಿಯಾಗಳು",
     "yourIdeasTitle": "ನಿಮ್ಮ ಐಡಿಯಾಗಳು",
-    "seeAll_one": "{{count}} ಉಳಿಸಿದ ಐಡಿಯಾ ನೋಡಿ",
-    "seeAll_other": "ಎಲ್ಲಾ {{count}} ಉಳಿಸಿದ ಐಡಿಯಾಗಳನ್ನು ನೋಡಿ",
     "savedBy": "{{name}} ಉಳಿಸಿದ್ದು",
     "savedByYou": "ನೀವು ಉಳಿಸಿದ್ದು",
     "popularHere": "ಇಲ್ಲಿ ಜನಪ್ರಿಯ",
     "cardHintLink": "ಇಲ್ಲೇ ಪ್ಲೇ ಆಗುತ್ತದೆ; ದಿನಕ್ಕೆ ಯೋಜಿಸಲು ಅಥವಾ ತೆಗೆಯಲು ದೀರ್ಘವಾಗಿ ಒತ್ತಿ",
     "openIn": "{{app}}ನಲ್ಲಿ ತೆರೆಯಿರಿ",
     "cantPlay": "ಇದನ್ನು NomadSafe ಒಳಗೆ ಪ್ಲೇ ಮಾಡಲಾಗದು.",
-    "openLink": "ಲಿಂಕ್ ತೆರೆಯಿರಿ"
+    "openLink": "ಲಿಂಕ್ ತೆರೆಯಿರಿ",
+    "savedSection": "ಉಳಿಸಿದವು",
+    "seeAllShort": "ಎಲ್ಲವನ್ನೂ ನೋಡಿ"
   },
   "planned": {
     "anyTime": "ಯಾವಾಗ ಬೇಕಾದರೂ",

@@ -91,8 +91,6 @@
       "save": "حفظ",
       "mustDos_one": "{{count}} مكان لا يُفوَّت في {{place}}",
       "mustDos_other": "{{count}} أماكن لا تُفوَّت في {{place}}",
-      "ideas_one": "{{count}} فكرة محفوظة",
-      "ideas_other": "{{count}} أفكار محفوظة",
       "mustDosRoute_one": "{{count}} مكان لا يُفوَّت على طريقك",
       "mustDosRoute_other": "{{count}} أماكن لا تُفوَّت على طريقك"
     },
@@ -2079,15 +2077,15 @@
     "seePopular": "عرض الأماكن الشائعة",
     "inCity": "أفكارك في {{city}}",
     "yourIdeasTitle": "أفكارك",
-    "seeAll_one": "عرض {{count}} فكرة محفوظة",
-    "seeAll_other": "عرض كل الأفكار المحفوظة ({{count}})",
     "savedBy": "حفظها {{name}}",
     "savedByYou": "حفظتها أنت",
     "popularHere": "شائع هنا",
     "cardHintLink": "يُشغَّل هنا؛ اضغط مطولًا لتخطيطه في يوم أو إزالته",
     "openIn": "فتح في {{app}}",
     "cantPlay": "لا يمكن تشغيل هذا داخل NomadSafe.",
-    "openLink": "فتح الرابط"
+    "openLink": "فتح الرابط",
+    "savedSection": "المحفوظ",
+    "seeAllShort": "عرض الكل"
   },
   "planned": {
     "anyTime": "في أي وقت",
