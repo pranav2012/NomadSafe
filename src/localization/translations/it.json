@@ -2101,7 +2101,6 @@
     "formTitle": "Inizia a pianificare",
     "ideas_one": "{{count}} idea",
     "ideas_other": "{{count}} idee",
-    "ideasButton": "Idee",
     "justName": "Non sai ancora dove? Dagli un nome",
     "limitNote": "Hai usato i tuoi {{count}} viaggi gratuiti. Salvalo come viaggio in programma e confermalo con Plus quando avrai le date.",
     "moveIdeas": "Sposta le idee",
@@ -2118,6 +2117,14 @@
     "savedToast": "{{name}} salvato come viaggio in programma",
     "section": "In programma",
     "sectionCount": "{{count}} di {{limit}} gratuiti",
-    "whenLabel": "Più o meno quando?"
+    "whenLabel": "Più o meno quando?",
+    "invite": "Invita",
+    "waiting": "In attesa che {{name}} confermi",
+    "leave": "Esci",
+    "leaveTitle": "Uscire da {{name}}?",
+    "leaveBody": "Le idee che hai salvato restano per gli altri.",
+    "discardForEveryone": "Viene eliminato per tutti i partecipanti.",
+    "withPeople": "con {{names}}",
+    "shareIntro": "Crea un link di invito per questo viaggio in programma. Chi lo apre può unirsi e salvare idee con te. Spese e prenotazioni arrivano quando lo confermi con le date."
   }
 }

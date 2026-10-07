@@ -2101,7 +2101,6 @@
     "formTitle": "計画を始める",
     "ideas_one": "アイデア{{count}}件",
     "ideas_other": "アイデア{{count}}件",
-    "ideasButton": "アイデア",
     "justName": "行き先は未定？名前だけ付ける",
     "limitNote": "無料の旅行{{count}}件を使い切りました。計画中の旅行として保存し、日程が決まったらPlusで確定できます。",
     "moveIdeas": "アイデアを移す",
@@ -2118,6 +2117,14 @@
     "savedToast": "{{name}}を計画中の旅行として保存しました",
     "section": "計画中",
     "sectionCount": "無料 {{limit}}件中{{count}}件",
-    "whenLabel": "だいたいいつ？"
+    "whenLabel": "だいたいいつ？",
+    "invite": "招待",
+    "waiting": "{{name}}さんの確定待ち",
+    "leave": "退出",
+    "leaveTitle": "{{name}}から退出しますか？",
+    "leaveBody": "あなたが保存したアイデアは他のメンバーに残ります。",
+    "discardForEveryone": "参加している全員から削除されます。",
+    "withPeople": "{{names}}と",
+    "shareIntro": "この計画中の旅行の招待リンクを作成します。開いた人は参加して一緒にアイデアを保存できます。費用や予約は日程を決めて確定してからです。"
   }
 }

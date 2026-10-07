@@ -2101,7 +2101,6 @@
     "formTitle": "Empezar a planear",
     "ideas_one": "{{count}} idea",
     "ideas_other": "{{count}} ideas",
-    "ideasButton": "Ideas",
     "justName": "¿Aún no sabes dónde? Ponle un nombre",
     "limitNote": "Ya usaste tus {{count}} viajes gratis. Guárdalo como viaje planeado y confírmalo con Plus cuando tengas fechas.",
     "moveIdeas": "Mover ideas",
@@ -2118,6 +2117,14 @@
     "savedToast": "{{name}} guardado como viaje planeado",
     "section": "Planeando",
     "sectionCount": "{{count}} de {{limit}} gratis",
-    "whenLabel": "¿Más o menos cuándo?"
+    "whenLabel": "¿Más o menos cuándo?",
+    "invite": "Invitar",
+    "waiting": "Esperando a que {{name}} lo confirme",
+    "leave": "Salir",
+    "leaveTitle": "¿Salir de {{name}}?",
+    "leaveBody": "Las ideas que guardaste se quedan para los demás.",
+    "discardForEveryone": "Se elimina para todos los que están en él.",
+    "withPeople": "con {{names}}",
+    "shareIntro": "Crea un enlace de invitación para este viaje planeado. Quien lo abra puede unirse y guardar ideas contigo. Los gastos y las reservas llegan cuando lo confirmes con fechas."
   }
 }

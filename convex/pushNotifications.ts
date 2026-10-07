@@ -9,6 +9,9 @@ import { requireUser } from "./users";
 const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
 export const NOTIFY_TITLE_CHARS = 60;
 const NOTIFY_INTERVAL_MS = 60_000;
+// Saving ideas comes in bursts (a dozen reels at once), so they're summed up over a few hours.
+const IDEA_NOTIFY_INTERVAL_MS = 3 * 60 * 60_000;
+const IDEAS_KEY = "#ideas";
 const MAX_TOKENS_PER_USER = 10;
 const MAX_LOCALE = 35;
 
@@ -85,6 +88,44 @@ const ADDED: Record<string, string> = {
   ta: "{actor} உங்களை {title} இல் சேர்த்தார்",
   te: "{actor} మిమ్మల్ని {title} లో చేర్చారు",
   "zh-CN": "{actor} 把你加入了 {title}",
+};
+
+// Placeholders: {actor}, {title} (the idea), {count}.
+const IDEAS: Record<string, { one: string; many: string }> = {
+  en: { one: "{actor} saved {title}", many: "{actor} saved {count} ideas" },
+  ar: { one: "حفظ {actor} {title}", many: "حفظ {actor} {count} أفكار" },
+  de: { one: "{actor} hat {title} gespeichert", many: "{actor} hat {count} Ideen gespeichert" },
+  es: { one: "{actor} guardó {title}", many: "{actor} guardó {count} ideas" },
+  fr: { one: "{actor} a enregistré {title}", many: "{actor} a enregistré {count} idées" },
+  hi: { one: "{actor} ने {title} सेव किया", many: "{actor} ने {count} आइडिया सेव किए" },
+  it: { one: "{actor} ha salvato {title}", many: "{actor} ha salvato {count} idee" },
+  ja: { one: "{actor}さんが{title}を保存しました", many: "{actor}さんがアイデアを{count}件保存しました" },
+  kn: { one: "{actor} {title} ಉಳಿಸಿದರು", many: "{actor} {count} ಐಡಿಯಾಗಳನ್ನು ಉಳಿಸಿದರು" },
+  ko: { one: "{actor}님이 {title}을(를) 저장했어요", many: "{actor}님이 아이디어 {count}개를 저장했어요" },
+  ml: { one: "{actor} {title} സേവ് ചെയ്തു", many: "{actor} {count} ആശയങ്ങൾ സേവ് ചെയ്തു" },
+  "pt-BR": { one: "{actor} salvou {title}", many: "{actor} salvou {count} ideias" },
+  ta: { one: "{actor} {title} சேமித்தார்", many: "{actor} {count} யோசனைகளைச் சேமித்தார்" },
+  te: { one: "{actor} {title} సేవ్ చేశారు", many: "{actor} {count} ఆలోచనలు సేవ్ చేశారు" },
+  "zh-CN": { one: "{actor} 保存了 {title}", many: "{actor} 保存了 {count} 个想法" },
+};
+
+// Placeholders: {actor}, {dates}. The push title is the trip's name.
+const CONFIRMED: Record<string, string> = {
+  en: "{actor} confirmed the trip · {dates}",
+  ar: "أكّد {actor} الرحلة · {dates}",
+  de: "{actor} hat die Reise bestätigt · {dates}",
+  es: "{actor} confirmó el viaje · {dates}",
+  fr: "{actor} a confirmé le voyage · {dates}",
+  hi: "{actor} ने ट्रिप कन्फ़र्म की · {dates}",
+  it: "{actor} ha confermato il viaggio · {dates}",
+  ja: "{actor}さんが旅行を確定しました · {dates}",
+  kn: "{actor} ಪ್ರವಾಸವನ್ನು ಖಚಿತಪಡಿಸಿದರು · {dates}",
+  ko: "{actor}님이 여행을 확정했어요 · {dates}",
+  ml: "{actor} യാത്ര ഉറപ്പിച്ചു · {dates}",
+  "pt-BR": "{actor} confirmou a viagem · {dates}",
+  ta: "{actor} பயணத்தை உறுதிசெய்தார் · {dates}",
+  te: "{actor} ట్రిప్‌ను నిర్ధారించారు · {dates}",
+  "zh-CN": "{actor} 确认了旅行 · {dates}",
 };
 
 function fill(template: string, values: Record<string, string>) {
@@ -217,7 +258,7 @@ export async function sendPushMessages(ctx: ActionCtx, messages: PushMessage[]) 
 }
 
 const changeValidator = v.object({
-  kind: v.union(v.literal("expense"), v.literal("settlement")),
+  kind: v.union(v.literal("expense"), v.literal("settlement"), v.literal("idea")),
   action: v.union(v.literal("added"), v.literal("updated"), v.literal("deleted")),
   title: v.string(),
   amount: v.number(),
@@ -226,17 +267,26 @@ const changeValidator = v.object({
 
 type Change = Infer<typeof changeValidator>;
 
+/** The member a notify-state row is for; idea rows are kept apart with a suffix. */
+function actorOf(stateKey: string) {
+  return stateKey.endsWith(IDEAS_KEY) ? stateKey.slice(0, -IDEAS_KEY.length) : stateKey;
+}
+
 /**
- * Sends a member's money changes right away, or, within a minute of their last push on this group,
- * counts them and sends one summary when the minute is up, so a burst of edits is one notification.
+ * Sends a member's changes right away, or, within the interval since their last push on this group,
+ * counts them and sends one summary when it's up, so a burst of edits is one notification. Money
+ * changes use a minute; saved ideas (`changes` all of kind "idea") a few hours, on their own row.
  */
 export async function queueGroupNotification(ctx: MutationCtx, groupId: Id<"sharedGroups">, actorMemberId: string, changes: Change[]) {
   const now = Date.now();
+  const ideas = changes.every((change) => change.kind === "idea");
+  const stateKey = ideas ? `${actorMemberId}${IDEAS_KEY}` : actorMemberId;
+  const interval = ideas ? IDEA_NOTIFY_INTERVAL_MS : NOTIFY_INTERVAL_MS;
   const state = await ctx.db
     .query("groupNotifyState")
-    .withIndex("by_group_actor", (q) => q.eq("groupId", groupId).eq("actorMemberId", actorMemberId))
+    .withIndex("by_group_actor", (q) => q.eq("groupId", groupId).eq("actorMemberId", stateKey))
     .unique();
-  if (!state || (!state.flushScheduled && now - state.lastSentAt >= NOTIFY_INTERVAL_MS)) {
+  if (!state || (!state.flushScheduled && now - state.lastSentAt >= interval)) {
     await ctx.scheduler.runAfter(0, internal.pushNotifications.notifyGroup, {
       groupId,
       actorMemberId,
@@ -244,7 +294,7 @@ export async function queueGroupNotification(ctx: MutationCtx, groupId: Id<"shar
       count: changes.length,
     });
     if (state) await ctx.db.patch(state._id, { lastSentAt: now, pendingCount: 0, pendingFirst: undefined });
-    else await ctx.db.insert("groupNotifyState", { groupId, actorMemberId, lastSentAt: now, pendingCount: 0, flushScheduled: false });
+    else await ctx.db.insert("groupNotifyState", { groupId, actorMemberId: stateKey, lastSentAt: now, pendingCount: 0, flushScheduled: false });
     return;
   }
   await ctx.db.patch(state._id, {
@@ -253,7 +303,7 @@ export async function queueGroupNotification(ctx: MutationCtx, groupId: Id<"shar
     flushScheduled: true,
   });
   if (!state.flushScheduled) {
-    await ctx.scheduler.runAt(state.lastSentAt + NOTIFY_INTERVAL_MS, internal.pushNotifications.flushGroupNotification, {
+    await ctx.scheduler.runAt(state.lastSentAt + interval, internal.pushNotifications.flushGroupNotification, {
       stateId: state._id,
     });
   }
@@ -267,7 +317,7 @@ export const flushGroupNotification = internalMutation({
     if (state.pendingCount > 0 && state.pendingFirst) {
       await ctx.scheduler.runAfter(0, internal.pushNotifications.notifyGroup, {
         groupId: state.groupId,
-        actorMemberId: state.actorMemberId,
+        actorMemberId: actorOf(state.actorMemberId),
         changes: [state.pendingFirst],
         count: state.pendingCount,
       });
@@ -294,8 +344,13 @@ export const notifyGroup = internalAction({
         amount: formatAmount(change.amount, change.currency, locale),
         count: String(total),
       };
+      const ideas = IDEAS[locale] ?? IDEAS[locale.split("-")[0]] ?? IDEAS.en;
       const template =
-        total > 1
+        change.kind === "idea"
+          ? total > 1
+            ? ideas.many
+            : ideas.one
+          : total > 1
           ? t.many
           : change.kind === "settlement"
             ? change.action === "deleted"
@@ -308,13 +363,45 @@ export const notifyGroup = internalAction({
         body: fill(template, values),
         sound: "default" as const,
         channelId: CHANNEL_ID,
-        data: { source: SOURCE, groupId: String(groupId) },
+        data: { source: SOURCE, groupId: String(groupId), ...(change.kind === "idea" ? { type: "ideas" } : {}) },
       };
     });
 
     await sendPushMessages(ctx, messages);
   },
 });
+
+/** Tells the other members that the owner confirmed a planned trip, with its dates. */
+export const notifyConfirmed = internalAction({
+  args: { groupId: v.id("sharedGroups"), actorMemberId: v.string(), startDate: v.string(), endDate: v.string() },
+  handler: async (ctx, { groupId, actorMemberId, startDate, endDate }) => {
+    const info = await ctx.runQuery(internal.groups.notificationTargets, { groupId, actorMemberId });
+    if (!info || info.targets.length === 0) return;
+    const messages = info.targets.map(({ token, locale }) => {
+      const template = CONFIRMED[locale] ?? CONFIRMED[locale.split("-")[0]] ?? CONFIRMED.en;
+      return {
+        to: token,
+        title: truncate(info.groupName, NOTIFY_TITLE_CHARS),
+        body: fill(template, { actor: truncate(info.actorName, NOTIFY_TITLE_CHARS), dates: formatDateRange(startDate, endDate, locale) }),
+        sound: "default" as const,
+        channelId: CHANNEL_ID,
+        data: { source: SOURCE, groupId: String(groupId), type: "confirmed" },
+      };
+    });
+    await sendPushMessages(ctx, messages);
+  },
+});
+
+/** "Mar 3 – 10" style range for two "YYYY-MM-DD" keys; the raw keys if the locale can't format them. */
+function formatDateRange(startDate: string, endDate: string, locale: string) {
+  const toDate = (key: string) => new Date(`${key}T12:00:00Z`);
+  try {
+    const format = new Intl.DateTimeFormat(locale, { month: "short", day: "numeric", timeZone: "UTC" });
+    return startDate === endDate ? format.format(toDate(startDate)) : `${format.format(toDate(startDate))} – ${format.format(toDate(endDate))}`;
+  } catch {
+    return startDate === endDate ? startDate : `${startDate} – ${endDate}`;
+  }
+}
 
 /** Asks the members holding an item's ticket to send it; tapping opens the ticket with Send ready. */
 export const notifyTicketAsk = internalAction({

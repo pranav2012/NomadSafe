@@ -40,6 +40,14 @@ Agreed 2026-10-07. Saved ideas are a trip's ideas, never its plans.
 - A destination is optional: pick a place from search, or just type a name ("Europe summer"). With no place there's no globe pin and no must-dos until one is added.
 - Confirming opens the same date picker, starting on the rough month if one was set.
 
+### Shared planned trips (phase 2b)
+
+- Invites use the same link and flow as trips. Joined planned trips don't count toward a member's limits.
+- Only the owner can confirm. Members see who they're waiting on to confirm. Only the owner's 2-trip limit applies.
+- Confirming updates the trip for everyone. Members get a push ("Sam confirmed Bali · Mar 3–10"), and it becomes their upcoming trip.
+- Saved ideas send batched pushes to the other members, at most one every few hours ("Sam saved 3 ideas to Bali").
+- Members can leave. The owner can discard it for everyone after a confirmation, with no settle-up step since there's no money.
+
 ## Sharing in (phase 3, new native build)
 
 - Android share target and iOS Share Extension. Accepts Instagram reels and posts, TikTok, YouTube Shorts and any link.

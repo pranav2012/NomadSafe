@@ -2101,7 +2101,6 @@
     "formTitle": "계획 시작",
     "ideas_one": "아이디어 {{count}}개",
     "ideas_other": "아이디어 {{count}}개",
-    "ideasButton": "아이디어",
     "justName": "어디로 갈지 미정인가요? 이름만 정하기",
     "limitNote": "무료 여행 {{count}}개를 모두 썼어요. 계획 중인 여행으로 저장하고 날짜가 정해지면 Plus로 확정하세요.",
     "moveIdeas": "아이디어 옮기기",
@@ -2118,6 +2117,14 @@
     "savedToast": "{{name}}을(를) 계획 중인 여행으로 저장했어요",
     "section": "계획 중",
     "sectionCount": "무료 {{limit}}개 중 {{count}}개",
-    "whenLabel": "대략 언제쯤?"
+    "whenLabel": "대략 언제쯤?",
+    "invite": "초대",
+    "waiting": "{{name}}님의 확정을 기다리는 중",
+    "leave": "나가기",
+    "leaveTitle": "{{name}}에서 나갈까요?",
+    "leaveBody": "내가 저장한 아이디어는 다른 사람들에게 남아요.",
+    "discardForEveryone": "참여한 모든 사람에게서 삭제돼요.",
+    "withPeople": "{{names}}님과",
+    "shareIntro": "이 계획 중인 여행의 초대 링크를 만들어요. 링크를 연 사람은 참여해서 함께 아이디어를 저장할 수 있어요. 지출과 예약은 날짜를 정해 확정한 뒤에 시작돼요."
   }
 }

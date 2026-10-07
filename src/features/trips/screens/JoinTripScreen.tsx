@@ -7,7 +7,8 @@ import { AuraButton, AuraCard, AuraChip, AuraField, AuraLoader, Icon, PressableS
 import { useAuthStore } from "@/features/auth/store/authStore";
 import { registerGroupPush } from "@/features/sync";
 import { useMoneyViewStore } from "@/features/expenses/store/moneyViewStore";
-import { isTrip, selectMoneyGroups, useTripsStore, type MoneyGroup } from "@/features/trips/store/tripsStore";
+import { isPlanned, isTrip, selectShareables, useTripsStore, type Shareable } from "@/features/trips/store/tripsStore";
+import { useSavedSheetStore } from "@/features/itinerary/store/savedSheetStore";
 import { track, PrivateView } from "@/modules/analytics";
 import { fromDateKey } from "@/features/trips/utils/dates";
 import { useLocalization } from "@/localization";
@@ -16,14 +17,14 @@ import { useSheetTopInset } from "@/hooks/useSheetTopInset";
 const NEW_MEMBER = "__new__";
 const ARRIVAL_TIMEOUT_MS = 8000;
 
-/** Waits for the joined trip or group to arrive through live sync; a trip becomes the active trip. */
-function openWhenSynced(serverTripId: string): Promise<MoneyGroup | null> {
-  const select = () => selectMoneyGroups(useTripsStore.getState()).find((item) => item.shared?.groupId === serverTripId);
+/** Waits for the joined trip, group or planned trip to arrive through live sync; a trip becomes the active trip. */
+function openWhenSynced(serverTripId: string): Promise<Shareable | null> {
+  const select = () => selectShareables(useTripsStore.getState()).find((item) => item.shared?.groupId === serverTripId);
   return new Promise((resolve) => {
     const activate = () => {
       const item = select();
       if (!item) return null;
-      if (isTrip(item)) useTripsStore.getState().setActiveTrip(item.id);
+      if (!isPlanned(item) && isTrip(item)) useTripsStore.getState().setActiveTrip(item.id);
       return item;
     };
     const ready = activate();
@@ -61,11 +62,14 @@ export default function JoinTripScreen() {
   const selected = choice ?? (preview?.unclaimed.length ? null : NEW_MEMBER);
   const k = (key: string) => (preview?.kind === "group" ? `groupShare.${key}` : `groupTrip.${key}`);
 
+  // A joined planned trip opens on its ideas; a group on its money; a trip on Home.
   const finish = async (tripId: string) => {
     const joined = await openWhenSynced(tripId);
-    if (joined && !isTrip(joined)) useMoneyViewStore.getState().select(joined.id);
+    const group = joined && !isPlanned(joined) && !isTrip(joined);
+    if (group) useMoneyViewStore.getState().select(joined.id);
     router.dismissAll();
-    router.replace(joined && !isTrip(joined) ? "/(tabs)/expenses" : "/(tabs)");
+    router.replace(group ? "/(tabs)/expenses" : "/(tabs)");
+    if (joined && isPlanned(joined)) useSavedSheetStore.getState().show(joined.id, "ideas", "join");
   };
 
   const handleJoin = async () => {
@@ -91,9 +95,12 @@ export default function JoinTripScreen() {
     }
   };
 
-  const dates = preview?.startDate
-    ? `${formatDate(fromDateKey(preview.startDate), { month: "short", day: "numeric" })} — ${formatDate(fromDateKey(preview.endDate), { month: "short", day: "numeric", year: "numeric" })}`
-    : "";
+  const dates =
+    preview?.kind === "planned"
+      ? `${t("planned.badge")} · ${preview.month ? t("planned.roughMonth", { month: formatDate(fromDateKey(`${preview.month}-01`), { month: "long", year: "numeric" }) }) : t("planned.noDates")}`
+      : preview?.startDate
+        ? `${formatDate(fromDateKey(preview.startDate), { month: "short", day: "numeric" })} — ${formatDate(fromDateKey(preview.endDate), { month: "short", day: "numeric", year: "numeric" })}`
+        : "";
 
   return (
     <View style={[styles.root, { backgroundColor: c.bg }]}>

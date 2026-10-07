@@ -3,10 +3,21 @@ import { useChatStore } from "@/features/ai/store/chatStore";
 import { useExpensesStore, type Expense, type Settlement } from "@/features/expenses/store/expensesStore";
 import { payersOf, SELF_ID, type ExpenseShare, type ExpenseSplit } from "@/features/expenses/utils/split";
 import { useEventsStore, type TripEvent } from "@/features/itinerary/store/eventsStore";
-import { isTrip, selectMoneyGroups, setMoneyGroups, useTripsStore, type GroupBase, type MoneyGroup, type SharedGroupInfo } from "@/features/trips/store/tripsStore";
+import {
+  isPlanned,
+  isTrip,
+  selectShareables,
+  setShareables,
+  useTripsStore,
+  type GroupBase,
+  type MoneyGroup,
+  type Shareable,
+  type SharedGroupInfo,
+} from "@/features/trips/store/tripsStore";
 import { syncWidgets } from "@/features/widget/syncWidgets";
 import { logger } from "@/modules/logger";
 import { storage } from "@/modules/storage";
+import { groupDetails, mergeDetails } from "../utils/groupDetails";
 import { hashOf } from "../utils/hash";
 import { clearGroupLedgers, groupLedgerKey, keepLocalOnly, makeSharedScope, stripRaw, type SharedKind } from "../utils/sharedScope";
 
@@ -56,26 +67,8 @@ export function localGroupId(serverGroupId: string) {
   return `g-${serverGroupId}`;
 }
 
-/** All trips and groups on this phone. */
-const allGroups = () => selectMoneyGroups(useTripsStore.getState());
-
-/** The fields everyone shares; people are members, and ids differ per phone. Groups say `kind: "group"`. */
-function groupDetails(trip: MoneyGroup) {
-  if (!isTrip(trip)) {
-    return { kind: "group" as const, name: trip.name, emoji: trip.emoji, budget: trip.budget, currency: trip.currency, createdAt: trip.createdAt, smartSplit: trip.smartSplit };
-  }
-  return {
-    name: trip.name,
-    destinations: trip.destinations,
-    destinationCoordinates: trip.destinationCoordinates,
-    startDate: trip.startDate,
-    endDate: trip.endDate,
-    budget: trip.budget,
-    currency: trip.currency,
-    createdAt: trip.createdAt,
-    smartSplit: trip.smartSplit,
-  };
-}
+/** All trips, groups and planned trips on this phone. */
+const allGroups = () => selectShareables(useTripsStore.getState());
 
 function readLedger(uid: string, groupId: string): GroupLedger {
   try {
@@ -200,7 +193,7 @@ function toLocalRecord(kind: SharedKind, data: unknown, localId: string, map: Tr
   return { ...expense, groupId: localId, paidBy: paidBy === SELF_ID ? undefined : paidBy, shares, payers, split };
 }
 
-function groupRecordsOf(owner: string, trip: GroupBase): { kind: SharedKind; record: LocalRecord }[] {
+function groupRecordsOf(owner: string, trip: Pick<GroupBase, "id">): { kind: SharedKind; record: LocalRecord }[] {
   const scope = makeSharedScope(owner, allGroups());
   const { expenses, settlements } = useExpensesStore.getState();
   return [
@@ -243,7 +236,7 @@ function dropLocalGroup(localId: string, serverGroupId: string, owner: string, k
     useChatStore.getState().removeConversation(localId);
   }
   useEventsStore.getState().removeByTripId(localId);
-  setMoneyGroups(remaining);
+  setShareables(remaining);
   storage.remove(groupLedgerKey(owner, serverGroupId));
   verified.delete(serverGroupId);
 }
@@ -258,7 +251,7 @@ function applyGroupList(owner: string, list: ServerGroup[]) {
     dropLocalGroup(local.id, local.shared.groupId, owner);
   }
   const before = allGroups();
-  let trips: MoneyGroup[] = [...before];
+  let trips: Shareable[] = [...before];
 
   for (const server of list) {
     const info: SharedGroupInfo = {
@@ -279,7 +272,8 @@ function applyGroupList(owner: string, list: ServerGroup[]) {
     if (index === -1) {
       if (sharingInFlight > 0) continue;
       const base = { id: localGroupId(server.groupId), companions: memberCompanions, shared: info };
-      const created: MoneyGroup = details.kind === "group" ? { ...details, ...base } : { ...details, ...base, mode: "group" };
+      const created: Shareable =
+        details.kind === "group" || details.kind === "planned" ? { ...details, ...base } : { ...details, ...base, mode: "group" };
       trips = [created, ...trips];
       // A fresh local copy starts from nothing, so a leftover ledger can't turn into deletions.
       writeLedger(owner, server.groupId, { ...EMPTY_LEDGER, entries: {}, detailsHash: hashOf(details), detailsUpdatedAt: server.dataUpdatedAt });
@@ -291,19 +285,18 @@ function applyGroupList(owner: string, list: ServerGroup[]) {
     const pending = local.companions.filter((name) => !known.has(name.trim().toLowerCase()));
     const ledger = readLedger(owner, server.groupId);
     const remoteNewer = server.dataUpdatedAt > ledger.detailsUpdatedAt && hashOf(details) !== hashOf(groupDetails(local));
-    const merged = { ...local, ...(remoteNewer ? details : {}), companions: [...memberCompanions, ...pending], shared: info } as MoneyGroup;
-    trips[index] = isTrip(merged) ? { ...merged, mode: "group" } : merged;
+    trips[index] = mergeDetails(local, remoteNewer ? details : null, [...memberCompanions, ...pending], info);
     if (remoteNewer) writeLedger(owner, server.groupId, { ...ledger, detailsHash: hashOf(details), detailsUpdatedAt: server.dataUpdatedAt });
   }
 
   if (hashOf(trips) !== hashOf(before)) {
-    setMoneyGroups(trips);
+    setShareables(trips);
     void syncWidgets();
   }
 }
 
 /** Pulls a trip's records written since the last pull and merges them into the stores. */
-async function pullGroup(owner: string, server: ServerGroup, local: MoneyGroup): Promise<boolean> {
+async function pullGroup(owner: string, server: ServerGroup, local: Shareable): Promise<boolean> {
   const ledger = readLedger(owner, server.groupId);
   const remote: RemoteRecord[] = [];
   let cursor: string | null = null;
@@ -378,7 +371,7 @@ async function pullGroup(owner: string, server: ServerGroup, local: MoneyGroup):
 }
 
 /** Sends a trip's local changes: details, new companions, and records the ledger hasn't seen. */
-async function pushGroup(owner: string, local: MoneyGroup): Promise<boolean> {
+async function pushGroup(owner: string, local: Shareable): Promise<boolean> {
   const info = local.shared!;
   if (!info.myMemberId) return true;
   const serverGroupId = info.groupId as Id<"sharedGroups">;
@@ -575,7 +568,7 @@ export function clearSharedLocalData(owner: string | null) {
  * Shares a trip or group: creates it on the server, then re-keys it locally to the shared id so every
  * phone (including the owner's others) agrees on the id its expenses point to.
  */
-export async function shareGroup(trip: MoneyGroup, ownerName: string, fromGroupId?: string): Promise<string> {
+export async function shareGroup(trip: Shareable, ownerName: string, fromGroupId?: string): Promise<string> {
   sharingInFlight += 1;
   let serverId: Id<"sharedGroups">;
   try {
@@ -596,10 +589,10 @@ export async function shareGroup(trip: MoneyGroup, ownerName: string, fromGroupI
 
   const wasActive = useTripsStore.getState().activeTripId === trip.id;
   const shared: SharedGroupInfo = { groupId: serverId, myMemberId: "", role: "owner", inviteCode: "", archived: false, muted: false, members: [] };
-  setMoneyGroups(
+  setShareables(
     allGroups().map((item) => {
       if (item.id !== trip.id) return item;
-      return isTrip(item) ? { ...item, id: newId, mode: "group", shared } : { ...item, id: newId, shared };
+      return !isPlanned(item) && isTrip(item) ? { ...item, id: newId, mode: "group", shared } : { ...item, id: newId, shared };
     }),
   );
   if (wasActive) useTripsStore.setState({ activeTripId: newId });
@@ -623,7 +616,7 @@ export async function shareGroup(trip: MoneyGroup, ownerName: string, fromGroupI
 export async function setGroupArchived(group: MoneyGroup, archived: boolean): Promise<void> {
   if (group.shared) {
     await convex.mutation(api.groups.setPreferences, { groupId: group.shared.groupId as Id<"sharedGroups">, archived });
-    setMoneyGroups(allGroups().map((item) => (item.id === group.id && item.shared ? { ...item, shared: { ...item.shared, archived } } : item)));
+    setShareables(allGroups().map((item) => (item.id === group.id && item.shared ? { ...item, shared: { ...item.shared, archived } } : item)));
   } else if (isTrip(group)) {
     useTripsStore.getState().updateTrip(group.id, { archived });
   } else {

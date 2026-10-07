@@ -139,7 +139,7 @@ export default defineSchema({
     pendingCount: v.number(),
     pendingFirst: v.optional(
       v.object({
-        kind: v.union(v.literal("expense"), v.literal("settlement")),
+        kind: v.union(v.literal("expense"), v.literal("settlement"), v.literal("idea")),
         action: v.union(v.literal("added"), v.literal("updated"), v.literal("deleted")),
         title: v.string(),
         amount: v.number(),

@@ -79,6 +79,7 @@ test("free plan allows 3 planned trips, separately from confirmed ones", () => {
   assert.equal(plan.canCreatePlannedTrip([{}, {}], plan.FREE_PLAN), true);
   assert.equal(plan.canCreatePlannedTrip([{}, {}, {}], plan.FREE_PLAN), false);
   assert.equal(plan.canCreatePlannedTrip([{}, {}, {}], { unlimitedTrips: true, cloudAi: false }), true);
+  assert.equal(plan.canCreatePlannedTrip([{}, {}, { shared: { role: "member" } }], plan.FREE_PLAN), true);
 });
 
 test("free group limit counts owned groups only, separately from trips", () => {

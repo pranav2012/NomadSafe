@@ -72,7 +72,7 @@ export interface AnalyticsEvents {
   ticket_opened: { kind: "pdf" | "image"; count: number };
   ticket_added: { source: "gmail" | "file" | "photo" | "received"; count: number };
   must_do_suggestion: { action: "added" | "dismissed"; where: "free_day" | "trip_prep" | "day_ideas" | "saved_sheet" };
-  saved_ideas_opened: { from: "prep" | "must_dos" | "day" | "header" | "toast"; ideas: number };
+  saved_ideas_opened: { from: "prep" | "must_dos" | "day" | "header" | "toast" | "join" | "push"; ideas: number };
   saved_idea_action: { action: "planned" | "removed"; where: "saved_sheet" | "day_ideas" };
   today_action: { action: "maps" | "add_stop" | "expand_globe" | "collapse_globe" | "back_to_today" | "done" | "undone" | "ask_ticket" };
   recap_opened: { source: "home" | "notification" | "trips"; stops: number };

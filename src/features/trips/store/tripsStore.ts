@@ -75,22 +75,56 @@ export interface Trip extends GroupBase {
  * confirming turns it into a trip with the same id, so its ideas carry over.
  */
 export interface PlannedTrip {
+  kind: "planned";
   id: string;
   name: string;
   destinations: string[];
   destinationCoordinates?: (LatLng | null)[];
   /** "YYYY-MM" when there's a month in mind. */
   month?: string;
+  /** Other people on it once it's shared (member names), like a trip's companions. */
+  companions: string[];
+  shared?: SharedGroupInfo;
   createdAt: string;
 }
 
-export type PlannedTripInput = Omit<PlannedTrip, "id" | "createdAt">;
+export type PlannedTripInput = Pick<PlannedTrip, "name" | "destinations" | "destinationCoordinates" | "month">;
+
+/** Anything that can be shared through an invite: trips, groups and planned trips. */
+export type Shareable = MoneyGroup | PlannedTrip;
+
+export function isPlanned(item: Shareable): item is PlannedTrip {
+  return item.kind === "planned";
+}
 
 /** Anything expenses can belong to: a trip or a group. */
 export type MoneyGroup = Trip | Group;
 
+let shareablesCache: { money: MoneyGroup[]; planned: PlannedTrip[]; all: Shareable[] } | null = null;
+
+/** Trips, groups and planned trips together, for sharing and sync (stable reference while none change). */
+export function selectShareables(state: Pick<TripsState, "trips" | "groups" | "plannedTrips">): Shareable[] {
+  const money = selectMoneyGroups(state);
+  const cache = shareablesCache;
+  if (cache && cache.money === money && cache.planned === state.plannedTrips) return cache.all;
+  const all: Shareable[] = [...money, ...state.plannedTrips];
+  shareablesCache = { money, planned: state.plannedTrips, all };
+  return all;
+}
+
+/** Like `setMoneyGroups`, for a combined list that also holds planned trips. */
+export function setShareables(list: Shareable[]) {
+  setMoneyGroups(list.filter((item): item is MoneyGroup => !isPlanned(item)));
+  useTripsStore.setState({ plannedTrips: list.filter(isPlanned) });
+}
+
 export function isTrip(group: MoneyGroup): group is Trip {
   return group.kind !== "group";
+}
+
+/** A planned trip as stored by older builds (no `kind` or `companions`). */
+export function normalizePlanned(planned: Omit<PlannedTrip, "kind" | "companions"> & Partial<Pick<PlannedTrip, "kind" | "companions">>): PlannedTrip {
+  return { ...planned, kind: "planned", companions: planned.companions ?? [] };
 }
 
 export interface CreateTripInput {
@@ -130,7 +164,7 @@ interface TripsState {
   setActiveTrip: (tripId: string) => void;
   clearActiveTrip: () => void;
   createPlannedTrip: (input: PlannedTripInput) => PlannedTrip;
-  updatePlannedTrip: (id: string, input: Partial<PlannedTripInput>) => void;
+  updatePlannedTrip: (id: string, input: Partial<Omit<PlannedTrip, "id" | "kind" | "createdAt">>) => void;
   /** Removes only the planned trip; its ideas are the caller's to move or delete. */
   deletePlannedTrip: (id: string) => void;
   /** Turns a planned trip into a real one with the same id (so its ideas follow) and makes it active. */
@@ -158,6 +192,12 @@ export function selectMoneyGroups(state: Pick<TripsState, "trips" | "groups">): 
 export function defaultSpendGroupId(state: Pick<TripsState, "trips" | "groups" | "activeTripId">): string | null {
   const open = selectMoneyGroups(state).filter((group) => !isArchivedGroup(group));
   return open.find((group) => group.id === state.activeTripId)?.id ?? open[0]?.id ?? null;
+}
+
+/** A trip, group or planned trip by id. */
+export function findShareable(state: Pick<TripsState, "trips" | "groups" | "plannedTrips">, id: string | null | undefined): Shareable | null {
+  if (!id) return null;
+  return findMoneyGroup(state, id) ?? state.plannedTrips.find((planned) => planned.id === id) ?? null;
 }
 
 export function findMoneyGroup(state: Pick<TripsState, "trips" | "groups">, id: string | null | undefined): MoneyGroup | null {
@@ -275,7 +315,7 @@ export const useTripsStore = create<TripsState>()(
       setActiveTrip: (tripId) => set((state) => (state.trips.some((trip) => trip.id === tripId) ? { activeTripId: tripId } : {})),
       clearActiveTrip: () => set({ activeTripId: null }),
       createPlannedTrip: (input) => {
-        const planned: PlannedTrip = { ...input, id: `${Date.now()}`, createdAt: new Date().toISOString() };
+        const planned: PlannedTrip = { ...input, kind: "planned", companions: [], id: `${Date.now()}`, createdAt: new Date().toISOString() };
         set((state) => ({ plannedTrips: [planned, ...state.plannedTrips] }));
         return planned;
       },
@@ -283,7 +323,10 @@ export const useTripsStore = create<TripsState>()(
         set((state) => ({ plannedTrips: state.plannedTrips.map((planned) => (planned.id === id ? { ...planned, ...input } : planned)) })),
       deletePlannedTrip: (id) => set((state) => ({ plannedTrips: state.plannedTrips.filter((planned) => planned.id !== id) })),
       confirmPlannedTrip: (id, input) => {
-        const trip: Trip = { ...input, id, createdAt: new Date().toISOString() };
+        const planned = useTripsStore.getState().plannedTrips.find((item) => item.id === id);
+        // A shared planned trip stays shared: same members, now a group trip.
+        const sharing = planned?.shared ? { mode: "group" as const, companions: planned.companions, shared: planned.shared } : {};
+        const trip: Trip = { ...input, ...sharing, id, createdAt: new Date().toISOString() };
         set((state) => ({
           trips: [trip, ...state.trips],
           plannedTrips: state.plannedTrips.filter((planned) => planned.id !== id),
@@ -296,12 +339,12 @@ export const useTripsStore = create<TripsState>()(
     {
       name: "trips-store",
       storage: createJSONStorage(() => mmkvStateStorage),
-      version: 5,
+      version: 6,
       migrate: (persistedState, version) => {
         const state = persistedState as Partial<TripsState> | undefined;
         if (!state?.trips) return persistedState;
-        // v5 added groups next to trips; planned trips came later and default to none.
-        if (version >= 4) return { ...state, groups: state.groups ?? [], plannedTrips: state.plannedTrips ?? [] };
+        // v5 added groups next to trips; v6 tagged planned trips with `kind` and `companions`.
+        if (version >= 4) return { ...state, groups: state.groups ?? [], plannedTrips: (state.plannedTrips ?? []).map(normalizePlanned) };
 
         const trips = state.trips.map((trip) => {
           const legacyTrip = trip as Trip & { destination?: string };

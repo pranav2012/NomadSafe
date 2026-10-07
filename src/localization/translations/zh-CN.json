@@ -2101,7 +2101,6 @@
     "formTitle": "开始计划",
     "ideas_one": "{{count}} 个想法",
     "ideas_other": "{{count}} 个想法",
-    "ideasButton": "想法",
     "justName": "还没想好去哪？先起个名字",
     "limitNote": "你已用完 {{count}} 个免费旅行。先存为计划中的旅行，有日期后用 Plus 确认。",
     "moveIdeas": "移动想法",
@@ -2118,6 +2117,14 @@
     "savedToast": "{{name}}已存为计划中的旅行",
     "section": "计划中",
     "sectionCount": "免费 {{count}}/{{limit}}",
-    "whenLabel": "大概什么时候？"
+    "whenLabel": "大概什么时候？",
+    "invite": "邀请",
+    "waiting": "等待 {{name}} 确认",
+    "leave": "退出",
+    "leaveTitle": "退出{{name}}？",
+    "leaveBody": "你保存的想法会留给其他人。",
+    "discardForEveryone": "将为所有参与者删除。",
+    "withPeople": "与 {{names}}",
+    "shareIntro": "为这个计划中的旅行创建邀请链接。打开链接的人可以加入并和你一起保存想法。确定日期确认旅行后，才会有开销和预订。"
   }
 }

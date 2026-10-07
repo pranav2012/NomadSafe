@@ -6,7 +6,7 @@ import { usePassportStore, type PastTravel } from "@/features/passport/store/pas
 import { deleteAllTripPhotos } from "@/features/recap/services/tripPhotos";
 import { deleteAllTickets } from "@/features/itinerary/services/tickets";
 import { useTravelInfoStore } from "@/features/trips/store/travelInfoStore";
-import { pickDefaultActiveTripId, selectMoneyGroups, useTripsStore, type Group, type PlannedTrip, type Trip } from "@/features/trips/store/tripsStore";
+import { normalizePlanned, pickDefaultActiveTripId, selectShareables, useTripsStore, type Group, type PlannedTrip, type Trip } from "@/features/trips/store/tripsStore";
 import { useRecurringStore, type RecurringRule } from "@/features/expenses/store/recurringStore";
 import { syncWidgets } from "@/features/widget/syncWidgets";
 import { logger } from "@/modules/logger";
@@ -48,10 +48,10 @@ function localRecords(): Map<string, { kind: Kind; id: string; data: unknown }> 
   // Shared trips and the records they own sync through the trip; only your own unsplit expenses on
   // a shared trip stay in the personal backup.
   const { trips, groups } = useTripsStore.getState();
-  const scope = makeSharedScope(userId, selectMoneyGroups(useTripsStore.getState()));
+  const scope = makeSharedScope(userId, selectShareables(useTripsStore.getState()));
   for (const trip of trips) if (!trip.shared) add("trip", trip.id, trip);
   for (const group of groups) if (!group.shared) add("group", group.id, group);
-  for (const planned of useTripsStore.getState().plannedTrips) add("planned", planned.id, planned);
+  for (const planned of useTripsStore.getState().plannedTrips) if (!planned.shared) add("planned", planned.id, planned);
   const { expenses, settlements } = useExpensesStore.getState();
   for (const expense of expenses) if (!scope.has("expense", expense)) add("expense", expense.id, stripRaw(expense));
   for (const settlement of settlements) if (!scope.has("settlement", settlement)) add("settlement", settlement.id, settlement);
@@ -184,14 +184,14 @@ async function pullChanges(uid: string): Promise<boolean> {
     incoming.set(key, record);
   }
   // Records that now belong to a shared trip are owned by that trip's sync; never touch them here.
-  const scope = makeSharedScope(uid, selectMoneyGroups(useTripsStore.getState()));
+  const scope = makeSharedScope(uid, selectShareables(useTripsStore.getState()));
   for (const [key, record] of incoming) {
     const local = { id: record.clientId, ...(withGroupId(record.data) as { groupId?: string | null; tripId?: string | null }) };
     const ownedByTrip =
-      record.kind === "passport" || record.kind === "recurring" || record.kind === "planned"
+      record.kind === "passport" || record.kind === "recurring"
         ? false
-        : record.kind === "trip" || record.kind === "group"
-        ? selectMoneyGroups(useTripsStore.getState()).some((item) => item.id === record.clientId && item.shared)
+        : record.kind === "trip" || record.kind === "group" || record.kind === "planned"
+        ? selectShareables(useTripsStore.getState()).some((item) => item.id === record.clientId && item.shared)
         : isLocallyShared(scope, record.kind, record.clientId) || (!record.deleted && scope.has(record.kind, local));
     if (!ownedByTrip) continue;
     incoming.delete(key);
@@ -238,7 +238,7 @@ function applyRemote(incoming: Map<string, RemoteRecord>) {
   const groups = merge<Group>(tripsState.groups, "group", incoming);
   if (groups) useTripsStore.setState({ groups });
   const plannedTrips = merge<PlannedTrip>(tripsState.plannedTrips, "planned", incoming);
-  if (plannedTrips) useTripsStore.setState({ plannedTrips });
+  if (plannedTrips) useTripsStore.setState({ plannedTrips: plannedTrips.map(normalizePlanned) });
   const expensesState = useExpensesStore.getState();
   const expenses = merge<Expense>(expensesState.expenses, "expense", incoming);
   const settlements = merge<Settlement>(expensesState.settlements, "settlement", incoming);

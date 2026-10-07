@@ -242,10 +242,11 @@ export const previewInvite = query({
     if (!group) return null;
     const members = await membersOf(ctx, group._id);
     const owner = members.find((member) => member.role === "owner");
-    const data = group.data as { kind?: string; emoji?: string; name?: string; startDate?: string; endDate?: string; destinations?: string[] };
+    const data = group.data as { kind?: string; emoji?: string; name?: string; startDate?: string; endDate?: string; destinations?: string[]; month?: string };
     return {
       groupId: group._id,
-      kind: data.kind === "group" ? ("group" as const) : ("trip" as const),
+      kind: data.kind === "group" ? ("group" as const) : data.kind === "planned" ? ("planned" as const) : ("trip" as const),
+      month: data.month ?? "",
       emoji: data.emoji ?? "",
       name: data.name ?? "",
       startDate: data.startDate ?? "",
@@ -316,20 +317,40 @@ export const joinGroup = mutation({
   },
 });
 
-/** Group details edited by any member; last write wins. */
+/**
+ * Group details edited by any member; last write wins. Only the owner confirms a planned trip (its
+ * details change from `kind: "planned"` to a trip's), and the others hear about it.
+ */
 export const updateGroupDetails = mutation({
   args: { groupId: v.id("sharedGroups"), data: v.any(), dataUpdatedAt: v.number() },
   handler: async (ctx, { groupId, data, dataUpdatedAt }) => {
     const user = await requireUser(ctx);
     assertGroupData(data);
-    await requireMember(ctx, groupId, user.id);
+    const me = await requireMember(ctx, groupId, user.id);
     await rateLimiter.limit(ctx, "groupDetails", { key: user.id, throws: true });
     const group = await ctx.db.get(groupId);
     const updatedAt = clampClientTime(dataUpdatedAt, Date.now());
     if (!group || group.dataUpdatedAt > updatedAt) return;
+    const wasPlanned = isPlannedData(group.data);
+    const confirmed = wasPlanned && !isPlannedData(data);
+    if (confirmed && me.role !== "owner") throw new Error("Only the owner can confirm the trip");
+    if (!wasPlanned && isPlannedData(data)) throw new Error("A trip can't go back to planning");
     await ctx.db.patch(groupId, { data, dataUpdatedAt: updatedAt, seq: group.seq + 1 });
+    const dates = data as { startDate?: unknown; endDate?: unknown };
+    if (confirmed && typeof dates.startDate === "string" && typeof dates.endDate === "string") {
+      await ctx.scheduler.runAfter(0, internal.pushNotifications.notifyConfirmed, {
+        groupId,
+        actorMemberId: me.memberId,
+        startDate: dates.startDate.slice(0, 10),
+        endDate: dates.endDate.slice(0, 10),
+      });
+    }
   },
 });
+
+function isPlannedData(data: unknown): boolean {
+  return (data as { kind?: unknown } | null)?.kind === "planned";
+}
 
 /** Adds name-only members for companions typed into the group form. */
 export const addCompanions = mutation({
@@ -399,6 +420,9 @@ export const pushRecords = mutation({
     let recordCount = group.recordCount ?? 0;
     let rejectedSeq: number | null = null;
     const changes: { kind: "expense" | "settlement"; action: "added" | "updated" | "deleted"; title: string; amount: number; currency: string }[] = [];
+    // Ideas newly saved to a planned trip; they're announced separately, a few hours at a time.
+    const ideas: { kind: "idea"; action: "added"; title: string; amount: number; currency: string }[] = [];
+    const planned = isPlannedData(group.data);
     for (const record of records) {
       if (!record.deleted && JSON.stringify(record.data ?? null).length > MAX_RECORD_BYTES) throw new Error("Record too large");
       const existing = await ctx.db
@@ -430,6 +454,10 @@ export const pushRecords = mutation({
       if (existing) await ctx.db.replace(existing._id, doc);
       else await ctx.db.insert("groupRecords", doc);
 
+      const idea = record.data as { timing?: unknown; title?: unknown } | undefined;
+      if (planned && record.kind === "event" && !record.deleted && (!existing || existing.deleted) && idea?.timing === "wishlist") {
+        ideas.push({ kind: "idea", action: "added", title: typeof idea.title === "string" ? idea.title.slice(0, NOTIFY_TITLE_CHARS) : "", amount: 0, currency: "" });
+      }
       if (record.kind !== "event") {
         const source = (record.deleted ? existing?.data : record.data) as { merchant?: unknown; amount?: unknown; currency?: unknown } | undefined;
         changes.push({
@@ -443,6 +471,7 @@ export const pushRecords = mutation({
     }
     if (seq !== group.seq) await ctx.db.patch(groupId, { seq, recordCount });
     if (changes.length > 0) await queueGroupNotification(ctx, groupId, me.memberId, changes);
+    if (ideas.length > 0) await queueGroupNotification(ctx, groupId, me.memberId, ideas);
     // The client re-pulls from just before the oldest rejected record to adopt the newer version.
     return { seq, rejectedSeq };
   },
@@ -526,15 +555,19 @@ export const resetInviteCode = mutation({
   },
 });
 
-/** Owner deletes the group; only allowed once no one else who joined is still on it. */
+/**
+ * Owner deletes the group; only allowed once no one else who joined is still on it. A planned trip
+ * has no money to settle, so its owner can discard it for everyone.
+ */
 export const deleteSharedGroup = mutation({
   args: { groupId: v.id("sharedGroups") },
   handler: async (ctx, { groupId }) => {
     const user = await requireUser(ctx);
     const me = await requireMember(ctx, groupId, user.id);
     if (me.role !== "owner") throw new Error("Only the owner can delete the group");
+    const group = await ctx.db.get(groupId);
     const members = await membersOf(ctx, groupId);
-    if (members.some((member) => member.userId && member.userId !== user.id && member.status === "active")) {
+    if (!isPlannedData(group?.data) && members.some((member) => member.userId && member.userId !== user.id && member.status === "active")) {
       throw new Error("Remove everyone else first");
     }
     await purgeGroup(ctx, groupId);

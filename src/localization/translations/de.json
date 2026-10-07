@@ -2101,7 +2101,6 @@
     "formTitle": "Planung starten",
     "ideas_one": "{{count}} Idee",
     "ideas_other": "{{count}} Ideen",
-    "ideasButton": "Ideen",
     "justName": "Noch kein Ziel? Gib ihr einfach einen Namen",
     "limitNote": "Du hast deine {{count}} kostenlosen Reisen genutzt. Speichere sie als geplante Reise und bestätige sie mit Plus, sobald du Daten hast.",
     "moveIdeas": "Ideen verschieben",
@@ -2118,6 +2117,14 @@
     "savedToast": "{{name}} als geplante Reise gespeichert",
     "section": "In Planung",
     "sectionCount": "{{count}} von {{limit}} kostenlos",
-    "whenLabel": "Ungefähr wann?"
+    "whenLabel": "Ungefähr wann?",
+    "invite": "Einladen",
+    "waiting": "Wartet auf Bestätigung von {{name}}",
+    "leave": "Verlassen",
+    "leaveTitle": "{{name}} verlassen?",
+    "leaveBody": "Deine gespeicherten Ideen bleiben für die anderen erhalten.",
+    "discardForEveryone": "Sie wird für alle Beteiligten entfernt.",
+    "withPeople": "mit {{names}}",
+    "shareIntro": "Erstelle einen Einladungslink für diese geplante Reise. Wer ihn öffnet, kann beitreten und mit dir Ideen sammeln. Ausgaben und Buchungen kommen, sobald du sie mit Daten bestätigst."
   }
 }

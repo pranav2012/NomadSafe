@@ -2101,7 +2101,6 @@
     "formTitle": "Commencer à planifier",
     "ideas_one": "{{count}} idée",
     "ideas_other": "{{count}} idées",
-    "ideasButton": "Idées",
     "justName": "Pas encore de destination ? Donne-lui un nom",
     "limitNote": "Tu as utilisé tes {{count}} voyages gratuits. Enregistre-le en projet et confirme-le avec Plus quand tu as des dates.",
     "moveIdeas": "Déplacer les idées",
@@ -2118,6 +2117,14 @@
     "savedToast": "{{name}} enregistré en projet",
     "section": "En projet",
     "sectionCount": "{{count}} sur {{limit}} gratuits",
-    "whenLabel": "À peu près quand ?"
+    "whenLabel": "À peu près quand ?",
+    "invite": "Inviter",
+    "waiting": "En attente de la confirmation de {{name}}",
+    "leave": "Quitter",
+    "leaveTitle": "Quitter {{name}} ?",
+    "leaveBody": "Les idées que tu as enregistrées restent pour les autres.",
+    "discardForEveryone": "Il est supprimé pour tout le monde.",
+    "withPeople": "avec {{names}}",
+    "shareIntro": "Crée un lien d'invitation pour ce voyage en projet. Toute personne qui l'ouvre peut le rejoindre et enregistrer des idées avec toi. Les dépenses et réservations viennent une fois confirmé avec des dates."
   }
 }

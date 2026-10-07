@@ -11,7 +11,7 @@ import { useGlobeContext } from "@/features/home/hooks/useGlobeContext";
 import { useLocalization } from "@/localization";
 import { PlannedTripCard } from "@/features/trips/components/PlannedTripCard";
 import { useTripsStore } from "@/features/trips/store/tripsStore";
-import { FREE_PLANNED_LIMIT, usePlan } from "@/modules/billing";
+import { FREE_PLANNED_LIMIT, ownedTripCount, usePlan } from "@/modules/billing";
 import { Globe, type GlobeStop } from "./aura/globe/Globe";
 
 /** Home without a trip: the spinning globe with "Where to first?" (search opens the planner) and planned trips as dashed cards and pins. */
@@ -97,7 +97,7 @@ export function EmptyHome({
                 <Text style={[styles.planningTitle, { color: c.text, fontFamily: f.semibold }]}>{t("planned.section")}</Text>
                 {unlimitedTrips ? null : (
                   <Text style={[styles.planningCount, { color: c.textMuted, fontFamily: f.regular }]}>
-                    {t("planned.sectionCount", { count: plannedTrips.length, limit: FREE_PLANNED_LIMIT })}
+                    {t("planned.sectionCount", { count: ownedTripCount(plannedTrips), limit: FREE_PLANNED_LIMIT })}
                   </Text>
                 )}
               </View>

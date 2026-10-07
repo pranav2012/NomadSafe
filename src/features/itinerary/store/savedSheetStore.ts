@@ -5,7 +5,7 @@ import { ideasOf } from "@/features/itinerary/utils/ideas";
 import { useEventsStore } from "./eventsStore";
 
 export type SavedTab = "ideas" | "popular";
-type OpenedFrom = "prep" | "must_dos" | "day" | "header" | "toast";
+type OpenedFrom = "prep" | "must_dos" | "day" | "header" | "toast" | "join" | "push";
 
 interface SavedSheetState {
   open: { tripId: string; tab: SavedTab } | null;

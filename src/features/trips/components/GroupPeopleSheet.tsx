@@ -21,7 +21,7 @@ import { useAuthStore } from "@/features/auth/store/authStore";
 import { registerGroupPush, shareGroup } from "@/features/sync";
 import { useExpensesStore } from "@/features/expenses/store/expensesStore";
 import { payersOf } from "@/features/expenses/utils/split";
-import { findMoneyGroup, isArchivedGroup, isTrip, useTripsStore, type GroupMember, type MoneyGroup } from "@/features/trips/store/tripsStore";
+import { findShareable, isArchivedGroup, isPlanned, isTrip, useTripsStore, type GroupMember, type MoneyGroup, type Shareable } from "@/features/trips/store/tripsStore";
 import { useLocalization } from "@/localization";
 import { PrivateView } from "@/modules/analytics";
 
@@ -38,16 +38,16 @@ function isReferenced(groupId: string, person: string) {
   );
 }
 
-/** People, invite link and settings for a trip or group; shares it first if needed. */
+/** People, invite link and settings for a trip, group or planned trip; shares it first if needed. */
 export function GroupPeopleSheet({ groupId, onClose }: { groupId: string | null; onClose: () => void }) {
   const { c, f } = useAura();
   const { t } = useLocalization();
   // Sharing re-keys the trip or group, so follow it to its new id.
   const [currentId, setCurrentId] = useState<string | null>(null);
   const id = currentId ?? groupId;
-  const trip = useTripsStore((s) => findMoneyGroup(s, id));
+  const trip = useTripsStore((s) => findShareable(s, id));
   const [person, setPerson] = useState("");
-  const k = (key: string) => (trip && !isTrip(trip) ? `groupShare.${key}` : `groupTrip.${key}`);
+  const k = (key: string) => (trip && !isPlanned(trip) && !isTrip(trip) ? `groupShare.${key}` : `groupTrip.${key}`);
   const userName = useAuthStore((s) => s.user?.name ?? "");
   const [busy, setBusy] = useState(false);
   const setPreferences = useMutation(api.groups.setPreferences);
@@ -60,8 +60,9 @@ export function GroupPeopleSheet({ groupId, onClose }: { groupId: string | null;
     onClose();
   };
 
-  const setCompanions = (item: MoneyGroup, companions: string[]) => {
-    if (isTrip(item)) useTripsStore.getState().updateTrip(item.id, { companions, mode: companions.length > 0 ? "group" : item.mode });
+  const setCompanions = (item: Shareable, companions: string[]) => {
+    if (isPlanned(item)) useTripsStore.getState().updatePlannedTrip(item.id, { companions });
+    else if (isTrip(item)) useTripsStore.getState().updateTrip(item.id, { companions, mode: companions.length > 0 ? "group" : item.mode });
     else useTripsStore.getState().updateGroup(item.id, { companions });
   };
 
@@ -164,7 +165,7 @@ export function GroupPeopleSheet({ groupId, onClose }: { groupId: string | null;
         ) : null}
         {!trip ? null : !shared ? (
           <>
-            <Text style={[styles.intro, { color: c.textSoft, fontFamily: f.regular }]}>{t(k("shareIntro"))}</Text>
+            <Text style={[styles.intro, { color: c.textSoft, fontFamily: f.regular }]}>{isPlanned(trip) ? t("planned.shareIntro") : t(k("shareIntro"))}</Text>
           </>
         ) : !shared.myMemberId || !shared.inviteCode ? (
           <View style={styles.pending}>

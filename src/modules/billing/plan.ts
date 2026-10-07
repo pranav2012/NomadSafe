@@ -35,9 +35,9 @@ export function canCreateTrip(trips: readonly { shared?: { role: "owner" | "memb
   return plan.unlimitedTrips || ownedTripCount(trips) < FREE_TRIP_LIMIT;
 }
 
-/** Planned trips have their own allowance; the trip limit applies when one is confirmed. */
-export function canCreatePlannedTrip(plannedTrips: readonly unknown[], plan: PlanState): boolean {
-  return plan.unlimitedTrips || plannedTrips.length < FREE_PLANNED_LIMIT;
+/** Planned trips have their own allowance (joined ones don't count); the trip limit applies when one is confirmed. */
+export function canCreatePlannedTrip(plannedTrips: readonly { shared?: { role: "owner" | "member" } }[], plan: PlanState): boolean {
+  return plan.unlimitedTrips || ownedTripCount(plannedTrips) < FREE_PLANNED_LIMIT;
 }
 
 /** Groups (not trips) count separately: free covers this many owned groups; joined ones never count. */

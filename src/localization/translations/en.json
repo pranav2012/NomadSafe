@@ -2101,7 +2101,6 @@
     "formTitle": "Start planning",
     "ideas_one": "{{count}} idea",
     "ideas_other": "{{count}} ideas",
-    "ideasButton": "Ideas",
     "justName": "Not sure where yet? Just name it",
     "limitNote": "You've used your {{count}} free trips. Save this as a planned trip and confirm it with Plus when you have dates.",
     "moveIdeas": "Move ideas",
@@ -2118,6 +2117,14 @@
     "savedToast": "{{name}} saved as a planned trip",
     "section": "Planning",
     "sectionCount": "{{count}} of {{limit}} free",
-    "whenLabel": "Roughly when?"
+    "whenLabel": "Roughly when?",
+    "invite": "Invite",
+    "waiting": "Waiting for {{name}} to confirm",
+    "leave": "Leave",
+    "leaveTitle": "Leave {{name}}?",
+    "leaveBody": "Ideas you saved stay on it for the others.",
+    "discardForEveryone": "It's removed for everyone on it.",
+    "withPeople": "with {{names}}",
+    "shareIntro": "Create an invite link for this planned trip. Anyone who opens it can join and save ideas with you. Money and bookings come once you confirm it with dates."
   }
 }
