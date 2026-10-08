@@ -20,22 +20,17 @@ pnpm typecheck
 
 `pnpm dev` doesn't run the Worker; use `pnpm preview` for `/privacy`, `/delete-account` and `/join/<code>`.
 
-## Deploying (Cloudflare Workers Builds)
+## Deploying
 
-The `nomadsafe-site` Worker is connected to the GitHub repo (Worker → Settings → Build):
+Deploy from your machine (needs `npx wrangler login` once):
 
-| Setting | Value |
-| --- | --- |
-| Root directory | `website` |
-| Build command | `pnpm install --frozen-lockfile && pnpm build` |
-| Deploy command | `npx wrangler deploy` |
-| Build variable `SKIP_DEPENDENCY_INSTALL` | `1` (the build command does the install) |
-| Build variable `NODE_VERSION` | `24` |
-| Build variable `PNPM_VERSION` | `12.8.1` |
+```sh
+pnpm run deploy   # builds, then uploads the nomadsafe-site Worker and its assets
+```
 
-Because `website/` has its own `pnpm-workspace.yaml`, pnpm treats it as its own root. The install pulls in only the site's dependencies, pinned by `website/pnpm-lock.yaml`, and never the Expo app.
+`wrangler.toml` holds the custom domain, the assets setup and `CONVEX_SITE_URL`.
 
-`wrangler.toml` holds everything else: the custom domain, the assets setup and `CONVEX_SITE_URL`. To deploy by hand, run `pnpm build && pnpm run deploy` (needs `wrangler login`).
+The Worker is also connected to GitHub (Workers Builds), which only builds `main`. Its settings: root directory `website`, build command `pnpm install --frozen-lockfile && pnpm build`, deploy command `npx wrangler deploy`, build variables `SKIP_DEPENDENCY_INSTALL=1`, `NODE_VERSION=24`, `PNPM_VERSION=12.8.1`.
 
 ## Demo phones
 
