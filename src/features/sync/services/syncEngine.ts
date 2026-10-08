@@ -191,7 +191,9 @@ async function pullChanges(uid: string): Promise<boolean> {
   // Records that now belong to a shared trip are owned by that trip's sync; never touch them here.
   const scope = makeSharedScope(uid, selectShareables(useTripsStore.getState()));
   for (const [key, record] of incoming) {
-    const local = { id: record.clientId, ...((record.kind === "event" ? repairEventTripId(record.data as { tripId?: string | null }) : withGroupId(record.data)) as { groupId?: string | null; tripId?: string | null }) };
+    // Tombstones arrive without data.
+    const data = record.data ?? {};
+    const local = { id: record.clientId, ...((record.kind === "event" ? repairEventTripId(data as { tripId?: string | null }) : withGroupId(data)) as { groupId?: string | null; tripId?: string | null }) };
     const ownedByTrip =
       record.kind === "passport" || record.kind === "recurring"
         ? false
