@@ -1,7 +1,15 @@
-# Cloudflare Pages project (Git builds). Root directory: website. See README.md.
-name = "nomadsafe-web"
-pages_build_output_dir = "./dist"
+# Marketing site + the public pages the app links to. Deployed by Workers Builds (root directory: website). See README.md.
+name = "nomadsafe-site"
+main = "worker/index.ts"
 compatibility_date = "2026-10-01"
+workers_dev = false
+routes = [{ pattern = "nomadsafe.pranav-agarwal.com", custom_domain = true }]
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "404-page"
+run_worker_first = ["/privacy", "/delete-account", "/join/*"]
 
 [vars]
 CONVEX_SITE_URL = "https://gregarious-crocodile-599.convex.site"

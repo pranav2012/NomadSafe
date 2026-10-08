@@ -1,15 +1,20 @@
+interface Env {
+  CONVEX_SITE_URL: string;
+  ASSETS: { fetch: (request: Request) => Promise<Response> };
+}
+
 const ROUTES = [
   { path: /^\/privacy$/, methods: ["GET", "HEAD"] },
   { path: /^\/delete-account$/, methods: ["GET", "HEAD", "POST"] },
   { path: /^\/join\/[A-Za-z0-9]{1,16}\/?$/, methods: ["GET", "HEAD"] },
 ];
 
-/** Forwards the public pages to Convex's HTTP actions; everything else (auth, AI, webhooks) stays on convex.site. */
+/** Runs only for the paths in `run_worker_first`: forwards the public pages to Convex's HTTP actions; anything else gets the static 404 page. */
 export default {
-  async fetch(request, env) {
+  async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     const route = ROUTES.find((r) => r.path.test(url.pathname));
-    if (!route) return new Response("Not found", { status: 404 });
+    if (!route) return env.ASSETS.fetch(request);
     if (!route.methods.includes(request.method)) return new Response("Method not allowed", { status: 405 });
 
     const headers = new Headers(request.headers);

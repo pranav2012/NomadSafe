@@ -26,7 +26,7 @@ Status of each step for the first Android release. ✅ = done, 🧑 = you do it 
 | Package name | `com.pranav.nomadsafe` (permanent once uploaded) |
 | Backend (prod) | `https://gregarious-crocodile-599.convex.cloud` |
 | Site (prod) | `https://gregarious-crocodile-599.convex.site` |
-| Public pages | `https://nomadsafe.pranav-agarwal.com` (Cloudflare Worker in `workers/site`, forwarding to the Convex site) |
+| Public pages | `https://nomadsafe.pranav-agarwal.com` (the `website/` Worker: marketing page, and forwards these pages to the Convex site) |
 | Privacy policy URL | `https://nomadsafe.pranav-agarwal.com/privacy` |
 | Account deletion URL | `https://nomadsafe.pranav-agarwal.com/delete-account` |
 | Google sign-in callback | `https://gregarious-crocodile-599.convex.site/api/auth/callback/google` |
