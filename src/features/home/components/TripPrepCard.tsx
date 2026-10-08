@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { AuraSection, Icon, PressableScale, useAura, type IconName } from "@/atoms";
 import { mustDosAlong, useMustDoStore, useSavedSheetStore, type TripEvent } from "@/features/itinerary";
@@ -9,6 +9,10 @@ import type { HomeStop } from "@/features/home/types";
 import type { Trip } from "@/features/trips/store/tripsStore";
 import { useLocalization } from "@/localization";
 import { auraSignal } from "@/constants/aura";
+import { usePlusGate } from "@/modules/billing";
+import { AddForexSheet } from "@/features/expenses/components/AddForexSheet";
+import { usePocketsStore } from "@/features/expenses/store/pocketsStore";
+import { tripForeignCurrencies } from "@/features/expenses/utils/tripCurrencies";
 
 const GAP_ROWS = 2;
 
@@ -18,7 +22,13 @@ const GAP_ROWS = 2;
  */
 export function TripPrepCard({ trip, events, stops }: { trip: Trip; events: TripEvent[]; stops: HomeStop[] }) {
   const { c, f } = useAura();
-  const { t, locale, hour12 } = useLocalization();
+  const { t, locale, hour12, currency: home } = useLocalization();
+  const plus = usePlusGate();
+  const [addingForex, setAddingForex] = useState(false);
+  const foreign = useMemo(() => tripForeignCurrencies(trip, home), [trip, home]);
+  const hasPocket = usePocketsStore((state) => state.pockets.some((pocket) => pocket.groupId === trip.id));
+  const forexDismissed = usePocketsStore((state) => state.dismissedPrompts.includes(trip.id));
+  const askForex = foreign.length > 0 && !hasPocket && !forexDismissed;
   const dismissed = useMustDoStore((state) => state.dismissed[trip.id]);
   const showSaved = useSavedSheetStore((state) => state.show);
   const format = formatters(locale, hour12);
@@ -48,7 +58,7 @@ export function TripPrepCard({ trip, events, stops }: { trip: Trip; events: Trip
   );
 
   const first = prep.first;
-  if (!first && prep.bookedNights === 0 && mustDoCount === 0) return null;
+  if (!first && prep.bookedNights === 0 && mustDoCount === 0 && !askForex) return null;
   return (
     <View>
       <AuraSection title={t("home.prep.title")} style={styles.section} />
@@ -77,7 +87,13 @@ export function TripPrepCard({ trip, events, stops }: { trip: Trip; events: Trip
               () => showSaved(trip.id, "popular", "must_dos"),
             )
           : null}
+        {askForex
+          ? link(plus.isPlus ? "banknote" : "lock", foreign.length === 1 ? t("forex.prompt", { currency: foreign[0] }) : t("forex.promptAny"), () =>
+              plus.run("forex", () => setAddingForex(true)),
+            )
+          : null}
       </View>
+      <AddForexSheet visible={addingForex} onClose={() => setAddingForex(false)} trip={trip} />
     </View>
   );
 }

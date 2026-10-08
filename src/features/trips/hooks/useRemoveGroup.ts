@@ -6,6 +6,7 @@ import { useLocalization } from "@/localization";
 import { useChatStore } from "@/features/ai/store/chatStore";
 import { useExpensesStore } from "@/features/expenses/store/expensesStore";
 import { useRecurringStore } from "@/features/expenses/store/recurringStore";
+import { usePocketsStore } from "@/features/expenses/store/pocketsStore";
 import { isSettledUp } from "@/features/sync";
 import { isTrip, useTripsStore, type MoneyGroup } from "@/features/trips/store/tripsStore";
 
@@ -41,6 +42,7 @@ export function useRemoveGroup(group: MoneyGroup | null, onDone: () => void) {
     useExpensesStore.getState().removeByGroupId(id);
     useChatStore.getState().removeConversation(id);
     useRecurringStore.getState().removeByGroupId(id);
+    usePocketsStore.getState().removeByGroupId(id);
   };
 
   let label: string;

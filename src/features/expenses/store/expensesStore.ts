@@ -9,7 +9,8 @@ import type { SplitHint } from "@/features/expenses/utils/party";
 import { trimStoredEmailRecord } from "@/features/expenses/utils/emailText";
 
 /** "sms" is legacy (device SMS import, removed); kept so stored expenses stay valid. */
-export type ExpenseSource = "manual" | "paste" | "sms" | "email" | "voice" | "recurring" | "import";
+/** "forex" spends belong to a forex pocket (fee, untracked cash, leftover, conversion loss or gain) and are edited there. */
+export type ExpenseSource = "manual" | "paste" | "sms" | "email" | "voice" | "recurring" | "import" | "forex";
 
 export interface ExpenseLocation {
   latitude: number;

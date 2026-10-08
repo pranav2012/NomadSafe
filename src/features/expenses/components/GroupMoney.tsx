@@ -18,6 +18,10 @@ import { RecurringList } from "@/features/expenses/components/RecurringList";
 import { GroupBalances } from "@/features/expenses/components/GroupBalances";
 import { SpendHero } from "@/features/expenses/components/SpendHero";
 import { GroupPlaces, TripPaceCard } from "@/features/expenses/components/SpendCharts";
+import { TripForex } from "@/features/expenses/components/TripForex";
+import { pocketOfForexSpend } from "@/features/expenses/services/forexPockets";
+import { useForexSheetStore } from "@/features/expenses/store/forexSheetStore";
+import { usePocketsStore } from "@/features/expenses/store/pocketsStore";
 
 /** Money for one trip or group: balances first when there are people, your spend, then activity by day. */
 export function GroupMoney({
@@ -64,6 +68,12 @@ export function GroupMoney({
   const trip = isTrip(group) ? group : null;
   const keepHandled = useKeepGroupStore((state) => (trip ? state.handled.includes(trip.id) : true));
   const showKeep = !!trip && !keepHandled && trip.companions.length > 0 && getTripStatus(trip) === "complete";
+  // Fees, untracked cash and leftovers belong to their pocket, so they open it rather than the spend form.
+  const openExpense = (expense: Expense) => {
+    const pocket = expense.source === "forex" ? pocketOfForexSpend(usePocketsStore.getState().pockets, expense.id) : null;
+    if (pocket) useForexSheetStore.getState().open(pocket.id);
+    else onOpenExpense(expense);
+  };
 
   return (
     <View>
@@ -110,6 +120,8 @@ export function GroupMoney({
         </View>
       ) : null}
 
+      {trip ? <TripForex trip={trip} /> : null}
+
       {!hasPeople ? (
         <AuraCard style={styles.addPeople}>
           <View style={styles.addPeopleRow}>
@@ -141,7 +153,7 @@ export function GroupMoney({
             convertedById={convertedById}
             displayCurrency={group.currency}
             showYourPart={hasPeople}
-            onOpen={onOpenExpense}
+            onOpen={openExpense}
           />
         </>
       )}

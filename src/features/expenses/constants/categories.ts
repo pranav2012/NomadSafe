@@ -5,6 +5,7 @@ export type ExpenseCategory =
   | "stays"
   | "travel"
   | "shopping"
+  | "fees"
   | "other";
 
 export interface CategoryMeta {
@@ -17,6 +18,7 @@ export const EXPENSE_CATEGORIES: CategoryMeta[] = [
   { id: "stays", icon: "building" },
   { id: "travel", icon: "car" },
   { id: "shopping", icon: "wallet" },
+  { id: "fees", icon: "swap" },
   { id: "other", icon: "receipt" },
 ];
 

@@ -3,6 +3,8 @@ import { useFocusEffect } from "expo-router";
 import type { ExpenseCategory } from "@/features/expenses/constants/categories";
 import { useExpensesStore, type Expense } from "@/features/expenses/store/expensesStore";
 import { requestRates, retryRates, useRatesStore, type RateRequest } from "@/features/expenses/store/ratesStore";
+import { usePocketsStore } from "@/features/expenses/store/pocketsStore";
+import { hintedRate, pocketRateHints } from "@/features/expenses/utils/forex";
 import { toLocalDayKey } from "@/features/expenses/utils/dateKey";
 import { rateKey, type ConvertibleAmount } from "@/features/expenses/utils/rates";
 import type { Trip } from "@/features/trips/store/tripsStore";
@@ -38,19 +40,25 @@ export function useRateRequests(requests: RateRequest[]) {
 
 /**
  * Converts expenses into `targetCurrency`. Expenses without a rate are left out
- * of totals and reported in `unconvertedTotals`.
+ * of totals and reported in `unconvertedTotals`. Spends paid from a forex pocket use its rate.
  */
 export function useConvertedExpenses<T extends ConvertibleAmount = Expense>(expenses: T[], targetCurrency: string) {
+  const pockets = usePocketsStore((state) => state.pockets);
+  const hints = useMemo(() => pocketRateHints(pockets), [pockets]);
+  const pocketRateOf = (expense: T) => hintedRate(hints.get((expense as { id?: string }).id ?? ""), expense.currency, targetCurrency);
   const requests = useMemo(
-    () => expenses.map((expense) => ({ currency: expense.currency, target: targetCurrency, date: expense.date })),
-    [expenses, targetCurrency],
+    () =>
+      expenses
+        .filter((expense) => hintedRate(hints.get((expense as { id?: string }).id ?? ""), expense.currency, targetCurrency) === undefined)
+        .map((expense) => ({ currency: expense.currency, target: targetCurrency, date: expense.date })),
+    [expenses, targetCurrency, hints],
   );
   const { rates, failed } = useRateRequests(requests);
 
   const convertedExpenses: ConvertedExpense<T>[] = [];
   const unavailableExpenses: T[] = [];
   for (const expense of expenses) {
-    const rate = expense.currency === targetCurrency ? 1 : rates[rateKey(expense.currency, targetCurrency, expense.date)];
+    const rate = expense.currency === targetCurrency ? 1 : (pocketRateOf(expense) ?? rates[rateKey(expense.currency, targetCurrency, expense.date)]);
     if (rate === undefined) {
       unavailableExpenses.push(expense);
       continue;

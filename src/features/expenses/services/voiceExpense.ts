@@ -1,4 +1,5 @@
 import type { ExpenseCategory } from "@/features/expenses/constants/categories";
+import { saysCash } from "@/features/expenses/utils/forex";
 import {
   isSelfWord,
   matchCompanion,
@@ -105,6 +106,9 @@ export interface VoiceExpenseDraft {
   explicitShares: ExpenseShare[];
   unknownNames: string[];
   amountUncertain: boolean;
+  /** Said it was paid in cash, so it can come out of a forex pocket. */
+  paidCash: boolean;
+  currencySpoken: boolean;
   transcript: string;
 }
 
@@ -238,6 +242,8 @@ export function interpretVoiceExtraction(
     explicitShares,
     unknownNames,
     amountUncertain,
+    paidCash: saysCash(transcript),
+    currencySpoken: normalizeCurrency(data.currency, "") !== "",
     transcript,
   };
 }

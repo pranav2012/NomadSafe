@@ -40,6 +40,7 @@ import { NewGroupSheet } from "@/features/expenses/components/NewGroupSheet";
 import { ImportFromAppSheet } from "@/features/expenses/components/ImportFromAppSheet";
 import { GroupSettingsSheet } from "@/features/expenses/components/GroupSettingsSheet";
 import { MoneyActionsSheet, type MoneyAction } from "@/features/expenses/components/MoneyActionsSheet";
+import { useForexSheetStore } from "@/features/expenses/store/forexSheetStore";
 
 /** Money tab: the active trip's money (or the Overview with no trip), a switcher to any group, and a floating capture bar. */
 export default function ExpensesScreen() {
@@ -130,6 +131,16 @@ export default function ExpensesScreen() {
         ...(canRecord ? [{ icon: "swap" as const, label: t("split.recordPayment"), onPress: () => setRecording(true) }] : []),
         { icon: "users", label: t("money.peopleAction"), onPress: () => setPeopleOpen(true) },
         { icon: "settings", label: t("groupSettings.title"), onPress: () => setSettingsOpen(true) },
+        ...(isTrip(group)
+          ? [
+              {
+                icon: plus.isPlus ? ("banknote" as const) : ("lock" as const),
+                label: t("forex.add"),
+                detail: plus.isPlus ? undefined : t("money.plusOnly"),
+                onPress: () => plus.run("forex", () => useForexSheetStore.getState().startAdding(group.id)),
+              },
+            ]
+          : []),
         importAction,
         exportAction,
       ]

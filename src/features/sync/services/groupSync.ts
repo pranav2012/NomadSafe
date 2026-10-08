@@ -1,6 +1,7 @@
 import { api, convex, type Id } from "@/modules/backend";
 import { useChatStore } from "@/features/ai/store/chatStore";
 import { useExpensesStore, type Expense, type Settlement } from "@/features/expenses/store/expensesStore";
+import { usePocketsStore } from "@/features/expenses/store/pocketsStore";
 import { payersOf, SELF_ID, type ExpenseShare, type ExpenseSplit } from "@/features/expenses/utils/split";
 import { useEventsStore, type TripEvent } from "@/features/itinerary/store/eventsStore";
 import {
@@ -234,6 +235,7 @@ function dropLocalGroup(localId: string, serverGroupId: string, owner: string, k
     });
   } else {
     useExpensesStore.getState().removeByGroupId(localId);
+    usePocketsStore.getState().removeByGroupId(localId);
     useChatStore.getState().removeConversation(localId);
   }
   useEventsStore.getState().removeByTripId(localId);

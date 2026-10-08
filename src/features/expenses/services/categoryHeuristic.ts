@@ -55,6 +55,13 @@ const KEYWORDS: [ExpenseCategory, string[]][] = [
     ],
   ],
   [
+    "fees",
+    [
+      "forex", "currency exchange", "money exchange", "bureau de change", "atm fee", "atm withdrawal fee",
+      "bank fee", "bank charge", "markup fee", "conversion fee", "commission", "western union", "thomas cook",
+    ],
+  ],
+  [
     "travel",
     [
       "uber", "ola", "grab", "lyft", "bolt", "cabify", "gojek", "rapido", "taxi", "cab",

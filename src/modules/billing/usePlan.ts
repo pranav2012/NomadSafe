@@ -51,7 +51,7 @@ export function useStartNewGroup() {
   );
 }
 
-export type PlusFeature = "shares" | "presets" | "recurring" | "charts" | "export" | "receiptScan";
+export type PlusFeature = "shares" | "presets" | "recurring" | "charts" | "export" | "receiptScan" | "forex";
 
 /** Plus extras: `run(feature, action)` runs it on Plus or Pro, else opens the paywall for that feature. */
 export function usePlusGate() {

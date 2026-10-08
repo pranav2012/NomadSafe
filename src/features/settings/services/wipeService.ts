@@ -5,6 +5,7 @@ import { aiRuntime, aiService, clearAiUsageLog, clearByokConfig, clearCloudExhau
 import { usePlanStore } from "@/modules/billing";
 import { useChatStore } from "@/features/ai/store/chatStore";
 import { useRecurringStore } from "@/features/expenses/store/recurringStore";
+import { usePocketsStore } from "@/features/expenses/store/pocketsStore";
 import { useSplitPresetsStore } from "@/features/expenses/store/splitPresetsStore";
 import { useKeepGroupStore } from "@/features/expenses/store/keepGroupStore";
 import { useExpensesStore } from "@/features/expenses/store/expensesStore";
@@ -57,6 +58,7 @@ export async function wipeAllDeviceData({ keepModels = false }: { keepModels?: b
   useKeepGroupStore.getState().reset();
   useSplitPresetsStore.getState().reset();
   useRecurringStore.getState().reset();
+  usePocketsStore.getState().reset();
   useEventsStore.getState().reset();
   useMustDoStore.getState().reset();
   usePlaceLookupStore.getState().reset();

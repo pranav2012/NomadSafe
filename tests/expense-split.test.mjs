@@ -170,6 +170,12 @@ test("voice: repayments become settlements", () => {
 
 test("voice: unclear or zero amounts are unclear", () => {
   assert.equal(voice.interpretVoiceExtraction({ ...baseExtraction, amount: 0 }, "hello", context).kind, "unclear");
+  const cash = voice.interpretVoiceExtraction({ ...baseExtraction, currency: "" }, "paid 500 cash for dinner", context);
+  assert.equal(cash.paidCash, true);
+  assert.equal(cash.currencySpoken, false);
+  const card = voice.interpretVoiceExtraction({ ...baseExtraction, currency: "JPY" }, "paid 500 yen for dinner", context);
+  assert.equal(card.paidCash, false);
+  assert.equal(card.currencySpoken, true);
   assert.equal(voice.interpretVoiceExtraction(null, "hello", context).kind, "unclear");
 });
 

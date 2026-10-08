@@ -7,6 +7,8 @@ export type IconName =
   | "shield"
   | "compass"
   | "wallet"
+  | "banknote"
+  | "creditCard"
   | "sparkle"
   | "users"
   | "settings"
@@ -174,6 +176,23 @@ export function Icon({
           <Path d="M3 7a2 2 0 012-2h13a1 1 0 011 1v3H5a2 2 0 00-2 2V7z" />
           <Path d="M3 11a2 2 0 012-2h15v10a1 1 0 01-1 1H5a2 2 0 01-2-2V11z" />
           <Circle cx="16" cy="14" r="1.3" fill={color} stroke="none" />
+        </G>
+      );
+      break;
+    case "banknote":
+      body = (
+        <G {...p}>
+          <Rect x="2.5" y="6" width="19" height="12" rx="2" />
+          <Circle cx="12" cy="12" r="2.5" />
+          <Path d="M6 9.5v.01M18 14.5v.01" />
+        </G>
+      );
+      break;
+    case "creditCard":
+      body = (
+        <G {...p}>
+          <Rect x="2.5" y="5" width="19" height="14" rx="2" />
+          <Path d="M2.5 10h19M6.5 15h4" />
         </G>
       );
       break;

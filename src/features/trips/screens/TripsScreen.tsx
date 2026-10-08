@@ -22,6 +22,7 @@ import { pruneTickets } from "@/features/itinerary/services/tickets";
 import { useEventsStore } from "@/features/itinerary/store/eventsStore";
 import { clearTripGmailCoverage } from "@/features/expenses/store/tripGmailCoverageStore";
 import { useExpensesStore } from "@/features/expenses/store/expensesStore";
+import { usePocketsStore } from "@/features/expenses/store/pocketsStore";
 import { selectionChanged } from "@/utils/haptics";
 
 type SectionKey = "current" | "upcoming" | "past" | "archived";
@@ -150,6 +151,7 @@ export default function TripsScreen() {
     deleteTrip(tripId);
     useEventsStore.getState().removeByTripId(tripId);
     useExpensesStore.getState().removeByGroupId(tripId);
+    usePocketsStore.getState().removeByGroupId(tripId);
     useChatStore.getState().removeConversation(tripId);
     clearTripGmailCoverage(tripId);
     useRecapStore.getState().clearTrip(tripId);

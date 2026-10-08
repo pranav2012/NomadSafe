@@ -16,6 +16,8 @@ export interface VoiceDraftCardProps {
   draft: VoiceExpenseDraft | VoiceSettlementDraft;
   shares: ShareResolution | null;
   tripName: string | null;
+  /** Comes out of the trip's forex cash. */
+  fromCash?: boolean;
   canAddPeople: boolean;
   onAddPerson: (name: string) => void;
   onLeaveOut: (name: string) => void;
@@ -29,6 +31,7 @@ export function VoiceDraftCard({
   draft,
   shares,
   tripName,
+  fromCash,
   canAddPeople,
   onAddPerson,
   onLeaveOut,
@@ -82,6 +85,12 @@ export function VoiceDraftCard({
           <Text style={[styles.meta, { color: c.textMuted, fontFamily: f.regular }]}>
             {[tripName, dateLabel, t("split.paidByName", { name: personLabel(draft.paidBy, t) })].filter(Boolean).join(" · ")}
           </Text>
+          {fromCash ? (
+            <View style={styles.cashRow}>
+              <Icon name="banknote" size={14} color={c.textSoft} />
+              <Text style={[styles.meta, { color: c.textSoft, fontFamily: f.medium }]}>{t("forex.voiceFromCash")}</Text>
+            </View>
+          ) : null}
 
           {shares?.ok ? (
             <View style={[styles.shares, { borderColor: c.hairline }]}>
@@ -163,6 +172,7 @@ const styles = StyleSheet.create({
   amountRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
   amount: { fontSize: 38, letterSpacing: -1.2 },
   amountShrink: { flexShrink: 1 },
+  cashRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   categoryPill: { flexDirection: "row", alignItems: "center", gap: 5, height: 28, borderRadius: 14, paddingHorizontal: 10 },
   categoryText: { fontSize: 12.5 },
   merchant: { fontSize: 16.5 },

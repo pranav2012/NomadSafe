@@ -34,7 +34,12 @@ export interface AnalyticsEvents {
   app_import_completed: { source: "splitwise" | "settleup"; mode: "history" | "balances"; expenses: number; payments: number };
   group_archived: { archived: boolean; kind: "trip" | "group" };
   smart_split_changed: { on: boolean };
-  plus_feature_blocked: { feature: "shares" | "presets" | "recurring" | "charts" | "export" | "receiptScan" };
+  plus_feature_blocked: { feature: "shares" | "presets" | "recurring" | "charts" | "export" | "receiptScan" | "forex" };
+  forex_loaded: { kind: "cash" | "card"; top_up: boolean; fee_logged: boolean };
+  forex_counted: { kind: "cash" | "card"; logged_gap: boolean };
+  forex_closed: { kind: "kept" | "converted" | "writtenOff"; had_leftover: boolean };
+  forex_carried: { kind: "cash" | "card" };
+  forex_spend_paid: { source: "manual" | "voice"; kind: "cash" | "card" };
   trip_joined: { deferred: boolean; claimed_member: boolean };
   invite_deferred_found: { source: "install_referrer" | "clipboard" };
   expense_added: { source: ExpenseSourceKind; count: number };

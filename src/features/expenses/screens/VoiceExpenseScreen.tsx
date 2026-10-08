@@ -29,11 +29,15 @@ import { VoiceDraftCard } from "@/features/expenses/components/VoiceDraftCard";
 import {
   interpretVoiceExtraction,
   replaceDraftPerson,
+  type VoiceDraft,
   type VoiceExpenseDraft,
   type VoiceSettlementDraft,
 } from "@/features/expenses/services/voiceExpense";
 import { formatMoney } from "@/features/expenses/utils/money";
-import { resolveShares } from "@/features/expenses/utils/split";
+import { resolveShares, SELF_ID } from "@/features/expenses/utils/split";
+import { usePocketsStore } from "@/features/expenses/store/pocketsStore";
+import { payablePockets, type ForexPocket } from "@/features/expenses/utils/forex";
+import { usePlanStore } from "@/modules/billing";
 import { resolveWidgetTrip, setWidgetTripId } from "@/features/widget/widgetTrip";
 import { syncWidgets } from "@/features/widget/syncWidgets";
 import { VoiceOrb, type VoiceOrbMode } from "@/features/expenses/components/VoiceOrb";
@@ -46,6 +50,13 @@ type Phase =
   | { name: "saved"; summary: string };
 
 /** Speak-to-add screen. It also runs while PIN-locked, so it never shows the ledger or balances. */
+/** The trip's forex cash pocket a spoken "paid cash" spend comes out of (Plus); a spoken currency must match it. */
+function cashPocketFor(draft: VoiceDraft, tripId: string | null, pockets: readonly ForexPocket[], isPlus: boolean): ForexPocket | null {
+  if (draft.kind !== "expense" || !draft.paidCash || draft.paidBy !== SELF_ID || !tripId || !isPlus) return null;
+  const cash = payablePockets(pockets, tripId).filter((pocket) => pocket.kind === "cash");
+  return cash.find((pocket) => pocket.currency === draft.currency) ?? (!draft.currencySpoken && cash.length === 1 ? cash[0] : null);
+}
+
 export default function VoiceExpenseScreen() {
   const { c, f, isDark } = useAura();
   const insets = useSafeAreaInsets();
@@ -61,6 +72,8 @@ export default function VoiceExpenseScreen() {
   const updateGroup = useTripsStore((state) => state.updateGroup);
   const addExpense = useExpensesStore((state) => state.addExpense);
   const addSettlement = useExpensesStore((state) => state.addSettlement);
+  const pockets = usePocketsStore((state) => state.pockets);
+  const isPlus = usePlanStore((state) => state.unlimitedTrips);
   const locked = useAuthStore((state) => state.isSignedIn && state.lockEnabled && !state.isUnlocked);
   const localAiEnabled = useSettingsStore((state) => state.localAiEnabled);
   const ai = useAiAvailability("voiceExpense");
@@ -85,10 +98,13 @@ export default function VoiceExpenseScreen() {
       try {
         const raw = await aiService.extractVoiceExpense(transcript, companions);
         if (run !== runId.current) return;
-        const draft = interpretVoiceExtraction(raw, transcript, {
+        const interpreted = interpretVoiceExtraction(raw, transcript, {
           companions,
           tripCurrency,
         });
+        // "paid 1200 cash" with no currency said is in the forex pocket's currency.
+        const pocket = cashPocketFor(interpreted, tripId, usePocketsStore.getState().pockets, usePlanStore.getState().unlimitedTrips);
+        const draft = pocket && interpreted.kind === "expense" ? { ...interpreted, currency: pocket.currency } : interpreted;
         if (draft.kind === "unclear") {
           track("voice_capture_failed", { reason: "unclear" });
           setPhase({ name: "unclear", transcript });
@@ -103,7 +119,7 @@ export default function VoiceExpenseScreen() {
         setPhase({ name: "unclear", transcript });
       }
     },
-    [companions, tripCurrency],
+    [companions, tripCurrency, tripId],
   );
 
   const contextualStrings = useMemo(() => [...companions, "split", "everyone"], [companions]);
@@ -194,7 +210,8 @@ export default function VoiceExpenseScreen() {
             : null;
         if (resolution && !resolution.ok) return;
         const merchant = current.merchant || t(`expenses.category.${current.category}`);
-        addExpense({
+        const pocket = cashPocketFor(current, trip?.id ?? null, pockets, isPlus);
+        const added = addExpense({
           groupId: trip?.id ?? null,
           merchant,
           amount: current.amount,
@@ -207,6 +224,10 @@ export default function VoiceExpenseScreen() {
           paidBy: resolution ? current.paidBy : undefined,
           shares: resolution?.shares.filter((share) => share.amount > 0),
         });
+        if (pocket) {
+          usePocketsStore.getState().setSpend(added.id, pocket.id);
+          track("forex_spend_paid", { source: "voice", kind: pocket.kind });
+        }
         track("expense_added", { source: "voice", count: 1 });
         track("voice_draft_saved", { kind: "expense", split: Boolean(resolution), edited: false, auto });
         setPhase({
@@ -218,7 +239,7 @@ export default function VoiceExpenseScreen() {
       }
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     },
-    [phase, trip, addExpense, addSettlement, formatCurrency, t],
+    [phase, trip, addExpense, addSettlement, formatCurrency, t, pockets, isPlus],
   );
 
   const pickable = trips.filter((entry) => !isArchivedGroup(entry) || entry.id === tripId);
@@ -317,6 +338,7 @@ export default function VoiceExpenseScreen() {
                     draft={draft}
                     shares={shares}
                     tripName={trip?.name ?? null}
+                    fromCash={cashPocketFor(draft, trip?.id ?? null, pockets, isPlus) !== null}
                     canAddPeople={trip !== null && !locked}
                     onAddPerson={addPerson}
                     onLeaveOut={(name) => updateDraft(replaceDraftPerson(draft, name, null))}
@@ -395,6 +417,7 @@ export default function VoiceExpenseScreen() {
             paidBy: draft.paidBy,
             shares: shares?.ok ? shares.shares : undefined,
             rawText: draft.transcript,
+            pocketId: cashPocketFor(draft, trip?.id ?? null, pockets, isPlus)?.id ?? null,
           }}
           source="voice"
           groupId={trip?.id ?? null}

@@ -38,6 +38,10 @@ import { getCurrentExpenseLocation } from "@/features/expenses/services/location
 import { useGmailStatus } from "@/features/expenses/hooks/useGmailStatus";
 import { localeDecimalSeparator, parseAmountInput } from "@/features/expenses/utils/amountInput";
 import { track, PrivateView } from "@/modules/analytics";
+import { pocketOfExpense } from "@/features/expenses/services/forexPockets";
+import { usePocketsStore } from "@/features/expenses/store/pocketsStore";
+import { defaultPocketFor, payablePockets, pocketBalance, type ForexPocket } from "@/features/expenses/utils/forex";
+import { formatMoney } from "@/features/expenses/utils/money";
 import { showInterstitial } from "@/modules/ads";
 
 export interface ExpenseDraftValues {
@@ -51,6 +55,8 @@ export interface ExpenseDraftValues {
   shares?: ExpenseShare[];
   split?: ExpenseSplit;
   rawText?: string;
+  /** Forex pocket it was paid from (voice: "paid cash"). */
+  pocketId?: string | null;
 }
 
 export interface ExpenseFormProps {
@@ -169,7 +175,7 @@ function ExpenseFormBody({
   onDelete,
 }: ExpenseFormProps & { onDelete: () => void }) {
   const { c, f } = useAura();
-  const { t, locale, currency: defaultCurrency } = useLocalization();
+  const { t, locale, currency: defaultCurrency, formatCurrency } = useLocalization();
   const [targetId, setTargetId] = useState<string | null>(editingExpense ? editingExpense.groupId : groupId);
   const target = useTripsStore((state) => findMoneyGroup(state, targetId));
   const allGroups = useTripsStore(selectMoneyGroups);
@@ -196,6 +202,15 @@ function ExpenseFormBody({
   const [categoryTouched, setCategoryTouched] = useState(Boolean(prefill));
   const [currency, setCurrency] = useState(prefill?.currency ?? tripCurrency ?? target?.currency ?? defaultCurrency);
   const [note, setNote] = useState(editingExpense?.note ?? "");
+  const pockets = usePocketsStore((state) => state.pockets);
+  const allExpenses = useExpensesStore((state) => state.expenses);
+  const [editingPocket] = useState(() => (editingExpense ? pocketOfExpense(usePocketsStore.getState().pockets, editingExpense.id) : null));
+  const [pocketId, setPocketId] = useState<string | null>(() => {
+    if (editingExpense) return editingPocket?.id ?? null;
+    if (initialDraft?.pocketId !== undefined) return initialDraft.pocketId;
+    return plus.isPlus ? (defaultPocketFor(usePocketsStore.getState().pockets, targetId, currency)?.id ?? null) : null;
+  });
+  const [pocketTouched, setPocketTouched] = useState(Boolean(editingExpense) || initialDraft?.pocketId !== undefined);
   const [date, setDate] = useState<Date>(prefill ? new Date(prefill.date) : new Date());
   // Companions removed from the trip still show if an existing split names them.
   const everyone = useMemo(
@@ -231,7 +246,10 @@ function ExpenseFormBody({
     if (nextId === targetId) return;
     setTargetId(nextId);
     const next = nextId ? allGroups.find((group) => group.id === nextId) : null;
-    if (!currencyTouched) setCurrency(next?.currency ?? defaultCurrency);
+    const nextCurrency = currencyTouched ? currency : (next?.currency ?? defaultCurrency);
+    if (!currencyTouched) setCurrency(nextCurrency);
+    if (!pocketTouched && plus.isPlus) setPocketId(defaultPocketFor(pockets, nextId, nextCurrency)?.id ?? null);
+    else if (pocketId && !pockets.some((pocket) => pocket.id === pocketId && pocket.groupId === nextId)) setPocketId(null);
     setSplit(defaultSplit([SELF_ID, ...(next?.companions ?? [])]));
     setSplitOpen(false);
   };
@@ -323,6 +341,22 @@ function ExpenseFormBody({
     track("receipt_items_split", { items: receiptItems?.items.length ?? 0, people: resolution.shares.length });
   };
 
+  const youPay = split.multiPay ? Number(parseAmountInput(split.payers[SELF_ID] ?? "", decimalSeparator)) > 0 : !canSplit || split.paidBy === SELF_ID;
+  const pocketChoices = [
+    ...payablePockets(pockets, targetId),
+    ...(editingPocket && editingPocket.closed && editingPocket.groupId === targetId ? [editingPocket] : []),
+  ];
+  const showPaidWith = pocketChoices.length > 0 && youPay && (plus.isPlus || editingPocket !== null);
+  const choosePocket = (pocket: ForexPocket | null) =>
+    plus.run("forex", () => {
+      setPocketTouched(true);
+      setPocketId(pocket?.id ?? null);
+      if (pocket) {
+        setCurrency(pocket.currency);
+        setCurrencyTouched(true);
+      }
+    });
+
   const handleSave = () => {
     const parsedAmount = parseAmountInput(amount, decimalSeparator);
     const numericAmount = Number.isFinite(parsedAmount) ? roundMoney(parsedAmount, currency) : parsedAmount;
@@ -358,10 +392,17 @@ function ExpenseFormBody({
       split: shares ? splitValueToStored(split, decimalSeparator) : undefined,
       splitHint: undefined,
     };
+    const paidFrom = showPaidWith && pocketChoices.some((pocket) => pocket.id === pocketId && pocket.currency === currency) ? pocketId : null;
     if (editingExpense) {
       updateExpense(editingExpense.id, payload);
+      if ((editingPocket?.id ?? null) !== paidFrom) usePocketsStore.getState().setSpend(editingExpense.id, paidFrom);
     } else {
-      addExpense({ ...payload, source, rawText: initialDraft?.rawText, autoCategorized: false });
+      const added = addExpense({ ...payload, source, rawText: initialDraft?.rawText, autoCategorized: false });
+      if (paidFrom) {
+        usePocketsStore.getState().setSpend(added.id, paidFrom);
+        const kind = pockets.find((pocket) => pocket.id === paidFrom)?.kind ?? "cash";
+        track("forex_spend_paid", { source: source === "voice" ? "voice" : "manual", kind });
+      }
       if (repeat && canRepeat) {
         const day = toLocalDayKey(payload.date);
         useRecurringStore.getState().add({
@@ -449,10 +490,32 @@ function ExpenseFormBody({
                   setCurrency(option.code);
                   setCurrencyTouched(true);
                   setIsCurrencyOpen(false);
+                  if (!pocketTouched && plus.isPlus) setPocketId(defaultPocketFor(pockets, targetId, option.code)?.id ?? null);
+                  else if (pocketId && pockets.find((pocket) => pocket.id === pocketId)?.currency !== option.code) setPocketId(null);
                 }}
               />
             ))}
           </Animated.View>
+        ) : null}
+
+        {showPaidWith ? (
+          <View style={styles.group}>
+            <Text style={[styles.label, { color: c.textSoft, fontFamily: f.medium }]}>{t("forex.paidWith")}</Text>
+            <View style={styles.wrap}>
+              <AuraChip label={t("forex.paidWithCard")} selected={pocketId === null} onPress={() => choosePocket(null)} />
+              {pocketChoices.map((pocket) => (
+                <AuraChip
+                  key={pocket.id}
+                  icon={pocket.kind === "card" ? "creditCard" : "banknote"}
+                  label={`${t(pocket.kind === "card" ? "forex.kindCard" : "forex.kindCash")} · ${t("forex.paidWithLeft", {
+                    amount: formatMoney(formatCurrency, pocketBalance(pocket, allExpenses).left, pocket.currency),
+                  })}`}
+                  selected={pocket.id === pocketId}
+                  onPress={() => choosePocket(pocket)}
+                />
+              ))}
+            </View>
+          </View>
         ) : null}
 
         <AuraField label={t("expenses.merchant")} value={merchant} onChangeText={handleMerchantChange} placeholder={t("expenses.merchantPlaceholder")} autoCapitalize="words" />

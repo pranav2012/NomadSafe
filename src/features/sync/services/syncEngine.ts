@@ -11,13 +11,15 @@ import { deleteAllTickets } from "@/features/itinerary/services/tickets";
 import { useTravelInfoStore } from "@/features/trips/store/travelInfoStore";
 import { normalizePlanned, pickDefaultActiveTripId, selectShareables, useTripsStore, type Group, type PlannedTrip, type Trip } from "@/features/trips/store/tripsStore";
 import { useRecurringStore, type RecurringRule } from "@/features/expenses/store/recurringStore";
+import { usePocketsStore } from "@/features/expenses/store/pocketsStore";
+import type { ForexPocket } from "@/features/expenses/utils/forex";
 import { syncWidgets } from "@/features/widget/syncWidgets";
 import { logger } from "@/modules/logger";
 import { flushPendingWrites, storage } from "@/modules/storage";
 import { hashOf } from "../utils/hash";
 import { clearGroupLedgers, keepLocalOnly, makeSharedScope, stripRaw } from "../utils/sharedScope";
 
-type Kind = "trip" | "group" | "planned" | "expense" | "settlement" | "event" | "passport" | "recurring";
+type Kind = "trip" | "group" | "planned" | "expense" | "settlement" | "event" | "passport" | "recurring" | "pocket";
 
 interface LedgerEntry {
   hash: string;
@@ -44,6 +46,7 @@ const ledgerKey = (userId: string) => `sync-ledger:${userId}`;
 const PUSH_DEBOUNCE_MS = 1500;
 const PUSH_BATCH = 100;
 const PULL_PAGE = 200;
+const NEWER_KINDS: ReadonlySet<Kind> = new Set(["pocket"]);
 
 function localRecords(): Map<string, { kind: Kind; id: string; data: unknown }> {
   const records = new Map<string, { kind: Kind; id: string; data: unknown }>();
@@ -61,12 +64,13 @@ function localRecords(): Map<string, { kind: Kind; id: string; data: unknown }> 
   for (const event of useEventsStore.getState().events) if (!scope.has("event", event)) add("event", event.id, stripRaw(event));
   for (const entry of usePassportStore.getState().entries) add("passport", entry.id, entry);
   for (const rule of useRecurringStore.getState().rules) add("recurring", rule.id, rule);
+  for (const pocket of usePocketsStore.getState().pockets) add("pocket", pocket.id, pocket);
   return records;
 }
 
 /** Whether the local copy of a record (if any) currently belongs to a shared trip. */
 function isLocallyShared(scope: ReturnType<typeof makeSharedScope>, kind: Exclude<Kind, "trip" | "group">, id: string) {
-  if (kind === "passport" || kind === "recurring" || kind === "planned") return false;
+  if (kind === "passport" || kind === "recurring" || kind === "pocket" || kind === "planned") return false;
   if (kind === "event") {
     const event = useEventsStore.getState().events.find((item) => item.id === id);
     return event ? scope.has("event", event) : false;
@@ -130,14 +134,23 @@ async function pushChanges(uid: string): Promise<boolean> {
     changes.push({ key, hash: "", record: { kind: kind as Kind, clientId: rest.join(":"), deleted: true, updatedAt: now } });
   }
 
-  for (let i = 0; i < changes.length; i += PUSH_BATCH) {
-    const batch = changes.slice(i, i + PUSH_BATCH);
+  // Kinds newer than the server (sent before its deploy) go in their own batches, so rejecting them
+  // can't hold back the rest of the backup; they're retried on the next sync.
+  const batches: (typeof changes)[] = [];
+  for (const group of [changes.filter((change) => !NEWER_KINDS.has(change.record.kind)), changes.filter((change) => NEWER_KINDS.has(change.record.kind))]) {
+    for (let i = 0; i < group.length; i += PUSH_BATCH) batches.push(group.slice(i, i + PUSH_BATCH));
+  }
+  let ok = true;
+  for (const batch of batches) {
+    const newer = NEWER_KINDS.has(batch[0].record.kind);
     let rejectedSeq: number | null = null;
     try {
       ({ rejectedSeq } = await convex.mutation(api.sync.push, { records: batch.map((change) => change.record) }));
     } catch (err) {
-      logger.warn("sync", "push failed", err, { records: batch.length });
-      return false;
+      logger.warn("sync", "push failed", err, { records: batch.length, newer_kind: newer });
+      if (!newer) return false;
+      ok = false;
+      break;
     }
     if (userId !== uid) return false;
     for (const change of batch) {
@@ -152,7 +165,7 @@ async function pushChanges(uid: string): Promise<boolean> {
     }
     writeLedger(uid, ledger);
   }
-  return true;
+  return ok;
 }
 
 /** Fetches everything written since the last pull and merges it into the local stores. */
@@ -195,7 +208,7 @@ async function pullChanges(uid: string): Promise<boolean> {
     const data = record.data ?? {};
     const local = { id: record.clientId, ...((record.kind === "event" ? repairEventTripId(data as { tripId?: string | null }) : withGroupId(data)) as { groupId?: string | null; tripId?: string | null }) };
     const ownedByTrip =
-      record.kind === "passport" || record.kind === "recurring"
+      record.kind === "passport" || record.kind === "recurring" || record.kind === "pocket"
         ? false
         : record.kind === "trip" || record.kind === "group" || record.kind === "planned"
         ? selectShareables(useTripsStore.getState()).some((item) => item.id === record.clientId && item.shared)
@@ -263,6 +276,8 @@ function applyRemote(incoming: Map<string, RemoteRecord>) {
   if (passport) usePassportStore.setState({ entries: passport });
   const rules = merge<RecurringRule>(useRecurringStore.getState().rules, "recurring", incoming);
   if (rules) useRecurringStore.setState({ rules });
+  const pockets = merge<ForexPocket>(usePocketsStore.getState().pockets, "pocket", incoming);
+  if (pockets) usePocketsStore.setState({ pockets });
   if (trips) void syncWidgets();
 }
 
@@ -311,6 +326,7 @@ export function clearSyncedLocalData() {
   useEventsStore.getState().reset();
   usePassportStore.getState().reset();
   useRecurringStore.getState().reset();
+  usePocketsStore.getState().reset();
   useIncomingShareStore.getState().clear();
   void deleteAllTripPhotos();
   void deleteAllTickets();
@@ -338,6 +354,7 @@ export function startSync(uid: string) {
     useEventsStore.subscribe(schedulePush),
     usePassportStore.subscribe(schedulePush),
     useRecurringStore.subscribe(schedulePush),
+    usePocketsStore.subscribe(schedulePush),
   ];
   appStateSub = AppState.addEventListener("change", (next) => {
     if (next === "active") void syncNow();
