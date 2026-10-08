@@ -63,6 +63,8 @@ import { logger } from "@/modules/logger";
 const PRESETS = [15 * 60, 30 * 60, 60 * 60, 2 * 60 * 60, 4 * 60 * 60, 8 * 60 * 60];
 
 const SOS_HOLD_MS = 2000;
+// Keeps the SOS button above Google's credit line, which sits on the panel's top edge.
+const SOS_GAP = 34;
 const SOS_CANCEL_WINDOW_SECONDS = 5;
 const WARN = "#FFB547";
 const READY = "#3DDC97";
@@ -301,6 +303,17 @@ export default function SafetyScreen() {
     bootstrap();
     return () => { mounted = false; };
   }, [refreshReadiness]);
+
+  // The map's locate button: a fix at most 15 s old, so it lands where you are now.
+  const locateMe = useCallback(() => {
+    getRecentPosition("balanced", 15_000)
+      .then((loc) => {
+        const fix = { latitude: loc.latitude, longitude: loc.longitude, accuracy: loc.accuracy, timestamp: loc.timestamp };
+        saveLastKnownFix(fix);
+        setLocation(fix);
+      })
+      .catch((err) => logger.warn("safety", "locate failed", err));
+  }, []);
 
   const locationLat = location?.latitude;
   const locationLng = location?.longitude;
@@ -708,6 +721,7 @@ export default function SafetyScreen() {
           isDark={isDark}
           me={location ? { latitude: location.latitude, longitude: location.longitude } : null}
           people={mapPeople}
+          onLocate={locateMe}
         />
       </BlurTargetView>
 
@@ -721,7 +735,7 @@ export default function SafetyScreen() {
         </View>
       </View>
 
-      <View style={[styles.sos, { bottom: panelBottom + panelHeight + 14 }]} pointerEvents="box-none">
+      <View style={[styles.sos, { bottom: panelBottom + panelHeight + SOS_GAP }]} pointerEvents="box-none">
         <SosHoldButton
           holdMs={SOS_HOLD_MS}
           idleLabel={t("safety.holdForSos")}

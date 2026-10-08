@@ -21,6 +21,7 @@ const RETURN_FALLBACK_MS = 400;
 const COVER_AFTER_BLUR_MS = 500;
 // Room kept around the points inside the clear area, on top of the header and panel insets.
 const FRAME_PADDING = { top: 40, right: 60, bottom: 80, left: 60 };
+const ME_ZOOM = 15;
 
 type Point = { latitude: number; longitude: number };
 
@@ -33,13 +34,15 @@ interface SafetyMapProps {
   isDark: boolean;
   me: Point | null;
   people: (Point & { name: string; stale: boolean })[];
+  /** Fetches a fresh fix for you; the map follows it once it lands. */
+  onLocate: () => void;
 }
 
 /**
  * Full-screen quiet map of you and everyone sharing with you. It frames all points in the space
- * between the header and the panel, can be panned, and the button re-frames it.
+ * between the header and the panel, can be panned, and the button zooms to you until you pan away.
  */
-export function SafetyMap({ topInset, bottomInset, palette: c, accent, isDark, me, people }: SafetyMapProps) {
+export function SafetyMap({ topInset, bottomInset, palette: c, accent, isDark, me, people, onLocate }: SafetyMapProps) {
   const { t } = useLocalization();
   const mapRef = useRef<MapViewHandle>(null);
   const style = useMemo(() => quietMapStyle(isDark), [isDark]);
@@ -54,9 +57,14 @@ export function SafetyMap({ topInset, bottomInset, palette: c, accent, isDark, m
       ? FRAME_PADDING
       : { ...FRAME_PADDING, top: FRAME_PADDING.top + topInset, bottom: FRAME_PADDING.bottom + bottomInset };
 
+  const followMe = useRef(false);
   const frame = (animated: boolean) => {
     const map = mapRef.current;
     if (!map || points.length === 0) return;
+    if (followMe.current && me) {
+      map.animateCamera({ center: me, zoom: ME_ZOOM }, { duration: animated ? 500 : 0 });
+      return;
+    }
     map.fitToCoordinates(points.length === 1 ? [offset(points[0], -0.004), offset(points[0], 0.004)] : points, {
       edgePadding,
       animated,
@@ -110,6 +118,12 @@ export function SafetyMap({ topInset, bottomInset, palette: c, accent, isDark, m
     // eslint-disable-next-line react-hooks/exhaustive-deps -- re-frame when the points move, the panel resizes or the padding lands
   }, [pointsKey, bottomInset, ready]);
 
+  const locate = () => {
+    followMe.current = true;
+    frame(true);
+    onLocate();
+  };
+
   const first = points[0];
 
   return (
@@ -135,6 +149,9 @@ export function SafetyMap({ topInset, bottomInset, palette: c, accent, isDark, m
             showsCompass={false}
             showsPointsOfInterests={false}
             moveOnMarkerPress={false}
+            onPanDrag={() => {
+              followMe.current = false;
+            }}
           >
             {me ? <MeMarker key={`me-${accent}`} coordinate={me} accent={accent} title={t("sharing.youLabel")} /> : null}
             {people.map((person, i) => (
@@ -160,7 +177,7 @@ export function SafetyMap({ topInset, bottomInset, palette: c, accent, isDark, m
 
       {points.length > 0 ? (
         <PressableScale
-          onPress={() => frame(true)}
+          onPress={locate}
           accessibilityRole="button"
           accessibilityLabel={t("safety.recenterMap")}
           style={[styles.recenter, { top: topInset + 8, backgroundColor: c.surfaceStrong, borderColor: c.hairline }]}

@@ -5,7 +5,7 @@ import { Easing, cancelAnimation, useSharedValue, withSpring, withTiming } from 
 import { scheduleOnRN } from "react-native-worklets";
 import { auraFonts, auraStatusAccent, auraStatusColors, type AuraPalette } from "@/constants/aura";
 
-const SIZE = 74;
+const SIZE = 60;
 const RING = 5;
 const CANVAS = SIZE + RING * 4;
 const ALERT = auraStatusAccent.alert;
@@ -126,9 +126,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     shadowColor: GLOW,
     shadowOpacity: 0.55,
-    shadowRadius: 18,
+    shadowRadius: 14,
     shadowOffset: { width: 0, height: 6 },
     elevation: 10,
   },
-  sos: { color: "#FFFFFF", fontFamily: auraFonts.bold, fontSize: 19, letterSpacing: 1 },
+  sos: { color: "#FFFFFF", fontFamily: auraFonts.bold, fontSize: 16, letterSpacing: 0.8 },
 });
