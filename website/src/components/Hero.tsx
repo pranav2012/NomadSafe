@@ -1,29 +1,38 @@
+import { useEffect, useRef } from "react";
 import { Aurora } from "./Aurora";
-import { Phone } from "./Phone";
+import { DemoPhone } from "./DemoPhone";
 import { StoreBadges } from "./StoreBadges";
 
 export function Hero() {
-  return (
-    <section className="hero" aria-labelledby="hero-title">
-      <Aurora />
-      <svg className="hero__arc" viewBox="0 0 1440 640" preserveAspectRatio="none" aria-hidden="true" focusable="false">
-        <path
-          id="hero-arc-path"
-          d="M-40 628 C 520 640, 860 420, 1480 70"
-          fill="none"
-          stroke="#EDEFF5"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeDasharray="1 12"
-          vectorEffect="non-scaling-stroke"
-        />
-        <circle className="hero__arc-dot" r="4" fill="#9B7BFF">
-          <animateMotion dur="16s" repeatCount="indefinite">
-            <mpath href="#hero-arc-path" />
-          </animateMotion>
-        </circle>
-      </svg>
+  const ref = useRef<HTMLElement>(null);
 
+  // The aurora leans a little toward the pointer (fine pointers only, eased in CSS).
+  useEffect(() => {
+    const hero = ref.current;
+    if (!hero || !window.matchMedia("(pointer: fine) and (prefers-reduced-motion: no-preference)").matches) return;
+    let frame = 0;
+    let x = 0;
+    let y = 0;
+    const onMove = (e: PointerEvent) => {
+      x = e.clientX / window.innerWidth - 0.5;
+      y = e.clientY / window.innerHeight - 0.5;
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        hero.style.setProperty("--mx", x.toFixed(3));
+        hero.style.setProperty("--my", y.toFixed(3));
+      });
+    };
+    hero.addEventListener("pointermove", onMove);
+    return () => {
+      hero.removeEventListener("pointermove", onMove);
+      cancelAnimationFrame(frame);
+    };
+  }, []);
+
+  return (
+    <section ref={ref} className="hero" aria-labelledby="hero-title">
+      <Aurora />
       <div className="wrap hero__grid">
         <div className="hero__copy">
           <p className="pill">
@@ -46,13 +55,8 @@ export function Hero() {
         </div>
 
         <div className="hero__media">
-          <div className="halo" aria-hidden="true" />
-          <Phone
-            className="phone--hero"
-            src="/screens/home.png"
-            alt="The NomadSafe home screen with a globe showing the trip route and today's plan."
-            eager
-          />
+          <div className="hero__glow" aria-hidden="true" />
+          <DemoPhone size="hero" label="Interactive demo of the NomadSafe app" tab="trip" globe hint="Tap around · it's a live demo" />
         </div>
       </div>
     </section>

@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { defineConfig, type Plugin } from "vite";
 
-// In dev, render each page on the server the same way scripts/prerender.mjs does at build time, so no client JS is needed.
+// In dev, render each page on the server the same way scripts/prerender.mjs does at build time.
 function serverRender(): Plugin {
   return {
     name: "nomadsafe-server-render",
@@ -18,7 +18,7 @@ function serverRender(): Plugin {
             const { head, html } = renderPage(page);
             res.statusCode = page === "home" ? 200 : 404;
             res.setHeader("Content-Type", "text/html; charset=utf-8");
-            res.end(template.replace("<!--head-->", head).replace("<!--app-->", html));
+            res.end(template.replace("<!--head-->", head).replace("<!--app-->", html).replace("<!--page-->", page));
           } catch (error) {
             server.ssrFixStacktrace(error as Error);
             next(error);

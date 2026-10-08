@@ -1,4 +1,19 @@
+import type { PointerEvent } from "react";
 import { STORE_LINKS } from "../site";
+
+// Magnetic hover: the badge drifts a few pixels toward a mouse pointer.
+function onMagnet(e: PointerEvent<HTMLElement>) {
+  if (e.pointerType !== "mouse") return;
+  const el = e.currentTarget;
+  const box = el.getBoundingClientRect();
+  el.style.setProperty("--tx", `${(((e.clientX - box.left) / box.width - 0.5) * 10).toFixed(1)}px`);
+  el.style.setProperty("--ty", `${(((e.clientY - box.top) / box.height - 0.5) * 8).toFixed(1)}px`);
+}
+
+function offMagnet(e: PointerEvent<HTMLElement>) {
+  e.currentTarget.style.removeProperty("--tx");
+  e.currentTarget.style.removeProperty("--ty");
+}
 
 function PlayIcon() {
   return (
@@ -19,8 +34,8 @@ function AppStoreIcon() {
 }
 
 const STORES = [
-  { key: "play", name: "Google Play", live: "Get it on", soon: "Coming soon to", Icon: PlayIcon },
-  { key: "appStore", name: "App Store", live: "Download on the", soon: "Coming soon to the", Icon: AppStoreIcon },
+  { key: "play", name: "Google Play", live: "Get it on", soon: "Coming soon", Icon: PlayIcon },
+  { key: "appStore", name: "App Store", live: "Download on the", soon: "Coming soon", Icon: AppStoreIcon },
 ] as const;
 
 export function StoreBadges({ center = false }: { center?: boolean }) {
@@ -40,11 +55,13 @@ export function StoreBadges({ center = false }: { center?: boolean }) {
         return (
           <li key={key}>
             {href ? (
-              <a className="store-badge" href={href} rel="noopener">
+              <a className="store-badge" href={href} rel="noopener" onPointerMove={onMagnet} onPointerLeave={offMagnet}>
                 {body}
               </a>
             ) : (
-              <span className="store-badge store-badge--soon">{body}</span>
+              <span className="store-badge store-badge--soon" onPointerMove={onMagnet} onPointerLeave={offMagnet}>
+                {body}
+              </span>
             )}
           </li>
         );

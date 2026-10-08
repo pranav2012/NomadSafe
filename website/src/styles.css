@@ -1,3 +1,5 @@
+@import "./demo/demo.css";
+
 @font-face {
   font-family: "Instrument Sans";
   font-weight: 400;
@@ -387,15 +389,6 @@ h3 {
   background: linear-gradient(180deg, rgba(11, 13, 18, 0), var(--bg));
   pointer-events: none;
 }
-.hero__arc {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: -1;
-  opacity: 0.32;
-  pointer-events: none;
-}
 .hero__grid {
   display: grid;
   gap: clamp(48px, 7vw, 80px);
@@ -408,17 +401,17 @@ h3 {
 }
 .hero__copy h1 .gradient-text {
   display: block;
+  white-space: nowrap;
+}
+.hero__copy h1 {
+  font-size: clamp(2.6rem, 4.2vw + 0.5rem, 4.4rem);
 }
 .hero__media {
   position: relative;
   display: grid;
   place-items: center;
 }
-@media (min-width: 960px) {
-  .hero__grid {
-    grid-template-columns: 1.15fr 0.85fr;
-  }
-}
+
 
 .pill {
   display: inline-flex;
@@ -567,20 +560,17 @@ a.store-badge:hover {
   transform: translateX(-50%);
   z-index: 1;
 }
-.phone img {
-  width: 100%;
-  height: auto;
-  aspect-ratio: 9 / 19.5;
-  object-fit: cover;
-  object-position: top;
-  border-radius: 38px;
-  background: var(--card);
+.phone,
+.brand__mark {
+  -webkit-user-drag: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
-.phone--hero {
-  width: clamp(240px, 62vw, 320px);
-  transform: rotate(2deg);
+.phone img,
+.phone svg,
+.phone canvas {
+  -webkit-user-drag: none;
 }
-
 .halo {
   position: absolute;
   inset: 50% auto auto 50%;
@@ -609,41 +599,6 @@ a.store-badge:hover {
 }
 .halo--rose {
   background: radial-gradient(closest-side, rgba(255, 107, 139, 0.32), rgba(255, 107, 139, 0) 70%);
-}
-
-/* Features */
-
-.feature {
-  padding-block: clamp(56px, 7vw, 100px);
-  overflow-x: clip;
-}
-.feature__grid {
-  display: grid;
-  gap: clamp(48px, 7vw, 96px);
-  align-items: center;
-}
-.feature__copy {
-  max-width: 560px;
-}
-.feature__copy h2 {
-  margin-bottom: 28px;
-}
-.feature__media {
-  position: relative;
-  display: grid;
-  place-items: center;
-  min-height: 420px;
-}
-@media (min-width: 900px) {
-  .feature__grid {
-    grid-template-columns: 1fr 1fr;
-  }
-  .feature--flip .feature__media {
-    order: -1;
-  }
-  .feature--flip .feature__copy {
-    justify-self: end;
-  }
 }
 
 .points {
@@ -681,36 +636,6 @@ a.store-badge:hover {
   color: var(--text-muted);
   font-size: 0.88rem;
   line-height: 1.55;
-}
-
-.phone-pair {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 100%;
-  padding-block: 24px;
-}
-.phone-pair .phone {
-  grid-area: 1 / 1;
-}
-.phone--back {
-  transform: translateX(-30%) rotate(-8deg) scale(0.86);
-  opacity: 0.9;
-  filter: saturate(0.9) brightness(0.85);
-}
-.phone--front {
-  transform: translateX(22%) rotate(4deg);
-}
-@media (max-width: 520px) {
-  .phone-pair .phone {
-    width: 58vw;
-  }
-  .phone--back {
-    transform: translateX(-26%) rotate(-8deg) scale(0.86);
-  }
-  .phone--front {
-    transform: translateX(20%) rotate(4deg);
-  }
 }
 
 /* Bands */
@@ -1000,31 +925,121 @@ a.store-badge:hover {
   box-shadow: 0 14px 30px -12px rgba(91, 108, 255, 0.6);
 }
 
-/* Motion: scroll reveal only where scroll-driven animations exist; everything is visible otherwise. */
+/* Shared helpers */
 
-@media (prefers-reduced-motion: no-preference) {
-  @supports (animation-timeline: view()) {
-    .reveal {
-      animation: reveal linear both;
-      animation-timeline: view();
-      animation-range: entry 0% entry 40%;
-    }
-  }
+.sr-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
 }
-@keyframes reveal {
+
+@property --halo-color {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: rgba(155, 123, 255, 0.42);
+}
+
+/* Logo: glow blooms, then the dotted arc draws in */
+
+.logo__glow {
+  opacity: 0.5;
+}
+.logo--animated .logo__n,
+.logo--animated .logo__glow {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.logo--animated .logo__n {
+  animation: logo-n 0.7s var(--ease) both;
+}
+.logo--animated .logo__glow {
+  animation: logo-bloom 1.8s ease-out both;
+}
+.logo--animated .logo__arc-reveal {
+  stroke-dasharray: 1;
+  animation: logo-arc 1.2s 0.55s cubic-bezier(0.65, 0, 0.35, 1) both;
+}
+@keyframes logo-n {
   from {
     opacity: 0;
-    translate: 0 28px;
+    transform: scale(0.86);
+  }
+}
+@keyframes logo-bloom {
+  0% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  45% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+  100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+}
+@keyframes logo-arc {
+  from {
+    stroke-dashoffset: 1;
   }
   to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Hero: globe and the aurora that leans toward the pointer */
+
+.hero .aurora__blob,
+.hero .aurora__band {
+  transition: translate 1.4s var(--ease);
+}
+.hero .aurora__blob--teal {
+  translate: calc(var(--mx, 0) * -50px) calc(var(--my, 0) * -36px);
+}
+.hero .aurora__blob--indigo {
+  translate: calc(var(--mx, 0) * 30px) calc(var(--my, 0) * 24px);
+}
+.hero .aurora__blob--violet {
+  translate: calc(var(--mx, 0) * 64px) calc(var(--my, 0) * 40px);
+}
+.hero .aurora__band {
+  translate: calc(var(--mx, 0) * 24px) calc(var(--my, 0) * 18px);
+}
+
+/* Reveals (JS adds is-in as items scroll into view) */
+
+@media (prefers-reduced-motion: no-preference) {
+  .js .reveal {
+    opacity: 0;
+    translate: 0 26px;
+    transition:
+      opacity 0.9s var(--ease),
+      translate 0.9s var(--ease);
+  }
+  .js .reveal.is-in {
     opacity: 1;
     translate: 0 0;
   }
 }
 
+/* Magnetic store badges */
+
+.store-badge {
+  translate: var(--tx, 0) var(--ty, 0);
+  transition:
+    translate 0.35s var(--ease),
+    transform 0.25s var(--ease),
+    box-shadow 0.25s var(--ease);
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
+  }
+  .pin__pulse {
+    display: none;
   }
   *,
   *::before,
@@ -1032,21 +1047,50 @@ a.store-badge:hover {
     animation: none !important;
     transition: none !important;
   }
-  .hero__arc-dot {
-    display: none;
-  }
 }
 
-@media (max-width: 959px) {
-  .hero__arc {
-    display: none;
+@media (max-width: 1023px) {
+  .hero {
+    padding-top: 40px;
+  }
+  .hero__copy {
+    gap: 20px;
+  }
+  .hero__grid {
+    gap: 8px;
   }
 }
 @media (max-width: 480px) {
+  .badges {
+    flex-wrap: nowrap;
+    width: 100%;
+    gap: 10px;
+  }
   .badges li {
-    flex: 1 1 100%;
+    flex: 1 1 0;
+    min-width: 0;
   }
   .store-badge {
     width: 100%;
+    min-width: 0;
+    height: 56px;
+    gap: 10px;
+    padding: 0 12px;
+  }
+  .store-badge__icon {
+    width: 22px;
+    height: 22px;
+  }
+  .store-badge__kicker {
+    font-size: 0.6rem;
+    letter-spacing: 0.05em;
+  }
+  .store-badge__store {
+    font-size: 1rem;
+  }
+  .trust {
+    gap: 6px 16px;
+    font-size: 0.86rem;
   }
 }
+

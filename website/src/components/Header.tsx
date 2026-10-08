@@ -12,7 +12,7 @@ export function Header({ showSections = true }: { showSections?: boolean }) {
     <header className="site-header">
       <div className="wrap site-header__inner">
         <a className="brand" href="/" aria-label="NomadSafe home">
-          <LogoMark className="brand__mark" />
+          <LogoMark className="brand__mark" animated />
           <span className="brand__name">NomadSafe</span>
         </a>
         {showSections && (

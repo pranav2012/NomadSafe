@@ -3,12 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <script>document.documentElement.classList.add("js");setTimeout(function(){if(!window.__nsReady)document.documentElement.classList.remove("js")},8000)</script>
   <!--head-->
   <link rel="preload" href="/fonts/InstrumentSans_400Regular.ttf" as="font" type="font/ttf" crossorigin>
   <link rel="preload" href="/fonts/InstrumentSans_600SemiBold.ttf" as="font" type="font/ttf" crossorigin>
   <link rel="stylesheet" href="/src/styles.css">
+  <script type="module" src="/src/entry-client.tsx"></script>
 </head>
 <body>
-  <!--app-->
+  <div id="root" data-page="<!--page-->"><!--app--></div>
 </body>
 </html>
