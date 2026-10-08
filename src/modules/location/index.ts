@@ -27,6 +27,7 @@ export {
   MapView,
   Marker,
   Polyline,
+  useMarkerTracking,
   type LatLng,
   type MapMarkerProps,
   type MapPolylineProps,

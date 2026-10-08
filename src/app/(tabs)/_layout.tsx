@@ -109,10 +109,32 @@ function GlassTabsLayout() {
   );
 }
 
+type TabDescriptor = Parameters<typeof defaultTabsSlotRender>[0];
+
 // Hidden tabs stay mounted; freezing them stops their React updates (Convex data, timers) from
 // re-rendering offscreen screens while another tab is scrolling.
-function renderFrozenWhenHidden(descriptor: Parameters<typeof defaultTabsSlotRender>[0], options: TabsSlotRenderOptions) {
-  return defaultTabsSlotRender({ ...descriptor, options: { ...descriptor.options, freezeOnBlur: true } }, options);
+function renderFrozenWhenHidden(descriptor: TabDescriptor, options: TabsSlotRenderOptions) {
+  return <FreezeWhenHidden key={descriptor.route.key} descriptor={descriptor} options={options} />;
+}
+
+// How long a tab stays hidden before it freezes.
+const FREEZE_AFTER_MS = 500;
+
+/**
+ * Turns on `freezeOnBlur` only once a tab has been hidden for a moment. react-native-screens can
+ * freeze a tab that is left right after it was opened before its hidden style commits, which
+ * leaves it drawn over the tab you switched to.
+ */
+function FreezeWhenHidden({ descriptor, options }: { descriptor: TabDescriptor; options: TabsSlotRenderOptions }) {
+  const [hiddenAWhile, setHiddenAWhile] = useState(false);
+  if (options.isFocused && hiddenAWhile) setHiddenAWhile(false);
+  useEffect(() => {
+    if (options.isFocused) return;
+    const timer = setTimeout(() => setHiddenAWhile(true), FREEZE_AFTER_MS);
+    return () => clearTimeout(timer);
+  }, [options.isFocused]);
+  const freezeOnBlur = hiddenAWhile && !options.isFocused;
+  return defaultTabsSlotRender({ ...descriptor, options: { ...descriptor.options, freezeOnBlur } }, options);
 }
 
 function AppTabBar({ blurTarget }: { blurTarget: React.RefObject<View | null> }) {

@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Platform, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { useIsFocused } from "expo-router";
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { PrivateView } from "@/modules/analytics";
-import { MapView, Marker, type MapViewHandle } from "@/modules/location";
+import { MapView, Marker, useMarkerTracking, type MapViewHandle } from "@/modules/location";
 import { Icon, PressableScale } from "@/atoms";
 import { auraFonts as f, type AuraPalette } from "@/constants/aura";
 import { quietMapStyle } from "@/features/home/components/aura/mapStyles";
@@ -10,11 +12,20 @@ import { circleTone } from "@/features/location-sharing/components/CircleAvatar"
 import { useLocalization } from "@/localization";
 
 const LIVE = "#3DDC97";
+const REVEAL_MS = 200;
+// Shows the map even if Google never reports its tiles drawn (offline, no Play services). A map
+// re-created on return draws from its cache, so it waits less.
+const REVEAL_FALLBACK_MS = 2000;
+const RETURN_FALLBACK_MS = 400;
+// Long enough for the screen to be hidden (tab switch) or covered (pushed screen) first.
+const COVER_AFTER_BLUR_MS = 500;
+// Room kept around the points inside the clear area, on top of the header and panel insets.
+const FRAME_PADDING = { top: 40, right: 60, bottom: 80, left: 60 };
 
 type Point = { latitude: number; longitude: number };
 
 interface SafetyMapProps {
-  /** Space covered by the header and the bottom panel, kept clear when framing. */
+  /** Space covered by the header and the bottom panel (up to its top edge). Framing and Google's logo stay clear of it. */
   topInset: number;
   bottomInset: number;
   palette: AuraPalette;
@@ -36,20 +47,68 @@ export function SafetyMap({ topInset, bottomInset, palette: c, accent, isDark, m
   const points = useMemo(() => [...(me ? [me] : []), ...people.map(({ latitude, longitude }) => ({ latitude, longitude }))], [people, me]);
   const pointsKey = points.map((p) => `${p.latitude.toFixed(4)},${p.longitude.toFixed(4)}`).join("|");
 
+  const mapPadding = { top: topInset, right: 0, bottom: bottomInset, left: 0 };
+  // Android adds edgePadding to mapPadding; iOS measures it from the map's edges.
+  const edgePadding =
+    Platform.OS === "android"
+      ? FRAME_PADDING
+      : { ...FRAME_PADDING, top: FRAME_PADDING.top + topInset, bottom: FRAME_PADDING.bottom + bottomInset };
+
   const frame = (animated: boolean) => {
     const map = mapRef.current;
     if (!map || points.length === 0) return;
     map.fitToCoordinates(points.length === 1 ? [offset(points[0], -0.004), offset(points[0], 0.004)] : points, {
-      edgePadding: { top: topInset + 40, right: 60, bottom: bottomInset + 40, left: 60 },
+      edgePadding,
       animated,
     });
   };
 
+  // The page background covers the map until its tiles have drawn, then fades away. Android
+  // re-creates the map whenever the screen is shown again (onMapReady fires again), so it's covered
+  // shortly after the screen is left and fades back in once the new map draws.
+  const cover = useSharedValue(1);
+  const coverStyle = useAnimatedStyle(() => ({ opacity: cover.get() }));
+  const fallback = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loadedOnce = useRef(false);
+  const reveal = () => {
+    if (fallback.current) clearTimeout(fallback.current);
+    fallback.current = null;
+    loadedOnce.current = true;
+    cover.set(withTiming(0, { duration: REVEAL_MS }));
+  };
+  const coverUntilLoaded = () => {
+    cover.set(1);
+    if (fallback.current) clearTimeout(fallback.current);
+    fallback.current = setTimeout(reveal, loadedOnce.current ? RETURN_FALLBACK_MS : REVEAL_FALLBACK_MS);
+  };
+  useEffect(() => {
+    coverUntilLoaded();
+    return () => {
+      if (fallback.current) clearTimeout(fallback.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- arm the fallback once on mount
+  }, []);
+  const focused = useIsFocused();
+  useEffect(() => {
+    if (!loadedOnce.current) return;
+    if (focused) {
+      if (cover.get() > 0 && !fallback.current) fallback.current = setTimeout(reveal, RETURN_FALLBACK_MS);
+      return;
+    }
+    const timer = setTimeout(() => cover.set(1), COVER_AFTER_BLUR_MS);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs on focus changes only
+  }, [focused]);
+
+  // Android's map crashes if its padding changes after layout but before the map is ready, so the
+  // padding is only set once it is, and the map is framed again once that has landed.
+  const [ready, setReady] = useState(false);
+
   useEffect(() => {
     const timer = setTimeout(() => frame(true), 300);
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-frame when the points move or the panel resizes
-  }, [pointsKey, bottomInset]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-frame when the points move, the panel resizes or the padding lands
+  }, [pointsKey, bottomInset, ready]);
 
   const first = points[0];
 
@@ -63,7 +122,13 @@ export function SafetyMap({ topInset, bottomInset, palette: c, accent, isDark, m
             initialRegion={{ ...first, latitudeDelta: 0.05, longitudeDelta: 0.05 }}
             customMapStyle={style}
             userInterfaceStyle={isDark ? "dark" : "light"}
-            onMapReady={() => frame(false)}
+            mapPadding={ready ? mapPadding : undefined}
+            onMapReady={() => {
+              coverUntilLoaded();
+              setReady(true);
+              frame(false);
+            }}
+            onMapLoaded={reveal}
             rotateEnabled={false}
             pitchEnabled={false}
             toolbarEnabled={false}
@@ -72,17 +137,17 @@ export function SafetyMap({ topInset, bottomInset, palette: c, accent, isDark, m
             moveOnMarkerPress={false}
           >
             {me ? <MeMarker key={`me-${accent}`} coordinate={me} accent={accent} title={t("sharing.youLabel")} /> : null}
-            {people.map((person, i) => {
-              const tone = circleTone(person.name);
-              return (
-                <Marker key={`${person.name}-${i}`} coordinate={person} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false} title={person.name}>
-                  <View style={[styles.person, { borderColor: person.stale ? c.textMuted : LIVE, backgroundColor: isDark ? "#161922" : "#FFFFFF" }]}>
-                    <Text style={[styles.initial, { color: tone }]}>{person.name.charAt(0).toUpperCase()}</Text>
-                  </View>
-                </Marker>
-              );
-            })}
+            {people.map((person, i) => (
+              <PersonMarker
+                key={`${person.name}-${i}`}
+                coordinate={person}
+                name={person.name}
+                ring={person.stale ? c.textMuted : LIVE}
+                fill={isDark ? "#161922" : "#FFFFFF"}
+              />
+            ))}
           </MapView>
+          <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: c.bg }, coverStyle]} />
         </PrivateView>
       ) : (
         <View style={[StyleSheet.absoluteFill, styles.fallback, { paddingBottom: bottomInset, backgroundColor: c.bg }]}>
@@ -107,20 +172,25 @@ export function SafetyMap({ topInset, bottomInset, palette: c, accent, isDark, m
   );
 }
 
-/**
- * Your dot. Android draws a marker into a bitmap once; it tracks view changes for a moment after
- * mounting so the bitmap includes the inner dot. Remount (new key) to change its colour.
- */
+/** Your dot. Remount (new key) to change its colour. */
 function MeMarker({ coordinate, accent, title }: { coordinate: Point; accent: string; title: string }) {
-  const [tracking, setTracking] = useState(true);
-  useEffect(() => {
-    const timer = setTimeout(() => setTracking(false), 600);
-    return () => clearTimeout(timer);
-  }, []);
+  const tracking = useMarkerTracking(accent);
   return (
     <Marker coordinate={coordinate} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={tracking} title={title}>
       <View style={[styles.meHalo, { backgroundColor: `${accent}33` }]}>
         <View style={[styles.meDot, { backgroundColor: accent }]} />
+      </View>
+    </Marker>
+  );
+}
+
+/** Someone sharing with you: their initial in a ring that turns grey when their location is stale. */
+function PersonMarker({ coordinate, name, ring, fill }: { coordinate: Point; name: string; ring: string; fill: string }) {
+  const tracking = useMarkerTracking(`${name}|${ring}|${fill}`);
+  return (
+    <Marker coordinate={coordinate} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={tracking} title={name}>
+      <View style={[styles.person, { borderColor: ring, backgroundColor: fill }]}>
+        <Text style={[styles.initial, { color: circleTone(name) }]}>{name.charAt(0).toUpperCase()}</Text>
       </View>
     </Marker>
   );

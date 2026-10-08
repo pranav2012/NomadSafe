@@ -702,7 +702,7 @@ export default function SafetyScreen() {
       <BlurTargetView ref={blurTarget} style={StyleSheet.absoluteFill}>
         <SafetyMap
           topInset={headerHeight}
-          bottomInset={panelBottom + panelHeight + 40}
+          bottomInset={panelBottom + panelHeight}
           palette={c}
           accent={accent}
           isDark={isDark}

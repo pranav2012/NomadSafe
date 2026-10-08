@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
 import { PrivateView } from "@/modules/analytics";
-import { MapView, Marker } from "@/modules/location";
+import { MapView, Marker, useMarkerTracking } from "@/modules/location";
 import { AuraButton, AuraCard, Icon, LiveDot, useAura, useTabBarInset } from "@/atoms";
 import { auraStatusAccent, auraStatusColors } from "@/constants/aura";
 import { useAppLocked } from "@/features/auth";
@@ -31,6 +31,18 @@ interface EmergencyTakeoverProps {
   onAlertAgain: () => void;
   onSharingAction: () => void;
   onCancel: () => void;
+}
+
+/** Your dot on the SOS map. */
+function YouMarker({ coordinate, title }: { coordinate: { latitude: number; longitude: number }; title: string }) {
+  const tracking = useMarkerTracking("you");
+  return (
+    <Marker coordinate={coordinate} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={tracking} title={title}>
+      <View style={[styles.halo, { backgroundColor: `${ALERT}33` }]}>
+        <View style={[styles.dot, { backgroundColor: ALERT }]} />
+      </View>
+    </Marker>
+  );
 }
 
 /** Full-screen state while an SOS is active: what was sent, where you are, and how to get help. */
@@ -101,11 +113,7 @@ export function EmergencyTakeover({
                 pitchEnabled={false}
                 toolbarEnabled={false}
               >
-                <Marker coordinate={location} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false} title={t("sos.yourLocation")}>
-                  <View style={[styles.halo, { backgroundColor: `${ALERT}33` }]}>
-                    <View style={[styles.dot, { backgroundColor: ALERT }]} />
-                  </View>
-                </Marker>
+                <YouMarker coordinate={location} title={t("sos.yourLocation")} />
               </MapView>
             </PrivateView>
           ) : (

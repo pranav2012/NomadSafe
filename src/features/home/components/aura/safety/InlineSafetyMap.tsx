@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { Linking, Platform, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeInDown, FadeOutDown } from "react-native-reanimated";
 import { Icon, PressableScale } from "@/atoms";
@@ -8,7 +8,7 @@ import type { PlacePin, SafetyPlace } from "@/features/home/hooks/useTripSafety"
 import { isCompactFrame, regionForPoints } from "@/features/trips/utils/mapFraming";
 import { useLocalization } from "@/localization";
 import { isSafeMapsUrl } from "@/utils/safeUrl";
-import { MapView, Marker, Polyline, type MapViewHandle, type Region } from "@/modules/location";
+import { MapView, Marker, Polyline, useMarkerTracking, type MapViewHandle, type Region } from "@/modules/location";
 import { distanceKm } from "../globe/sun";
 import { quietMapStyle } from "../mapStyles";
 import { SAFETY_KIND_META } from "./kinds";
@@ -135,13 +135,8 @@ export function InlineSafetyMap({
   );
   const selectedKm = selected && stop ? distanceKm(stop, selected) : null;
 
-  const markerKey = `${sorted.map(({ place }) => place.name).join("|")}#${hotel?.latitude ?? ""}#${contacts.length}`;
-  const [settledMarkers, setSettledMarkers] = useState<string | null>(null);
-  const tracking = settledMarkers !== markerKey;
-  useEffect(() => {
-    const id = setTimeout(() => setSettledMarkers(markerKey), MARKER_SETTLE_MS);
-    return () => clearTimeout(id);
-  }, [markerKey]);
+  const markerKey = `${sorted.map(({ place }) => place.name).join("|")}#${hotel?.latitude ?? ""}#${contacts.map((contact) => contact.name).join("|")}#${accent}#${isDark}`;
+  const tracking = useMarkerTracking(markerKey, MARKER_SETTLE_MS);
 
   const legend = [
     ...LEGEND_KINDS.filter((kind) => sorted.some(({ place }) => place.kind === kind)).map((kind) => ({

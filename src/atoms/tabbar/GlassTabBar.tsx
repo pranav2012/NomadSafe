@@ -300,6 +300,9 @@ export function GlassTabBar({
   const moved = useSharedValue(false);
   // The tab drawn selected at rest; moved on release so the new tab lights up before navigation.
   const restIndex = useSharedValue(activeIndex);
+  // The tab last picked on the bar or shown by React, whichever came last. A release sets it on the
+  // UI thread, so a quick second drag never compares against a tab React hasn't caught up with yet.
+  const pickedIndex = useSharedValue(activeIndex);
   // How squashed the drop is by drag speed (0..1) and how much taller it bulges after slowing down,
   // with their spring velocities.
   const flat = useSharedValue(0);
@@ -421,6 +424,7 @@ export function GlassTabBar({
   // Moves the drop when the tab changes from outside (links, first layout). A release already
   // sent it there, so that case doesn't restart it mid-flight.
   useEffect(() => {
+    pickedIndex.set(activeIndex);
     if (slot === 0 || dragging.get()) return;
     restIndex.set(activeIndex);
     const target = INSET + activeIndex * slot;
@@ -439,7 +443,7 @@ export function GlassTabBar({
       liquidRunning.set(true);
     });
     startLiquidFromEffect();
-  }, [INSET, activeIndex, dragging, goal, lastIndex, liquidRunning, restIndex, settledOn, slot, x]);
+  }, [INSET, activeIndex, dragging, goal, lastIndex, liquidRunning, pickedIndex, restIndex, settledOn, slot, x]);
 
   const indexAt = (px: number) => {
     "worklet";
@@ -488,7 +492,10 @@ export function GlassTabBar({
       settledOn.set(target);
       goal.set(target);
       landing.set(true);
-      if (index !== activeIndex) scheduleOnRN(onChange, index);
+      if (index !== pickedIndex.get()) {
+        pickedIndex.set(index);
+        scheduleOnRN(onChange, index);
+      }
     });
 
   const uniforms = useDerivedValue(() => {
