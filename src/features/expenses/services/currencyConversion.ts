@@ -22,6 +22,11 @@ const STORED_PREFIX = "fx-rates:";
 const STORED_DAYS_PER_PAIR = 30;
 
 const rateCache = new Map<string, ExchangeRate>();
+
+// Some builds stored every target's rates under one key per base currency ("fx-rates:JPY|"), mixing them up.
+for (const key of storage.getAllKeys()) {
+  if (/^fx-rates:[A-Z]{3}\|$/.test(key)) storage.remove(key);
+}
 const inFlightRates = new Map<string, Promise<ExchangeRate>>();
 
 function dateKey(value: string): string {
@@ -29,11 +34,11 @@ function dateKey(value: string): string {
 }
 
 function cacheKey(base: string, quote: string, date: string): string {
-  return `${base.toUpperCase()}||${dateKey(date)}`;
+  return `${base.toUpperCase()}|${quote.toUpperCase()}|${dateKey(date)}`;
 }
 
 function pairKey(base: string, quote: string): string {
-  return `${STORED_PREFIX}${base.toUpperCase()}|`;
+  return `${STORED_PREFIX}${base.toUpperCase()}|${quote.toUpperCase()}`;
 }
 
 /** Stored rates for one pair, keyed by the requested local day. */
