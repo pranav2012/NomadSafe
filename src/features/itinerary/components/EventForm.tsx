@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { AuraButton, AuraChip, AuraDateField, AuraField, AuraSegmented, AuraSheet, AuraSwitch, Icon, PressableScale, useAura } from "@/atoms";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
+import { AuraButton, AuraChip, AuraDateField, AuraField, AuraSegmented, AuraSheet, AuraSwitch, Icon, PressableScale, showToast, useAura } from "@/atoms";
 import { track } from "@/modules/analytics";
 import { attachFiles, attachPhotos, sendTicket, setTicketShared } from "@/features/itinerary/services/tickets";
 import { useTicketsStore } from "@/features/itinerary/store/ticketsStore";
@@ -8,7 +8,10 @@ import { auraEventColors, auraHitSlop } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { SELF_ID } from "@/features/expenses/utils/split";
 import { EVENT_TYPES, TRANSIT_MODES, canBeUntimed, type EventTiming, type EventType, type TransitMode } from "@/features/itinerary/constants/eventTypes";
-import type { TripEvent } from "@/features/itinerary/store/eventsStore";
+import type { EventLink, TripEvent } from "@/features/itinerary/store/eventsStore";
+import type { ScreenshotRead } from "@/features/itinerary/services/ticketScreenshot";
+import { classifyLink } from "@/features/itinerary/utils/sharedLinks";
+import { TRAVEL_FIELDS, type TravelDetails, type TravelField } from "@/features/itinerary/utils/travelDetails";
 import { localizeEventDetail, localizeEventTitle } from "@/features/itinerary/utils/eventText";
 import { transitModeOf } from "@/features/itinerary/utils/transit";
 import { toWallClock } from "@/features/itinerary/utils/wallClock";
@@ -25,6 +28,13 @@ export interface EventFormValues {
   timing?: EventTiming;
   /** Undefined means everyone. */
   people?: string[];
+  /** The place as the user typed it; undefined when left empty. */
+  where?: string;
+  link?: EventLink;
+  travel?: TravelDetails;
+  bookingRef?: string;
+  /** A screenshot the item was filled from, to keep as its ticket once saved. */
+  screenshot?: { uri: string; name: string };
 }
 
 type When = "time" | EventTiming;
@@ -32,6 +42,13 @@ type When = "time" | EventTiming;
 const DAY_MS = 86_400_000;
 const HOUR_MS = 3_600_000;
 const DETAIL_SEPARATOR = " · ";
+const TRAVEL_FIELDS_BY_MODE: Record<TransitMode, TravelField[]> = {
+  flight: ["terminal", "gate", "seat"],
+  train: ["platform", "coach", "seat"],
+  bus: ["platform", "seat"],
+  ferry: ["terminal", "seat"],
+  car: [],
+};
 
 /** Puts back the English sentinel head ("Check-out", "Departure"…) when the user kept its translated form. */
 function restoreDetailHead(edited: string, original: string | undefined, localized: string): string {
@@ -45,6 +62,17 @@ function restoreDetailHead(edited: string, original: string | undefined, localiz
   return edited;
 }
 
+/** Travel details the form shows for this mode, trimmed; boarding time only when set. */
+function cleanTravel(travel: TravelDetails, boarding: Date | null, fields: TravelField[]): TravelDetails | undefined {
+  const kept: TravelDetails = {};
+  for (const field of TRAVEL_FIELDS) {
+    const value = fields.includes(field) ? travel[field]?.trim() : undefined;
+    if (value) kept[field] = value.toUpperCase();
+  }
+  if (boarding) kept.boardingAt = toWallClock(boarding);
+  return Object.keys(kept).length > 0 ? kept : undefined;
+}
+
 /** Sheet to create or edit a single itinerary event; shows Delete when editing. */
 export function EventForm({
   event,
@@ -54,6 +82,8 @@ export function EventForm({
   onOpenTicket,
   sharedTrip,
   onAskForTicket,
+  readScreenshot,
+  prefill,
   visible,
   onSave,
   onDelete,
@@ -71,6 +101,10 @@ export function EventForm({
   /** Shared trips: tickets get a "Visible to the group" switch, and others' tickets can be asked for. */
   sharedTrip: boolean;
   onAskForTicket: () => void;
+  /** New items: picks a ticket screenshot and reads it on the phone, to fill the form. */
+  readScreenshot?: () => Promise<ScreenshotRead | null>;
+  /** A screenshot already read before the form opened: fills a new item and is kept as its ticket. */
+  prefill?: ScreenshotRead | null;
   visible: boolean;
   onSave: (values: EventFormValues) => void;
   onDelete?: () => void;
@@ -80,17 +114,33 @@ export function EventForm({
   const { c, f } = useAura();
 
   // The parent remounts this form (via `key`) for each open, so state initializes fresh from props.
-  const [type, setType] = useState<EventType>(event?.type ?? "activity");
-  const [title, setTitle] = useState(event ? localizeEventTitle(event.title, t) : "");
-  const [initialDetail] = useState(() => (event ? (localizeEventDetail(event.detail, t) ?? "") : ""));
+  const seed = event ? null : (prefill?.booking ?? null);
+  const [type, setType] = useState<EventType>(event?.type ?? seed?.type ?? "activity");
+  const [title, setTitle] = useState(event ? localizeEventTitle(event.title, t) : (seed?.title ?? ""));
+  const [initialDetail] = useState(() => (event ? (localizeEventDetail(event.detail, t) ?? "") : (seed?.detail ?? "")));
   const [detail, setDetail] = useState(initialDetail);
-  const [transitMode, setTransitMode] = useState<TransitMode | undefined>(() => (event ? transitModeOf(event) : undefined));
-  const [when, setWhen] = useState<Date>(() => (event ? new Date(event.startAt) : (defaultStart ?? new Date())));
+  const [transitMode, setTransitMode] = useState<TransitMode | undefined>(() => (event ? transitModeOf(event) : seed?.transitMode));
+  const [when, setWhen] = useState<Date>(() => (event ? new Date(event.startAt) : seed ? new Date(seed.startAt) : (defaultStart ?? new Date())));
   const [until, setUntil] = useState<Date>(() =>
-    event?.endAt ? new Date(event.endAt) : new Date((event ? new Date(event.startAt) : (defaultStart ?? new Date())).getTime() + DAY_MS),
+    event?.endAt
+      ? new Date(event.endAt)
+      : seed?.endAt
+        ? new Date(seed.endAt)
+        : new Date((event ? new Date(event.startAt) : (defaultStart ?? new Date())).getTime() + DAY_MS),
   );
   const [pickedWhen, setWhenKind] = useState<When>(event?.timing ?? "time");
   const [people, setPeople] = useState<string[]>(event?.people ?? []);
+  const [where, setWhere] = useState(event?.where ?? "");
+  const [link, setLink] = useState(event?.link?.url ?? "");
+  const [travel, setTravel] = useState<TravelDetails>(event?.travel ?? seed?.travel ?? {});
+  const [boarding, setBoarding] = useState<Date | null>(() => {
+    const boardingAt = event ? event.travel?.boardingAt : seed?.travel?.boardingAt;
+    return boardingAt ? new Date(boardingAt) : null;
+  });
+  const [showEnd, setShowEnd] = useState(Boolean(event?.endAt ?? seed?.endAt));
+  const [bookingRef, setBookingRef] = useState(event?.bookingRef ?? seed?.bookingRef);
+  const [screenshot, setScreenshot] = useState<ScreenshotRead | null>(event ? null : (prefill ?? null));
+  const [reading, setReading] = useState(false);
   const allTickets = useTicketsStore((state) => state.tickets);
   const tickets = event ? allTickets.filter((ticket) => ticket.eventId === event.id) : [];
   const others = (event?.ticketHolders ?? []).filter((person) => person !== SELF_ID);
@@ -116,9 +166,44 @@ export function EventForm({
   const savedDetail = restoreDetailHead(detail.trim(), event?.detail, initialDetail);
   // A lone check-out (from a booking email) is its own entry and has no separate end.
   const isLoneCheckOut = type === "stay" && !event?.endAt && savedDetail.split(DETAIL_SEPARATOR)[0] === "Check-out";
-  // Stays always have a check-out; a transit shows its arrival only when one is known.
-  const hasEnd = whenKind === "time" && ((type === "stay" && !isLoneCheckOut) || (type === "transit" && Boolean(event?.endAt)));
+  // Stays always have a check-out; other items show an end (arrival for transit) once known or added.
+  const hasEnd = whenKind === "time" && ((type === "stay" && !isLoneCheckOut) || (type !== "stay" && type !== "note" && showEnd));
   const canSave = title.trim().length > 0;
+  const linkValue = link.trim() ? classifyLink(/^https?:\/\//i.test(link.trim()) ? link.trim() : `https://${link.trim()}`) : null;
+  const travelFields = type === "transit" && transitMode ? TRAVEL_FIELDS_BY_MODE[transitMode] : type === "transit" ? (["seat"] as TravelField[]) : [];
+  const placeable = type === "activity" || type === "food" || type === "stay";
+
+  const fillFromScreenshot = async () => {
+    if (!readScreenshot || reading) return;
+    setReading(true);
+    try {
+      const read = await readScreenshot();
+      if (!read) return;
+      setScreenshot(read);
+      const booking = read.booking;
+      track("ticket_screenshot_read", { found: Boolean(booking) });
+      if (!booking) {
+        showToast(t("itinerary.form.screenshotNothing"));
+        return;
+      }
+      setType(booking.type);
+      setTitle(booking.title);
+      setDetail(booking.detail ?? "");
+      setTransitMode(booking.transitMode);
+      setWhenKind("time");
+      setWhen(new Date(booking.startAt));
+      if (booking.endAt) {
+        setUntil(new Date(booking.endAt));
+        setShowEnd(true);
+      }
+      setTravel(booking.travel ?? {});
+      setBoarding(booking.travel?.boardingAt ? new Date(booking.travel.boardingAt) : null);
+      setBookingRef(booking.bookingRef);
+      showToast(t("itinerary.form.screenshotFilled"));
+    } finally {
+      setReading(false);
+    }
+  };
 
   // Moving the start past the end shifts the end by the same duration, so it stays valid.
   const changeWhen = (next: Date) => {
@@ -143,6 +228,11 @@ export function EventForm({
       transitMode: type === "transit" ? transitMode : undefined,
       timing: whenKind === "time" ? undefined : whenKind,
       people: people.length > 0 ? people : undefined,
+      where: placeable && where.trim() ? where.trim() : undefined,
+      link: linkValue ? { url: linkValue.url, provider: linkValue.provider, ...(linkValue.author ? { author: linkValue.author } : null) } : undefined,
+      travel: type === "transit" ? cleanTravel(travel, boarding, travelFields) : undefined,
+      bookingRef,
+      screenshot: screenshot ? { uri: screenshot.uri, name: screenshot.name } : undefined,
     });
   };
 
@@ -166,6 +256,23 @@ export function EventForm({
       }
     >
       <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+        {!event && readScreenshot ? (
+          <PressableScale
+            onPress={() => void fillFromScreenshot()}
+            accessibilityRole="button"
+            style={[styles.screenshot, { backgroundColor: c.surface, borderColor: c.hairline }]}
+          >
+            <View style={[styles.screenshotIcon, { backgroundColor: c.surfaceStrong }]}>
+              {reading ? <ActivityIndicator size="small" color={c.textSoft} /> : <Icon name="camera" size={16} color={c.text} />}
+            </View>
+            <View style={styles.flex}>
+              <Text style={[styles.screenshotTitle, { color: c.text, fontFamily: f.semibold }]}>
+                {screenshot ? t("itinerary.form.screenshotAgain") : t("itinerary.form.screenshotTitle")}
+              </Text>
+              <Text style={[styles.hint, { color: c.textMuted, fontFamily: f.regular }]}>{t("itinerary.form.screenshotBody")}</Text>
+            </View>
+          </PressableScale>
+        ) : null}
         <View style={styles.types}>
           {EVENT_TYPES.map((meta) => (
             <AuraChip
@@ -224,13 +331,62 @@ export function EventForm({
         )}
         {hasEnd ? (
           <AuraDateField
-            label={type === "stay" ? t("itinerary.defaults.checkOut") : t("itinerary.defaults.arrival")}
+            label={type === "stay" ? t("itinerary.defaults.checkOut") : type === "transit" ? t("itinerary.defaults.arrival") : t("itinerary.form.ends")}
             value={until}
             onChange={setUntil}
             minimumDate={when}
             withTime
           />
+        ) : whenKind === "time" && type !== "stay" && type !== "note" ? (
+          <AuraChip
+            label={type === "transit" ? t("itinerary.form.addArrival") : t("itinerary.form.addEnd")}
+            icon="clock"
+            onPress={() => {
+              setUntil(new Date(when.getTime() + (type === "transit" ? HOUR_MS : 2 * HOUR_MS)));
+              setShowEnd(true);
+            }}
+          />
         ) : null}
+        {placeable ? (
+          <AuraField
+            label={t("itinerary.form.where")}
+            value={where}
+            onChangeText={setWhere}
+            placeholder={event?.place?.name ?? t("itinerary.form.wherePlaceholder")}
+            returnKeyType="next"
+          />
+        ) : null}
+        {travelFields.length > 0 ? (
+          <View style={styles.people}>
+            <Text style={[styles.peopleLabel, { color: c.textSoft, fontFamily: f.medium }]}>{t("itinerary.travel.title")}</Text>
+            <View style={styles.travelRow}>
+              {travelFields.map((field) => (
+                <View key={field} style={styles.travelField}>
+                  <AuraField
+                    label={t(`itinerary.travel.${field}`)}
+                    value={travel[field] ?? ""}
+                    onChangeText={(value) => setTravel((current) => ({ ...current, [field]: value }))}
+                    autoCapitalize="characters"
+                  />
+                </View>
+              ))}
+            </View>
+            {boarding ? (
+              <AuraDateField label={t("itinerary.travel.boarding")} value={boarding} onChange={setBoarding} withTime />
+            ) : (
+              <AuraChip label={t("itinerary.travel.addBoarding")} icon="clock" onPress={() => setBoarding(new Date(when.getTime() - 45 * 60_000))} />
+            )}
+          </View>
+        ) : null}
+        <AuraField
+          label={t("itinerary.form.link")}
+          value={link}
+          onChangeText={setLink}
+          placeholder={t("itinerary.form.linkPlaceholder")}
+          autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType="url"
+        />
         <View style={styles.people}>
           <Text style={[styles.peopleLabel, { color: c.textSoft, fontFamily: f.medium }]}>{t("tickets.title")}</Text>
           {event ? (
@@ -279,6 +435,8 @@ export function EventForm({
               </View>
               <Text style={[styles.hint, { color: c.textMuted, fontFamily: f.regular }]}>{t("tickets.onlyHere")}</Text>
             </>
+          ) : screenshot ? (
+            <Text style={[styles.hint, { color: c.textMuted, fontFamily: f.regular }]}>{t("itinerary.form.screenshotKept")}</Text>
           ) : (
             <Text style={[styles.hint, { color: c.textMuted, fontFamily: f.regular }]}>{t("tickets.saveFirst")}</Text>
           )}
@@ -308,6 +466,11 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, paddingTop: 6, paddingBottom: 8, gap: 18 },
   types: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   hint: { fontSize: 13.5, lineHeight: 19 },
+  screenshot: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth },
+  screenshotIcon: { width: 36, height: 36, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  screenshotTitle: { fontSize: 15 },
+  travelRow: { flexDirection: "row", gap: 8 },
+  travelField: { flex: 1 },
   people: { gap: 10 },
   ticketCard: { borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, overflow: "hidden" },
   ticket: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, minHeight: 50 },

@@ -789,7 +789,7 @@
     "eventSafeMessageSent_other": "Message « je suis en sécurité » envoyé à {{count}} contacts",
     "eventSafeMessageOpened_one": "Message « je suis en sécurité » ouvert par SMS pour {{count}} contact",
     "eventSafeMessageOpened_other": "Message « je suis en sécurité » ouvert par SMS pour {{count}} contacts",
-    "recenterMap": "Afficher tout le monde sur la carte",
+    "recenterMap": "Afficher ma position",
     "keepHolding": "Maintenez",
     "imSafeShort": "Je vais bien",
     "alertChannelName": "Alertes de sécurité de vos contacts",
@@ -1133,7 +1133,20 @@
       "day": "Jour",
       "whoFor": "Pour qui",
       "everyone": "Tout le monde",
-      "you": "Vous"
+      "you": "Vous",
+      "screenshotTitle": "Remplir depuis une capture",
+      "screenshotAgain": "Utiliser une autre capture",
+      "screenshotBody": "Choisissez une capture d'écran d'un billet ou d'une réservation. Elle est lue sur votre téléphone et conservée avec cet élément comme billet.",
+      "screenshotFilled": "Rempli depuis votre capture. Vérifiez les détails.",
+      "screenshotNothing": "Aucune réservation trouvée dans cette capture. Elle sera tout de même conservée comme billet.",
+      "screenshotKept": "La capture sera enregistrée comme billet de cet élément.",
+      "ends": "Fin",
+      "addEnd": "Ajouter l'heure de fin",
+      "addArrival": "Ajouter l'heure d'arrivée",
+      "where": "Où",
+      "wherePlaceholder": "Lieu ou adresse, pour la carte",
+      "link": "Lien de réservation ou de billet",
+      "linkPlaceholder": "https://…"
     },
     "defaults": {
       "hotelStay": "Séjour à l'hôtel",
@@ -1159,14 +1172,118 @@
       "togetherAgain": "De nouveau ensemble",
       "splitUp_one": "Séparés {{from}}–{{to}} · {{count}} programme pour {{names}}",
       "splitUp_other": "Séparés {{from}}–{{to}} · {{count}} programmes pour {{names}}",
-      "addToDay": "Ajouter"
+      "addToDay": "Ajouter",
+      "openLink": "Ouvrir le lien de réservation"
     },
     "anytime": "N'importe quand",
     "mustDo": {
       "title": "Incontournables à {{place}}",
       "dismiss": "Masquer {{name}}"
     },
-    "plannedTitle": "Prévu"
+    "plannedTitle": "Prévu",
+    "landsAt": "Atterrissage {{time}}",
+    "missing": {
+      "place": "Ajouter un lieu",
+      "ticket": "Ajouter un billet"
+    },
+    "travel": {
+      "title": "Détails du trajet",
+      "terminal": "Terminal",
+      "gate": "Porte",
+      "platform": "Voie",
+      "coach": "Voiture",
+      "seat": "Siège",
+      "boarding": "Embarquement",
+      "addBoarding": "Ajouter l'heure d'embarquement",
+      "short": {
+        "terminal": "T{{value}}",
+        "gate": "Porte {{value}}",
+        "platform": "Voie {{value}}",
+        "coach": "Voiture {{value}}",
+        "seat": "Siège {{value}}"
+      },
+      "boards": "Embarquement {{time}}",
+      "booking": "Réservation {{ref}}",
+      "ticket": "Billet",
+      "departs": "Départ",
+      "arrives": "Arrivée",
+      "departsAt": "Départ {{time}}",
+      "addGateSeat": "Ajouter porte et siège",
+      "addPlatformSeat": "Ajouter voie et siège",
+      "leaveBy": "Partez avant {{time}}",
+      "ride": "{{duration}} pour y aller",
+      "beThereFlight": "à l'aéroport {{duration}} avant",
+      "beThere": "sur place {{duration}} avant"
+    },
+    "gap": {
+      "free": "Libre {{range}} · {{duration}}",
+      "lunch": "Déjeuner ? Libre {{range}}",
+      "dinner": "Dîner ? Libre {{range}}",
+      "bags": "Le check-in de l'hôtel est plus tard. Demandez à déposer vos bagages.",
+      "findFood": "Trouver où manger",
+      "ideas": "Idées",
+      "walk": "{{duration}} à pied · {{distance}}",
+      "transit": "{{duration}} en transports · {{distance}}",
+      "drive": "{{duration}} en voiture · {{distance}}",
+      "tight": "Serré : {{duration}} pour y aller · {{distance}}",
+      "exit": "{{duration}} pour sortir de l'aéroport",
+      "boardFlight": "Soyez à l'aéroport {{duration}} avant",
+      "boardGround": "Soyez sur place {{duration}} avant",
+      "freeTitle": "Temps libre",
+      "lunchTitle": "Déjeuner",
+      "dinnerTitle": "Dîner",
+      "yourIdeas": "Vos idées enregistrées à proximité",
+      "walkShort": "{{duration}} à pied",
+      "transitShort": "{{duration}} en transports",
+      "driveShort": "{{duration}} en voiture",
+      "nearby": "À proximité",
+      "added": "{{title}} ajouté au programme",
+      "noPlace": "Ajoutez un lieu à l'élément précédent pour voir ce qu'il y a à proximité."
+    },
+    "glance": {
+      "title": "Votre voyage en un coup d'œil",
+      "fullPlan": "Programme complet",
+      "day": "Jour {{day}}",
+      "lands": "Atterrissage à {{place}} à {{time}}",
+      "freeDay": "Journée libre",
+      "tonight": "Nuit à {{name}}",
+      "free": "{{duration}} de libre",
+      "noStay": "Aucun hébergement réservé",
+      "missing_one": "{{count}} chose à ajouter",
+      "missing_other": "{{count}} choses à ajouter",
+      "loadLabel": "{{percent}} % de la journée planifiée",
+      "nudge_one": "Il manque {{count}} chose. Ajoutez-la pour voir le programme complet.",
+      "nudge_other": "Il manque {{count}} choses. Ajoutez-les pour voir le programme complet.",
+      "allDays": "Les {{count}} jours"
+    },
+    "plan": {
+      "subtitle_one": "{{count}} jour",
+      "subtitle_other": "{{count}} jours",
+      "noPins": "Les lieux s'affichent ici dès que vos éléments en ont.",
+      "dayOnMap": "Journée sur la carte",
+      "wholeTrip": "Tout le voyage",
+      "allDays": "Tous les jours"
+    },
+    "preview": {
+      "title": "Votre voyage, jour par jour",
+      "body": "Ajoutez vos réservations pour voir quand vous atterrissez, le temps entre les étapes, le temps libre et les repas, et ce qui manque encore.",
+      "sampleLabel": "Exemple de journée : atterrissage à 7:40, trajet jusqu'à l'hôtel, temps libre pour déjeuner, check-in à 15:00",
+      "land": "Atterrissage · NRT",
+      "ride": "~1 h 10 jusqu'à votre hôtel",
+      "free": "Libre 10:00–13:00 · déjeuner à proximité",
+      "hotel": "Check-in · Hotel Gracery",
+      "screenshot": "Depuis une capture",
+      "add": "Ajouter une réservation"
+    },
+    "reminders": {
+      "channel": "Rappels de voyage",
+      "leaveTitle": "Partez avant {{time}}",
+      "leaveBodyFlight": "{{name}} part à {{time}}. Cela tient compte du trajet et d'une arrivée en avance à l'aéroport.",
+      "leaveBody": "{{name}} part à {{time}}.",
+      "boardingTitle": "Embarquement bientôt · {{name}}",
+      "boardingBody": "Embarquement à {{time}}.",
+      "boardingBodyGate": "Embarquement à {{time}}, porte {{gate}}."
+    }
   },
   "places": {
     "nearYou": "Près de vous",
@@ -1185,7 +1302,9 @@
     "openNow": "Ouvert",
     "closed": "Fermé",
     "photoBy": "Photo : {{name}}",
-    "nothingNearby": "Rien trouvé à proximité dans cette catégorie."
+    "nothingNearby": "Rien trouvé à proximité dans cette catégorie.",
+    "add": "Ajouter",
+    "addToPlan": "Ajouter {{name}} au programme"
   },
   "emergencyContacts": {
     "confirmRemoveTitle": "Retirer {{name}} ?",

@@ -789,7 +789,7 @@
     "eventSafeMessageSent_other": "“안전해요” 메시지가 연락처 {{count}}명에게 전송되었어요",
     "eventSafeMessageOpened_one": "“안전해요” 메시지가 연락처 {{count}}명을 위해 SMS로 열렸어요",
     "eventSafeMessageOpened_other": "“안전해요” 메시지가 연락처 {{count}}명을 위해 SMS로 열렸어요",
-    "recenterMap": "모두 지도에 표시",
+    "recenterMap": "내 위치 표시",
     "keepHolding": "계속 누르세요",
     "imSafeShort": "안전해요",
     "alertChannelName": "연락처의 안전 알림",
@@ -1133,7 +1133,20 @@
       "day": "날짜",
       "whoFor": "누구의 일정",
       "everyone": "모두",
-      "you": "나"
+      "you": "나",
+      "screenshotTitle": "스크린샷으로 채우기",
+      "screenshotAgain": "다른 스크린샷 사용",
+      "screenshotBody": "티켓이나 예약 스크린샷을 고르세요. 휴대폰에서 읽고 이 항목의 티켓으로 함께 보관해요.",
+      "screenshotFilled": "스크린샷으로 채웠어요. 내용을 확인하세요.",
+      "screenshotNothing": "스크린샷에서 예약을 찾지 못했어요. 티켓으로는 그대로 보관돼요.",
+      "screenshotKept": "스크린샷은 이 항목의 티켓으로 저장돼요.",
+      "ends": "종료",
+      "addEnd": "종료 시간 추가",
+      "addArrival": "도착 시간 추가",
+      "where": "장소",
+      "wherePlaceholder": "지도에 표시할 장소나 주소",
+      "link": "예약 또는 티켓 링크",
+      "linkPlaceholder": "https://…"
     },
     "defaults": {
       "hotelStay": "호텔 숙박",
@@ -1159,14 +1172,118 @@
       "togetherAgain": "다시 함께",
       "splitUp_one": "{{from}}–{{to}} 따로 · {{names}}의 일정 {{count}}개",
       "splitUp_other": "{{from}}–{{to}} 따로 · {{names}}의 일정 {{count}}개",
-      "addToDay": "추가"
+      "addToDay": "추가",
+      "openLink": "예약 링크 열기"
     },
     "anytime": "언제든",
     "mustDo": {
       "title": "{{place}} 필수 코스",
       "dismiss": "{{name}} 숨기기"
     },
-    "plannedTitle": "계획됨"
+    "plannedTitle": "계획됨",
+    "landsAt": "{{time}} 도착",
+    "missing": {
+      "place": "장소 추가",
+      "ticket": "티켓 추가"
+    },
+    "travel": {
+      "title": "이동 정보",
+      "terminal": "터미널",
+      "gate": "게이트",
+      "platform": "승강장",
+      "coach": "호차",
+      "seat": "좌석",
+      "boarding": "탑승",
+      "addBoarding": "탑승 시간 추가",
+      "short": {
+        "terminal": "T{{value}}",
+        "gate": "게이트 {{value}}",
+        "platform": "{{value}}번 승강장",
+        "coach": "{{value}}호차",
+        "seat": "좌석 {{value}}"
+      },
+      "boards": "{{time}} 탑승",
+      "booking": "예약 {{ref}}",
+      "ticket": "티켓",
+      "departs": "출발",
+      "arrives": "도착",
+      "departsAt": "{{time}} 출발",
+      "addGateSeat": "게이트·좌석 추가",
+      "addPlatformSeat": "승강장·좌석 추가",
+      "leaveBy": "{{time}}까지 출발",
+      "ride": "이동 {{duration}}",
+      "beThereFlight": "공항에 {{duration}} 일찍",
+      "beThere": "{{duration}} 일찍 도착"
+    },
+    "gap": {
+      "free": "{{range}} 비어 있음 · {{duration}}",
+      "lunch": "점심? {{range}} 비어 있음",
+      "dinner": "저녁? {{range}} 비어 있음",
+      "bags": "호텔 체크인은 나중이에요. 짐을 맡길 수 있는지 물어보세요.",
+      "findFood": "식당 찾기",
+      "ideas": "아이디어",
+      "walk": "도보 {{duration}} · {{distance}}",
+      "transit": "대중교통 {{duration}} · {{distance}}",
+      "drive": "차로 {{duration}} · {{distance}}",
+      "tight": "빠듯해요: 이동 {{duration}} · {{distance}}",
+      "exit": "공항을 나오는 데 {{duration}}",
+      "boardFlight": "공항에 {{duration}} 일찍 도착하세요",
+      "boardGround": "{{duration}} 일찍 도착하세요",
+      "freeTitle": "자유 시간",
+      "lunchTitle": "점심",
+      "dinnerTitle": "저녁",
+      "yourIdeas": "근처에 저장한 아이디어",
+      "walkShort": "도보 {{duration}}",
+      "transitShort": "대중교통 {{duration}}",
+      "driveShort": "차로 {{duration}}",
+      "nearby": "근처",
+      "added": "{{title}}을(를) 일정에 추가했어요",
+      "noPlace": "근처에 뭐가 있는지 보려면 이전 항목에 장소를 추가하세요."
+    },
+    "glance": {
+      "title": "여행 한눈에 보기",
+      "fullPlan": "전체 일정",
+      "day": "{{day}}일차",
+      "lands": "{{time}}에 {{place}} 도착",
+      "freeDay": "자유일",
+      "tonight": "숙소: {{name}}",
+      "free": "{{duration}} 여유",
+      "noStay": "예약한 숙소 없음",
+      "missing_one": "추가할 항목 {{count}}개",
+      "missing_other": "추가할 항목 {{count}}개",
+      "loadLabel": "하루의 {{percent}}% 계획됨",
+      "nudge_one": "{{count}}개가 빠져 있어요. 추가하면 전체 일정을 볼 수 있어요.",
+      "nudge_other": "{{count}}개가 빠져 있어요. 추가하면 전체 일정을 볼 수 있어요.",
+      "allDays": "전체 {{count}}일"
+    },
+    "plan": {
+      "subtitle_one": "{{count}}일",
+      "subtitle_other": "{{count}}일",
+      "noPins": "항목에 장소가 있으면 여기에 표시돼요.",
+      "dayOnMap": "지도로 보는 하루",
+      "wholeTrip": "여행 전체",
+      "allDays": "모든 날"
+    },
+    "preview": {
+      "title": "하루하루 보는 여행",
+      "body": "예약을 추가하면 도착 시간, 장소 간 이동 시간, 자유 시간과 식사, 아직 빠진 것을 볼 수 있어요.",
+      "sampleLabel": "예시: 7:40 도착, 호텔로 이동, 점심 자유 시간, 15:00 체크인",
+      "land": "도착 · NRT",
+      "ride": "호텔까지 약 1시간 10분",
+      "free": "10:00–13:00 비어 있음 · 근처에서 점심",
+      "hotel": "체크인 · Hotel Gracery",
+      "screenshot": "스크린샷에서",
+      "add": "예약 추가"
+    },
+    "reminders": {
+      "channel": "여행 알림",
+      "leaveTitle": "{{time}}까지 출발",
+      "leaveBodyFlight": "{{name}} {{time}} 출발이에요. 이동 시간과 공항에 일찍 도착할 시간을 고려했어요.",
+      "leaveBody": "{{name}} {{time}} 출발이에요.",
+      "boardingTitle": "곧 탑승 · {{name}}",
+      "boardingBody": "{{time}} 탑승이에요.",
+      "boardingBodyGate": "{{time}} 탑승, {{gate}} 게이트예요."
+    }
   },
   "places": {
     "nearYou": "내 주변",
@@ -1185,7 +1302,9 @@
     "openNow": "영업 중",
     "closed": "영업 종료",
     "photoBy": "사진: {{name}}",
-    "nothingNearby": "이 카테고리에서 근처에 찾은 곳이 없습니다."
+    "nothingNearby": "이 카테고리에서 근처에 찾은 곳이 없습니다.",
+    "add": "추가",
+    "addToPlan": "{{name}}을(를) 일정에 추가"
   },
   "emergencyContacts": {
     "confirmRemoveTitle": "{{name}}을(를) 제거할까요?",

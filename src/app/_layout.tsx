@@ -31,6 +31,7 @@ import { checkDeferredInvite } from "@/features/trips/services/deferredInvite";
 import { WidgetSync } from "@/features/widget/WidgetSync";
 import { BillingEffects } from "@/modules/billing";
 import { useRecapEffects } from "@/features/recap/hooks/useRecapEffects";
+import { useTravelReminderEffects } from "@/features/itinerary/hooks/useTravelReminderEffects";
 import { SavedIdeasSheet } from "@/features/itinerary/components/SavedIdeasSheet";
 import { AndroidShareIntake } from "@/features/itinerary/components/AndroidShareIntake";
 import { useBoundaryViewSync } from "@/features/passport/hooks/usePassport";
@@ -236,6 +237,7 @@ function SessionEffects() {
   useSafetyServerSync();
   useGroupNotificationRouting();
   useRecapEffects();
+  useTravelReminderEffects();
   useBoundaryViewSync();
 
   useEffect(() => {
@@ -323,6 +325,7 @@ function AppStack() {
           <Stack.Screen name="trip-recap/[id]" options={{ presentation: "fullScreenModal", animation: "fade" }} />
           <Stack.Screen name="ticket/[eventId]" options={{ presentation: "fullScreenModal", animation: "fade" }} />
           <Stack.Screen name="receive-ticket" options={PAGE_OPTIONS} />
+          <Stack.Screen name="trip-plan/[id]" options={PAGE_OPTIONS} />
           <Stack.Screen name="save-link" options={PAGE_OPTIONS} />
           <Stack.Screen name="idea/[eventId]" options={{ presentation: "fullScreenModal", animation: "fade" }} />
           <Stack.Screen

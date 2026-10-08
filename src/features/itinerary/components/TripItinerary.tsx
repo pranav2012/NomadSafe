@@ -1,60 +1,48 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "expo-router";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import React, { useCallback, useEffect, useState } from "react";
+import { StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
-import { AuraButton, AuraSection, AuraSheet, Icon, PressableScale, showAlert, showToast, useAura } from "@/atoms";
-import { auraRadius, auraSpace, auraType } from "@/constants/aura";
+import { AuraButton, AuraSection, AuraSheet, showAlert, showToast, useAura } from "@/atoms";
 import { useLocalization } from "@/localization";
 import { PrivateView, track } from "@/modules/analytics";
 import { aiRuntime, aiService, useAiAvailability } from "@/modules/ai";
 import type { Trip } from "@/features/trips/store/tripsStore";
 import { useEventsStore, type TripEvent } from "@/features/itinerary/store/eventsStore";
-import { EventForm, type EventFormValues } from "@/features/itinerary/components/EventForm";
 import { PlannedList, TimelineList, UpNextList } from "@/features/itinerary/components/ItineraryViews";
-import { DayPlan } from "@/features/itinerary/components/DayPlan";
+import { DayPlan, type FreeGap } from "@/features/itinerary/components/DayPlan";
 import { DayIdeas } from "@/features/itinerary/components/DayIdeas";
+import { GapSheet } from "@/features/itinerary/components/GapSheet";
+import { TravelDayCard } from "@/features/itinerary/components/TravelDayCard";
+import { GlanceDayCard, useOpenTripPlan, useTripGlance } from "@/features/itinerary/components/TripGlance";
 import { useSaveMustDo } from "@/features/itinerary/hooks/useSaveMustDo";
+import { defaultStartFor, useItineraryEditor } from "@/features/itinerary/hooks/useItineraryEditor";
+import { useItineraryPlaces } from "@/features/itinerary/hooks/useItineraryPlaces";
 import { ideasNear, ideasOf } from "@/features/itinerary/utils/ideas";
 import { formatters } from "@/features/itinerary/utils/entryText";
 import { toWallClock } from "@/features/itinerary/utils/wallClock";
 import { mustDosNear } from "@/features/itinerary/utils/mustDos";
 import { useMustDoStore } from "@/features/itinerary/store/mustDoStore";
-import { useTicketsStore } from "@/features/itinerary/store/ticketsStore";
-import { pruneTickets, reconcileTicketHolders, removeTickets } from "@/features/itinerary/services/tickets";
-import { api, useMutation, type Id } from "@/modules/backend";
-import { SELF_ID } from "@/features/expenses/utils/split";
+import { pruneTickets, reconcileTicketHolders } from "@/features/itinerary/services/tickets";
 import { upNext } from "@/features/itinerary/utils/timeline";
 import { fromDateKey } from "@/features/trips/utils/dates";
 import { logger } from "@/modules/logger";
 import { showInterstitial } from "@/modules/ads";
-import { useGmailImport } from "@/features/expenses/hooks/useGmailImport";
-import { useGmailProgressLabel, useGmailStatus } from "@/features/expenses/hooks/useGmailStatus";
-import { syncTripGmail } from "@/features/expenses/services/tripGmailSync";
-import { useTripGmailSyncStatus } from "@/features/expenses/store/gmailSyncStatusStore";
+import { ItineraryEmpty } from "@/features/itinerary/components/ItineraryEmpty";
 
 const UP_NEXT_COUNT = 3;
 const PLANNED_COUNT = 5;
 
-/** Where a new event starts: the next full hour on today, 09:00 on another day, now without a day. */
-function defaultStartFor(day: Date | null | undefined, now: number): Date | undefined {
-  if (!day) return undefined;
-  const current = new Date(now);
-  if (day.toDateString() === current.toDateString()) {
-    return new Date(current.getFullYear(), current.getMonth(), current.getDate(), current.getHours() + 1);
-  }
-  return new Date(day.getFullYear(), day.getMonth(), day.getDate(), 9);
-}
-
 /**
- * The trip's itinerary on Home: the next few bookings (tap to edit), or one day's plan when `day`
- * is set, a day-by-day "Full itinerary" sheet, adding events, and on-device AI refinement with a
- * review sheet before anything is removed.
+ * The trip's itinerary on Home: "Trip at a glance" before the trip (`glance`), one day's plan when
+ * `day` is set, else the next few bookings; adding and editing items, the full plan screen, and
+ * on-device AI refinement with a review sheet before anything is removed.
  */
 export function TripItinerary({
   trip,
   day,
   now: liveNow,
   place,
+  glance,
+  glanceDay = 0,
 }: {
   trip: Trip;
   accent: string;
@@ -63,63 +51,37 @@ export function TripItinerary({
   now?: Date;
   /** Where the day is spent: names Maps searches ("Nishiki Market, Kyoto") and picks must-dos. */
   place?: { name: string; latitude: number; longitude: number };
+  /** Before the trip: the day picked on Home's day rail (`glanceDay`) instead of "Up next". */
+  glance?: boolean;
+  glanceDay?: number;
 }) {
   const { c, f } = useAura();
   const { t, locale, hour12 } = useLocalization();
-  const events = useEventsStore((state) => state.events);
-  const addEvent = useEventsStore((state) => state.addEvent);
   const updateEvent = useEventsStore((state) => state.updateEvent);
-  const deleteEvent = useEventsStore((state) => state.deleteEvent);
   const deleteEvents = useEventsStore((state) => state.deleteEvents);
   const isAiAvailable = useAiAvailability("itinerary").available;
+  const { context, glance: glanceDays } = useTripGlance(trip);
+  const editor = useItineraryEditor(trip);
+  const openPlan = useOpenTripPlan(trip);
+  useItineraryPlaces(trip);
 
   const [isRefining, setIsRefining] = useState(false);
   const [allOpen, setAllOpen] = useState(false);
+  const [gap, setGap] = useState<FreeGap | null>(null);
   const [review, setReview] = useState<{ keep: number; remove: string[] } | null>(null);
-  // `null` = closed; "new" = add form; otherwise the event being edited.
-  const [editing, setEditing] = useState<TripEvent | "new" | null>(null);
 
-  const ordered = useMemo(
-    () => events.filter((event) => event.tripId === trip.id).sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime()),
-    [events, trip.id],
-  );
+  const ordered = context.tripEvents;
   const [mountedAt] = useState(() => Date.now());
   const now = liveNow?.getTime() ?? mountedAt;
   const next = upNext(ordered, now, UP_NEXT_COUNT);
   // Refine only tidies Gmail imports; what the user added is theirs to keep.
   const imported = ordered.filter((event) => event.source === "email");
-  const tripStart = fromDateKey(trip.startDate);
-  const router = useRouter();
-  const tickets = useTicketsStore((state) => state.tickets);
-  const ticketEventIds = new Set(tickets.map((ticket) => ticket.eventId));
-  const openTickets = (eventId: string, ticketId?: string) => router.push({ pathname: "/ticket/[eventId]", params: { eventId, ...(ticketId ? { ticketId } : null) } });
 
   // Items removed elsewhere (sync, another member) leave their files behind; tidy up once per mount.
   useEffect(() => {
     void pruneTickets().then(reconcileTicketHolders);
   }, []);
 
-  const askMutation = useMutation(api.groups.askForTicket);
-  const askForTicket = (event: TripEvent) => {
-    const serverTripId = trip.shared?.groupId;
-    if (!serverTripId) return;
-    const names = (event.ticketHolders ?? []).filter((person) => person !== SELF_ID).join(", ");
-    showAlert(t("tickets.askTitle", { names }), t("tickets.askBody", { names }), [
-      { text: t("common.cancel"), style: "cancel" },
-      {
-        text: t("tickets.ask"),
-        onPress: () => {
-          track("today_action", { action: "ask_ticket" });
-          askMutation({ groupId: serverTripId as Id<"sharedGroups">, clientId: event.id })
-            .then(({ sent }) => showToast(sent ? t("tickets.asked", { names }) : t("tickets.askedRecently")))
-            .catch((error: unknown) => {
-              logger.warn("tickets", "ask failed", error);
-              showToast(t("tickets.askFailed"));
-            });
-        },
-      },
-    ]);
-  };
   const dismissed = useMustDoStore((state) => state.dismissed[trip.id]);
   const dismissMustDo = useMustDoStore((state) => state.dismiss);
   const city = place?.name.split(",")[0];
@@ -135,44 +97,6 @@ export function TripItinerary({
   };
   const isToday = day ? day.toDateString() === new Date(now).toDateString() : false;
   const sectionTitle = day ? (isToday ? t("home.live.todayTitle") : formatters(locale, hour12).dayHeader.format(day)) : t("itinerary.title");
-
-  const handleSave = (values: EventFormValues) => {
-    if (editing && editing !== "new") {
-      updateEvent(editing.id, {
-        type: values.type,
-        title: values.title,
-        detail: values.detail || undefined,
-        transitMode: values.transitMode,
-        startAt: values.startAt,
-        endAt: values.endAt,
-        timing: values.timing,
-        people: values.people,
-        editedAt: new Date().toISOString(),
-      });
-      track("itinerary_event_edited", { source: editing.source });
-    } else {
-      addEvent({
-        tripId: trip.id,
-        type: values.type,
-        title: values.title,
-        detail: values.detail || undefined,
-        transitMode: values.transitMode,
-        startAt: values.startAt,
-        endAt: values.endAt,
-        timing: values.timing,
-        people: values.people,
-        source: "manual",
-      });
-      track("itinerary_event_added", { source: "manual", count: 1 });
-    }
-    setEditing(null);
-    if (editing === "new") showInterstitial("itinerary_event_added");
-  };
-
-  const toggleDone = (event: TripEvent) => {
-    track("today_action", { action: event.doneAt ? "undone" : "done" });
-    updateEvent(event.id, { doneAt: event.doneAt ? undefined : new Date().toISOString() });
-  };
 
   const scheduleOn = (event: TripEvent, target: Date) => {
     track("saved_idea_action", { action: "planned", where: "day_ideas" });
@@ -206,72 +130,91 @@ export function TripItinerary({
     }
   }, [isRefining, imported, t]);
 
+  const addFromScreenshot = () => editor.add(defaultStartFor(day, now), { screenshot: true });
+
   return (
     <PrivateView>
-      <AuraSection
-        title={sectionTitle}
-        action={
-          <>
-            {isAiAvailable && imported.length > 1 ? (
-              <AuraButton
-                label={isRefining ? t("itinerary.refining") : t("home.refine")}
-                icon="sparkle"
-                variant="secondary"
-                size="md"
-                loading={isRefining}
-                onPress={() => void handleRefine()}
-              />
-            ) : null}
-            <AuraButton label={t("itinerary.add")} icon="plus" variant="secondary" size="md" onPress={() => setEditing("new")} />
-          </>
-        }
-      />
+      {glance && ordered.length > 0 ? null : (
+        <AuraSection
+          title={sectionTitle}
+          action={
+            <>
+              {isAiAvailable && imported.length > 1 ? (
+                <AuraButton
+                  label={isRefining ? t("itinerary.refining") : t("home.refine")}
+                  icon="sparkle"
+                  variant="secondary"
+                  size="md"
+                  loading={isRefining}
+                  onPress={() => void handleRefine()}
+                />
+              ) : null}
+              <AuraButton label={t("itinerary.add")} icon="plus" variant="secondary" size="md" onPress={() => editor.add(defaultStartFor(day, now))} />
+            </>
+          }
+        />
+      )}
 
       {day && ordered.length > 0 ? (
         <Animated.View entering={FadeIn.duration(300)}>
+          <TravelDayCard
+            events={ordered}
+            day={day}
+            now={new Date(now)}
+            homeCountry={context.homeCountry}
+            ticketEventIds={context.ticketEventIds}
+            onOpenTicket={editor.openTickets}
+            onEdit={editor.edit}
+          />
           <DayPlan
             events={ordered}
             day={day}
             now={new Date(now)}
             city={city}
-            onPress={setEditing}
-            ticketEventIds={ticketEventIds}
-            onOpenTickets={openTickets}
-            onAskForTicket={trip.shared ? askForTicket : undefined}
-            onToggleDone={toggleDone}
+            meals={context.mealsOn(day)}
+            learned={context.learned}
+            homeCountry={context.homeCountry}
+            placeFailedIds={context.placeFailedIds}
+            onPress={editor.edit}
+            ticketEventIds={context.ticketEventIds}
+            onOpenTickets={editor.openTickets}
+            onAskForTicket={editor.askForTicket}
+            onToggleDone={editor.toggleDone}
+            onGap={setGap}
             onAdd={() => {
               track("today_action", { action: "add_stop" });
-              setEditing("new");
+              editor.add(defaultStartFor(day, now));
             }}
           />
-          {ordered.length > 0 ? (
-            <AuraButton
-              label={t("itinerary.fullItinerary", { total: ordered.length })}
-              variant="ghost"
-              size="md"
-              onPress={() => {
-                setAllOpen(true);
-                track("itinerary_sheet_opened", { events: ordered.length });
-              }}
-              style={styles.viewAll}
-            />
-          ) : null}
+          <View style={styles.dayActions}>
+            <AuraButton label={t("itinerary.plan.dayOnMap")} icon="mapPin" variant="ghost" size="md" onPress={() => openPlan("day", day)} />
+            <AuraButton label={t("itinerary.plan.wholeTrip")} icon="calendar" variant="ghost" size="md" onPress={() => openPlan("day")} />
+          </View>
+        </Animated.View>
+      ) : glance && ordered.length > 0 ? (
+        <Animated.View entering={FadeIn.duration(300)}>
+          <GlanceDayCard
+            trip={trip}
+            day={glanceDays[glanceDay]}
+            index={glanceDay}
+            onAdd={() => editor.add(defaultStartFor(glanceDays[glanceDay]?.date, now))}
+          />
         </Animated.View>
       ) : next.length > 0 ? (
         <Animated.View entering={FadeIn.duration(300)}>
-          <UpNextList events={next} onPress={setEditing} />
+          <UpNextList events={next} onPress={editor.edit} />
           {ordered.length > 1 && planned.length === 0 ? (
             <AuraButton label={t("itinerary.fullItinerary", { total: ordered.length })} variant="ghost" size="md" onPress={openAll} style={styles.viewAll} />
           ) : null}
         </Animated.View>
       ) : (
-        <ItineraryEmpty trip={trip} onAdd={() => setEditing("new")} />
+        <ItineraryEmpty trip={trip} preview={glance} onAdd={() => editor.add(defaultStartFor(day, now))} onScreenshot={addFromScreenshot} />
       )}
 
-      {!day && planned.length > 0 ? (
+      {!day && !glance && planned.length > 0 ? (
         <Animated.View entering={FadeIn.duration(300)}>
           <AuraSection title={t("itinerary.plannedTitle")} style={styles.planned} />
-          <PlannedList events={planned.slice(0, PLANNED_COUNT)} onPress={setEditing} />
+          <PlannedList events={planned.slice(0, PLANNED_COUNT)} onPress={editor.edit} />
           <AuraButton label={t("itinerary.fullItinerary", { total: ordered.length })} variant="ghost" size="md" onPress={openAll} style={styles.viewAll} />
         </Animated.View>
       ) : null}
@@ -297,7 +240,7 @@ export function TripItinerary({
             tripStart={fromDateKey(trip.startDate)}
             onPress={(event) => {
               setAllOpen(false);
-              setEditing(event);
+              editor.edit(event);
             }}
           />
         </PrivateView>
@@ -327,107 +270,16 @@ export function TripItinerary({
         </Text>
       </AuraSheet>
 
-      {editing !== null ? (
-        <EventForm
-          key={editing === "new" ? "new" : editing.id}
-          event={editing === "new" ? null : editing}
-          defaultStart={editing === "new" ? defaultStartFor(day, now) : undefined}
-          tripStart={tripStart}
-          companions={trip.companions}
-          sharedTrip={Boolean(trip.shared)}
-          onAskForTicket={() => {
-            if (editing === "new") return;
-            const event = editing;
-            setEditing(null);
-            askForTicket(event);
-          }}
-          onOpenTicket={(ticketId) => {
-            if (editing === "new") return;
-            const eventId = editing.id;
-            setEditing(null);
-            openTickets(eventId, ticketId);
-          }}
-          visible
-          onSave={handleSave}
-          onDelete={
-            editing !== "new"
-              ? () => {
-                  deleteEvent(editing.id);
-                  void removeTickets(tickets.filter((ticket) => ticket.eventId === editing.id));
-                  track("itinerary_event_deleted", { source: editing.source });
-                  setEditing(null);
-                }
-              : undefined
-          }
-          onClose={() => setEditing(null)}
-        />
-      ) : null}
+      <GapSheet trip={trip} events={ordered} gap={gap} onClose={() => setGap(null)} />
+      {editor.form}
     </PrivateView>
-  );
-}
-
-/** Empty state that follows the Gmail booking sync: connect, checking, nothing found or failed. */
-function ItineraryEmpty({ trip, onAdd }: { trip: Trip; onAdd: () => void }) {
-  const { c, f } = useAura();
-  const { t } = useLocalization();
-  const gmail = useGmailStatus();
-  const { connect, ready } = useGmailImport();
-  const progressLabel = useGmailProgressLabel(trip.id);
-  const sync = useTripGmailSyncStatus(trip.id).state;
-
-  const syncing = gmail.connected && sync === "syncing";
-  const title = gmail.connected && sync === "done" ? t("itinerary.noneFoundTitle") : t("itinerary.emptyTitle");
-  const body = !gmail.configured
-    ? t("itinerary.emptyManual")
-    : !gmail.connected
-      ? t("itinerary.emptyConnect")
-      : syncing
-        ? (progressLabel ?? t("itinerary.syncing"))
-        : sync === "failed"
-          ? t("itinerary.syncFailed")
-          : t("itinerary.noneFoundBody");
-
-  return (
-    <PressableScale
-      onPress={onAdd}
-      pressedScale={0.98}
-      accessibilityRole="button"
-      accessibilityHint={t("itinerary.form.addTitle")}
-      style={[styles.empty, { backgroundColor: c.surface, borderColor: c.hairline }]}
-    >
-      <View style={styles.emptyHead}>
-        <View style={[styles.emptyIcon, { backgroundColor: c.surfaceStrong }]}>
-          {syncing ? <ActivityIndicator size="small" color={c.textSoft} /> : <Icon name="calendar" size={18} color={c.textSoft} />}
-        </View>
-        <View style={styles.flex}>
-          <Text style={[styles.emptyTitle, { color: c.text, fontFamily: f.semibold }]}>{title}</Text>
-          <Text style={[styles.emptyText, { color: c.textSoft, fontFamily: f.regular }]} accessibilityLiveRegion="polite">
-            {body}
-          </Text>
-        </View>
-      </View>
-      {gmail.configured && !syncing ? (
-        <AuraButton
-          size="md"
-          variant={gmail.connected ? "secondary" : "primary"}
-          icon="mail"
-          label={gmail.connected ? t("itinerary.scanAgain") : t("expenses.gmailConnect")}
-          disabled={!gmail.connected && !ready}
-          onPress={() => void (gmail.connected ? syncTripGmail(trip).catch(() => undefined) : connect())}
-        />
-      ) : null}
-    </PressableScale>
   );
 }
 
 const styles = StyleSheet.create({
   planned: { marginTop: 24, marginBottom: 12 },
   viewAll: { alignSelf: "center", marginTop: 6 },
-  empty: { gap: 14, padding: auraSpace.cardPad, borderRadius: auraRadius.card, borderWidth: StyleSheet.hairlineWidth },
-  emptyHead: { flexDirection: "row", alignItems: "center", gap: 12 },
-  emptyIcon: { width: 38, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  emptyTitle: { fontSize: auraType.bodyStrong },
-  emptyText: { fontSize: 13.5, lineHeight: 19, marginTop: 2, fontVariant: ["tabular-nums"] },
+  dayActions: { flexDirection: "row", justifyContent: "center", flexWrap: "wrap", gap: 4, marginTop: 6 },
   reviewActions: { flexDirection: "row", gap: 10 },
   reviewBody: { fontSize: 15, lineHeight: 22, paddingHorizontal: 20, paddingBottom: 8 },
   flex: { flex: 1 },

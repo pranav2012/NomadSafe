@@ -46,17 +46,33 @@ function distanceInMeters(from: { latitude: number; longitude: number }, place: 
   return 2 * 6_371_000 * Math.asin(Math.sqrt(value));
 }
 
-/** Places around the user by category, as photo cards with walk time, rating and open status. */
-export function NearbyPlaces({ userLocation }: { userLocation: UserLocation | null }) {
+/**
+ * Places around a point by category, as photo cards with walk time, rating and open status. With
+ * `at`, open status is for that time; with `onAdd`, each card can be added to the plan.
+ */
+export function NearbyPlaces({
+  userLocation,
+  title,
+  initialCategory = "food",
+  at,
+  onAdd,
+}: {
+  userLocation: UserLocation | null;
+  title?: string;
+  initialCategory?: NearbyCategory;
+  at?: number;
+  onAdd?: (place: NearbyPlace, category: NearbyCategory) => void;
+}) {
   const { c, f } = useAura();
   const { t, locale, formatDistance, formatCompactNumber } = useLocalization();
   const latitude = userLocation?.latitude;
   const longitude = userLocation?.longitude;
   const searchNearby = useAction(api.places.searchNearby);
-  const [category, setCategory] = useState<NearbyCategory>("food");
+  const [category, setCategory] = useState<NearbyCategory>(initialCategory);
   const [results, setResults] = useState<Record<string, LoadState>>({});
   const [brokenPhotos, setBrokenPhotos] = useState<ReadonlySet<string>>(new Set());
-  const [now] = useState(Date.now);
+  const [mountedAt] = useState(Date.now);
+  const now = at ?? mountedAt;
   const inflight = useRef(new Set<string>());
 
   const key = latitude != null && longitude != null ? `nearby:${category}:${areaKey(latitude, longitude)}` : "";
@@ -94,7 +110,7 @@ export function NearbyPlaces({ userLocation }: { userLocation: UserLocation | nu
 
   return (
     <View>
-      <AuraSection title={userLocation?.city ? t("places.nearYouIn", { city: userLocation.city }) : t("places.nearYou")} />
+      <AuraSection title={title ?? (userLocation?.city ? t("places.nearYouIn", { city: userLocation.city }) : t("places.nearYou"))} />
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.bleed} contentContainerStyle={styles.tabs}>
         {CATEGORIES.map((item) => (
@@ -213,6 +229,18 @@ export function NearbyPlaces({ userLocation }: { userLocation: UserLocation | nu
                   <View style={styles.walkRow}>
                     <Icon name="mapPin" size={12} color={active.tint} />
                     <Text style={[styles.walk, { color: c.text, fontFamily: f.medium }]}>{away}</Text>
+                    {onAdd ? (
+                      <PressableScale
+                        onPress={() => onAdd(place, category)}
+                        accessibilityRole="button"
+                        accessibilityLabel={t("places.addToPlan", { name: place.name })}
+                        hitSlop={8}
+                        style={[styles.add, { backgroundColor: c.surfaceStrong }]}
+                      >
+                        <Icon name="plus" size={12} color={c.text} />
+                        <Text style={[styles.addText, { color: c.text, fontFamily: f.semibold }]}>{t("places.add")}</Text>
+                      </PressableScale>
+                    ) : null}
                   </View>
                 </View>
               </PressableScale>
@@ -255,5 +283,7 @@ const styles = StyleSheet.create({
   rating: { fontSize: 13 },
   category: { fontSize: 12.5 },
   walkRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 4 },
-  walk: { fontSize: 12.5 },
+  walk: { flex: 1, fontSize: 12.5 },
+  add: { flexDirection: "row", alignItems: "center", gap: 4, height: 26, paddingHorizontal: 10, borderRadius: 13 },
+  addText: { fontSize: 12 },
 });

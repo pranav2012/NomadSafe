@@ -325,7 +325,20 @@
       "day": "Day",
       "whoFor": "Who's it for",
       "everyone": "Everyone",
-      "you": "You"
+      "you": "You",
+      "screenshotTitle": "Fill from a screenshot",
+      "screenshotAgain": "Use another screenshot",
+      "screenshotBody": "Pick a ticket or booking screenshot. It's read on your phone and kept with this item as its ticket.",
+      "screenshotFilled": "Filled in from your screenshot. Check the details.",
+      "screenshotNothing": "Couldn't find a booking in that screenshot. It'll still be kept as the ticket.",
+      "screenshotKept": "The screenshot will be saved as this item's ticket.",
+      "ends": "Ends",
+      "addEnd": "Add end time",
+      "addArrival": "Add arrival time",
+      "where": "Where",
+      "wherePlaceholder": "Place or address, for the map",
+      "link": "Booking or ticket link",
+      "linkPlaceholder": "https://…"
     },
     "defaults": {
       "hotelStay": "Hotel stay",
@@ -351,14 +364,118 @@
       "togetherAgain": "Together again",
       "splitUp_one": "Split up {{from}}–{{to}} · {{count}} plan for {{names}}",
       "splitUp_other": "Split up {{from}}–{{to}} · {{count}} plans for {{names}}",
-      "addToDay": "Add"
+      "addToDay": "Add",
+      "openLink": "Open booking link"
     },
     "anytime": "Anytime",
     "mustDo": {
       "title": "Must-dos in {{place}}",
       "dismiss": "Hide {{name}}"
     },
-    "plannedTitle": "Planned"
+    "plannedTitle": "Planned",
+    "landsAt": "Lands {{time}}",
+    "missing": {
+      "place": "Add place",
+      "ticket": "Add ticket"
+    },
+    "travel": {
+      "title": "Travel details",
+      "terminal": "Terminal",
+      "gate": "Gate",
+      "platform": "Platform",
+      "coach": "Coach",
+      "seat": "Seat",
+      "boarding": "Boarding",
+      "addBoarding": "Add boarding time",
+      "short": {
+        "terminal": "T{{value}}",
+        "gate": "Gate {{value}}",
+        "platform": "Platform {{value}}",
+        "coach": "Coach {{value}}",
+        "seat": "Seat {{value}}"
+      },
+      "boards": "Boards {{time}}",
+      "booking": "Booking {{ref}}",
+      "ticket": "Ticket",
+      "departs": "Departs",
+      "arrives": "Arrives",
+      "departsAt": "Departs {{time}}",
+      "addGateSeat": "Add gate & seat",
+      "addPlatformSeat": "Add platform & seat",
+      "leaveBy": "Leave by {{time}}",
+      "ride": "{{duration}} to get there",
+      "beThereFlight": "at the airport {{duration}} early",
+      "beThere": "there {{duration}} early"
+    },
+    "gap": {
+      "free": "Free {{range}} · {{duration}}",
+      "lunch": "Lunch? Free {{range}}",
+      "dinner": "Dinner? Free {{range}}",
+      "bags": "Hotel check-in is later. Ask to leave your bags.",
+      "findFood": "Find food",
+      "ideas": "Ideas",
+      "walk": "{{duration}} walk · {{distance}}",
+      "transit": "{{duration}} by transit · {{distance}}",
+      "drive": "{{duration}} by car · {{distance}}",
+      "tight": "Tight: {{duration}} to get there · {{distance}}",
+      "exit": "{{duration}} to get out of the airport",
+      "boardFlight": "Be at the airport {{duration}} early",
+      "boardGround": "Be there {{duration}} early",
+      "freeTitle": "Free time",
+      "lunchTitle": "Lunch",
+      "dinnerTitle": "Dinner",
+      "yourIdeas": "Your saved ideas nearby",
+      "walkShort": "{{duration}} walk",
+      "transitShort": "{{duration}} by transit",
+      "driveShort": "{{duration}} by car",
+      "nearby": "Nearby",
+      "added": "Added {{title}} to the plan",
+      "noPlace": "Add a place to the item before this one to see what's nearby."
+    },
+    "glance": {
+      "title": "Trip at a glance",
+      "fullPlan": "Full plan",
+      "day": "Day {{day}}",
+      "lands": "Land in {{place}} at {{time}}",
+      "freeDay": "Free day",
+      "tonight": "Sleep at {{name}}",
+      "free": "{{duration}} free",
+      "noStay": "No stay booked",
+      "missing_one": "{{count}} thing to add",
+      "missing_other": "{{count}} things to add",
+      "loadLabel": "{{percent}}% of the day planned",
+      "nudge_one": "{{count}} thing is missing. Add it to see the full plan.",
+      "nudge_other": "{{count}} things are missing. Add them to see the full plan.",
+      "allDays": "All {{count}} days"
+    },
+    "plan": {
+      "subtitle_one": "{{count}} day",
+      "subtitle_other": "{{count}} days",
+      "noPins": "Places show here once your items have them.",
+      "dayOnMap": "Day on the map",
+      "wholeTrip": "Whole trip",
+      "allDays": "All days"
+    },
+    "preview": {
+      "title": "Your trip, day by day",
+      "body": "Add your bookings and you'll see when you land, the time between stops, free time and meals, and what's still missing.",
+      "sampleLabel": "Example day: land at 7:40, ride to the hotel, free time for lunch, check in at 15:00",
+      "land": "Land · NRT",
+      "ride": "~1 h 10 to your hotel",
+      "free": "Free 10:00–13:00 · lunch nearby",
+      "hotel": "Check in · Hotel Gracery",
+      "screenshot": "From a screenshot",
+      "add": "Add a booking"
+    },
+    "reminders": {
+      "channel": "Travel reminders",
+      "leaveTitle": "Leave by {{time}}",
+      "leaveBodyFlight": "{{name}} departs at {{time}}. That allows for the ride and getting to the airport early.",
+      "leaveBody": "{{name}} departs at {{time}}.",
+      "boardingTitle": "Boarding soon · {{name}}",
+      "boardingBody": "Boarding at {{time}}.",
+      "boardingBodyGate": "Boarding at {{time}}, gate {{gate}}."
+    }
   },
   "places": {
     "nearYou": "Near you",
@@ -377,7 +494,9 @@
     "openNow": "Open now",
     "closed": "Closed",
     "photoBy": "Photo: {{name}}",
-    "nothingNearby": "Nothing found nearby in this category."
+    "nothingNearby": "Nothing found nearby in this category.",
+    "add": "Add",
+    "addToPlan": "Add {{name}} to the plan"
   },
   "settings": {
     "title": "Settings",
@@ -897,7 +1016,7 @@
     "eventSafeMessageSent_other": "“I'm safe” message sent to {{count}} contacts",
     "eventSafeMessageOpened_one": "“I'm safe” message opened in SMS for {{count}} contact",
     "eventSafeMessageOpened_other": "“I'm safe” message opened in SMS for {{count}} contacts",
-    "recenterMap": "Show everyone on the map",
+    "recenterMap": "Show my location",
     "keepHolding": "Keep holding",
     "imSafeShort": "I'm safe",
     "alertChannelName": "Safety alerts from contacts",

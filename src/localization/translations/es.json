@@ -789,7 +789,7 @@
     "eventSafeMessageSent_other": "Mensaje de «estoy a salvo» enviado a {{count}} contactos",
     "eventSafeMessageOpened_one": "Mensaje de «estoy a salvo» abierto en SMS para {{count}} contacto",
     "eventSafeMessageOpened_other": "Mensaje de «estoy a salvo» abierto en SMS para {{count}} contactos",
-    "recenterMap": "Ver a todos en el mapa",
+    "recenterMap": "Ver mi ubicación",
     "keepHolding": "Sigue pulsando",
     "imSafeShort": "Estoy bien",
     "alertChannelName": "Alertas de seguridad de contactos",
@@ -1133,7 +1133,20 @@
       "day": "Día",
       "whoFor": "Para quién",
       "everyone": "Todos",
-      "you": "Tú"
+      "you": "Tú",
+      "screenshotTitle": "Rellenar con una captura",
+      "screenshotAgain": "Usar otra captura",
+      "screenshotBody": "Elige una captura de un billete o una reserva. Se lee en tu teléfono y se guarda con este elemento como su billete.",
+      "screenshotFilled": "Rellenado con tu captura. Revisa los datos.",
+      "screenshotNothing": "No encontramos una reserva en esa captura. Se guardará igualmente como billete.",
+      "screenshotKept": "La captura se guardará como billete de este elemento.",
+      "ends": "Termina",
+      "addEnd": "Añadir hora de fin",
+      "addArrival": "Añadir hora de llegada",
+      "where": "Dónde",
+      "wherePlaceholder": "Lugar o dirección, para el mapa",
+      "link": "Enlace de reserva o billete",
+      "linkPlaceholder": "https://…"
     },
     "defaults": {
       "hotelStay": "Estancia en hotel",
@@ -1159,14 +1172,118 @@
       "togetherAgain": "Juntos de nuevo",
       "splitUp_one": "Separados {{from}}–{{to}} · {{count}} plan para {{names}}",
       "splitUp_other": "Separados {{from}}–{{to}} · {{count}} planes para {{names}}",
-      "addToDay": "Añadir"
+      "addToDay": "Añadir",
+      "openLink": "Abrir enlace de reserva"
     },
     "anytime": "En cualquier momento",
     "mustDo": {
       "title": "Imprescindibles en {{place}}",
       "dismiss": "Ocultar {{name}}"
     },
-    "plannedTitle": "Planeado"
+    "plannedTitle": "Planeado",
+    "landsAt": "Aterriza {{time}}",
+    "missing": {
+      "place": "Añadir lugar",
+      "ticket": "Añadir billete"
+    },
+    "travel": {
+      "title": "Detalles del trayecto",
+      "terminal": "Terminal",
+      "gate": "Puerta",
+      "platform": "Andén",
+      "coach": "Vagón",
+      "seat": "Asiento",
+      "boarding": "Embarque",
+      "addBoarding": "Añadir hora de embarque",
+      "short": {
+        "terminal": "T{{value}}",
+        "gate": "Puerta {{value}}",
+        "platform": "Andén {{value}}",
+        "coach": "Vagón {{value}}",
+        "seat": "Asiento {{value}}"
+      },
+      "boards": "Embarque {{time}}",
+      "booking": "Reserva {{ref}}",
+      "ticket": "Billete",
+      "departs": "Salida",
+      "arrives": "Llegada",
+      "departsAt": "Sale {{time}}",
+      "addGateSeat": "Añadir puerta y asiento",
+      "addPlatformSeat": "Añadir andén y asiento",
+      "leaveBy": "Sal antes de las {{time}}",
+      "ride": "{{duration}} para llegar",
+      "beThereFlight": "en el aeropuerto {{duration}} antes",
+      "beThere": "allí {{duration}} antes"
+    },
+    "gap": {
+      "free": "Libre {{range}} · {{duration}}",
+      "lunch": "¿Comida? Libre {{range}}",
+      "dinner": "¿Cena? Libre {{range}}",
+      "bags": "El check-in del hotel es más tarde. Pregunta si puedes dejar tus maletas.",
+      "findFood": "Buscar comida",
+      "ideas": "Ideas",
+      "walk": "{{duration}} a pie · {{distance}}",
+      "transit": "{{duration}} en transporte público · {{distance}}",
+      "drive": "{{duration}} en coche · {{distance}}",
+      "tight": "Justo: {{duration}} para llegar · {{distance}}",
+      "exit": "{{duration}} para salir del aeropuerto",
+      "boardFlight": "Llega al aeropuerto {{duration}} antes",
+      "boardGround": "Llega {{duration}} antes",
+      "freeTitle": "Tiempo libre",
+      "lunchTitle": "Comida",
+      "dinnerTitle": "Cena",
+      "yourIdeas": "Tus ideas guardadas cerca",
+      "walkShort": "{{duration}} a pie",
+      "transitShort": "{{duration}} en transporte público",
+      "driveShort": "{{duration}} en coche",
+      "nearby": "Cerca",
+      "added": "{{title}} añadido al plan",
+      "noPlace": "Añade un lugar al elemento anterior para ver qué hay cerca."
+    },
+    "glance": {
+      "title": "Tu viaje de un vistazo",
+      "fullPlan": "Plan completo",
+      "day": "Día {{day}}",
+      "lands": "Aterrizas en {{place}} a las {{time}}",
+      "freeDay": "Día libre",
+      "tonight": "Noche en {{name}}",
+      "free": "{{duration}} libre",
+      "noStay": "Sin alojamiento reservado",
+      "missing_one": "Falta {{count}} cosa",
+      "missing_other": "Faltan {{count}} cosas",
+      "loadLabel": "{{percent}} % del día planificado",
+      "nudge_one": "Falta {{count}} cosa. Añádela para ver el plan completo.",
+      "nudge_other": "Faltan {{count}} cosas. Añádelas para ver el plan completo.",
+      "allDays": "Los {{count}} días"
+    },
+    "plan": {
+      "subtitle_one": "{{count}} día",
+      "subtitle_other": "{{count}} días",
+      "noPins": "Los lugares aparecen aquí cuando tus elementos los tienen.",
+      "dayOnMap": "Día en el mapa",
+      "wholeTrip": "Todo el viaje",
+      "allDays": "Todos los días"
+    },
+    "preview": {
+      "title": "Tu viaje, día a día",
+      "body": "Añade tus reservas y verás cuándo aterrizas, el tiempo entre paradas, el tiempo libre y las comidas, y lo que aún falta.",
+      "sampleLabel": "Día de ejemplo: aterrizas a las 7:40, vas al hotel, tiempo libre para comer, check-in a las 15:00",
+      "land": "Aterrizaje · NRT",
+      "ride": "~1 h 10 min hasta tu hotel",
+      "free": "Libre 10:00–13:00 · comida cerca",
+      "hotel": "Check-in · Hotel Gracery",
+      "screenshot": "Desde una captura",
+      "add": "Añadir una reserva"
+    },
+    "reminders": {
+      "channel": "Recordatorios de viaje",
+      "leaveTitle": "Sal antes de las {{time}}",
+      "leaveBodyFlight": "{{name}} sale a las {{time}}. Esto cuenta el trayecto y llegar con tiempo al aeropuerto.",
+      "leaveBody": "{{name}} sale a las {{time}}.",
+      "boardingTitle": "Embarque pronto · {{name}}",
+      "boardingBody": "Embarque a las {{time}}.",
+      "boardingBodyGate": "Embarque a las {{time}}, puerta {{gate}}."
+    }
   },
   "places": {
     "nearYou": "Cerca de ti",
@@ -1185,7 +1302,9 @@
     "openNow": "Abierto ahora",
     "closed": "Cerrado",
     "photoBy": "Foto: {{name}}",
-    "nothingNearby": "No se encontró nada cerca en esta categoría."
+    "nothingNearby": "No se encontró nada cerca en esta categoría.",
+    "add": "Añadir",
+    "addToPlan": "Añadir {{name}} al plan"
   },
   "emergencyContacts": {
     "confirmRemoveTitle": "¿Eliminar a {{name}}?",

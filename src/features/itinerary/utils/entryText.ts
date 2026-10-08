@@ -57,5 +57,6 @@ export function describeEntry(entry: TimelineEntry<TripEvent>, t: Translate, for
     return { title: name, sub: [t("itinerary.defaults.checkIn"), nights].filter(Boolean).join(" · ") };
   }
   if (entry.role === "check-out") return { title: name, sub: t("itinerary.defaults.checkOut") };
+  if (entry.role === "arrival") return { title: routeOf(entry.event.detail) || name, sub: t("itinerary.landsAt", { time: format.time.format(new Date(entry.at)) }) };
   return describe(entry.event, t, format, now);
 }

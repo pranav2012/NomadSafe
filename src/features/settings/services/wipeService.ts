@@ -12,10 +12,12 @@ import { clearGlobeImagery } from "@/features/home/services/globeImagery";
 import { clearLegacyGmailCheckpoints } from "@/features/expenses/services/legacyGmailCheckpoints";
 import { useEventsStore } from "@/features/itinerary/store/eventsStore";
 import { useMustDoStore } from "@/features/itinerary/store/mustDoStore";
+import { usePlaceLookupStore } from "@/features/itinerary/store/placeLookupStore";
 import { useTravelInfoStore } from "@/features/trips/store/travelInfoStore";
 import { useRecapStore } from "@/features/recap/store/recapStore";
 import { usePassportStore } from "@/features/passport/store/passportStore";
 import { syncRecapNotifications } from "@/features/recap/services/recapNotifications";
+import { syncTravelReminders } from "@/features/itinerary/services/travelReminders";
 import { deleteAllTripPhotos } from "@/features/recap/services/tripPhotos";
 import { deleteAllTickets } from "@/features/itinerary/services/tickets";
 import { resetBackgroundDisclosure } from "@/features/location-sharing/components/BackgroundLocationDisclosure";
@@ -57,6 +59,7 @@ export async function wipeAllDeviceData({ keepModels = false }: { keepModels?: b
   useRecurringStore.getState().reset();
   useEventsStore.getState().reset();
   useMustDoStore.getState().reset();
+  usePlaceLookupStore.getState().reset();
   useIncomingShareStore.getState().clear();
   useTravelInfoStore.getState().reset();
   useSafetyStore.getState().reset();
@@ -76,6 +79,7 @@ export async function wipeAllDeviceData({ keepModels = false }: { keepModels?: b
   clearAiUsageLog();
   usePlanStore.getState().reset();
   await attempt(() => syncRecapNotifications([], {}));
+  await attempt(() => syncTravelReminders([], [], null, { locale: "en", hour12: false }));
   await attempt(deleteAllTripPhotos);
   await attempt(deleteAllTickets);
   await attempt(deleteAllIdeaThumbs);

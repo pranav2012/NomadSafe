@@ -16,6 +16,8 @@ interface DayRailProps {
   selected?: number | null;
   onSelect?: (index: number) => void;
   height?: number;
+  /** 0..1 per day: how full each day is; ticks grow with it (the trip summary). */
+  levels?: number[];
 }
 
 const PAD = 4;
@@ -26,7 +28,7 @@ const TICK_W = 3;
  * magnifies the ticks under the finger like a dock and reports the day under it. With
  * `onSelect`, the day under the finger when it lifts (or a tapped day) stays picked.
  */
-export function DayRail({ totalDays, today, colors, onScrub, selected = null, onSelect, height = 44 }: DayRailProps) {
+export function DayRail({ totalDays, today, colors, onScrub, selected = null, onSelect, height = 44, levels }: DayRailProps) {
   const [width, setWidth] = useState(0);
   const count = Math.max(1, totalDays);
   const step = count > 1 ? (width - PAD * 2 - TICK_W) / (count - 1) : 0;
@@ -57,7 +59,8 @@ export function DayRail({ totalDays, today, colors, onScrub, selected = null, on
       if (kind === "future" && (isPast || isToday)) continue;
 
       const wave = Math.min(1, Math.max(0, progress * (count + 6) / 6 - i / 6));
-      const base = isToday ? 30 : isPicked ? 26 : isPast ? 18 : 12;
+      const level = levels?.[i];
+      const base = isToday ? 30 : isPicked ? 26 : level !== undefined ? 8 + level * (height - 20) : isPast ? 18 : 12;
       const distance = i - focus.get();
       const magnify = 1 + lens.get() * 0.9 * Math.exp(-(distance * distance) / 3);
       const h = Math.min(height, base * magnify) * wave;
@@ -84,6 +87,7 @@ export function DayRail({ totalDays, today, colors, onScrub, selected = null, on
     "worklet";
     buildTicks(builder, "selected");
   });
+
 
   const indexAt = (x: number) => {
     "worklet";

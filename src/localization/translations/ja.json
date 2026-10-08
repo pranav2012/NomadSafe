@@ -789,7 +789,7 @@
     "eventSafeMessageSent_other": "「安全です」メッセージを{{count}}人の連絡先へ送信しました",
     "eventSafeMessageOpened_one": "「安全です」メッセージを{{count}}人の連絡先向けにSMSで開きました",
     "eventSafeMessageOpened_other": "「安全です」メッセージを{{count}}人の連絡先向けにSMSで開きました",
-    "recenterMap": "全員を地図に表示",
+    "recenterMap": "現在地を表示",
     "keepHolding": "そのまま長押し",
     "imSafeShort": "安全です",
     "alertChannelName": "連絡先からの安全アラート",
@@ -1133,7 +1133,20 @@
       "day": "日付",
       "whoFor": "誰の予定",
       "everyone": "全員",
-      "you": "あなた"
+      "you": "あなた",
+      "screenshotTitle": "スクリーンショットから入力",
+      "screenshotAgain": "別のスクリーンショットを使う",
+      "screenshotBody": "チケットや予約のスクリーンショットを選んでください。スマホ上で読み取り、この予定のチケットとして保存します。",
+      "screenshotFilled": "スクリーンショットから入力しました。内容を確認してください。",
+      "screenshotNothing": "このスクリーンショットから予約が見つかりませんでした。チケットとしては保存されます。",
+      "screenshotKept": "スクリーンショットはこの予定のチケットとして保存されます。",
+      "ends": "終了",
+      "addEnd": "終了時刻を追加",
+      "addArrival": "到着時刻を追加",
+      "where": "場所",
+      "wherePlaceholder": "場所または住所（地図用）",
+      "link": "予約・チケットのリンク",
+      "linkPlaceholder": "https://…"
     },
     "defaults": {
       "hotelStay": "ホテル滞在",
@@ -1159,14 +1172,118 @@
       "togetherAgain": "再び合流",
       "splitUp_one": "{{from}}〜{{to}} 別行動 · {{names}}の予定{{count}}件",
       "splitUp_other": "{{from}}〜{{to}} 別行動 · {{names}}の予定{{count}}件",
-      "addToDay": "追加"
+      "addToDay": "追加",
+      "openLink": "予約リンクを開く"
     },
     "anytime": "いつでも",
     "mustDo": {
       "title": "{{place}}の必見スポット",
       "dismiss": "{{name}}を非表示"
     },
-    "plannedTitle": "予定"
+    "plannedTitle": "予定",
+    "landsAt": "{{time}}着",
+    "missing": {
+      "place": "場所を追加",
+      "ticket": "チケットを追加"
+    },
+    "travel": {
+      "title": "移動の詳細",
+      "terminal": "ターミナル",
+      "gate": "ゲート",
+      "platform": "番線",
+      "coach": "号車",
+      "seat": "座席",
+      "boarding": "搭乗",
+      "addBoarding": "搭乗時刻を追加",
+      "short": {
+        "terminal": "T{{value}}",
+        "gate": "ゲート{{value}}",
+        "platform": "{{value}}番線",
+        "coach": "{{value}}号車",
+        "seat": "座席{{value}}"
+      },
+      "boards": "{{time}}搭乗",
+      "booking": "予約番号 {{ref}}",
+      "ticket": "チケット",
+      "departs": "出発",
+      "arrives": "到着",
+      "departsAt": "{{time}}発",
+      "addGateSeat": "ゲートと座席を追加",
+      "addPlatformSeat": "番線と座席を追加",
+      "leaveBy": "{{time}}までに出発",
+      "ride": "移動{{duration}}",
+      "beThereFlight": "{{duration}}前に空港へ",
+      "beThere": "{{duration}}前に到着"
+    },
+    "gap": {
+      "free": "{{range}} 空き · {{duration}}",
+      "lunch": "ランチ？ {{range}} 空き",
+      "dinner": "ディナー？ {{range}} 空き",
+      "bags": "ホテルのチェックインはまだ先です。荷物を預けられるか聞いてみましょう。",
+      "findFood": "食事を探す",
+      "ideas": "アイデア",
+      "walk": "徒歩{{duration}} · {{distance}}",
+      "transit": "公共交通機関で{{duration}} · {{distance}}",
+      "drive": "車で{{duration}} · {{distance}}",
+      "tight": "ぎりぎり：移動{{duration}} · {{distance}}",
+      "exit": "空港を出るまで{{duration}}",
+      "boardFlight": "{{duration}}前に空港へ",
+      "boardGround": "{{duration}}前に到着",
+      "freeTitle": "空き時間",
+      "lunchTitle": "ランチ",
+      "dinnerTitle": "ディナー",
+      "yourIdeas": "近くの保存したアイデア",
+      "walkShort": "徒歩{{duration}}",
+      "transitShort": "公共交通機関で{{duration}}",
+      "driveShort": "車で{{duration}}",
+      "nearby": "近く",
+      "added": "{{title}}をプランに追加しました",
+      "noPlace": "近くの情報を見るには、ひとつ前の予定に場所を追加してください。"
+    },
+    "glance": {
+      "title": "旅の全体像",
+      "fullPlan": "プラン全体",
+      "day": "{{day}}日目",
+      "lands": "{{time}}に{{place}}着",
+      "freeDay": "フリーの日",
+      "tonight": "宿泊：{{name}}",
+      "free": "空き{{duration}}",
+      "noStay": "宿泊先の予約なし",
+      "missing_one": "追加するもの{{count}}件",
+      "missing_other": "追加するもの{{count}}件",
+      "loadLabel": "1日の{{percent}}%が予定済み",
+      "nudge_one": "{{count}}件足りません。追加するとプラン全体が見られます。",
+      "nudge_other": "{{count}}件足りません。追加するとプラン全体が見られます。",
+      "allDays": "全{{count}}日"
+    },
+    "plan": {
+      "subtitle_one": "{{count}}日間",
+      "subtitle_other": "{{count}}日間",
+      "noPins": "予定に場所があると、ここに表示されます。",
+      "dayOnMap": "地図で見る1日",
+      "wholeTrip": "旅行全体",
+      "allDays": "全日程"
+    },
+    "preview": {
+      "title": "日ごとの旅",
+      "body": "予約を追加すると、到着時刻、移動時間、空き時間や食事、まだ足りないものがわかります。",
+      "sampleLabel": "例：7:40に到着、ホテルへ移動、ランチの空き時間、15:00にチェックイン",
+      "land": "到着 · NRT",
+      "ride": "ホテルまで約1時間10分",
+      "free": "10:00–13:00 空き · 近くでランチ",
+      "hotel": "チェックイン · Hotel Gracery",
+      "screenshot": "スクリーンショットから",
+      "add": "予約を追加"
+    },
+    "reminders": {
+      "channel": "旅行のリマインダー",
+      "leaveTitle": "{{time}}までに出発",
+      "leaveBodyFlight": "{{name}}は{{time}}発です。移動時間と空港に早めに着く時間を含めています。",
+      "leaveBody": "{{name}}は{{time}}発です。",
+      "boardingTitle": "まもなく搭乗 · {{name}}",
+      "boardingBody": "{{time}}に搭乗開始。",
+      "boardingBodyGate": "{{time}}に搭乗開始、{{gate}}番ゲート。"
+    }
   },
   "places": {
     "nearYou": "近くのスポット",
@@ -1185,7 +1302,9 @@
     "openNow": "営業中",
     "closed": "営業時間外",
     "photoBy": "写真: {{name}}",
-    "nothingNearby": "このカテゴリでは近くに見つかりませんでした。"
+    "nothingNearby": "このカテゴリでは近くに見つかりませんでした。",
+    "add": "追加",
+    "addToPlan": "{{name}}をプランに追加"
   },
   "emergencyContacts": {
     "confirmRemoveTitle": "{{name}}を削除しますか？",

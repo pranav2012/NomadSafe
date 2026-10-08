@@ -789,7 +789,7 @@
     "eventSafeMessageSent_other": "{{count}} ಸಂಪರ್ಕಗಳಿಗೆ “ನಾನು ಸುರಕ್ಷಿತ” ಸಂದೇಶ ಕಳುಹಿಸಲಾಗಿದೆ",
     "eventSafeMessageOpened_one": "{{count}} ಸಂಪರ್ಕಕ್ಕಾಗಿ “ನಾನು ಸುರಕ್ಷಿತ” ಸಂದೇಶವನ್ನು SMS ನಲ್ಲಿ ತೆರೆಯಲಾಗಿದೆ",
     "eventSafeMessageOpened_other": "{{count}} ಸಂಪರ್ಕಗಳಿಗಾಗಿ “ನಾನು ಸುರಕ್ಷಿತ” ಸಂದೇಶವನ್ನು SMS ನಲ್ಲಿ ತೆರೆಯಲಾಗಿದೆ",
-    "recenterMap": "ಎಲ್ಲರನ್ನೂ ನಕ್ಷೆಯಲ್ಲಿ ತೋರಿಸಿ",
+    "recenterMap": "ನನ್ನ ಸ್ಥಳ ತೋರಿಸಿ",
     "keepHolding": "ಹಿಡಿದಿರಿ",
     "imSafeShort": "ನಾನು ಸುರಕ್ಷಿತ",
     "alertChannelName": "ಸಂಪರ್ಕಗಳಿಂದ ಸುರಕ್ಷತಾ ಎಚ್ಚರಿಕೆಗಳು",
@@ -1133,7 +1133,20 @@
       "day": "ದಿನ",
       "whoFor": "ಯಾರಿಗಾಗಿ",
       "everyone": "ಎಲ್ಲರೂ",
-      "you": "ನೀವು"
+      "you": "ನೀವು",
+      "screenshotTitle": "ಸ್ಕ್ರೀನ್‌ಶಾಟ್‌ನಿಂದ ತುಂಬಿಸಿ",
+      "screenshotAgain": "ಬೇರೆ ಸ್ಕ್ರೀನ್‌ಶಾಟ್ ಬಳಸಿ",
+      "screenshotBody": "ಟಿಕೆಟ್ ಅಥವಾ ಬುಕಿಂಗ್‌ನ ಸ್ಕ್ರೀನ್‌ಶಾಟ್ ಆರಿಸಿ. ಅದನ್ನು ನಿಮ್ಮ ಫೋನ್‌ನಲ್ಲೇ ಓದಲಾಗುತ್ತದೆ ಮತ್ತು ಈ ಐಟಂನ ಟಿಕೆಟ್ ಆಗಿ ಇಡಲಾಗುತ್ತದೆ.",
+      "screenshotFilled": "ನಿಮ್ಮ ಸ್ಕ್ರೀನ್‌ಶಾಟ್‌ನಿಂದ ತುಂಬಿಸಲಾಗಿದೆ. ವಿವರಗಳನ್ನು ಪರಿಶೀಲಿಸಿ.",
+      "screenshotNothing": "ಆ ಸ್ಕ್ರೀನ್‌ಶಾಟ್‌ನಲ್ಲಿ ಬುಕಿಂಗ್ ಸಿಗಲಿಲ್ಲ. ಆದರೂ ಅದನ್ನು ಟಿಕೆಟ್ ಆಗಿ ಇಡಲಾಗುತ್ತದೆ.",
+      "screenshotKept": "ಸ್ಕ್ರೀನ್‌ಶಾಟ್ ಈ ಐಟಂನ ಟಿಕೆಟ್ ಆಗಿ ಉಳಿಯುತ್ತದೆ.",
+      "ends": "ಮುಕ್ತಾಯ",
+      "addEnd": "ಮುಕ್ತಾಯ ಸಮಯ ಸೇರಿಸಿ",
+      "addArrival": "ತಲುಪುವ ಸಮಯ ಸೇರಿಸಿ",
+      "where": "ಎಲ್ಲಿ",
+      "wherePlaceholder": "ಸ್ಥಳ ಅಥವಾ ವಿಳಾಸ, ನಕ್ಷೆಗಾಗಿ",
+      "link": "ಬುಕಿಂಗ್ ಅಥವಾ ಟಿಕೆಟ್ ಲಿಂಕ್",
+      "linkPlaceholder": "https://…"
     },
     "defaults": {
       "hotelStay": "ಹೋಟೆಲ್ ವಾಸ್ತವ್ಯ",
@@ -1159,14 +1172,118 @@
       "togetherAgain": "ಮತ್ತೆ ಜೊತೆಯಾಗಿ",
       "splitUp_one": "{{from}}–{{to}} ಬೇರೆ ಬೇರೆ · {{names}} ಗೆ {{count}} ಯೋಜನೆ",
       "splitUp_other": "{{from}}–{{to}} ಬೇರೆ ಬೇರೆ · {{names}} ಗೆ {{count}} ಯೋಜನೆಗಳು",
-      "addToDay": "ಸೇರಿಸಿ"
+      "addToDay": "ಸೇರಿಸಿ",
+      "openLink": "ಬುಕಿಂಗ್ ಲಿಂಕ್ ತೆರೆಯಿರಿ"
     },
     "anytime": "ಯಾವಾಗ ಬೇಕಾದರೂ",
     "mustDo": {
       "title": "{{place}} ನಲ್ಲಿ ತಪ್ಪದೇ ನೋಡಿ",
       "dismiss": "{{name}} ಮರೆಮಾಡಿ"
     },
-    "plannedTitle": "ಯೋಜಿಸಿದವು"
+    "plannedTitle": "ಯೋಜಿಸಿದವು",
+    "landsAt": "{{time}} ಕ್ಕೆ ಲ್ಯಾಂಡಿಂಗ್",
+    "missing": {
+      "place": "ಸ್ಥಳ ಸೇರಿಸಿ",
+      "ticket": "ಟಿಕೆಟ್ ಸೇರಿಸಿ"
+    },
+    "travel": {
+      "title": "ಪ್ರಯಾಣದ ವಿವರಗಳು",
+      "terminal": "ಟರ್ಮಿನಲ್",
+      "gate": "ಗೇಟ್",
+      "platform": "ಪ್ಲಾಟ್‌ಫಾರ್ಮ್",
+      "coach": "ಕೋಚ್",
+      "seat": "ಸೀಟ್",
+      "boarding": "ಬೋರ್ಡಿಂಗ್",
+      "addBoarding": "ಬೋರ್ಡಿಂಗ್ ಸಮಯ ಸೇರಿಸಿ",
+      "short": {
+        "terminal": "T{{value}}",
+        "gate": "ಗೇಟ್ {{value}}",
+        "platform": "ಪ್ಲಾಟ್‌ಫಾರ್ಮ್ {{value}}",
+        "coach": "ಕೋಚ್ {{value}}",
+        "seat": "ಸೀಟ್ {{value}}"
+      },
+      "boards": "ಬೋರ್ಡಿಂಗ್ {{time}}",
+      "booking": "ಬುಕಿಂಗ್ {{ref}}",
+      "ticket": "ಟಿಕೆಟ್",
+      "departs": "ಹೊರಡುವಿಕೆ",
+      "arrives": "ತಲುಪುವಿಕೆ",
+      "departsAt": "{{time}} ಕ್ಕೆ ಹೊರಡುತ್ತದೆ",
+      "addGateSeat": "ಗೇಟ್ ಮತ್ತು ಸೀಟ್ ಸೇರಿಸಿ",
+      "addPlatformSeat": "ಪ್ಲಾಟ್‌ಫಾರ್ಮ್ ಮತ್ತು ಸೀಟ್ ಸೇರಿಸಿ",
+      "leaveBy": "{{time}} ಒಳಗೆ ಹೊರಡಿ",
+      "ride": "ತಲುಪಲು {{duration}}",
+      "beThereFlight": "{{duration}} ಮುಂಚೆ ವಿಮಾನ ನಿಲ್ದಾಣದಲ್ಲಿ",
+      "beThere": "{{duration}} ಮುಂಚೆ ಅಲ್ಲಿ"
+    },
+    "gap": {
+      "free": "{{range}} ಬಿಡುವು · {{duration}}",
+      "lunch": "ಮಧ್ಯಾಹ್ನದ ಊಟ? {{range}} ಬಿಡುವು",
+      "dinner": "ರಾತ್ರಿ ಊಟ? {{range}} ಬಿಡುವು",
+      "bags": "ಹೋಟೆಲ್ ಚೆಕ್-ಇನ್ ನಂತರ ಇದೆ. ನಿಮ್ಮ ಬ್ಯಾಗ್‌ಗಳನ್ನು ಇಡಲು ಕೇಳಿ.",
+      "findFood": "ಊಟ ಹುಡುಕಿ",
+      "ideas": "ಐಡಿಯಾಗಳು",
+      "walk": "{{duration}} ನಡಿಗೆ · {{distance}}",
+      "transit": "ಸಾರ್ವಜನಿಕ ಸಾರಿಗೆಯಲ್ಲಿ {{duration}} · {{distance}}",
+      "drive": "ಕಾರಿನಲ್ಲಿ {{duration}} · {{distance}}",
+      "tight": "ಸಮಯ ಕಡಿಮೆ: ತಲುಪಲು {{duration}} · {{distance}}",
+      "exit": "ವಿಮಾನ ನಿಲ್ದಾಣದಿಂದ ಹೊರಬರಲು {{duration}}",
+      "boardFlight": "{{duration}} ಮುಂಚೆ ವಿಮಾನ ನಿಲ್ದಾಣದಲ್ಲಿರಿ",
+      "boardGround": "{{duration}} ಮುಂಚೆ ಅಲ್ಲಿರಿ",
+      "freeTitle": "ಬಿಡುವಿನ ಸಮಯ",
+      "lunchTitle": "ಮಧ್ಯಾಹ್ನದ ಊಟ",
+      "dinnerTitle": "ರಾತ್ರಿ ಊಟ",
+      "yourIdeas": "ಹತ್ತಿರದಲ್ಲಿ ನೀವು ಉಳಿಸಿದ ಐಡಿಯಾಗಳು",
+      "walkShort": "{{duration}} ನಡಿಗೆ",
+      "transitShort": "ಸಾರ್ವಜನಿಕ ಸಾರಿಗೆಯಲ್ಲಿ {{duration}}",
+      "driveShort": "ಕಾರಿನಲ್ಲಿ {{duration}}",
+      "nearby": "ಹತ್ತಿರದಲ್ಲಿ",
+      "added": "{{title}} ಯೋಜನೆಗೆ ಸೇರಿಸಲಾಗಿದೆ",
+      "noPlace": "ಹತ್ತಿರ ಏನಿದೆ ಎಂದು ನೋಡಲು ಇದರ ಹಿಂದಿನ ಐಟಂಗೆ ಸ್ಥಳ ಸೇರಿಸಿ."
+    },
+    "glance": {
+      "title": "ಪ್ರವಾಸ ಒಂದು ನೋಟದಲ್ಲಿ",
+      "fullPlan": "ಪೂರ್ಣ ಯೋಜನೆ",
+      "day": "ದಿನ {{day}}",
+      "lands": "{{time}} ಕ್ಕೆ {{place}} ನಲ್ಲಿ ಲ್ಯಾಂಡಿಂಗ್",
+      "freeDay": "ಬಿಡುವಿನ ದಿನ",
+      "tonight": "{{name}} ನಲ್ಲಿ ವಾಸ್ತವ್ಯ",
+      "free": "{{duration}} ಬಿಡುವು",
+      "noStay": "ವಸತಿ ಬುಕ್ ಆಗಿಲ್ಲ",
+      "missing_one": "{{count}} ವಿಷಯ ಸೇರಿಸಬೇಕು",
+      "missing_other": "{{count}} ವಿಷಯಗಳನ್ನು ಸೇರಿಸಬೇಕು",
+      "loadLabel": "ದಿನದ {{percent}}% ಯೋಜಿಸಲಾಗಿದೆ",
+      "nudge_one": "{{count}} ವಿಷಯ ಬಾಕಿ ಇದೆ. ಪೂರ್ಣ ಯೋಜನೆ ನೋಡಲು ಅದನ್ನು ಸೇರಿಸಿ.",
+      "nudge_other": "{{count}} ವಿಷಯಗಳು ಬಾಕಿ ಇವೆ. ಪೂರ್ಣ ಯೋಜನೆ ನೋಡಲು ಅವನ್ನು ಸೇರಿಸಿ.",
+      "allDays": "ಎಲ್ಲಾ {{count}} ದಿನಗಳು"
+    },
+    "plan": {
+      "subtitle_one": "{{count}} ದಿನ",
+      "subtitle_other": "{{count}} ದಿನಗಳು",
+      "noPins": "ನಿಮ್ಮ ಐಟಂಗಳಿಗೆ ಸ್ಥಳ ಇದ್ದಾಗ ಅವು ಇಲ್ಲಿ ಕಾಣಿಸುತ್ತವೆ.",
+      "dayOnMap": "ನಕ್ಷೆಯಲ್ಲಿ ದಿನ",
+      "wholeTrip": "ಇಡೀ ಪ್ರವಾಸ",
+      "allDays": "ಎಲ್ಲಾ ದಿನಗಳು"
+    },
+    "preview": {
+      "title": "ನಿಮ್ಮ ಪ್ರವಾಸ, ದಿನದಿಂದ ದಿನಕ್ಕೆ",
+      "body": "ನಿಮ್ಮ ಬುಕಿಂಗ್‌ಗಳನ್ನು ಸೇರಿಸಿ; ನೀವು ಯಾವಾಗ ಇಳಿಯುತ್ತೀರಿ, ನಿಲ್ದಾಣಗಳ ನಡುವಿನ ಸಮಯ, ಬಿಡುವಿನ ಸಮಯ ಮತ್ತು ಊಟ, ಇನ್ನೂ ಏನು ಬಾಕಿ ಇದೆ ಎಂಬುದು ಕಾಣುತ್ತದೆ.",
+      "sampleLabel": "ಉದಾಹರಣೆ ದಿನ: 7:40 ಕ್ಕೆ ಲ್ಯಾಂಡಿಂಗ್, ಹೋಟೆಲ್‌ಗೆ ಪ್ರಯಾಣ, ಊಟಕ್ಕೆ ಬಿಡುವು, 15:00 ಕ್ಕೆ ಚೆಕ್-ಇನ್",
+      "land": "ಲ್ಯಾಂಡಿಂಗ್ · NRT",
+      "ride": "ಹೋಟೆಲ್‌ಗೆ ~1 ಗಂಟೆ 10 ನಿಮಿಷ",
+      "free": "10:00–13:00 ಬಿಡುವು · ಹತ್ತಿರ ಊಟ",
+      "hotel": "ಚೆಕ್-ಇನ್ · Hotel Gracery",
+      "screenshot": "ಸ್ಕ್ರೀನ್‌ಶಾಟ್‌ನಿಂದ",
+      "add": "ಬುಕಿಂಗ್ ಸೇರಿಸಿ"
+    },
+    "reminders": {
+      "channel": "ಪ್ರಯಾಣ ಜ್ಞಾಪನೆಗಳು",
+      "leaveTitle": "{{time}} ಒಳಗೆ ಹೊರಡಿ",
+      "leaveBodyFlight": "{{name}} {{time}} ಕ್ಕೆ ಹೊರಡುತ್ತದೆ. ಇದರಲ್ಲಿ ಪ್ರಯಾಣದ ಸಮಯ ಮತ್ತು ವಿಮಾನ ನಿಲ್ದಾಣಕ್ಕೆ ಬೇಗ ತಲುಪುವ ಸಮಯ ಸೇರಿದೆ.",
+      "leaveBody": "{{name}} {{time}} ಕ್ಕೆ ಹೊರಡುತ್ತದೆ.",
+      "boardingTitle": "ಶೀಘ್ರದಲ್ಲೇ ಬೋರ್ಡಿಂಗ್ · {{name}}",
+      "boardingBody": "{{time}} ಕ್ಕೆ ಬೋರ್ಡಿಂಗ್.",
+      "boardingBodyGate": "{{time}} ಕ್ಕೆ ಬೋರ್ಡಿಂಗ್, ಗೇಟ್ {{gate}}."
+    }
   },
   "places": {
     "nearYou": "ನಿಮ್ಮ ಸಮೀಪದಲ್ಲಿ",
@@ -1185,7 +1302,9 @@
     "openNow": "ಈಗ ತೆರೆದಿದೆ",
     "closed": "ಮುಚ್ಚಿದೆ",
     "photoBy": "ಫೋಟೋ: {{name}}",
-    "nothingNearby": "ಈ ವರ್ಗದಲ್ಲಿ ಹತ್ತಿರ ಏನೂ ಸಿಗಲಿಲ್ಲ."
+    "nothingNearby": "ಈ ವರ್ಗದಲ್ಲಿ ಹತ್ತಿರ ಏನೂ ಸಿಗಲಿಲ್ಲ.",
+    "add": "ಸೇರಿಸಿ",
+    "addToPlan": "{{name}} ಯೋಜನೆಗೆ ಸೇರಿಸಿ"
   },
   "emergencyContacts": {
     "confirmRemoveTitle": "{{name}} ಅನ್ನು ತೆಗೆದುಹಾಕುವುದೇ?",

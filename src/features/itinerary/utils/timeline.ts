@@ -1,6 +1,7 @@
 import type { BookingLike } from "@/features/itinerary/utils/bookings";
 
-export type TimelineRole = "single" | "check-in" | "check-out";
+/** "arrival": overnight transit landing on a later day (only from `dayEntries`). */
+export type TimelineRole = "single" | "check-in" | "check-out" | "arrival";
 
 export interface TimelineEntry<T extends BookingLike> {
   event: T;

@@ -1,3 +1,4 @@
+import { travelDetailsFromText, type TravelDetails } from "@/features/itinerary/utils/travelDetails";
 import {
   hotelNameFromEmail,
   isFlightEmail,
@@ -37,6 +38,7 @@ export interface EventCandidate {
   note?: string;
   externalId?: string;
   bookingRef?: string;
+  travel?: TravelDetails;
   /** A cancellation email: the caller removes the matching booking. */
   cancelled?: boolean;
   /** Already present in the itinerary. */
@@ -420,6 +422,7 @@ export async function buildEventCandidates(
         note: message.note,
         externalId,
         bookingRef: event.bookingRef,
+        travel: event.type === "transit" ? travelDetailsFromText(message.body, startAt) : undefined,
         cancelled: event.cancelled,
         duplicate,
       });
@@ -437,4 +440,31 @@ export async function buildEventCandidates(
   });
 
   return candidates;
+}
+
+export interface TextBooking {
+  type: EventType;
+  title: string;
+  detail?: string;
+  transitMode?: TransitMode;
+  startAt: string;
+  endAt?: string;
+  bookingRef?: string;
+  travel?: TravelDetails;
+}
+
+/** Bookings found in a ticket screenshot's text (read on the phone), with the same parsers as Gmail; cancellations are dropped. */
+export function bookingsFromText(text: string, trip: Trip | null): TextBooking[] {
+  return extractEvents({ body: text }, trip)
+    .filter((event) => !event.cancelled)
+    .map((event) => ({
+      type: event.type,
+      title: event.title,
+      detail: event.detail || undefined,
+      transitMode: event.transitMode,
+      startAt: event.date,
+      endAt: event.endDate,
+      bookingRef: event.bookingRef,
+      travel: event.type === "transit" ? travelDetailsFromText(text, event.date) : undefined,
+    }));
 }

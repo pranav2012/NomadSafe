@@ -15,6 +15,9 @@ import { removeTickets, sendTicket } from "@/features/itinerary/services/tickets
 import { useEventsStore } from "@/features/itinerary/store/eventsStore";
 import { useTicketsStore, type Ticket } from "@/features/itinerary/store/ticketsStore";
 import { localizeEventTitle } from "@/features/itinerary/utils/eventText";
+import { formatters, routeOf } from "@/features/itinerary/utils/entryText";
+import { TRAVEL_FIELDS } from "@/features/itinerary/utils/travelDetails";
+import type { TripEvent } from "@/features/itinerary/store/eventsStore";
 
 // Light page and dark text: gate scanners read QR codes best on white at full brightness.
 const PAGE = "#FFFFFF";
@@ -51,6 +54,36 @@ function ZoomableImage({ uri }: { uri: string }) {
         <Image source={{ uri }} style={styles.fill} resizeMode="contain" />
       </Animated.View>
     </GestureDetector>
+  );
+}
+
+/** Route, times and terminal / gate / platform / coach / seat above a travel ticket, from the booking or the user. */
+function TravelStrip({ event }: { event: TripEvent }) {
+  const { t, locale, hour12 } = useLocalization();
+  const format = formatters(locale, hour12);
+  const route = routeOf(event.detail);
+  const times = [
+    t("itinerary.travel.departsAt", { time: format.time.format(new Date(event.startAt)) }),
+    event.travel?.boardingAt ? t("itinerary.travel.boards", { time: format.time.format(new Date(event.travel.boardingAt)) }) : null,
+    event.bookingRef ? t("itinerary.travel.booking", { ref: event.bookingRef }) : null,
+  ].filter(Boolean);
+  const details = TRAVEL_FIELDS.flatMap((field) => (event.travel?.[field] ? [{ field, value: event.travel[field]! }] : []));
+  return (
+    <View style={styles.strip}>
+      <Text numberOfLines={1} style={styles.stripRoute}>
+        {[route, times.join(" · ")].filter(Boolean).join("  ·  ")}
+      </Text>
+      {details.length > 0 ? (
+        <View style={styles.stripDetails}>
+          {details.map(({ field, value }) => (
+            <View key={field} style={styles.stripDetail}>
+              <Text style={styles.stripLabel}>{t(`itinerary.travel.${field}`)}</Text>
+              <Text style={styles.stripValue}>{value}</Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
+    </View>
   );
 }
 
@@ -134,6 +167,8 @@ export default function TicketViewerScreen() {
         </PressableScale>
       </View>
 
+      {event?.type === "transit" ? <TravelStrip event={event} /> : null}
+
       <PrivateView style={styles.fill}>
         {failed === ticket.id ? (
           <View style={styles.center}>
@@ -191,5 +226,11 @@ const styles = StyleSheet.create({
   titles: { flex: 1 },
   title: { fontFamily: f.semibold, fontSize: 16, color: INK },
   subtitle: { fontFamily: f.regular, fontSize: 13, color: "rgba(14,16,24,0.6)" },
+  strip: { paddingHorizontal: 16, paddingBottom: 10, gap: 8 },
+  stripRoute: { fontFamily: f.medium, fontSize: 13.5, color: "rgba(14,16,24,0.75)" },
+  stripDetails: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  stripDetail: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, backgroundColor: "rgba(14,16,24,0.06)" },
+  stripLabel: { fontFamily: f.medium, fontSize: 10.5, letterSpacing: 0.5, textTransform: "uppercase", color: "rgba(14,16,24,0.55)" },
+  stripValue: { fontFamily: f.semibold, fontSize: 17, color: INK },
   pager: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 18, paddingTop: 10 },
 });

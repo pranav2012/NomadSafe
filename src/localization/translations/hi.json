@@ -789,7 +789,7 @@
     "eventSafeMessageSent_other": "“मैं सुरक्षित हूं” मैसेज {{count}} संपर्कों को भेजा गया",
     "eventSafeMessageOpened_one": "{{count}} संपर्क के लिए SMS में “मैं सुरक्षित हूं” मैसेज खुला",
     "eventSafeMessageOpened_other": "{{count}} संपर्कों के लिए SMS में “मैं सुरक्षित हूं” मैसेज खुला",
-    "recenterMap": "सभी को मैप पर दिखाएँ",
+    "recenterMap": "मेरी लोकेशन दिखाएँ",
     "keepHolding": "दबाए रखें",
     "imSafeShort": "मैं सुरक्षित हूँ",
     "alertChannelName": "कॉन्टैक्ट्स से सुरक्षा अलर्ट",
@@ -1133,7 +1133,20 @@
       "day": "दिन",
       "whoFor": "किसके लिए",
       "everyone": "सभी",
-      "you": "आप"
+      "you": "आप",
+      "screenshotTitle": "स्क्रीनशॉट से भरें",
+      "screenshotAgain": "दूसरा स्क्रीनशॉट इस्तेमाल करें",
+      "screenshotBody": "किसी टिकट या बुकिंग का स्क्रीनशॉट चुनें। इसे आपके फ़ोन पर ही पढ़ा जाता है और इस आइटम के साथ उसके टिकट के रूप में रखा जाता है।",
+      "screenshotFilled": "आपके स्क्रीनशॉट से भरा गया। जानकारी जाँच लें।",
+      "screenshotNothing": "उस स्क्रीनशॉट में कोई बुकिंग नहीं मिली। फिर भी इसे टिकट के रूप में रखा जाएगा।",
+      "screenshotKept": "स्क्रीनशॉट इस आइटम के टिकट के रूप में सेव होगा।",
+      "ends": "खत्म",
+      "addEnd": "खत्म होने का समय जोड़ें",
+      "addArrival": "पहुँचने का समय जोड़ें",
+      "where": "कहाँ",
+      "wherePlaceholder": "जगह या पता, मैप के लिए",
+      "link": "बुकिंग या टिकट लिंक",
+      "linkPlaceholder": "https://…"
     },
     "defaults": {
       "hotelStay": "होटल में ठहराव",
@@ -1159,14 +1172,118 @@
       "togetherAgain": "फिर से साथ",
       "splitUp_one": "{{from}}–{{to}} अलग · {{names}} के लिए {{count}} योजना",
       "splitUp_other": "{{from}}–{{to}} अलग · {{names}} के लिए {{count}} योजनाएँ",
-      "addToDay": "जोड़ें"
+      "addToDay": "जोड़ें",
+      "openLink": "बुकिंग लिंक खोलें"
     },
     "anytime": "कभी भी",
     "mustDo": {
       "title": "{{place}} में ज़रूर देखें",
       "dismiss": "{{name}} छिपाएँ"
     },
-    "plannedTitle": "प्लान किया"
+    "plannedTitle": "प्लान किया",
+    "landsAt": "{{time}} पर लैंडिंग",
+    "missing": {
+      "place": "जगह जोड़ें",
+      "ticket": "टिकट जोड़ें"
+    },
+    "travel": {
+      "title": "यात्रा की जानकारी",
+      "terminal": "टर्मिनल",
+      "gate": "गेट",
+      "platform": "प्लेटफ़ॉर्म",
+      "coach": "कोच",
+      "seat": "सीट",
+      "boarding": "बोर्डिंग",
+      "addBoarding": "बोर्डिंग का समय जोड़ें",
+      "short": {
+        "terminal": "T{{value}}",
+        "gate": "गेट {{value}}",
+        "platform": "प्लेटफ़ॉर्म {{value}}",
+        "coach": "कोच {{value}}",
+        "seat": "सीट {{value}}"
+      },
+      "boards": "बोर्डिंग {{time}}",
+      "booking": "बुकिंग {{ref}}",
+      "ticket": "टिकट",
+      "departs": "प्रस्थान",
+      "arrives": "आगमन",
+      "departsAt": "{{time}} पर प्रस्थान",
+      "addGateSeat": "गेट और सीट जोड़ें",
+      "addPlatformSeat": "प्लेटफ़ॉर्म और सीट जोड़ें",
+      "leaveBy": "{{time}} तक निकलें",
+      "ride": "पहुँचने में {{duration}}",
+      "beThereFlight": "एयरपोर्ट पर {{duration}} पहले",
+      "beThere": "वहाँ {{duration}} पहले"
+    },
+    "gap": {
+      "free": "{{range}} खाली · {{duration}}",
+      "lunch": "लंच? {{range}} खाली",
+      "dinner": "डिनर? {{range}} खाली",
+      "bags": "होटल चेक-इन बाद में है। अपना सामान रखवाने के लिए पूछ लें।",
+      "findFood": "खाना ढूँढें",
+      "ideas": "आइडिया",
+      "walk": "{{duration}} पैदल · {{distance}}",
+      "transit": "{{duration}} पब्लिक ट्रांसपोर्ट से · {{distance}}",
+      "drive": "{{duration}} कार से · {{distance}}",
+      "tight": "समय कम है: पहुँचने में {{duration}} · {{distance}}",
+      "exit": "एयरपोर्ट से बाहर निकलने में {{duration}}",
+      "boardFlight": "एयरपोर्ट पर {{duration}} पहले पहुँचें",
+      "boardGround": "वहाँ {{duration}} पहले पहुँचें",
+      "freeTitle": "खाली समय",
+      "lunchTitle": "लंच",
+      "dinnerTitle": "डिनर",
+      "yourIdeas": "आसपास आपके सेव किए आइडिया",
+      "walkShort": "{{duration}} पैदल",
+      "transitShort": "{{duration}} पब्लिक ट्रांसपोर्ट से",
+      "driveShort": "{{duration}} कार से",
+      "nearby": "आसपास",
+      "added": "{{title}} प्लान में जोड़ा गया",
+      "noPlace": "आसपास क्या है, यह देखने के लिए इससे पहले वाले आइटम में जगह जोड़ें।"
+    },
+    "glance": {
+      "title": "ट्रिप एक नज़र में",
+      "fullPlan": "पूरा प्लान",
+      "day": "दिन {{day}}",
+      "lands": "{{place}} में {{time}} पर लैंडिंग",
+      "freeDay": "खाली दिन",
+      "tonight": "{{name}} में ठहरना",
+      "free": "{{duration}} खाली",
+      "noStay": "ठहरने की कोई जगह बुक नहीं",
+      "missing_one": "{{count}} चीज़ जोड़नी है",
+      "missing_other": "{{count}} चीज़ें जोड़नी हैं",
+      "loadLabel": "दिन का {{percent}}% प्लान किया गया",
+      "nudge_one": "{{count}} चीज़ बाकी है। पूरा प्लान देखने के लिए इसे जोड़ें।",
+      "nudge_other": "{{count}} चीज़ें बाकी हैं। पूरा प्लान देखने के लिए इन्हें जोड़ें।",
+      "allDays": "सभी {{count}} दिन"
+    },
+    "plan": {
+      "subtitle_one": "{{count}} दिन",
+      "subtitle_other": "{{count}} दिन",
+      "noPins": "आइटम में जगह होने पर वह यहाँ दिखेगी।",
+      "dayOnMap": "मैप पर दिन",
+      "wholeTrip": "पूरी ट्रिप",
+      "allDays": "सभी दिन"
+    },
+    "preview": {
+      "title": "आपकी ट्रिप, दिन-ब-दिन",
+      "body": "अपनी बुकिंग जोड़ें, फिर आप देख पाएँगे कि कब लैंड करेंगे, स्टॉप के बीच का समय, खाली समय और खाना, और क्या अभी बाकी है।",
+      "sampleLabel": "उदाहरण दिन: 7:40 पर लैंडिंग, होटल तक सफ़र, लंच के लिए खाली समय, 15:00 पर चेक-इन",
+      "land": "लैंडिंग · NRT",
+      "ride": "होटल तक ~1 घंटा 10 मिनट",
+      "free": "10:00–13:00 खाली · पास में लंच",
+      "hotel": "चेक-इन · Hotel Gracery",
+      "screenshot": "स्क्रीनशॉट से",
+      "add": "बुकिंग जोड़ें"
+    },
+    "reminders": {
+      "channel": "यात्रा रिमाइंडर",
+      "leaveTitle": "{{time}} तक निकलें",
+      "leaveBodyFlight": "{{name}} का प्रस्थान {{time}} पर है। इसमें सफ़र और एयरपोर्ट जल्दी पहुँचने का समय शामिल है।",
+      "leaveBody": "{{name}} का प्रस्थान {{time}} पर है।",
+      "boardingTitle": "बोर्डिंग जल्द · {{name}}",
+      "boardingBody": "बोर्डिंग {{time}} पर।",
+      "boardingBodyGate": "बोर्डिंग {{time}} पर, गेट {{gate}}।"
+    }
   },
   "places": {
     "nearYou": "आपके पास",
@@ -1185,7 +1302,9 @@
     "openNow": "अभी खुला",
     "closed": "बंद",
     "photoBy": "फ़ोटो: {{name}}",
-    "nothingNearby": "इस श्रेणी में आस-पास कुछ नहीं मिला।"
+    "nothingNearby": "इस श्रेणी में आस-पास कुछ नहीं मिला।",
+    "add": "जोड़ें",
+    "addToPlan": "{{name}} को प्लान में जोड़ें"
   },
   "emergencyContacts": {
     "confirmRemoveTitle": "{{name}} को हटाएं?",

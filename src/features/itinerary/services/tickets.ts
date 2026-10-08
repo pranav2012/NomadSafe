@@ -114,6 +114,11 @@ export async function attachPhotos(eventId: string): Promise<number> {
   return added;
 }
 
+/** Keeps one already-picked image (e.g. the screenshot an item was filled from) as the item's ticket. */
+export async function attachImage(eventId: string, uri: string, name: string): Promise<boolean> {
+  return (await copyIn(eventId, uri, name, "image", "photo")) !== null;
+}
+
 export function hasGmailTicket(eventId: string, sourceKey: string): boolean {
   return useTicketsStore.getState().tickets.some((ticket) => ticket.sourceKey === sourceKey && ticket.eventId === eventId);
 }

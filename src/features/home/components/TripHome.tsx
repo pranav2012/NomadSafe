@@ -14,6 +14,7 @@ import type { HomeData } from "@/features/home/types";
 import { todayStopIndex } from "@/features/home/utils/globeTiles";
 import { TripItinerary, useEventsStore } from "@/features/itinerary";
 import { SavedSection } from "@/features/itinerary/components/SavedSection";
+import { useOpenTripPlan, useTripGlance } from "@/features/itinerary/components/TripGlance";
 import { useTicketsStore } from "@/features/itinerary/store/ticketsStore";
 import { localizeEventTitle } from "@/features/itinerary/utils/eventText";
 import { useRouter } from "expo-router";
@@ -139,6 +140,9 @@ export function TripHome({
   }, [headerSpace, heroBox, heroHeight]);
   const heroBoxStyle = useAnimatedStyle(() => ({ height: heroBox.get() }));
   const router = useRouter();
+  const openPlan = useOpenTripPlan(trip);
+  const { glance } = useTripGlance(trip);
+  const [glanceIndex, setGlanceIndex] = useState(0);
   const tickets = useTicketsStore((state) => state.tickets);
   const ticketEventIds = new Set(tickets.map((ticket) => ticket.eventId));
   const ticketEvent = live ? tripEvents.find((event) => event.id === live.eventIds.find((id) => ticketEventIds.has(id))) : undefined;
@@ -468,9 +472,10 @@ export function TripHome({
             totalDays={data.totalDays}
             today={data.day}
             onScrub={setRailDay}
-            selected={liveMode ? selectedIndex : null}
-            onSelect={liveMode ? selectDay : undefined}
-            height={36}
+            selected={liveMode ? selectedIndex : stage === "upcoming" ? glanceIndex : null}
+            onSelect={liveMode ? selectDay : stage === "upcoming" ? setGlanceIndex : undefined}
+            height={stage === "upcoming" ? 44 : 36}
+            levels={stage === "upcoming" ? glance.map((day) => day.load) : undefined}
             colors={{
               past: c.textSoft,
               future: isDark ? "rgba(255,255,255,0.2)" : "rgba(14,16,24,0.16)",
@@ -500,9 +505,23 @@ export function TripHome({
               >
                 <Text style={[styles.backTodayText, { color: c.text }]}>{stage === "eve" ? t("home.live.backToDayOne") : t("home.live.backToToday")}</Text>
               </PressableScale>
+            ) : liveMode ? (
+              <PressableScale
+                onPress={() => openPlan("rail")}
+                accessibilityRole="button"
+                style={[styles.backToday, { backgroundColor: c.surfaceStrong, borderColor: c.hairline }]}
+              >
+                <Text style={[styles.backTodayText, { color: c.text }]}>{t("itinerary.plan.allDays")}</Text>
+              </PressableScale>
             ) : null}
             <Text style={[styles.railLabel, { color: c.textMuted }]}>{data.dayDates[data.dayDates.length - 1]}</Text>
           </View>
+
+          {stage === "upcoming" ? (
+            <View style={styles.dayPlan}>
+              <TripItinerary trip={trip} accent={accent} now={now} glance glanceDay={glanceIndex} />
+            </View>
+          ) : null}
 
           {stage === "upcoming" ? (
             <PrivateView>
@@ -524,7 +543,7 @@ export function TripHome({
         </View>
 
         <View style={styles.body}>
-          {liveMode ? null : <TripItinerary trip={trip} accent={accent} now={now} />}
+          {stage === "ended" ? <TripItinerary trip={trip} accent={accent} now={now} /> : null}
           {stage === "active" ? <NearbyPlaces userLocation={userLocation} /> : null}
         </View>
       </Animated.ScrollView>

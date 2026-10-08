@@ -789,7 +789,7 @@
     "eventSafeMessageSent_other": "تم إرسال رسالة “أنا بأمان” إلى {{count}} جهات اتصال",
     "eventSafeMessageOpened_one": "تم فتح رسالة “أنا بأمان” في الرسائل النصية لجهة اتصال واحدة",
     "eventSafeMessageOpened_other": "تم فتح رسالة “أنا بأمان” في الرسائل النصية لـ{{count}} جهات اتصال",
-    "recenterMap": "عرض الجميع على الخريطة",
+    "recenterMap": "عرض موقعي",
     "keepHolding": "واصل الضغط",
     "imSafeShort": "أنا بأمان",
     "alertChannelName": "تنبيهات الأمان من جهات الاتصال",
@@ -1133,7 +1133,20 @@
       "day": "اليوم",
       "whoFor": "لمن هذا",
       "everyone": "الجميع",
-      "you": "أنت"
+      "you": "أنت",
+      "screenshotTitle": "التعبئة من لقطة شاشة",
+      "screenshotAgain": "استخدام لقطة شاشة أخرى",
+      "screenshotBody": "اختر لقطة شاشة لتذكرة أو حجز. تُقرأ على هاتفك وتُحفظ مع هذا العنصر كتذكرة له.",
+      "screenshotFilled": "تمت التعبئة من لقطة الشاشة. راجع التفاصيل.",
+      "screenshotNothing": "لم نجد حجزًا في لقطة الشاشة هذه. ستُحفظ مع ذلك كتذكرة.",
+      "screenshotKept": "ستُحفظ لقطة الشاشة كتذكرة لهذا العنصر.",
+      "ends": "ينتهي",
+      "addEnd": "إضافة وقت الانتهاء",
+      "addArrival": "إضافة وقت الوصول",
+      "where": "المكان",
+      "wherePlaceholder": "مكان أو عنوان، للخريطة",
+      "link": "رابط الحجز أو التذكرة",
+      "linkPlaceholder": "https://…"
     },
     "defaults": {
       "hotelStay": "إقامة فندقية",
@@ -1159,14 +1172,118 @@
       "togetherAgain": "معًا من جديد",
       "splitUp_one": "افتراق {{from}}–{{to}} · خطة واحدة لـ {{names}}",
       "splitUp_other": "افتراق {{from}}–{{to}} · {{count}} خطط لـ {{names}}",
-      "addToDay": "إضافة"
+      "addToDay": "إضافة",
+      "openLink": "فتح رابط الحجز"
     },
     "anytime": "في أي وقت",
     "mustDo": {
       "title": "لا تفوّت في {{place}}",
       "dismiss": "إخفاء {{name}}"
     },
-    "plannedTitle": "مُخطَّط"
+    "plannedTitle": "مُخطَّط",
+    "landsAt": "الهبوط {{time}}",
+    "missing": {
+      "place": "إضافة مكان",
+      "ticket": "إضافة تذكرة"
+    },
+    "travel": {
+      "title": "تفاصيل التنقل",
+      "terminal": "مبنى الركاب",
+      "gate": "البوابة",
+      "platform": "الرصيف",
+      "coach": "العربة",
+      "seat": "المقعد",
+      "boarding": "الصعود",
+      "addBoarding": "إضافة وقت الصعود",
+      "short": {
+        "terminal": "T{{value}}",
+        "gate": "البوابة {{value}}",
+        "platform": "الرصيف {{value}}",
+        "coach": "العربة {{value}}",
+        "seat": "المقعد {{value}}"
+      },
+      "boards": "الصعود {{time}}",
+      "booking": "الحجز {{ref}}",
+      "ticket": "التذكرة",
+      "departs": "المغادرة",
+      "arrives": "الوصول",
+      "departsAt": "يغادر {{time}}",
+      "addGateSeat": "إضافة البوابة والمقعد",
+      "addPlatformSeat": "إضافة الرصيف والمقعد",
+      "leaveBy": "انطلق قبل {{time}}",
+      "ride": "{{duration}} للوصول",
+      "beThereFlight": "في المطار مبكرًا بـ {{duration}}",
+      "beThere": "هناك مبكرًا بـ {{duration}}"
+    },
+    "gap": {
+      "free": "متاح {{range}} · {{duration}}",
+      "lunch": "غداء؟ متاح {{range}}",
+      "dinner": "عشاء؟ متاح {{range}}",
+      "bags": "تسجيل الوصول في الفندق لاحقًا. اطلب ترك حقائبك.",
+      "findFood": "ابحث عن طعام",
+      "ideas": "أفكار",
+      "walk": "{{duration}} سيرًا · {{distance}}",
+      "transit": "{{duration}} بالمواصلات العامة · {{distance}}",
+      "drive": "{{duration}} بالسيارة · {{distance}}",
+      "tight": "الوقت ضيق: {{duration}} للوصول · {{distance}}",
+      "exit": "{{duration}} للخروج من المطار",
+      "boardFlight": "كن في المطار مبكرًا بـ {{duration}}",
+      "boardGround": "كن هناك مبكرًا بـ {{duration}}",
+      "freeTitle": "وقت فراغ",
+      "lunchTitle": "الغداء",
+      "dinnerTitle": "العشاء",
+      "yourIdeas": "أفكارك المحفوظة القريبة",
+      "walkShort": "{{duration}} سيرًا",
+      "transitShort": "{{duration}} بالمواصلات العامة",
+      "driveShort": "{{duration}} بالسيارة",
+      "nearby": "بالقرب",
+      "added": "أُضيف {{title}} إلى الخطة",
+      "noPlace": "أضف مكانًا إلى العنصر السابق لترى ما حوله."
+    },
+    "glance": {
+      "title": "الرحلة في لمحة",
+      "fullPlan": "الخطة كاملة",
+      "day": "اليوم {{day}}",
+      "lands": "الهبوط في {{place}} الساعة {{time}}",
+      "freeDay": "يوم حر",
+      "tonight": "المبيت في {{name}}",
+      "free": "{{duration}} متاحة",
+      "noStay": "لا توجد إقامة محجوزة",
+      "missing_one": "شيء واحد للإضافة",
+      "missing_other": "{{count}} أشياء للإضافة",
+      "loadLabel": "{{percent}}% من اليوم مخطط",
+      "nudge_one": "ينقص شيء واحد. أضفه لترى الخطة كاملة.",
+      "nudge_other": "تنقص {{count}} أشياء. أضفها لترى الخطة كاملة.",
+      "allDays": "كل الأيام الـ {{count}}"
+    },
+    "plan": {
+      "subtitle_one": "يوم واحد",
+      "subtitle_other": "{{count}} أيام",
+      "noPins": "تظهر الأماكن هنا عندما تحتوي عناصرك عليها.",
+      "dayOnMap": "اليوم على الخريطة",
+      "wholeTrip": "الرحلة كاملة",
+      "allDays": "كل الأيام"
+    },
+    "preview": {
+      "title": "رحلتك يومًا بيوم",
+      "body": "أضف حجوزاتك وسترى متى تهبط، والوقت بين المحطات، ووقت الفراغ والوجبات، وما الذي لا يزال ناقصًا.",
+      "sampleLabel": "مثال ليوم: الهبوط 7:40، الانتقال إلى الفندق، وقت فراغ للغداء، تسجيل الوصول 15:00",
+      "land": "الهبوط · NRT",
+      "ride": "نحو ساعة و10 دقائق إلى فندقك",
+      "free": "متاح 10:00–13:00 · غداء قريب",
+      "hotel": "تسجيل الوصول · Hotel Gracery",
+      "screenshot": "من لقطة شاشة",
+      "add": "إضافة حجز"
+    },
+    "reminders": {
+      "channel": "تذكيرات السفر",
+      "leaveTitle": "انطلق قبل {{time}}",
+      "leaveBodyFlight": "تغادر {{name}} الساعة {{time}}. يشمل ذلك وقت الطريق والوصول مبكرًا إلى المطار.",
+      "leaveBody": "تغادر {{name}} الساعة {{time}}.",
+      "boardingTitle": "الصعود قريبًا · {{name}}",
+      "boardingBody": "الصعود الساعة {{time}}.",
+      "boardingBodyGate": "الصعود الساعة {{time}}، البوابة {{gate}}."
+    }
   },
   "places": {
     "nearYou": "بالقرب منك",
@@ -1185,7 +1302,9 @@
     "openNow": "مفتوح الآن",
     "closed": "مغلق",
     "photoBy": "تصوير: {{name}}",
-    "nothingNearby": "لم يُعثر على شيء قريب في هذه الفئة."
+    "nothingNearby": "لم يُعثر على شيء قريب في هذه الفئة.",
+    "add": "إضافة",
+    "addToPlan": "إضافة {{name}} إلى الخطة"
   },
   "emergencyContacts": {
     "confirmRemoveTitle": "إزالة {{name}}؟",

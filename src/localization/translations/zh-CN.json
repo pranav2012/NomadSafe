@@ -789,7 +789,7 @@
     "eventSafeMessageSent_other": "“我很安全”消息已发送给 {{count}} 位联系人",
     "eventSafeMessageOpened_one": "“我很安全”消息已在短信中为 {{count}} 位联系人打开",
     "eventSafeMessageOpened_other": "“我很安全”消息已在短信中为 {{count}} 位联系人打开",
-    "recenterMap": "在地图上显示所有人",
+    "recenterMap": "显示我的位置",
     "keepHolding": "继续按住",
     "imSafeShort": "我很安全",
     "alertChannelName": "联系人的安全提醒",
@@ -1133,7 +1133,20 @@
       "day": "日期",
       "whoFor": "给谁",
       "everyone": "所有人",
-      "you": "你"
+      "you": "你",
+      "screenshotTitle": "从截图填写",
+      "screenshotAgain": "换一张截图",
+      "screenshotBody": "选择一张票据或预订截图。它会在你的手机上读取，并作为票据保存在此项中。",
+      "screenshotFilled": "已根据截图填写，请核对详情。",
+      "screenshotNothing": "截图中没有找到预订，但仍会作为票据保存。",
+      "screenshotKept": "截图将保存为此项的票据。",
+      "ends": "结束",
+      "addEnd": "添加结束时间",
+      "addArrival": "添加到达时间",
+      "where": "地点",
+      "wherePlaceholder": "地点或地址，用于地图",
+      "link": "预订或票据链接",
+      "linkPlaceholder": "https://…"
     },
     "defaults": {
       "hotelStay": "酒店住宿",
@@ -1159,14 +1172,118 @@
       "togetherAgain": "再次会合",
       "splitUp_one": "{{from}}–{{to}} 分头行动 · {{names}} 的 {{count}} 项安排",
       "splitUp_other": "{{from}}–{{to}} 分头行动 · {{names}} 的 {{count}} 项安排",
-      "addToDay": "添加"
+      "addToDay": "添加",
+      "openLink": "打开预订链接"
     },
     "anytime": "随时",
     "mustDo": {
       "title": "{{place}}必去",
       "dismiss": "隐藏 {{name}}"
     },
-    "plannedTitle": "已安排"
+    "plannedTitle": "已安排",
+    "landsAt": "{{time}} 落地",
+    "missing": {
+      "place": "添加地点",
+      "ticket": "添加票据"
+    },
+    "travel": {
+      "title": "出行详情",
+      "terminal": "航站楼",
+      "gate": "登机口",
+      "platform": "站台",
+      "coach": "车厢",
+      "seat": "座位",
+      "boarding": "登机",
+      "addBoarding": "添加登机时间",
+      "short": {
+        "terminal": "T{{value}}",
+        "gate": "登机口 {{value}}",
+        "platform": "{{value}} 站台",
+        "coach": "{{value}} 车厢",
+        "seat": "座位 {{value}}"
+      },
+      "boards": "{{time}} 登机",
+      "booking": "预订 {{ref}}",
+      "ticket": "票据",
+      "departs": "出发",
+      "arrives": "到达",
+      "departsAt": "{{time}} 出发",
+      "addGateSeat": "添加登机口和座位",
+      "addPlatformSeat": "添加站台和座位",
+      "leaveBy": "{{time}} 前出发",
+      "ride": "路上 {{duration}}",
+      "beThereFlight": "提前 {{duration}} 到机场",
+      "beThere": "提前 {{duration}} 到达"
+    },
+    "gap": {
+      "free": "{{range}} 空闲 · {{duration}}",
+      "lunch": "午餐？{{range}} 空闲",
+      "dinner": "晚餐？{{range}} 空闲",
+      "bags": "酒店入住时间较晚，可以问问能否寄存行李。",
+      "findFood": "找吃的",
+      "ideas": "想法",
+      "walk": "步行 {{duration}} · {{distance}}",
+      "transit": "公共交通 {{duration}} · {{distance}}",
+      "drive": "开车 {{duration}} · {{distance}}",
+      "tight": "时间紧：路上 {{duration}} · {{distance}}",
+      "exit": "出机场需要 {{duration}}",
+      "boardFlight": "提前 {{duration}} 到机场",
+      "boardGround": "提前 {{duration}} 到达",
+      "freeTitle": "空闲时间",
+      "lunchTitle": "午餐",
+      "dinnerTitle": "晚餐",
+      "yourIdeas": "附近已存的想法",
+      "walkShort": "步行 {{duration}}",
+      "transitShort": "公共交通 {{duration}}",
+      "driveShort": "开车 {{duration}}",
+      "nearby": "附近",
+      "added": "已将 {{title}} 加入计划",
+      "noPlace": "给前一项添加地点，即可查看附近有什么。"
+    },
+    "glance": {
+      "title": "行程一览",
+      "fullPlan": "完整计划",
+      "day": "第 {{day}} 天",
+      "lands": "{{time}} 抵达 {{place}}",
+      "freeDay": "自由日",
+      "tonight": "住在 {{name}}",
+      "free": "空闲 {{duration}}",
+      "noStay": "未预订住宿",
+      "missing_one": "还有 {{count}} 项待添加",
+      "missing_other": "还有 {{count}} 项待添加",
+      "loadLabel": "当天已规划 {{percent}}%",
+      "nudge_one": "还缺 {{count}} 项。添加后即可查看完整计划。",
+      "nudge_other": "还缺 {{count}} 项。添加后即可查看完整计划。",
+      "allDays": "全部 {{count}} 天"
+    },
+    "plan": {
+      "subtitle_one": "{{count}} 天",
+      "subtitle_other": "{{count}} 天",
+      "noPins": "行程项有地点后会显示在这里。",
+      "dayOnMap": "当天地图",
+      "wholeTrip": "整个旅行",
+      "allDays": "所有日期"
+    },
+    "preview": {
+      "title": "你的旅行，按天查看",
+      "body": "添加预订后，你会看到何时落地、各站之间的时间、空闲时间和用餐，以及还缺什么。",
+      "sampleLabel": "示例：7:40 落地，前往酒店，午餐空闲时间，15:00 入住",
+      "land": "落地 · NRT",
+      "ride": "到酒店约 1 小时 10 分",
+      "free": "10:00–13:00 空闲 · 附近午餐",
+      "hotel": "入住 · Hotel Gracery",
+      "screenshot": "从截图添加",
+      "add": "添加预订"
+    },
+    "reminders": {
+      "channel": "出行提醒",
+      "leaveTitle": "{{time}} 前出发",
+      "leaveBodyFlight": "{{name}} {{time}} 出发。已算上路程时间和提前到机场的时间。",
+      "leaveBody": "{{name}} {{time}} 出发。",
+      "boardingTitle": "即将登机 · {{name}}",
+      "boardingBody": "{{time}} 登机。",
+      "boardingBodyGate": "{{time}} 登机，{{gate}} 号登机口。"
+    }
   },
   "places": {
     "nearYou": "你附近",
@@ -1185,7 +1302,9 @@
     "openNow": "营业中",
     "closed": "已打烊",
     "photoBy": "照片：{{name}}",
-    "nothingNearby": "附近没有找到该类别的地点。"
+    "nothingNearby": "附近没有找到该类别的地点。",
+    "add": "添加",
+    "addToPlan": "将 {{name}} 加入计划"
   },
   "emergencyContacts": {
     "confirmRemoveTitle": "移除 {{name}}？",

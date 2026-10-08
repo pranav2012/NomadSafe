@@ -7,6 +7,7 @@ import { consolidateEmailBookings, mergeBooking, sameBooking } from "@/features/
 import { normalizeWallClock } from "@/features/itinerary/utils/wallClock";
 import { trimStoredEmailRecord } from "@/features/expenses/utils/emailText";
 import { nextRecordId } from "@/utils/recordId";
+import { mergeTravelDetails, type TravelDetails } from "@/features/itinerary/utils/travelDetails";
 
 export type EventSource = "manual" | "email";
 
@@ -56,7 +57,11 @@ export interface TripEvent {
   /** Saved ideas: who saved it (SELF_ID or a companion name; a member id on the server). */
   savedBy?: string;
   place?: EventPlace;
+  /** What the user typed as the place; looked up instead of the title. */
+  where?: string;
   link?: EventLink;
+  /** Transit: terminal, gate, platform, coach, seat and boarding time from the booking or the user. */
+  travel?: TravelDetails;
   /** Set when the user edits the event, so Gmail re-imports leave it alone. */
   editedAt?: string;
   createdAt: string;
@@ -80,7 +85,9 @@ export interface CreateEventInput {
   bookingRef?: string;
   savedBy?: string;
   place?: EventPlace;
+  where?: string;
   link?: EventLink;
+  travel?: TravelDetails;
 }
 
 export interface EmailEventInput extends CreateEventInput {
@@ -221,7 +228,8 @@ export const useEventsStore = create<EventsState>()(
             }
             const index = events.findIndex(matches);
             if (index >= 0) {
-              events[index] = { ...events[index], ...mergeBooking(events[index], input) };
+              const travel = mergeTravelDetails(events[index].travel, input.travel);
+              events[index] = { ...events[index], ...mergeBooking(events[index], input), ...(travel ? { travel } : null) };
             } else {
               events.unshift(buildEvent(input));
               result.added += 1;

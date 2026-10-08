@@ -21,6 +21,70 @@ Reference: japan.theclau.de/d/1 (a hand-written day plan: steps, transit legs, t
 - Step 5 (built): group tickets without uploading files: `ticketHolders` label, per-ticket "Visible to the group" switch (off for flights), Send via share sheet, "Open with NomadSafe" → choose the item, "Ask for it" push (rate-limited, holders only).
 - Baseline analytics shipped first (`home_viewed`, `itinerary_sheet_opened`, `itinerary_event_added/edited/deleted`).
 
+## Trip at a glance and day view (v2, agreed and built 2026-10-09)
+
+Goal: open the app and know the whole trip, and each day, without digging: when you land, where you sleep, how long things take, how far apart they are, where you have free time, and what's still missing.
+
+Decisions:
+- Travel time between items is an **offline estimate** from straight-line distance and the likely mode (walk / transit / car), shown as "~25 min · 3.2 km". No Routes/Directions API (the 2026-10-06 decision stands).
+- Free-time and meal-gap suggestions use what exists: saved ideas, bundled must-dos and Google nearby places (food / sights). No AI plans.
+- A ticket screenshot can **create** an item: read on the phone (`@/modules/ocr`), fields guessed, the user confirms. Attaching to an existing item stays.
+- Booking links: the item form gets a link field.
+- During the trip Home stays on today; the whole-trip summary is one tap away ("All days" on the DayRail).
+- Maps are real maps (`MapView` from `@/modules/location`), mounted only inside the summary and day view, never on Home's first screen.
+- Free for everyone.
+- Shared trips: one timeline while plans are shared; where a day or items diverge, show it per person (your items in full, the others folded as today). Travel time and gaps are worked out for your own plan.
+
+- Travel days (agreed 2026-10-09): no live flight/train data for now (no provider, no cost). Every flight, train, bus and ferry gets a travel-day card on the pass and ticket screen from the booking or what the user typed: route, local times, booking ref, and terminal / gate / platform / coach / seat when known ("Add gate / seat" nudge otherwise). Boarding time from the booking, else "Boards ~" estimate. Phone-only reminders ("Leave for the airport by 09:40": departure − be-there buffer − travel estimate from the stay; "Boarding soon"), scheduled only when notifications are already allowed. Ships in the same release. Live status (FlightAware AeroAPI push alerts, UK Darwin for trains) is a later option.
+- Time zones: booking times are already local wall-clock at the place, so no per-item zone is stored.
+
+### Before the trip, no data
+
+A preview card instead of an empty list: a ghosted day ("Land 07:40 → hotel 15:00 · 3 h free") and one line on what adding bookings gives you. Actions: Connect Gmail, Add a booking, Add a ticket (screenshot / PDF / link).
+
+### Before the trip, with data: Trip at a glance (replaces "Up next")
+
+```
+┌ Trip at a glance ───────────────── map ┐
+│ [ route across stops, pins per stop ]  │
+│ Sat 18  ✈ Land NRT 07:40 · 🏨 from 15:00 │  ▮▮▯▯ 3 h free
+│ Sun 19  Fushimi Inari → Nishiki · 4 km │  ▮▮▮▯
+│ Mon 20  Free day · 3 ideas nearby      │  ▯▯▯▯
+│         ⚠ No stay for Mon night · Add  │
+└─────────────────────────────────────────┘
+```
+
+- One row per day: arrival/departure, the stay, items, distance covered, a busy/free bar.
+- Missing info shows as chips on the row (no time, no place, no ticket, no stay).
+- Tap a day → day view. The map follows the scroll and highlights the day in view.
+
+### Day view (before and during the trip)
+
+```
+ [ map: today's pins + straight lines, item in view highlighted ]
+ 07:40  ✈ Land NRT            ⏱ immigration ~1 h
+        ┊ ~1 h 10 · 62 km · train
+ 09:30  Leave bags · Gracery   (check-in 15:00)
+        ┊ Free 10:00–13:00 · 2 ideas nearby  [+]
+ 13:00  Lunch?  nothing planned · food nearby [+]
+ 14:00  teamLab · ~2 h        ⚠ add ticket
+        ┊ ~20 min · 1.6 km · walk
+ 19:00  Dinner · Pontocho      ⚠ add place
+ 🛏 Tonight: Gracery · night 1 of 3
+```
+
+- Each item: time, length (`~` when guessed from defaults by type), move to the next item.
+- Gaps of 90 min+ between items become free windows with nearby saved ideas / must-dos / Google places.
+- Meal windows (lunch 12–14, dinner 19–21) with nothing planned get a food nudge.
+- Arrival buffers: landing → stay check-in, stay check-out → departure.
+
+### Data work underneath
+
+- `place` on every item: one Places lookup per item by name + city (`findPlaceByName`), stored on the event, re-run only when the title changes.
+- Time zone per item (IANA, from coordinates); landing and departure times shown in local time.
+- Default lengths by type when `endAt` is missing (food 1 h, activity 2 h, …), marked as estimates.
+- Travel estimate: pure function (distance × detour factor ÷ mode speed), mode from distance (walk under ~1.5 km).
+
 ## Home by trip stage
 
 | Stage | When | Question it answers | Top of Home |
@@ -104,7 +168,7 @@ Counts, enums and booleans only.
 Baseline (ship before the feature):
 - `home_viewed { stage, events_today, trip_events }`: once per app foreground
 - `itinerary_sheet_opened { events }`
-- `itinerary_event_added { source: manual | gmail, count }`
+- `itinerary_event_added { source: manual | gmail | screenshot, count }`
 - `itinerary_event_edited { source }` / `itinerary_event_deleted { source }`
 
 With the feature:
@@ -112,6 +176,7 @@ With the feature:
 - `today_action { action: maps | add_stop | expand | tomorrow | ticket | done }`
 - `must_do_suggestion { action: shown | added | dismissed, count }`
 - `attachment_added { source: gmail | file | photo }`
+- v2: `trip_plan_opened { from: home | rail | day, days, scope }`, `ticket_screenshot_read { found }`, `travel_reminders_scheduled { count }`, `today_action` adds `free_ideas | meal_food | fix_missing | open_link | show_travel`
 
 ## Interview guide (~30 min, 5–6 people)
 

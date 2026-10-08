@@ -144,6 +144,7 @@ async function addNewEvents(messages: RawMessage[], trip: Trip): Promise<EmailMe
       rawText: candidate.rawText,
       externalId: candidate.externalId,
       bookingRef: candidate.bookingRef,
+      travel: candidate.travel,
       cancelled: candidate.cancelled,
     })),
   );

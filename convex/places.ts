@@ -12,6 +12,9 @@ const PLACES_DAILY_BUDGET = 2_000;
 // Hospitals, police and the trip's hotel: kept apart so nearby browsing can't use them up.
 const SAFETY_DAILY_BUDGET = 3_000;
 const DESTINATIONS_DAILY_BUDGET = 10_000;
+// Itinerary items are looked up once each and cached on the item, so a whole trip fits in one burst.
+const ITINERARY_DAILY_BUDGET = 5_000;
+const ITINERARY_BATCH = 10;
 const MAX_QUERY_CHARS = 200;
 const MAX_LANGUAGE_CHARS = 35;
 
@@ -21,13 +24,15 @@ const rateLimiter = new RateLimiter(components.rateLimiter, {
   safety: { kind: "token bucket", rate: 60, period: HOUR, capacity: 20 },
   // Destination search sends a few suggestion requests per search while typing.
   destinations: { kind: "token bucket", rate: 300, period: HOUR, capacity: 60 },
+  itinerary: { kind: "token bucket", rate: 120, period: HOUR, capacity: 60 },
   placesGlobal: { kind: "token bucket", rate: PLACES_DAILY_BUDGET, period: DAY },
   safetyGlobal: { kind: "token bucket", rate: SAFETY_DAILY_BUDGET, period: DAY },
   destinationsGlobal: { kind: "token bucket", rate: DESTINATIONS_DAILY_BUDGET, period: DAY },
+  itineraryGlobal: { kind: "token bucket", rate: ITINERARY_DAILY_BUDGET, period: DAY },
 });
 
-type Bucket = "places" | "safety" | "destinations";
-const GLOBAL_BUCKET = { places: "placesGlobal", safety: "safetyGlobal", destinations: "destinationsGlobal" } as const;
+type Bucket = "places" | "safety" | "destinations" | "itinerary";
+const GLOBAL_BUCKET = { places: "placesGlobal", safety: "safetyGlobal", destinations: "destinationsGlobal", itinerary: "itineraryGlobal" } as const;
 const appCheckArg = v.optional(v.string());
 
 /** Takes `count` billed calls from the caller's and the app-wide budget; false when either is spent. */
@@ -286,6 +291,34 @@ export const searchSafetyPlaces = action({
 });
 
 /** Resolves a named place (e.g. a hotel from the itinerary) near a point to coordinates, or null. */
+async function searchOnePlace(apiKey: string, query: string, latitude: number, longitude: number) {
+  const response = await fetch("https://places.googleapis.com/v1/places:searchText", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Goog-Api-Key": apiKey,
+      "X-Goog-FieldMask": "places.displayName,places.location",
+    },
+    body: JSON.stringify({
+      textQuery: query.slice(0, 120),
+      pageSize: 1,
+      locationBias: { circle: { center: { latitude, longitude }, radius: 50_000 } },
+    }),
+  });
+
+  if (!response.ok) {
+    console.warn("[places] Text search failed", response.status, await response.text());
+    return null;
+  }
+
+  const body = (await response.json()) as { places?: GooglePlace[] };
+  const place = body.places?.[0];
+  const lat = place?.location?.latitude;
+  const lng = place?.location?.longitude;
+  if (typeof lat !== "number" || typeof lng !== "number") return null;
+  return { name: place?.displayName?.text ?? query, latitude: lat, longitude: lng };
+}
+
 export const findPlaceByName = action({
   args: {
     query: v.string(),
@@ -300,32 +333,28 @@ export const findPlaceByName = action({
 
     const apiKey = process.env.GOOGLE_PLACES_API_KEY;
     if (!apiKey) throw new Error("Places search is unavailable");
+    return searchOnePlace(apiKey, query, latitude, longitude);
+  },
+});
 
-    const response = await fetch("https://places.googleapis.com/v1/places:searchText", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Goog-Api-Key": apiKey,
-        "X-Goog-FieldMask": "places.displayName,places.location",
-      },
-      body: JSON.stringify({
-        textQuery: query.slice(0, 120),
-        pageSize: 1,
-        locationBias: { circle: { center: { latitude, longitude }, radius: 50_000 } },
-      }),
-    });
-
-    if (!response.ok) {
-      console.warn("[places] Text search failed", response.status, await response.text());
-      return null;
+/** Places for several itinerary items at once (name + the stop it's near); null where nothing was found. */
+export const findItineraryPlaces = action({
+  args: {
+    items: v.array(v.object({ query: v.string(), latitude: v.number(), longitude: v.number() })),
+    appCheckToken: appCheckArg,
+  },
+  handler: async (ctx, { items, appCheckToken }) => {
+    if (items.length === 0) return [];
+    if (items.length > ITINERARY_BATCH) throw new Error("Too many places");
+    for (const item of items) {
+      assertMaxLength(item.query, MAX_QUERY_CHARS, "Query");
+      assertCoordinate(item.latitude, item.longitude);
     }
+    await authorize(ctx, appCheckToken, "itinerary", items.length);
 
-    const body = (await response.json()) as { places?: GooglePlace[] };
-    const place = body.places?.[0];
-    const lat = place?.location?.latitude;
-    const lng = place?.location?.longitude;
-    if (typeof lat !== "number" || typeof lng !== "number") return null;
-    return { name: place?.displayName?.text ?? query, latitude: lat, longitude: lng };
+    const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+    if (!apiKey) throw new Error("Places search is unavailable");
+    return Promise.all(items.map((item) => searchOnePlace(apiKey, item.query, item.latitude, item.longitude).catch(() => null)));
   },
 });
 

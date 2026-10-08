@@ -67,16 +67,21 @@ export interface AnalyticsEvents {
   ad_failed: { placement: AdPlacement | "preload"; stage: "load" | "show" };
   home_viewed: { stage: HomeStage; events_today: number; trip_events: number };
   itinerary_sheet_opened: { events: number };
-  itinerary_event_added: { source: "manual" | "gmail"; count: number };
+  itinerary_event_added: { source: "manual" | "gmail" | "screenshot"; count: number };
   itinerary_event_edited: { source: EventSource };
   itinerary_event_deleted: { source: EventSource };
   itinerary_day_viewed: { relative_day: number };
   ticket_opened: { kind: "pdf" | "image"; count: number };
-  ticket_added: { source: "gmail" | "file" | "photo" | "received"; count: number };
+  ticket_added: { source: "gmail" | "file" | "photo" | "received" | "screenshot"; count: number };
+  ticket_screenshot_read: { found: boolean };
+  trip_plan_opened: { from: "home" | "rail" | "day"; days: number; scope: "trip" | "day" };
+  travel_reminders_scheduled: { count: number };
   must_do_suggestion: { action: "added" | "dismissed"; where: "free_day" | "trip_prep" | "day_ideas" | "saved_sheet" };
   saved_ideas_opened: { from: "prep" | "must_dos" | "day" | "header" | "toast" | "join" | "push" | "strip"; ideas: number };
   saved_idea_action: { action: "planned" | "removed"; where: "saved_sheet" | "day_ideas" };
-  today_action: { action: "maps" | "add_stop" | "expand_globe" | "collapse_globe" | "back_to_today" | "done" | "undone" | "ask_ticket" };
+  today_action: {
+    action: "maps" | "add_stop" | "expand_globe" | "collapse_globe" | "back_to_today" | "done" | "undone" | "ask_ticket" | "free_ideas" | "meal_food" | "fix_missing" | "open_link" | "show_travel";
+  };
   recap_opened: { source: "home" | "notification" | "trips"; stops: number };
   recap_finished: { stops: number };
   recap_shared: { format: "image" | "video"; spend: boolean };

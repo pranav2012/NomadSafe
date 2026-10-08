@@ -789,7 +789,7 @@
     "eventSafeMessageSent_other": "{{count}} కాంటాక్ట్‌లకు “నేను సురక్షితంగా ఉన్నాను” సందేశం పంపబడింది",
     "eventSafeMessageOpened_one": "{{count}} కాంటాక్ట్ కోసం “నేను సురక్షితంగా ఉన్నాను” సందేశం SMSలో తెరవబడింది",
     "eventSafeMessageOpened_other": "{{count}} కాంటాక్ట్‌ల కోసం “నేను సురక్షితంగా ఉన్నాను” సందేశం SMSలో తెరవబడింది",
-    "recenterMap": "అందరినీ మ్యాప్‌లో చూపించు",
+    "recenterMap": "నా లొకేషన్ చూపించు",
     "keepHolding": "పట్టుకోండి",
     "imSafeShort": "నేను సురక్షితం",
     "alertChannelName": "కాంటాక్ట్‌ల నుండి భద్రతా అలర్ట్‌లు",
@@ -1133,7 +1133,20 @@
       "day": "రోజు",
       "whoFor": "ఎవరి కోసం",
       "everyone": "అందరూ",
-      "you": "మీరు"
+      "you": "మీరు",
+      "screenshotTitle": "స్క్రీన్‌షాట్ నుండి నింపండి",
+      "screenshotAgain": "వేరే స్క్రీన్‌షాట్ వాడండి",
+      "screenshotBody": "టికెట్ లేదా బుకింగ్ స్క్రీన్‌షాట్‌ను ఎంచుకోండి. అది మీ ఫోన్‌లోనే చదవబడి, ఈ అంశానికి టికెట్‌గా ఉంచబడుతుంది.",
+      "screenshotFilled": "మీ స్క్రీన్‌షాట్ నుండి నింపబడింది. వివరాలు సరిచూసుకోండి.",
+      "screenshotNothing": "ఆ స్క్రీన్‌షాట్‌లో బుకింగ్ కనిపించలేదు. అయినా అది టికెట్‌గా ఉంచబడుతుంది.",
+      "screenshotKept": "స్క్రీన్‌షాట్ ఈ అంశానికి టికెట్‌గా సేవ్ అవుతుంది.",
+      "ends": "ముగింపు",
+      "addEnd": "ముగింపు సమయం జోడించండి",
+      "addArrival": "చేరుకునే సమయం జోడించండి",
+      "where": "ఎక్కడ",
+      "wherePlaceholder": "స్థలం లేదా చిరునామా, మ్యాప్ కోసం",
+      "link": "బుకింగ్ లేదా టికెట్ లింక్",
+      "linkPlaceholder": "https://…"
     },
     "defaults": {
       "hotelStay": "హోటల్ బస",
@@ -1159,14 +1172,118 @@
       "togetherAgain": "మళ్లీ కలిసి",
       "splitUp_one": "{{from}}–{{to}} విడివిడిగా · {{names}} కి {{count}} ప్లాన్",
       "splitUp_other": "{{from}}–{{to}} విడివిడిగా · {{names}} కి {{count}} ప్లాన్లు",
-      "addToDay": "జోడించు"
+      "addToDay": "జోడించు",
+      "openLink": "బుకింగ్ లింక్ తెరవండి"
     },
     "anytime": "ఎప్పుడైనా",
     "mustDo": {
       "title": "{{place}} లో తప్పక చూడాల్సినవి",
       "dismiss": "{{name}} దాచు"
     },
-    "plannedTitle": "ప్లాన్ చేసినవి"
+    "plannedTitle": "ప్లాన్ చేసినవి",
+    "landsAt": "{{time}}కి ల్యాండింగ్",
+    "missing": {
+      "place": "స్థలం జోడించండి",
+      "ticket": "టికెట్ జోడించండి"
+    },
+    "travel": {
+      "title": "ప్రయాణ వివరాలు",
+      "terminal": "టెర్మినల్",
+      "gate": "గేట్",
+      "platform": "ప్లాట్‌ఫారమ్",
+      "coach": "కోచ్",
+      "seat": "సీట్",
+      "boarding": "బోర్డింగ్",
+      "addBoarding": "బోర్డింగ్ సమయం జోడించండి",
+      "short": {
+        "terminal": "T{{value}}",
+        "gate": "గేట్ {{value}}",
+        "platform": "ప్లాట్‌ఫారమ్ {{value}}",
+        "coach": "కోచ్ {{value}}",
+        "seat": "సీట్ {{value}}"
+      },
+      "boards": "బోర్డింగ్ {{time}}",
+      "booking": "బుకింగ్ {{ref}}",
+      "ticket": "టికెట్",
+      "departs": "బయలుదేరడం",
+      "arrives": "చేరుకోవడం",
+      "departsAt": "{{time}}కి బయలుదేరుతుంది",
+      "addGateSeat": "గేట్ & సీట్ జోడించండి",
+      "addPlatformSeat": "ప్లాట్‌ఫారమ్ & సీట్ జోడించండి",
+      "leaveBy": "{{time}} లోపు బయలుదేరండి",
+      "ride": "అక్కడికి చేరడానికి {{duration}}",
+      "beThereFlight": "{{duration}} ముందే విమానాశ్రయంలో",
+      "beThere": "{{duration}} ముందే అక్కడ"
+    },
+    "gap": {
+      "free": "{{range}} ఖాళీ · {{duration}}",
+      "lunch": "మధ్యాహ్న భోజనం? {{range}} ఖాళీ",
+      "dinner": "రాత్రి భోజనం? {{range}} ఖాళీ",
+      "bags": "హోటల్ చెక్-ఇన్ తర్వాత ఉంది. మీ బ్యాగులు ఉంచుకోమని అడగండి.",
+      "findFood": "భోజనం వెతకండి",
+      "ideas": "ఆలోచనలు",
+      "walk": "{{duration}} నడక · {{distance}}",
+      "transit": "ప్రజా రవాణాలో {{duration}} · {{distance}}",
+      "drive": "కారులో {{duration}} · {{distance}}",
+      "tight": "సమయం తక్కువ: చేరడానికి {{duration}} · {{distance}}",
+      "exit": "విమానాశ్రయం నుండి బయటకు రావడానికి {{duration}}",
+      "boardFlight": "{{duration}} ముందే విమానాశ్రయంలో ఉండండి",
+      "boardGround": "{{duration}} ముందే అక్కడ ఉండండి",
+      "freeTitle": "ఖాళీ సమయం",
+      "lunchTitle": "మధ్యాహ్న భోజనం",
+      "dinnerTitle": "రాత్రి భోజనం",
+      "yourIdeas": "సమీపంలో మీరు సేవ్ చేసిన ఆలోచనలు",
+      "walkShort": "{{duration}} నడక",
+      "transitShort": "ప్రజా రవాణాలో {{duration}}",
+      "driveShort": "కారులో {{duration}}",
+      "nearby": "సమీపంలో",
+      "added": "{{title}} ప్లాన్‌కి జోడించబడింది",
+      "noPlace": "సమీపంలో ఏముందో చూడటానికి దీని ముందు అంశానికి స్థలం జోడించండి."
+    },
+    "glance": {
+      "title": "ట్రిప్ ఒక చూపులో",
+      "fullPlan": "పూర్తి ప్లాన్",
+      "day": "రోజు {{day}}",
+      "lands": "{{time}}కి {{place}}లో ల్యాండింగ్",
+      "freeDay": "ఖాళీ రోజు",
+      "tonight": "{{name}}లో బస",
+      "free": "{{duration}} ఖాళీ",
+      "noStay": "బస బుక్ చేయలేదు",
+      "missing_one": "{{count}} అంశం జోడించాలి",
+      "missing_other": "{{count}} అంశాలు జోడించాలి",
+      "loadLabel": "రోజులో {{percent}}% ప్లాన్ చేయబడింది",
+      "nudge_one": "{{count}} అంశం లేదు. పూర్తి ప్లాన్ చూడటానికి దాన్ని జోడించండి.",
+      "nudge_other": "{{count}} అంశాలు లేవు. పూర్తి ప్లాన్ చూడటానికి వాటిని జోడించండి.",
+      "allDays": "మొత్తం {{count}} రోజులు"
+    },
+    "plan": {
+      "subtitle_one": "{{count}} రోజు",
+      "subtitle_other": "{{count}} రోజులు",
+      "noPins": "మీ అంశాలకు స్థలాలు ఉన్నప్పుడు అవి ఇక్కడ కనిపిస్తాయి.",
+      "dayOnMap": "మ్యాప్‌లో రోజు",
+      "wholeTrip": "మొత్తం ట్రిప్",
+      "allDays": "అన్ని రోజులు"
+    },
+    "preview": {
+      "title": "మీ ట్రిప్, రోజువారీగా",
+      "body": "మీ బుకింగ్‌లు జోడిస్తే, మీరు ఎప్పుడు ల్యాండ్ అవుతారు, స్టాప్‌ల మధ్య సమయం, ఖాళీ సమయం, భోజనాలు, ఇంకా ఏమి లేదో చూడవచ్చు.",
+      "sampleLabel": "ఉదాహరణ రోజు: 7:40కి ల్యాండింగ్, హోటల్‌కి ప్రయాణం, మధ్యాహ్న భోజనానికి ఖాళీ సమయం, 15:00కి చెక్-ఇన్",
+      "land": "ల్యాండింగ్ · NRT",
+      "ride": "మీ హోటల్‌కి ~1 గం 10 ని",
+      "free": "10:00–13:00 ఖాళీ · సమీపంలో భోజనం",
+      "hotel": "చెక్-ఇన్ · Hotel Gracery",
+      "screenshot": "స్క్రీన్‌షాట్ నుండి",
+      "add": "బుకింగ్ జోడించండి"
+    },
+    "reminders": {
+      "channel": "ప్రయాణ రిమైండర్‌లు",
+      "leaveTitle": "{{time}} లోపు బయలుదేరండి",
+      "leaveBodyFlight": "{{name}} {{time}}కి బయలుదేరుతుంది. ఇందులో ప్రయాణ సమయం, విమానాశ్రయానికి ముందే చేరే సమయం కలిపి ఉన్నాయి.",
+      "leaveBody": "{{name}} {{time}}కి బయలుదేరుతుంది.",
+      "boardingTitle": "త్వరలో బోర్డింగ్ · {{name}}",
+      "boardingBody": "{{time}}కి బోర్డింగ్.",
+      "boardingBodyGate": "{{time}}కి బోర్డింగ్, గేట్ {{gate}}."
+    }
   },
   "places": {
     "nearYou": "మీ సమీపంలో",
@@ -1185,7 +1302,9 @@
     "openNow": "ఇప్పుడు తెరిచి ఉంది",
     "closed": "మూసివేయబడింది",
     "photoBy": "ఫోటో: {{name}}",
-    "nothingNearby": "ఈ వర్గంలో సమీపంలో ఏదీ కనుగొనబడలేదు."
+    "nothingNearby": "ఈ వర్గంలో సమీపంలో ఏదీ కనుగొనబడలేదు.",
+    "add": "జోడించు",
+    "addToPlan": "{{name}}ని ప్లాన్‌కి జోడించండి"
   },
   "emergencyContacts": {
     "confirmRemoveTitle": "{{name}}ను తీసివేయాలా?",
