@@ -108,9 +108,9 @@ index a80c17ca4ae65a667346a37a8f8098ad74d7a0b4..5e8ce16ebbe3b76d031cdd24eef2f48e
      ctxOptions.fOptionsPriv = &contextOptionsPriv;
      ctxOptions.fOptionsPriv->fStoreContextRefInRecorder = true;
 +#ifdef __ANDROID__
-+    // NomadSafe: Adreno's Vulkan driver crashes in vkCreateFramebuffer when Graphite opens the
-+    // multisampled render pass it uses for large paths. Without internal MSAA, Graphite renders
-+    // paths through its anti-aliased coverage atlas instead.
++    // NomadSafe: no internal MSAA on Android. Adreno has no memoryless MSAA attachments, so 4x
++    // MSAA cost ~210 MB more GPU memory on Home, and its render-to-single-sampled path crashes
++    // (skia#4158). Graphite draws paths through its anti-aliased coverage atlas instead.
 +    ctxOptions.fInternalMultisampleCount = skgpu::graphite::SampleCount::k1;
 +#endif
 +    ctxOptions.fGpuBudgetInBytes = kContextBudget;

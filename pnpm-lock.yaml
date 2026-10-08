@@ -7,7 +7,7 @@ settings:
 patchedDependencies:
   expo-blur@57.0.3: 64fbf8bae34f0606752573c265bc65fd9114282cd9c91d013d08cad54fcc3653
   react-native-android-widget@0.22.1: 90efa1c388a6fe733287fe8827004d2f53b4b20905891ba7198330f2c98c167b
-  react-native-skia@3.0.1: a9749e1875437b90b207add166e18d8b6e844b1bb8b5663ccfb75cddf7eb9b79
+  react-native-skia@3.0.1: 526652a7eb8e108f0eda60fa599556666e9b8821a1b7a140db4d6151751cfc34
 
 importers:
 
@@ -258,7 +258,7 @@ importers:
         version: 4.26.2(react-native@0.86.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.3(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.17)(react@19.2.3)(supports-color@8.1.1))(react@19.2.3)
       react-native-skia:
         specifier: 3.0.1
-        version: 3.0.1(patch_hash=a9749e1875437b90b207add166e18d8b6e844b1bb8b5663ccfb75cddf7eb9b79)(447865b9a4d9129e60d52e73db8cc6dd)
+        version: 3.0.1(patch_hash=526652a7eb8e108f0eda60fa599556666e9b8821a1b7a140db4d6151751cfc34)(447865b9a4d9129e60d52e73db8cc6dd)
       react-native-svg:
         specifier: ^15.15.4
         version: 15.15.4(react-native@0.86.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.86.3(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.17)(react@19.2.3)(supports-color@8.1.1))(react@19.2.3)
@@ -11300,7 +11300,7 @@ snapshots:
 
   react-native-skia-graphite-apple-macos@154.0.1: {}
 
-  react-native-skia@3.0.1(patch_hash=a9749e1875437b90b207add166e18d8b6e844b1bb8b5663ccfb75cddf7eb9b79)(447865b9a4d9129e60d52e73db8cc6dd):
+  react-native-skia@3.0.1(patch_hash=526652a7eb8e108f0eda60fa599556666e9b8821a1b7a140db4d6151751cfc34)(447865b9a4d9129e60d52e73db8cc6dd):
     dependencies:
       canvaskit-wasm: 0.41.0
       react: 19.2.3
