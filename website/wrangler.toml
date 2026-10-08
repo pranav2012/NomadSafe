@@ -1,0 +1,7 @@
+# Cloudflare Pages project (Git builds). Root directory: website. See README.md.
+name = "nomadsafe-web"
+pages_build_output_dir = "./dist"
+compatibility_date = "2026-10-01"
+
+[vars]
+CONVEX_SITE_URL = "https://gregarious-crocodile-599.convex.site"

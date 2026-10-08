@@ -17,6 +17,7 @@ NomadSafe is a travel safety and planning app built with Expo (SDK 57), React Na
 - **i18n check**: `node scripts/check-i18n-keys.mjs`
 - **Backend**: `npx convex dev`
 - **Release**: see `docs/PLAY_RELEASE.md` (EAS profiles are in `eas.json`)
+- **Website**: `website/` (Vite + React, prerendered; its own pnpm root and lockfile, excluded from the app's tsc/eslint). See `website/README.md`; deployed by Cloudflare Pages from Git
 
 ## Architecture
 
@@ -56,7 +57,7 @@ The code is split into three layers. ESLint (`no-restricted-imports` in `eslint.
   - `convex/users.ts`: auth helpers; user lookups go through the Better Auth component.
   - `convex/sharing.ts`: contact links, invites, location shares. A share shows until its `endsAt` (sent by the phone); shares with no end, and SOS, hide after 48 h without an update, since phones publish only when they move.
   - `convex/account.ts`: account deletion. It also schedules `convex/analytics.ts` to delete the user's PostHog data (needs `POSTHOG_PERSONAL_API_KEY` and `POSTHOG_PROJECT_ID` Convex env vars).
-  - `convex/legalPages.ts`: `/privacy` and `/delete-account` pages. They and `/join` are served on our own domain (`EXPO_PUBLIC_WEB_URL`, Convex `WEB_URL`) by the Cloudflare Worker in `workers/site`, which forwards only those paths; Google sign-in, AI and the RevenueCat webhook stay on the Convex site URL. The app still accepts invite links on the Convex site.
+  - `convex/legalPages.ts`: `/privacy` and `/delete-account` pages. They and `/join` are served on our own domain (`EXPO_PUBLIC_WEB_URL`, Convex `WEB_URL`) by the marketing site's Pages Functions (`website/functions`), which forward only those paths (`workers/site` is the previous Worker, kept until Pages owns the domain); Google sign-in, AI and the RevenueCat webhook stay on the Convex site URL. The app still accepts invite links on the Convex site.
   - `convex/groups.ts`: shared groups and trips (a trip is a group with travel details): `sharedGroups`, `groupMembers`, `groupRecords`, invite codes, membership checks; `convex/pushNotifications.ts` sends Expo pushes for money changes and stores `pushTokens`. `/join/<code>` (in `legalPages.ts`) opens `nomadsafe://join/<code>`.
   - `convex/safetyAlerts.ts`: SOS / missed check-in pushes to the user's accepted `contactLinks` (the people who get their live location). The app mirrors the check-in deadline with `setCheckIn` (`features/safety/services/safetyServerAlerts.ts`, from `useSafetyServerSync`); a scheduled job alerts contacts 5 min after it passes. Clearing or moving it after an alert, and `resolveSos`, send an "is safe" push.
   - `convex/billing.ts`: the `entitlements` table, filled from the RevenueCat REST API by the webhook (`/revenuecat/webhook`) and `refreshMyPlan`. Pure plan/quota rules are in `convex/billingRules.ts`.

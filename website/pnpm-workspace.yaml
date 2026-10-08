@@ -1,0 +1,5 @@
+# Own install root: keeps the site out of the app's hoisted workspace and gives it its own lockfile.
+minimumReleaseAge: 2880
+allowBuilds:
+  esbuild: true
+  workerd: true

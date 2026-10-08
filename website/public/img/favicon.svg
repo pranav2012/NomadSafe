@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 512 512">
+<defs><linearGradient id="aurora" x1="96" y1="420" x2="416" y2="92" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#22C7B8"/><stop offset="0.55" stop-color="#5B6CFF"/><stop offset="1" stop-color="#9B7BFF"/></linearGradient><radialGradient id="halo" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#5B6CFF" stop-opacity="0.45"/><stop offset="0.6" stop-color="#22C7B8" stop-opacity="0.08"/><stop offset="1" stop-color="#0B0D12" stop-opacity="0"/></radialGradient><filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="18"/></filter></defs>
+<rect width="512" height="512" fill="#0B0D12"/>
+<circle cx="256" cy="256" r="230" fill="url(#halo)"/>
+<g transform="translate(256 256) scale(0.92) translate(-256 -285)">
+  <path d="M184 340 V172 L328 340 V172" fill="none" stroke="url(#aurora)" stroke-width="46" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)" opacity="0.7"/>
+  <path d="M184 340 V172 L328 340 V172" fill="none" stroke="url(#aurora)" stroke-width="46" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M92 380 C170 430 342 430 420 380" fill="none" stroke="#EDEFF5" stroke-width="6" stroke-linecap="round" stroke-dasharray="2 14" opacity="0.55"/>
+</g>
+</svg>

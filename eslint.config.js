@@ -24,7 +24,7 @@ const vendorModules = [
 module.exports = defineConfig([
   expoConfig,
   {
-    ignores: ['dist/*', 'convex/_generated/*', 'android/*', 'ios/*'],
+    ignores: ['dist/*', 'convex/_generated/*', 'android/*', 'ios/*', 'website/*'],
   },
   {
     files: ['src/**/*.{ts,tsx}'],
