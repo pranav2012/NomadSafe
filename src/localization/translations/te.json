@@ -178,6 +178,8 @@
     "deleteAccountFailedBody": "మీ కనెక్షన్‌ను తనిఖీ చేసి మళ్లీ ప్రయత్నించండి. ఏమీ తొలగించబడలేదు.",
     "deleteAccountDoneTitle": "ఖాతా తొలగించబడింది",
     "deleteAccountDoneBody": "మీ ఖాతా మరియు డేటా తొలగించబడ్డాయి.",
+    "deleteAccountWipeFailedTitle": "ఖాతా తొలగించబడింది",
+    "deleteAccountWipeFailedBody": "మీ ఖాతా తొలగించబడింది, కానీ కొంత డేటా ఇంకా ఈ ఫోన్‌లో ఉండవచ్చు. దాన్ని తీసివేయడానికి ఫోన్ సెట్టింగ్‌లలో NomadSafe యాప్ డేటాను క్లియర్ చేయండి లేదా యాప్‌ను మళ్లీ ఇన్‌స్టాల్ చేయండి.",
     "smsChars": "{{count}} అక్షరాలు",
     "smsSegments": "{{count}} SMS",
     "aiSection": "AI",

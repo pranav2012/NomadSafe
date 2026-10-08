@@ -13,7 +13,8 @@ import { PlannedTripCard } from "@/features/trips/components/PlannedTripCard";
 import { TripFormSheet } from "@/features/trips/components/TripForm";
 import { isArchived, GroupPeopleSheet } from "@/features/trips/components/GroupPeopleSheet";
 import { selectActiveTrip, type Trip, useTripsStore } from "@/features/trips/store/tripsStore";
-import { countInclusiveDays, fromDateKey, getTripStatus, startOfLocalDay } from "@/features/trips/utils/dates";
+import { countInclusiveDays, fromDateKey, getTripStatus } from "@/features/trips/utils/dates";
+import { useToday } from "@/hooks/useNow";
 import { useChatStore } from "@/features/ai/store/chatStore";
 import { PassportCard } from "@/features/passport";
 import { useRecapStore } from "@/features/recap";
@@ -70,12 +71,12 @@ function code(name: string | undefined) {
 }
 
 /** Day progress of a running trip (0..1), 0 before it starts and 1 after it ends. */
-function tripProgress(trip: Trip) {
-  const status = getTripStatus(trip);
+function tripProgress(trip: Trip, today: Date) {
+  const status = getTripStatus(trip, today);
   if (status === "upcoming") return 0;
   if (status === "complete") return 1;
   const total = countDays(trip);
-  const elapsed = countInclusiveDays(fromDateKey(trip.startDate), startOfLocalDay(new Date()));
+  const elapsed = countInclusiveDays(fromDateKey(trip.startDate), today);
   return Math.min(1, elapsed / Math.max(1, total));
 }
 
@@ -95,6 +96,7 @@ export default function TripsScreen() {
   const activeTrip = useTripsStore(selectActiveTrip);
   const setActiveTrip = useTripsStore((state) => state.setActiveTrip);
   const deleteTrip = useTripsStore((state) => state.deleteTrip);
+  const today = useToday();
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editing, setEditing] = useState<Trip | null>(null);
@@ -126,13 +128,13 @@ export default function TripsScreen() {
   const sections = useMemo<TripSection[]>(() => {
     const remaining = trips.filter((trip) => trip.id !== activeTrip?.id && !isArchived(trip));
     const grouped: TripSection[] = [
-      { key: "current", data: remaining.filter((trip) => getTripStatus(trip) === "active").sort(byStartDate) },
-      { key: "upcoming", data: remaining.filter((trip) => getTripStatus(trip) === "upcoming").sort(byStartDate) },
-      { key: "past", data: remaining.filter((trip) => getTripStatus(trip) === "complete").sort((a, b) => byStartDate(b, a)) },
+      { key: "current", data: remaining.filter((trip) => getTripStatus(trip, today) === "active").sort(byStartDate) },
+      { key: "upcoming", data: remaining.filter((trip) => getTripStatus(trip, today) === "upcoming").sort(byStartDate) },
+      { key: "past", data: remaining.filter((trip) => getTripStatus(trip, today) === "complete").sort((a, b) => byStartDate(b, a)) },
       { key: "archived", data: trips.filter((trip) => isArchived(trip) && trip.id !== activeTrip?.id).sort((a, b) => byStartDate(b, a)) },
     ];
     return grouped.filter((section) => section.data.length > 0);
-  }, [trips, activeTrip]);
+  }, [trips, activeTrip, today]);
 
   const sectionLabels: Record<SectionKey, string> = {
     current: t("trip.happeningNow"),
@@ -176,6 +178,7 @@ export default function TripsScreen() {
       expanded={opts.active || expandedId === trip.id}
       overlap={opts.overlap}
       index={opts.index}
+      today={today}
       onPress={() => {
         if (opts.active) {
           router.back();
@@ -338,6 +341,7 @@ function TripPass({
   onReplay,
   onPeople,
   onDelete,
+  today,
 }: {
   trip: Trip;
   active: boolean;
@@ -350,12 +354,13 @@ function TripPass({
   onReplay: () => void;
   onPeople: () => void;
   onDelete: () => void;
+  today: Date;
 }) {
   const { c, f, isDark } = useAura();
   const { t, locale } = useLocalization();
-  const status = getTripStatus(trip);
+  const status = getTripStatus(trip, today);
   const tint = active ? auraStatusColors.calm : status === "complete" ? ["#5A6072", "#3A3F4D", "#2A2E39"] : ["#9B7BFF", "#5B6CFF", "#22C7B8"];
-  const progress = tripProgress(trip);
+  const progress = tripProgress(trip, today);
   const from = trip.destinations[0];
   const to = trip.destinations[trip.destinations.length - 1];
   const many = trip.destinations.length > 1;

@@ -1,4 +1,5 @@
 import type { TripStatus } from "@/features/trips/utils/dates";
+import { dateTimeFormat } from "@/utils/intl";
 
 export interface PassportTrip {
   id: string;
@@ -142,5 +143,5 @@ export function stampDate(date: string, locale: string): string {
   const [y, m, d] = date.split("-").map(Number);
   if (!m) return String(y);
   const value = new Date(y, m - 1, d || 1);
-  return new Intl.DateTimeFormat(locale, d ? { day: "numeric", month: "short", year: "numeric" } : { month: "short", year: "numeric" }).format(value);
+  return dateTimeFormat(locale, d ? { day: "numeric", month: "short", year: "numeric" } : { month: "short", year: "numeric" }).format(value);
 }

@@ -5,7 +5,7 @@ import { PrivateView } from "@/modules/analytics";
 import { auraStatusColors } from "@/constants/aura";
 import { useAnimationsActive } from "@/hooks/useAnimationsActive";
 import { usePerfTier } from "@/hooks/usePerfTier";
-import type { ChatMessage } from "../store/chatStore";
+import { useChatStreamStore, type ChatMessage } from "../store/chatStore";
 import { AiPlasmaOrb } from "./AiPlasmaOrb";
 import { AiThinking } from "./AiThinking";
 
@@ -148,9 +148,12 @@ function StreamingOrb({ isDark }: { isDark: boolean }) {
 }
 
 /** One chat turn: user text in an inverse bubble, assistant markdown flush left under a name row. */
-export function AiMessage({ msg, label, streamingText }: { msg: ChatMessage; label: string; streamingText?: string }) {
+/** One chat message; `streamKey` (the conversation being generated) makes it show that reply as it streams in. */
+export function AiMessage({ msg, label, streamKey }: { msg: ChatMessage; label: string; streamKey?: string }) {
   const { c, f, isDark, accent } = useAura();
-  const fullText = streamingText ?? msg.text;
+  // Subscribed here, not in the chat, so streaming re-renders only this message.
+  const streamingText = useChatStreamStore((s) => (streamKey !== undefined && s.conversationKey === streamKey ? s.text : null));
+  const fullText = streamingText || msg.text;
   const isAssistant = msg.from === "ai";
   const text = useRevealedText(fullText, isAssistant && msg.generating === true);
   const streaming = msg.generating === true || text.length < fullText.length;

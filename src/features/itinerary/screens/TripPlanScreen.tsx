@@ -19,7 +19,9 @@ import { TripPlanMap } from "@/features/itinerary/components/TripPlanMap";
 import { TravelDayCard } from "@/features/itinerary/components/TravelDayCard";
 import { defaultStartFor, useItineraryEditor } from "@/features/itinerary/hooks/useItineraryEditor";
 import { useItineraryPlaces } from "@/features/itinerary/hooks/useItineraryPlaces";
+import { livePlan } from "@/features/itinerary/utils/dayPlan";
 import { formatters } from "@/features/itinerary/utils/entryText";
+import { dateTimeFormat } from "@/utils/intl";
 import { planPins } from "@/features/itinerary/utils/planPins";
 
 const MAP_SHARE = 0.34;
@@ -59,6 +61,7 @@ function TripPlan({ trip, initialDate }: { trip: Trip; initialDate?: string }) {
   const jumped = useRef(false);
   const format = formatters(locale, hour12);
 
+  const current = livePlan(context.tripEvents, now.getTime()).current;
   const todayIndex = context.days.findIndex((day) => day.toDateString() === now.toDateString());
   const byDay = planPins(context.tripEvents, context.days);
   const itemPins = byDay.flatMap((day, i) => day.pins.map((pin) => ({ ...pin, id: `${i}-${pin.id}`, dim: i !== active })));
@@ -70,8 +73,8 @@ function TripPlan({ trip, initialDate }: { trip: Trip; initialDate?: string }) {
   const activeStop = context.stopOn(context.days[active] ?? context.days[0]);
   const focus = byDay[active]?.pins.length ? byDay[active].pins : activeStop ? [activeStop] : [];
   const mapHeight = Math.min(MAP_MAX, Math.round(height * MAP_SHARE));
-  const dayHeader = new Intl.DateTimeFormat(locale, { weekday: "long", month: "short", day: "numeric" });
-  const shortDate = new Intl.DateTimeFormat(locale, { month: "short", day: "numeric" });
+  const dayHeader = dateTimeFormat(locale, { weekday: "long", month: "short", day: "numeric" });
+  const shortDate = dateTimeFormat(locale, { month: "short", day: "numeric" });
   const shown = scrub ?? active;
   const shownStop = context.stopOn(context.days[shown] ?? context.days[0]);
 
@@ -257,6 +260,7 @@ function TripPlan({ trip, initialDate }: { trip: Trip; initialDate?: string }) {
                     onToggleDone={editor.toggleDone}
                     onAdd={() => editor.add(defaultStartFor(day, now.getTime()))}
                     onGap={setGap}
+                    current={current}
                   />
                 </View>
               );

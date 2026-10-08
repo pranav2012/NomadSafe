@@ -5,6 +5,7 @@ import { reloadAppAsync } from "expo";
 import { useSettingsStore } from "@/features/settings";
 import { storage } from "@/modules/storage";
 import { getEffectiveCurrency } from "@/utils/currency";
+import { dateTimeFormat, numberFormat } from "@/utils/intl";
 import {
   deviceUnitPrefs,
   formatApproxDuration,
@@ -34,7 +35,6 @@ interface LocalizationContextValue {
   formatDate: (value: Date | number, options?: Intl.DateTimeFormatOptions) => string;
   formatTime: (value: Date | number, options?: Intl.DateTimeFormatOptions) => string;
   formatDateTime: (value: Date | number, options?: Intl.DateTimeFormatOptions) => string;
-  formatDuration: (seconds: number) => string;
   units: UnitPrefs;
   /** What "Automatic" resolves to on this phone, for Settings. */
   deviceUnits: UnitPrefs;
@@ -86,7 +86,7 @@ function formatCompactCurrency(amount: number, currency: string, locale: string)
 }
 
 function formatCurrencyNumber(value: number, locale: string, currency: string): string {
-  return new Intl.NumberFormat(locale, {
+  return numberFormat(locale, {
     style: "currency",
     currency,
     minimumFractionDigits: 0,
@@ -184,32 +184,21 @@ export function LocalizationProvider({ children }: { children: React.ReactNode }
       },
       formatCurrency: (amount, selectedCurrency = currency, options) => {
         const compact = options ? null : formatCompactCurrency(amount, selectedCurrency, formatLocale);
-        return compact ?? new Intl.NumberFormat(formatLocale, {
+        return compact ?? numberFormat(formatLocale, {
           style: "currency",
           currency: selectedCurrency,
           ...options,
         }).format(amount);
       },
       formatDate: (value, options) =>
-        new Intl.DateTimeFormat(formatLocale, withDefaultStyle(options, { dateStyle: "medium" }, hour12)).format(value),
+        dateTimeFormat(formatLocale, withDefaultStyle(options, { dateStyle: "medium" }, hour12)).format(value),
       formatTime: (value, options) =>
-        new Intl.DateTimeFormat(formatLocale, withDefaultStyle(options, { timeStyle: "short" }, hour12)).format(value),
+        dateTimeFormat(formatLocale, withDefaultStyle(options, { timeStyle: "short" }, hour12)).format(value),
       formatDateTime: (value, options) =>
-        new Intl.DateTimeFormat(
+        dateTimeFormat(
           formatLocale,
           withDefaultStyle(options, { dateStyle: "medium", timeStyle: "short" }, hour12),
         ).format(value),
-      formatDuration: (seconds) => {
-        try {
-          return new Intl.NumberFormat(formatLocale, {
-            style: "unit",
-            unit: "second",
-            unitDisplay: "long",
-          }).format(Math.round(seconds));
-        } catch {
-          return `${Math.round(seconds)}s`;
-        }
-      },
       units,
       deviceUnits,
       deviceHour12,

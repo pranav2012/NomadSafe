@@ -12,6 +12,7 @@ import { localeDecimalSeparator, parseAmountInput } from "@/features/expenses/ut
 import { conversionResult, countedGap, pocketBalance, pocketSpends, type ForexPocket, type PocketCloseKind } from "@/features/expenses/utils/forex";
 import { formatMoney } from "@/features/expenses/utils/money";
 import { useTripsStore } from "@/features/trips/store/tripsStore";
+import { dateTimeFormat } from "@/utils/intl";
 
 /** One forex pocket: its balance and history, top-up, counting cash and what happened to the leftover. */
 export function PocketSheet({ onTopUp }: { onTopUp: (pocket: ForexPocket) => void }) {
@@ -50,7 +51,7 @@ function PocketBody({
   const untracked = pocketSpends(pocket, expenses).filter((expense) => expense.source === "forex" && expense.id !== pocket.closed?.expenseId);
   const spendsTotal = spends.reduce((sum, expense) => sum + expense.amount, 0);
   const money = (amount: number, currency = pocket.currency) => formatMoney(formatCurrency, amount, currency);
-  const fullDate = (iso: string) => new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" }).format(new Date(iso));
+  const fullDate = (iso: string) => dateTimeFormat(locale, { day: "numeric", month: "short" }).format(new Date(iso));
   const isCard = pocket.kind === "card";
 
   // Edits need Plus; a Free plan can still look at (and delete) its pockets.

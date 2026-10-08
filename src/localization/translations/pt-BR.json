@@ -178,6 +178,8 @@
     "deleteAccountFailedBody": "Verifique sua conexão e tente novamente. Nada foi excluído.",
     "deleteAccountDoneTitle": "Conta excluída",
     "deleteAccountDoneBody": "Sua conta e seus dados foram excluídos.",
+    "deleteAccountWipeFailedTitle": "Conta excluída",
+    "deleteAccountWipeFailedBody": "Sua conta foi excluída, mas alguns dados ainda podem estar neste celular. Para removê-los, limpe os dados do NomadSafe nas configurações do celular ou reinstale o app.",
     "smsChars": "{{count}} caracteres",
     "smsSegments": "{{count}} SMS",
     "aiSection": "IA",

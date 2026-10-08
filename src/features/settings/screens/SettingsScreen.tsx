@@ -30,11 +30,12 @@ import { byokProviderName, useAiAvailability, useAiSources, useAiUsageLog, useBy
 import { FREE_TRIP_LIMIT, manageSubscriptions, ownedTripCount, restorePurchases, usePlan } from "@/modules/billing";
 import { track, PrivateView } from "@/modules/analytics";
 import { showAdPrivacyOptions, useAdsStore } from "@/modules/ads";
+import { logger } from "@/modules/logger";
 import { useTripsStore } from "@/features/trips/store/tripsStore";
 import { hasGmailGrant, hydrateGmailConnection, useGmailConnectionStore } from "@/features/expenses/store/gmailConnectionStore";
 import { ensureGmailAccountEmail } from "@/features/expenses/services/gmailAuth";
 import { useSettingsStore } from "@/features/settings";
-import { useCircle } from "@/features/location-sharing/hooks/useCircle";
+import { useCircleNames } from "@/features/location-sharing/hooks/useCircle";
 import { exportEverything } from "@/features/settings/services/exportService";
 import { wipeAllDeviceData } from "@/features/settings/services/wipeService";
 import { SettingsProfileHeader } from "@/features/settings/components/SettingsProfileHeader";
@@ -123,7 +124,7 @@ export default function SettingsScreen() {
   const gmailConnected = hasGmailGrant(gmailTokens);
   const gmailEmail = gmailTokens?.email;
 
-  const circle = useCircle();
+  const circleNames = useCircleNames();
   const [exporting, setExporting] = useState(false);
   const [wiping, setWiping] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -154,7 +155,6 @@ export default function SettingsScreen() {
     .filter(Boolean)
     .join(" · ");
 
-  const circleNames = circle.people.filter((person) => person.status === "accepted").map((person) => person.name);
   const circleSub =
     circleNames.length > 0
       ? t("settings.circleSub", { count: circleNames.length, names: circleNames.join(", ") })
@@ -332,11 +332,19 @@ export default function SettingsScreen() {
             showAlert(t("settings.deleteAccountFailedTitle"), t("settings.deleteAccountFailedBody"));
             return;
           }
-          try {
-            await wipeAllDeviceData();
-          } catch {}
+          // The account is gone either way; retry the wipe once, then tell the user if data may remain.
+          let wiped = false;
+          for (let attempt = 0; attempt < 2 && !wiped; attempt++) {
+            try {
+              await wipeAllDeviceData();
+              wiped = true;
+            } catch (error) {
+              logger.error("settings", "account delete: device wipe failed", error, { attempt });
+            }
+          }
           setDeleting(false);
-          showToast(t("settings.deleteAccountDoneTitle"), t("settings.deleteAccountDoneBody"));
+          if (wiped) showToast(t("settings.deleteAccountDoneTitle"), t("settings.deleteAccountDoneBody"));
+          else showAlert(t("settings.deleteAccountWipeFailedTitle"), t("settings.deleteAccountWipeFailedBody"));
           router.replace("/(auth)/sign-in");
         },
       },

@@ -178,6 +178,8 @@
     "deleteAccountFailedBody": "अपना कनेक्शन जांचें और फिर से कोशिश करें। कुछ भी नहीं हटाया गया।",
     "deleteAccountDoneTitle": "अकाउंट हटा दिया गया",
     "deleteAccountDoneBody": "आपका अकाउंट और डेटा हटा दिया गया है।",
+    "deleteAccountWipeFailedTitle": "अकाउंट हटा दिया गया",
+    "deleteAccountWipeFailedBody": "आपका अकाउंट हटा दिया गया है, लेकिन कुछ डेटा अभी भी इस फ़ोन पर हो सकता है। इसे हटाने के लिए फ़ोन की सेटिंग में NomadSafe का ऐप डेटा साफ़ करें या ऐप दोबारा इंस्टॉल करें।",
     "smsChars": "{{count}} अक्षर",
     "smsSegments": "{{count}} SMS",
     "aiSection": "AI",

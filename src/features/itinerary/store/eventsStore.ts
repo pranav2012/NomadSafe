@@ -5,7 +5,6 @@ import { mmkvStateStorage } from "@/modules/storage";
 import type { EventTiming, EventType, TransitMode } from "@/features/itinerary/constants/eventTypes";
 import { consolidateEmailBookings, mergeBooking, sameBooking } from "@/features/itinerary/utils/bookings";
 import { normalizeWallClock } from "@/features/itinerary/utils/wallClock";
-import { trimStoredEmailRecord } from "@/features/expenses/utils/emailText";
 import { nextRecordId } from "@/utils/recordId";
 import { mergeTravelDetails, type TravelDetails } from "@/features/itinerary/utils/travelDetails";
 

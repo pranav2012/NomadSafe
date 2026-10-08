@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { Buffer } from "node:buffer";
+import { readFileSync } from "node:fs";
 import { buildSync } from "esbuild";
 
 function loadModule(entryPoint) {
@@ -218,7 +220,6 @@ test("prefers the merchant over alert boilerplate", () => {
   );
 });
 
-import { readFileSync } from "node:fs";
 
 const formats = loadModule("src/features/expenses/utils/importFormats.ts");
 const fixture = (name) => formats.decodeBytes(new Uint8Array(readFileSync(`tests/fixtures/import/${name}`)));

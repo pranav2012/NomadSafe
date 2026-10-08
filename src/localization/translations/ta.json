@@ -178,6 +178,8 @@
     "deleteAccountFailedBody": "உங்கள் இணைப்பைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும். எதுவும் நீக்கப்படவில்லை.",
     "deleteAccountDoneTitle": "கணக்கு நீக்கப்பட்டது",
     "deleteAccountDoneBody": "உங்கள் கணக்கும் தரவும் நீக்கப்பட்டுவிட்டன.",
+    "deleteAccountWipeFailedTitle": "கணக்கு நீக்கப்பட்டது",
+    "deleteAccountWipeFailedBody": "உங்கள் கணக்கு நீக்கப்பட்டது, ஆனால் சில தரவு இன்னும் இந்த ஃபோனில் இருக்கலாம். அதை நீக்க, ஃபோன் அமைப்புகளில் NomadSafe ஆப் தரவை அழிக்கவும் அல்லது ஆப்பை மீண்டும் நிறுவவும்.",
     "smsChars": "{{count}} எழுத்துகள்",
     "smsSegments": "{{count}} SMS",
     "aiSection": "AI",

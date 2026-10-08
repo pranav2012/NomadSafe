@@ -71,7 +71,7 @@ const LANGUAGES = `SELECT ?iso (GROUP_CONCAT(DISTINCT ?code; separator="|") AS ?
   ?c wdt:P297 ?iso ; wdt:P37 ?l . ?l wdt:P218 ?code .
 } GROUP BY ?iso`;
 
-function useOf(label) {
+function purposeOf(label) {
   if (!label) return "general";
   if (/police/i.test(label)) return "police";
   if (/medical|ambulance/i.test(label)) return "ambulance";
@@ -88,7 +88,7 @@ async function main() {
   };
 
   for (const row of await sparql(NUMBERS)) {
-    const use = useOf(row.useLabel?.value);
+    const use = purposeOf(row.useLabel?.value);
     const number = row.num.value.trim();
     if (!use || !/^[0-9]{2,5}$/.test(number)) continue;
     const country = entry(row.iso.value);

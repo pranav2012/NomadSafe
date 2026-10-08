@@ -1,5 +1,13 @@
 import type { LatLng } from "@/features/trips/services/geocoding";
-import { CITY_ROWS, COUNTRY_ROWS } from "./cities";
+
+type CityData = typeof import("./cities");
+let cityData: CityData | null = null;
+
+// The table (~100 KB) loads on the first search or lookup rather than at app launch.
+function cityRows(): CityData {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  return (cityData ??= require("./cities") as CityData);
+}
 
 export type DestinationKind = "city" | "place" | "country" | "online";
 
@@ -43,7 +51,7 @@ let englishCountryNames: Map<string, string> | null = null;
 
 function getCities(): City[] {
   if (cities) return cities;
-  cities = CITY_ROWS.split("\n").map((row) => {
+  cities = cityRows().CITY_ROWS.split("\n").map((row) => {
     const [name, alternates, country, lat, lon, flag] = row.split("|");
     return {
       name,
@@ -58,7 +66,7 @@ function getCities(): City[] {
 
 function getEnglishCountryNames() {
   englishCountryNames ??= new Map(
-    COUNTRY_ROWS.split("\n").map((row) => row.split("|") as [string, string]),
+    cityRows().COUNTRY_ROWS.split("\n").map((row) => row.split("|") as [string, string]),
   );
   return englishCountryNames;
 }

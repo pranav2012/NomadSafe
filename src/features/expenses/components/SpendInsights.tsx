@@ -9,6 +9,7 @@ import { formatMoney } from "@/features/expenses/utils/money";
 import { inRange, periodRange } from "@/features/expenses/utils/myMoney";
 import { periodTotals, periodVsUsual, weekendRatio, yearByMonth, type InsightItem } from "@/features/expenses/utils/spendInsights";
 import { OWED, OWES } from "@/features/expenses/components/GroupBalances";
+import { dateTimeFormat } from "@/utils/intl";
 
 const SPARK_HEIGHT = 44;
 const DOT = 3.5;
@@ -52,7 +53,7 @@ export function OverviewTrend({ items, period, currency }: { items: InsightItem[
   const points = year ? year.months : periodTotals(items, "month", MONTHS, period.offset);
   const { total, usualTotal } = periodVsUsual(items, period.kind, period.offset);
   const change = changeOf(total, usualTotal);
-  const label = (date: Date) => new Intl.DateTimeFormat(locale, { month: "short" }).format(date);
+  const label = (date: Date) => dateTimeFormat(locale, { month: "short" }).format(date);
   const lines = [
     change && change.key !== "new"
       ? {
@@ -200,7 +201,7 @@ export function BiggestSpends({ items, currency, period }: { items: InsightItem[
     .slice(0, BIGGEST);
   if (biggest.length === 0) return null;
   const money = (amount: number) => formatMoney(formatCurrency, amount, currency);
-  const day = (date: string) => new Intl.DateTimeFormat(locale, { month: "short", day: "numeric" }).format(new Date(date));
+  const day = (date: string) => dateTimeFormat(locale, { month: "short", day: "numeric" }).format(new Date(date));
 
   return (
     <View style={styles.biggest}>

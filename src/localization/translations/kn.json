@@ -178,6 +178,8 @@
     "deleteAccountFailedBody": "ನಿಮ್ಮ ಸಂಪರ್ಕವನ್ನು ಪರಿಶೀಲಿಸಿ ಮತ್ತು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ. ಏನನ್ನೂ ಅಳಿಸಲಾಗಿಲ್ಲ.",
     "deleteAccountDoneTitle": "ಖಾತೆ ಅಳಿಸಲಾಗಿದೆ",
     "deleteAccountDoneBody": "ನಿಮ್ಮ ಖಾತೆ ಮತ್ತು ಡೇಟಾವನ್ನು ಅಳಿಸಲಾಗಿದೆ.",
+    "deleteAccountWipeFailedTitle": "ಖಾತೆ ಅಳಿಸಲಾಗಿದೆ",
+    "deleteAccountWipeFailedBody": "ನಿಮ್ಮ ಖಾತೆಯನ್ನು ಅಳಿಸಲಾಗಿದೆ, ಆದರೆ ಕೆಲವು ಡೇಟಾ ಈ ಫೋನ್‌ನಲ್ಲಿ ಇನ್ನೂ ಇರಬಹುದು. ಅದನ್ನು ತೆಗೆದುಹಾಕಲು ಫೋನ್ ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ NomadSafe ಆ್ಯಪ್ ಡೇಟಾವನ್ನು ತೆರವುಗೊಳಿಸಿ ಅಥವಾ ಆ್ಯಪ್ ಅನ್ನು ಮರುಸ್ಥಾಪಿಸಿ.",
     "smsChars": "{{count}} ಅಕ್ಷರಗಳು",
     "smsSegments": "{{count}} SMS",
     "aiSection": "AI",

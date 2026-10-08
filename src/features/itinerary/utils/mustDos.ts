@@ -1,4 +1,10 @@
-import { MUST_DO_ROWS } from "@/features/itinerary/data/mustDos";
+type MustDoData = typeof import("../data/mustDos");
+
+// The table (~200 KB) loads on the first lookup rather than at app launch.
+function mustDoRows(): string {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  return (require("../data/mustDos") as MustDoData).MUST_DO_ROWS;
+}
 
 export interface MustDo {
   /** The English name; stable across languages, used to remember dismissals. */
@@ -29,7 +35,7 @@ let places: Place[] | null = null;
 
 function parse(): Place[] {
   const parsed: Place[] = [];
-  for (const line of MUST_DO_ROWS.split("\n")) {
+  for (const line of mustDoRows().split("\n")) {
     if (line.startsWith("#")) {
       const [name, , lat, lon, radius] = line.slice(1).split("|");
       parsed.push({ name, latitude: Number(lat), longitude: Number(lon), radiusKm: Number(radius), sights: [] });

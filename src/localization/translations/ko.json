@@ -178,6 +178,8 @@
     "deleteAccountFailedBody": "연결 상태를 확인하고 다시 시도해 주세요. 아무것도 삭제되지 않았어요.",
     "deleteAccountDoneTitle": "계정이 삭제되었어요",
     "deleteAccountDoneBody": "계정과 데이터가 삭제되었어요.",
+    "deleteAccountWipeFailedTitle": "계정이 삭제되었어요",
+    "deleteAccountWipeFailedBody": "계정은 삭제되었지만 일부 데이터가 이 휴대폰에 남아 있을 수 있어요. 휴대폰 설정에서 NomadSafe 앱 데이터를 지우거나 앱을 다시 설치하세요.",
     "smsChars": "{{count}}자",
     "smsSegments": "SMS {{count}}건",
     "aiSection": "AI",

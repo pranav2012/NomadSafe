@@ -178,6 +178,8 @@
     "deleteAccountFailedBody": "请检查网络连接后重试，尚未删除任何数据。",
     "deleteAccountDoneTitle": "账户已删除",
     "deleteAccountDoneBody": "你的账户和数据已被删除。",
+    "deleteAccountWipeFailedTitle": "账户已删除",
+    "deleteAccountWipeFailedBody": "你的账户已删除，但这台手机上可能仍有部分数据。请在手机设置中清除 NomadSafe 的应用数据，或重新安装应用。",
     "smsChars": "{{count}} 个字符",
     "smsSegments": "{{count}} 条短信",
     "aiSection": "AI",

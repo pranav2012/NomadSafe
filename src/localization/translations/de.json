@@ -178,6 +178,8 @@
     "deleteAccountFailedBody": "Überprüfe deine Verbindung und versuche es erneut. Es wurde nichts gelöscht.",
     "deleteAccountDoneTitle": "Konto gelöscht",
     "deleteAccountDoneBody": "Dein Konto und deine Daten wurden gelöscht.",
+    "deleteAccountWipeFailedTitle": "Konto gelöscht",
+    "deleteAccountWipeFailedBody": "Dein Konto wurde gelöscht, aber einige Daten sind möglicherweise noch auf diesem Telefon. Lösche die App-Daten von NomadSafe in den Einstellungen oder installiere die App neu.",
     "smsChars": "{{count}} Zeichen",
     "smsSegments": "{{count}} SMS",
     "aiSection": "KI",

@@ -8,7 +8,7 @@ import { SELF_ID } from "@/features/expenses/utils/split";
 import { TRANSIT_MODES, getEventTypeMeta, type EventType } from "@/features/itinerary/constants/eventTypes";
 import type { MealWindows } from "@/features/itinerary/data/mealTimes";
 import type { TripEvent } from "@/features/itinerary/store/eventsStore";
-import { anytimeOnDay, livePlan, tonightStay } from "@/features/itinerary/utils/dayPlan";
+import { anytimeOnDay, livePlan, tonightStay, type LivePlan } from "@/features/itinerary/utils/dayPlan";
 import { dayEntries, dayShape, missingInfo, type DayGap, type DurationGuess, type MissingKind } from "@/features/itinerary/utils/dayShape";
 import { describeEntry, formatters } from "@/features/itinerary/utils/entryText";
 import { localizeEventTitle } from "@/features/itinerary/utils/eventText";
@@ -71,6 +71,7 @@ export function DayPlan({
   ticketEventIds,
   onOpenTickets,
   onAskForTicket,
+  current: sharedCurrent,
 }: {
   events: TripEvent[];
   day: Date;
@@ -90,6 +91,8 @@ export function DayPlan({
   onToggleDone: (event: TripEvent) => void;
   /** A free window or open meal was tapped: suggest food or things to do there. */
   onGap?: (gap: FreeGap) => void;
+  /** `livePlan(events, now).current`, when a parent showing many days has already worked it out. */
+  current?: LivePlan<TripEvent>["current"];
 }) {
   const { c, f, accent } = useAura();
   const { t, locale, hour12, formatDistance, formatApproxDuration, formatCountdown } = useLocalization();
@@ -102,7 +105,7 @@ export function DayPlan({
   const shape = dayShape(timed.filter((entry) => isForMe(entry.event)), { day, meals, learned, homeCountry });
   const durations = new Map(shape.items.map((item) => [item.key, item.duration]));
   const tonight = tonightStay(events, day);
-  const current = livePlan(events, nowMs).current;
+  const current = sharedCurrent !== undefined ? sharedCurrent : livePlan(events, nowMs).current;
   const isNow = (entry: Entry) => current?.event.id === entry.event.id && current.role === entry.role;
   const nameOf = (person: string) => (person === SELF_ID ? t("itinerary.form.you") : person);
   const namesOf = (entry: Entry) => (entry.event.people ?? []).map(nameOf).join(", ");

@@ -17,7 +17,16 @@ interface Props {
 }
 
 /** Searchable list of every country, with an optional "automatic" row on top. */
-export function CountryPickerSheet({ visible, onClose, title, automaticLabel, selected, onSelect }: Props) {
+export function CountryPickerSheet({ visible, onClose, title, ...body }: Props) {
+  return (
+    <AuraSheet visible={visible} onClose={onClose} title={title} full>
+      <CountryPickerBody onClose={onClose} {...body} />
+    </AuraSheet>
+  );
+}
+
+/** Mounted only while the sheet is open, so the country list is built and sorted on demand. */
+function CountryPickerBody({ onClose, automaticLabel, selected, onSelect }: Omit<Props, "visible" | "title">) {
   const { c, f, accent } = useAura();
   const { t, locale } = useLocalization();
   const [query, setQuery] = useState("");
@@ -47,7 +56,7 @@ export function CountryPickerSheet({ visible, onClose, title, automaticLabel, se
   );
 
   return (
-    <AuraSheet visible={visible} onClose={onClose} title={title} full>
+    <>
       <View style={styles.search}>
         <AuraField value={query} onChangeText={setQuery} placeholder={t("passport.searchCountries")} autoCorrect={false} />
       </View>
@@ -59,7 +68,7 @@ export function CountryPickerSheet({ visible, onClose, title, automaticLabel, se
         renderItem={({ item }) => row(item.code, item.name)}
         contentContainerStyle={styles.list}
       />
-    </AuraSheet>
+    </>
   );
 }
 

@@ -17,6 +17,20 @@ type ContactLinks = {
   invites: { id: Id<"pendingInvites">; name: string; email: string | null; phone: string | null }[];
 };
 
+/** Names of accepted circle members, in the circle's order; reads only the contact links, not live locations. */
+export function useCircleNames(): string[] {
+  const appActive = useAppActive();
+  const links = useLastLoaded(useQuery(api.sharing.getContactLinks, appActive ? {} : "skip") as ContactLinks | undefined);
+  return useMemo(
+    () =>
+      (links?.outgoing ?? [])
+        .filter((link) => link.status === "accepted")
+        .map((link) => link.name)
+        .sort((a, b) => a.localeCompare(b)),
+    [links],
+  );
+}
+
 /**
  * Your circle: the people who get your SOS and missed-timer alerts, see you while you share, and
  * share with you. `loaded` is false until the links have arrived from the server.

@@ -8,8 +8,10 @@ import { useEventsStore } from "@/features/itinerary";
 import { useSharingStore } from "@/features/location-sharing";
 import { getDestinationCoordinates, selectActiveTrip, useTripsStore } from "@/features/trips/store/tripsStore";
 import { addDays, countInclusiveDays, daysLeftInTrip, fromDateKey, getTripStatus, startOfLocalDay } from "@/features/trips/utils/dates";
+import { useNow } from "@/hooks/useNow";
 import { useLocalization } from "@/localization";
 import type { HomeData, HomeEvent, HomeSpendDay } from "@/features/home/types";
+import { dateTimeFormat } from "@/utils/intl";
 
 function greetingKeyFor(hour: number) {
   if (hour >= 5 && hour < 12) return "trip.goodMorning";
@@ -25,6 +27,7 @@ export function useHomeData(): HomeData | null {
   const allEvents = useEventsStore((state) => state.events);
   const isSharing = useSharingStore((state) => state.isBroadcasting);
   const summary = useTripExpenseSummary(trip);
+  const now = useNow();
   // Stable per trip, so the globe's pins, weather and imagery don't recompute on every Home render.
   const stops = useMemo(
     () =>
@@ -36,11 +39,10 @@ export function useHomeData(): HomeData | null {
     [trip],
   );
 
-  const now = new Date();
   const userName = user?.name?.split(" ")[0] ?? t("common.fallbackUser");
   const greeting = t(greetingKeyFor(now.getHours()));
-  const timeFormatter = new Intl.DateTimeFormat(locale, { weekday: "short", hour: "numeric", minute: "2-digit", hour12 });
-  const shortDate = new Intl.DateTimeFormat(locale, { month: "short", day: "numeric" });
+  const timeFormatter = dateTimeFormat(locale, { weekday: "short", hour: "numeric", minute: "2-digit", hour12 });
+  const shortDate = dateTimeFormat(locale, { month: "short", day: "numeric" });
   const sharingLabel = isSharing ? t("trip.sharingLive") : t("trip.notSharing");
 
   if (!trip) return null;

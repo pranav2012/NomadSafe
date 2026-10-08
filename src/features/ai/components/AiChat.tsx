@@ -24,7 +24,7 @@ import { auraStatusAccent } from "@/constants/aura";
 import { useAnimationsActive } from "@/hooks/useAnimationsActive";
 import { useLocalization } from "@/localization";
 import { track } from "@/modules/analytics";
-import { useChatStore, useChatStreamStore } from "../store/chatStore";
+import { useChatStore } from "../store/chatStore";
 import { useChatContext, useChatConversationKey } from "../hooks/useChatConversationKey";
 import { GENERAL_CONTEXT, OVERVIEW_CONTEXT } from "../services/chatContext";
 import { useTripsStore } from "@/features/trips/store/tripsStore";
@@ -94,7 +94,6 @@ export function AiChat({
   const isGenerating = generatingKey === conversationKey;
   const sendMessage = useChatStore((s) => s.send);
   const stopReply = useChatStore((s) => s.stop);
-  const streamingText = useChatStreamStore((s) => (s.conversationKey === conversationKey ? s.text : null));
   const provisioning = useAiProvisioning();
   const ai = useAiAvailability();
   const aiSources = useAiSources();
@@ -305,7 +304,7 @@ export function AiChat({
                     <AiMessage
                       msg={m}
                       label={t("aiTab.assistantName")}
-                      streamingText={isGenerating && i === lastIndex && streamingText ? streamingText : undefined}
+                      streamKey={isGenerating && i === lastIndex ? conversationKey : undefined}
                     />
                   </React.Fragment>
                 );

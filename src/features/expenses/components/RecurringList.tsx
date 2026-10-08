@@ -7,6 +7,7 @@ import { useRecurringStore } from "@/features/expenses/store/recurringStore";
 import { toLocalDayKey } from "@/features/expenses/utils/dateKey";
 import { formatMoney } from "@/features/expenses/utils/money";
 import { nextDueDay } from "@/features/expenses/utils/recurring";
+import { dateTimeFormat } from "@/utils/intl";
 
 /** Repeating spends of a trip or group (or of no group), with the next date and a way to stop each. */
 export function RecurringList({ groupId }: { groupId: string | null }) {
@@ -17,7 +18,7 @@ export function RecurringList({ groupId }: { groupId: string | null }) {
   const isPlus = usePlanStore((state) => state.unlimitedTrips);
   if (rules.length === 0) return null;
   const today = toLocalDayKey(new Date().toISOString());
-  const dayLabel = (key: string) => new Intl.DateTimeFormat(locale, { month: "short", day: "numeric" }).format(new Date(`${key}T12:00:00`));
+  const dayLabel = (key: string) => dateTimeFormat(locale, { month: "short", day: "numeric" }).format(new Date(`${key}T12:00:00`));
 
   const stop = (id: string, merchant: string) =>
     showAlert(t("expenses.stopRepeatTitle", { merchant }), t("expenses.stopRepeatBody"), [

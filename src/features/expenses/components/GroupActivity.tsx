@@ -8,6 +8,7 @@ import { personLabel } from "@/features/expenses/components/SplitEditor";
 import { toLocalDayKey } from "@/features/expenses/utils/dateKey";
 import { formatMoney } from "@/features/expenses/utils/money";
 import { SELF_ID } from "@/features/expenses/utils/split";
+import { dateTimeFormat } from "@/utils/intl";
 
 const PAGE = 40;
 
@@ -57,7 +58,7 @@ export function GroupActivity({
     const yesterday = toLocalDayKey(new Date(now - 86_400_000).toISOString());
     if (key === today) return t("money.today");
     if (key === yesterday) return t("money.yesterday");
-    return new Intl.DateTimeFormat(locale, { weekday: "short", month: "short", day: "numeric" }).format(date);
+    return dateTimeFormat(locale, { weekday: "short", month: "short", day: "numeric" }).format(date);
   };
 
   const confirmDelete = (id: string) =>

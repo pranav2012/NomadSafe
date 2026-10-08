@@ -1,4 +1,10 @@
-import { AIRPORT_ROWS } from "../data/airports";
+type AirportData = typeof import("../data/airports");
+
+// The table (~70 KB) loads on the first lookup rather than at app launch.
+function airportRows(): string {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  return (require("../data/airports") as AirportData).AIRPORT_ROWS;
+}
 
 interface Airport {
   latitude: number;
@@ -11,7 +17,7 @@ let index: Map<string, Airport> | null = null;
 function airport(code: string): Airport | null {
   if (!/^[A-Z]{3}$/.test(code)) return null;
   index ??= new Map(
-    AIRPORT_ROWS.split("\n").map((row) => {
+    airportRows().split("\n").map((row) => {
       const [iata, lat, lon, country] = row.split("|");
       return [iata, { latitude: Number(lat), longitude: Number(lon), country }];
     }),

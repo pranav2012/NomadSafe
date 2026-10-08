@@ -178,6 +178,8 @@
     "deleteAccountFailedBody": "接続を確認してもう一度お試しください。何も削除されていません。",
     "deleteAccountDoneTitle": "アカウントを削除しました",
     "deleteAccountDoneBody": "アカウントとデータを削除しました。",
+    "deleteAccountWipeFailedTitle": "アカウントを削除しました",
+    "deleteAccountWipeFailedBody": "アカウントは削除されましたが、一部のデータがこの端末に残っている可能性があります。端末の設定でNomadSafeのアプリデータを消去するか、アプリを再インストールしてください。",
     "smsChars": "{{count}}文字",
     "smsSegments": "SMS {{count}}件",
     "aiSection": "AI",

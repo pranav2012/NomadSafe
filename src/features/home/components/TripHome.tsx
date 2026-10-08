@@ -129,7 +129,7 @@ export function TripHome({
   const here = userLocation?.latitude != null && userLocation.longitude != null ? { latitude: userLocation.latitude, longitude: userLocation.longitude } : null;
   const focusIndex = todayStopIndex(data.stops, data.phase, data.day, data.totalDays, here);
   const focusStop = data.stops[focusIndex];
-  const globe = useGlobeContext(focusStop);
+  const globe = useGlobeContext(focusStop, now);
   const selectedStop = pickedDay === null ? focusStop : data.stops[todayStopIndex(data.stops, "active", selectedIndex + 1, data.totalDays, null)];
   const live = useLivePass({ events: tripEvents, now, stage, day: data.day, totalDays: data.totalDays, city: focusStop?.name.split(",")[0] });
   const heroHeight = horizon ? HORIZON_HEIGHT : globeHeight;

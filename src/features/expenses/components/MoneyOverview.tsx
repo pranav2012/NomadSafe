@@ -17,6 +17,7 @@ import { BiggestSpends, OverviewTrend, PeriodInsights, type OverviewPeriod } fro
 import { totalsByOffset } from "@/features/expenses/utils/spendInsights";
 import { usePlusGate } from "@/modules/billing";
 import { ExportSheet } from "@/features/expenses/components/ExportSheet";
+import { dateTimeFormat } from "@/utils/intl";
 
 const SETTLED_AFTER_MS = 30 * 86_400_000;
 const MAX_MONTHS_BACK = 24;
@@ -76,7 +77,7 @@ export function MoneyOverview({
   const thisYear = new Date().getFullYear();
   const monthLabel = (offsetBack: number) => {
     const start = periodRange("month", offsetBack).start;
-    return new Intl.DateTimeFormat(locale, { month: "long", year: start.getFullYear() === thisYear ? undefined : "numeric" }).format(start);
+    return dateTimeFormat(locale, { month: "long", year: start.getFullYear() === thisYear ? undefined : "numeric" }).format(start);
   };
   const periodLabel = period.kind === "year" ? String(thisYear - period.offset) : monthLabel(period.offset);
   const firstDate = new Date(expenses.reduce((min, expense) => Math.min(min, new Date(expense.date).getTime()), Date.now()));

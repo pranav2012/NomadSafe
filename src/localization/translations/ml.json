@@ -178,6 +178,8 @@
     "deleteAccountFailedBody": "നിങ്ങളുടെ കണക്ഷൻ പരിശോധിച്ച് വീണ്ടും ശ്രമിക്കുക. ഒന്നും ഇല്ലാതാക്കിയിട്ടില്ല.",
     "deleteAccountDoneTitle": "അക്കൗണ്ട് ഇല്ലാതാക്കി",
     "deleteAccountDoneBody": "നിങ്ങളുടെ അക്കൗണ്ടും ഡാറ്റയും ഇല്ലാതാക്കിയിരിക്കുന്നു.",
+    "deleteAccountWipeFailedTitle": "അക്കൗണ്ട് ഇല്ലാതാക്കി",
+    "deleteAccountWipeFailedBody": "നിങ്ങളുടെ അക്കൗണ്ട് ഇല്ലാതാക്കി, പക്ഷേ ചില ഡാറ്റ ഇപ്പോഴും ഈ ഫോണിൽ ഉണ്ടായേക്കാം. അത് നീക്കാൻ ഫോൺ ക്രമീകരണങ്ങളിൽ NomadSafe ആപ്പ് ഡാറ്റ മായ്ക്കുക അല്ലെങ്കിൽ ആപ്പ് വീണ്ടും ഇൻസ്റ്റാൾ ചെയ്യുക.",
     "smsChars": "{{count}} അക്ഷരങ്ങൾ",
     "smsSegments": "{{count}} SMS",
     "aiSection": "AI",

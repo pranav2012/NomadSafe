@@ -178,6 +178,8 @@
     "deleteAccountFailedBody": "تحقق من اتصالك وحاول مرة أخرى. لم يتم حذف أي شيء.",
     "deleteAccountDoneTitle": "تم حذف الحساب",
     "deleteAccountDoneBody": "تم حذف حسابك وبياناتك.",
+    "deleteAccountWipeFailedTitle": "تم حذف الحساب",
+    "deleteAccountWipeFailedBody": "تم حذف حسابك، لكن قد تبقى بعض البيانات على هذا الهاتف. لإزالتها، امسح بيانات تطبيق NomadSafe من إعدادات الهاتف أو أعد تثبيت التطبيق.",
     "smsChars": "{{count}} حرف",
     "smsSegments": "{{count}} رسالة SMS",
     "aiSection": "الذكاء الاصطناعي",

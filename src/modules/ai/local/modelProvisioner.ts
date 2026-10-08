@@ -584,7 +584,8 @@ function init() {
     lastJsStatus = state.status;
     const { model, phase } = useProvisioningStore.getState();
     if (state.status === "downloading" && model && state.modelId === model.id && phase === "downloading") {
-      const progress = state.progress / 100;
+      // Whole percents only: screens show nothing finer, and each patch re-renders them.
+      const progress = Math.round(state.progress) / 100;
       if (progress !== useProvisioningStore.getState().progress) {
         patch({ progress, bytesDownloaded: Math.round(progress * model.sizeBytes) });
       }
