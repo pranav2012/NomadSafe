@@ -221,6 +221,17 @@ export default defineSchema({
     fetchedAt: v.number(),
   }).index("by_key", ["key"]),
 
+  // Shared exchange-rate cache, one row per pair and requested day (convex/rates.ts).
+  exchangeRates: defineTable({
+    key: v.string(),
+    date: v.string(),
+    rate: v.number(),
+    expiresAt: v.optional(v.number()),
+    fetchedAt: v.number(),
+  })
+    .index("by_key", ["key"])
+    .index("by_fetched", ["fetchedAt"]),
+
   weatherCells: defineTable({
     key: v.string(),
     summary: v.string(),

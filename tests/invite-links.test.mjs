@@ -19,6 +19,7 @@ function loadModule(entryPoint) {
 const { inviteCodeFromPath, inviteCodeFromReferrer, inviteCodeFromUrl } = loadModule("src/features/trips/utils/inviteLinks.ts");
 
 const SITE = "https://happy-otter-123.convex.site";
+const WEB = "https://nomadsafe.example.com";
 
 test("path parsing accepts deep link paths and uppercases the code", () => {
   assert.equal(inviteCodeFromPath("join/ab12cd"), "AB12CD");
@@ -37,8 +38,10 @@ test("Play referrer yields the join code alongside Play's own params", () => {
 });
 
 test("clipboard URLs only count when they're our own invite links", () => {
-  assert.equal(inviteCodeFromUrl(`${SITE}/join/AB12CD`, SITE), "AB12CD");
-  assert.equal(inviteCodeFromUrl("https://evil.example/join/AB12CD", SITE), null);
-  assert.equal(inviteCodeFromUrl(`${SITE}/privacy`, SITE), null);
-  assert.equal(inviteCodeFromUrl("not a url", SITE), null);
+  assert.equal(inviteCodeFromUrl(`${SITE}/join/AB12CD`, [SITE]), "AB12CD");
+  assert.equal(inviteCodeFromUrl(`${WEB}/join/AB12CD`, [WEB, SITE]), "AB12CD");
+  assert.equal(inviteCodeFromUrl(`${SITE}/join/AB12CD`, [WEB, SITE]), "AB12CD");
+  assert.equal(inviteCodeFromUrl("https://evil.example/join/AB12CD", [WEB, SITE]), null);
+  assert.equal(inviteCodeFromUrl(`${SITE}/privacy`, [SITE]), null);
+  assert.equal(inviteCodeFromUrl("not a url", [SITE]), null);
 });

@@ -17,7 +17,7 @@ function loadModule(entryPoint) {
 }
 
 const catalog = loadModule("src/modules/ai/local/modelCatalog.ts");
-const { pickModelForDevice, nominalRamGb, findModel, AI_MODELS, RETIRED_MODEL_FILES, STORAGE_HEADROOM_BYTES, GB } = catalog;
+const { pickModelForDevice, nominalRamGb, findModel, modelUrl, AI_MODELS, RETIRED_MODEL_FILES, STORAGE_HEADROOM_BYTES, GB } = catalog;
 
 const PLENTY = 64 * GB;
 const size = (id) => AI_MODELS.find((m) => m.id === id).sizeBytes;
@@ -106,7 +106,9 @@ test("legacy ids map to the model with the same file", () => {
   assert.equal(findModel("base").id, "base");
   assert.equal(findModel("nope"), null);
   for (const model of AI_MODELS) {
-    assert.match(model.url, new RegExp(`^https://huggingface\\.co/${model.hfRepoId}/resolve/${model.revision}/${model.hfFilename}$`));
+    assert.equal(model.url, modelUrl(model));
+    assert.match(modelUrl(model, null), new RegExp(`^https://huggingface\\.co/${model.hfRepoId}/resolve/${model.revision}/${model.hfFilename}$`));
+    assert.equal(modelUrl(model, "https://models.example.com"), `https://models.example.com/${model.revision}/${model.hfFilename}`);
     assert.match(model.sha256, /^[0-9a-f]{64}$/);
   }
 });

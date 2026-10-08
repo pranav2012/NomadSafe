@@ -20,6 +20,15 @@ const MB = 1024 * 1024;
 export const GB = 1024 * MB;
 export const STORAGE_HEADROOM_BYTES = GB;
 
+const MIRROR = process.env.EXPO_PUBLIC_AI_MODELS_URL?.replace(/\/$/, "");
+
+/** Our R2 copy (`<revision>/<file>`, filled by scripts/mirror-ai-models.mjs); Hugging Face when unset. */
+export function modelUrl(model: Pick<AiModel, "hfRepoId" | "revision" | "hfFilename">, mirror: string | null | undefined = MIRROR): string {
+  return mirror
+    ? `${mirror}/${model.revision}/${model.hfFilename}`
+    : `https://huggingface.co/${model.hfRepoId}/resolve/${model.revision}/${model.hfFilename}`;
+}
+
 function defineModel(
   model: Omit<AiModel, "sizeMb" | "url" | "quantLabel">,
 ): AiModel {
@@ -27,7 +36,7 @@ function defineModel(
     ...model,
     sizeMb: model.sizeBytes / MB,
     quantLabel: "Q4_K_M",
-    url: `https://huggingface.co/${model.hfRepoId}/resolve/${model.revision}/${model.hfFilename}`,
+    url: modelUrl(model),
   };
 }
 

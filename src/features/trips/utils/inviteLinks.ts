@@ -10,11 +10,11 @@ export function inviteCodeFromReferrer(referrer: string): string | null {
   return join ? inviteCodeFromPath(`join/${join}`) : null;
 }
 
-/** Reads the code from an invite URL, only if it's on our own site. */
-export function inviteCodeFromUrl(url: string, siteUrl: string): string | null {
+/** Reads the code from an invite URL, only if it's on one of our own sites. */
+export function inviteCodeFromUrl(url: string, siteUrls: readonly string[]): string | null {
   try {
     const parsed = new URL(url);
-    if (parsed.host !== new URL(siteUrl).host) return null;
+    if (!siteUrls.some((site) => new URL(site).host === parsed.host)) return null;
     return inviteCodeFromPath(parsed.pathname);
   } catch {
     return null;

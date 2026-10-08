@@ -1,5 +1,8 @@
 import { translate } from "@/localization/translate";
+import { withAppCheck } from "@/modules/appCheck";
+import { api, convex } from "@/modules/backend";
 import { storage } from "@/modules/storage";
+import { useAuthStore } from "@/features/auth/store/authStore";
 import { fromLocalDayKey, toLocalDayKey } from "@/features/expenses/utils/dateKey";
 
 export interface ExchangeRate {
@@ -9,11 +12,9 @@ export interface ExchangeRate {
   rate: number;
 }
 
-interface FrankfurterRateResponse {
-  base?: string;
-  quote?: string;
-  date?: string;
-  rate?: number;
+interface DayRate {
+  date: string;
+  rate: number;
 }
 
 const FETCH_TIMEOUT_MS = 8_000;
@@ -28,11 +29,11 @@ function dateKey(value: string): string {
 }
 
 function cacheKey(base: string, quote: string, date: string): string {
-  return `${base.toUpperCase()}|${quote.toUpperCase()}|${dateKey(date)}`;
+  return `${base.toUpperCase()}||${dateKey(date)}`;
 }
 
 function pairKey(base: string, quote: string): string {
-  return `${STORED_PREFIX}${base.toUpperCase()}|${quote.toUpperCase()}`;
+  return `${STORED_PREFIX}${base.toUpperCase()}|`;
 }
 
 /** Stored rates for one pair, keyed by the requested local day. */
@@ -66,6 +67,57 @@ function nearestStoredRate(base: string, quote: string, day: string): ExchangeRa
   return best?.rate;
 }
 
+function validRate(value: { date?: unknown; rate?: unknown } | null | undefined): DayRate | null {
+  if (!value || typeof value.date !== "string" || !value.date) return null;
+  const { rate } = value;
+  return typeof rate === "number" && Number.isFinite(rate) && rate > 0 ? { date: value.date, rate } : null;
+}
+
+/** Resolves to null after `ms`, so a request that never settles (e.g. queued while offline) can't hang a caller. */
+function within<T>(promise: Promise<T>, ms: number): Promise<T | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<null>((resolve) => {
+    timer = setTimeout(() => resolve(null), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+/** The shared server copy (a cached Convex query) if current, else a refresh when signed in; a stale copy if that fails. */
+async function fromServer(base: string, quote: string, day: string): Promise<DayRate | null> {
+  // Calls queue while disconnected; skip straight to the fallbacks instead of waiting out the timeout.
+  if (!convex.connectionState().isWebSocketConnected) return null;
+  const lookup = async () => {
+    const cached = await convex.query(api.rates.rate, { base, quote, day });
+    if (cached && (cached.expiresAt === null || cached.expiresAt > Date.now())) return validRate(cached);
+    // Refresh is signed-in only; signed out, a miss goes straight to Frankfurter.
+    if (!useAuthStore.getState().isSignedIn) return validRate(cached);
+    const refreshed = await convex.action(api.rates.refresh, await withAppCheck({ base, quote, day }));
+    return validRate(refreshed) ?? validRate(cached);
+  };
+  try {
+    return await within(lookup(), FETCH_TIMEOUT_MS);
+  } catch {
+    return null;
+  }
+}
+
+/** Frankfurter directly from the phone: used when signed out or when our server can't answer. */
+async function fromFrankfurter(base: string, quote: string, day: string): Promise<DayRate | null> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const response = await fetch(
+      `https://api.frankfurter.dev/v2/rate/${encodeURIComponent(base)}/${encodeURIComponent(quote)}?date=${encodeURIComponent(day)}`,
+      { signal: controller.signal },
+    );
+    return response.ok ? validRate((await response.json()) as { date?: unknown; rate?: unknown }) : null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export function getCachedExchangeRate(base: string, quote: string, date: string): ExchangeRate | undefined {
   if (base === quote) return { base, quote, date: dateKey(date), rate: 1 };
   const key = cacheKey(base, quote, date);
@@ -87,38 +139,17 @@ export async function fetchExchangeRate(base: string, quote: string, date: strin
   if (current) return current;
 
   const request = (async () => {
-    // Abort slow requests so imports and totals fall back instead of hanging.
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-    let payload: FrankfurterRateResponse;
-    try {
-      const response = await fetch(
-        `https://api.frankfurter.dev/v2/rate/${encodeURIComponent(base)}/${encodeURIComponent(quote)}?date=${encodeURIComponent(dateKey(date))}`,
-        { signal: controller.signal },
-      );
-      if (!response.ok) throw new Error(`Exchange-rate request failed (${response.status}).`);
-      payload = (await response.json()) as FrankfurterRateResponse;
-    } catch (error) {
+    const day = dateKey(date);
+    const found = (await fromServer(base.toUpperCase(), quote.toUpperCase(), day)) ?? (await fromFrankfurter(base, quote, day));
+    if (!found) {
       // Offline or failed: use the closest stored rate (not cached, so the next try refetches).
-      const fallback = nearestStoredRate(base, quote, dateKey(date));
+      const fallback = nearestStoredRate(base, quote, day);
       if (fallback) return fallback;
-      throw error;
-    } finally {
-      clearTimeout(timeout);
+      throw new Error("Exchange-rate request failed.");
     }
-    const numericRate = payload.rate;
-    if (numericRate === undefined || !payload.date || !Number.isFinite(numericRate) || numericRate <= 0) {
-      throw new Error("Exchange-rate response was invalid.");
-    }
-
-    const rate = {
-      base: payload.base ?? base,
-      quote: payload.quote ?? quote,
-      date: payload.date,
-      rate: numericRate,
-    };
+    const rate = { base, quote, date: found.date, rate: found.rate };
     rateCache.set(key, rate);
-    storeRate(base, quote, dateKey(date), rate);
+    storeRate(base, quote, day, rate);
     return rate;
   })();
 

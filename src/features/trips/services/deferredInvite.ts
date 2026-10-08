@@ -1,11 +1,11 @@
 import { Platform } from "react-native";
 import * as Application from "expo-application";
 import * as Clipboard from "expo-clipboard";
+import { INVITE_SITE_URLS } from "@/constants/legal";
 import { useSettingsStore } from "@/features/settings/store/settingsStore";
 import { usePendingJoinStore } from "@/features/trips/store/pendingJoinStore";
 import { inviteCodeFromReferrer, inviteCodeFromUrl } from "@/features/trips/utils/inviteLinks";
 import { track } from "@/modules/analytics";
-import { backendSiteUrl } from "@/modules/backend";
 import { logger } from "@/modules/logger";
 import { storage } from "@/modules/storage";
 
@@ -16,9 +16,9 @@ const CHECKED_KEY = "deferred-invite-checked";
  * a URL first so there's no paste prompt unless one is there.
  */
 async function codeFromClipboard(): Promise<string | null> {
-  if (!backendSiteUrl || !(await Clipboard.hasUrlAsync())) return null;
+  if (INVITE_SITE_URLS.length === 0 || !(await Clipboard.hasUrlAsync())) return null;
   const url = await Clipboard.getUrlAsync();
-  return url ? inviteCodeFromUrl(url, backendSiteUrl) : null;
+  return url ? inviteCodeFromUrl(url, INVITE_SITE_URLS) : null;
 }
 
 /**

@@ -2,7 +2,11 @@ import { Linking } from "react-native";
 import * as WebBrowser from "expo-web-browser";
 import { backendSiteUrl } from "@/modules/backend";
 
-const siteUrl = backendSiteUrl ?? "";
+/** Our domain for public pages (a Cloudflare Worker in front of Convex), else Convex's own site URL. */
+const siteUrl = process.env.EXPO_PUBLIC_WEB_URL?.replace(/\/$/, "") || backendSiteUrl || "";
+
+/** Hosts whose invite links the app accepts: ours, and links shared before the domain moved. */
+export const INVITE_SITE_URLS = [siteUrl, backendSiteUrl].filter((url): url is string => !!url);
 
 export const LEGAL_URLS = {
   privacy: `${siteUrl}/privacy`,

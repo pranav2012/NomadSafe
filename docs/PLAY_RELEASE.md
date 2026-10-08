@@ -26,8 +26,9 @@ Status of each step for the first Android release. ✅ = done, 🧑 = you do it 
 | Package name | `com.pranav.nomadsafe` (permanent once uploaded) |
 | Backend (prod) | `https://gregarious-crocodile-599.convex.cloud` |
 | Site (prod) | `https://gregarious-crocodile-599.convex.site` |
-| Privacy policy URL | `https://gregarious-crocodile-599.convex.site/privacy` |
-| Account deletion URL | `https://gregarious-crocodile-599.convex.site/delete-account` |
+| Public pages | `https://nomadsafe.pranav-agarwal.com` (Cloudflare Worker in `workers/site`, forwarding to the Convex site) |
+| Privacy policy URL | `https://nomadsafe.pranav-agarwal.com/privacy` |
+| Account deletion URL | `https://nomadsafe.pranav-agarwal.com/delete-account` |
 | Google sign-in callback | `https://gregarious-crocodile-599.convex.site/api/auth/callback/google` |
 | Support email | `p2012agarwal@gmail.com` (Convex `SUPPORT_EMAIL`) |
 | Upload key SHA-1 | Printed by `keytool -printcert -jarfile <build>.aab`, or at expo.dev → Project → Credentials → Android |
@@ -96,7 +97,7 @@ npx eas-cli submit -p android --profile production --path <aab or latest>
 
 | Form | Answer |
 |---|---|
-| Privacy policy | `https://gregarious-crocodile-599.convex.site/privacy` |
+| Privacy policy | `https://nomadsafe.pranav-agarwal.com/privacy` |
 | App access | Restricted. Add a Google test account (email + password) for reviewers. Note: "Sign in with Google." (The app lock is off by default.) |
 | Ads | **Yes, the app contains ads** (Free plan only; AdMob interstitials after finished actions) |
 | Content rating | Complete the IARC questionnaire. It's a utility app with no user-generated public content; location sharing is only with contacts the user chose. Expect Everyone / PEGI 3. |

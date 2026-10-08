@@ -1,0 +1,9 @@
+# Public pages on our own domain; Convex's free plan has no custom domains. Deploy: npx wrangler deploy
+name = "nomadsafe-site"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+workers_dev = false
+routes = [{ pattern = "nomadsafe.pranav-agarwal.com", custom_domain = true }]
+
+[vars]
+CONVEX_SITE_URL = "https://gregarious-crocodile-599.convex.site"

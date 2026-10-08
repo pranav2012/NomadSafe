@@ -133,8 +133,8 @@ export const privacyPolicy = httpAction(async () => {
 <li><strong>Websites of links you save, including YouTube, TikTok and Instagram</strong> (directly from your phone): when you save a link shared from another app, NomadSafe fetches its public preview (title, site name and image) from YouTube or TikTok, or from the linked page itself, and then loads the preview image from wherever that page points; only the link is sent. Instagram links get no preview request. Playing a saved reel or video in the app loads it from that site, as opening it in a browser would. These sites see your IP address and may set their own cookies.</li>
 <li><strong>MET Norway</strong> (via our server): trip coordinates rounded to about 10 km, for weather forecasts and current conditions. Our server keeps a shared copy of each forecast, not linked to you, and asks MET Norway for a fixed worldwide grid of points for the globe's live cloud cover.</li>
 <li><strong>Cloudflare and NASA GIBS</strong>: a rough rectangle around your trip's destinations, to download satellite imagery for the home globe from our copy on Cloudflare, or from NASA if that is unavailable.</li>
-<li><strong>Frankfurter</strong> (api.frankfurter.dev, directly from your phone): currency codes and dates only, to look up exchange rates for converting your expenses. No amounts, merchants or trip details are sent; Frankfurter sees your IP address.</li>
-<li><strong>Hugging Face</strong>: model download requests (your IP address), if you download an AI model.</li>
+<li><strong>Frankfurter</strong> (api.frankfurter.dev, via our server, or directly from your phone when you are signed out or our server is unavailable): currency codes and dates only, to look up exchange rates for converting your expenses. No amounts, merchants or trip details are sent. Our server keeps a shared copy of each rate, not linked to you; when your phone asks Frankfurter directly, Frankfurter sees your IP address.</li>
+<li><strong>Cloudflare</strong>: model download requests (your IP address), if you download an AI model, from our copy of the model files.</li>
 <li><strong>OpenRouter and the AI model provider it uses</strong> (via our server, Pro with Online AI on): AI requests as described under Online AI.</li>
 <li><strong>The AI provider you choose</strong> (directly from your phone, if you add your own API key): AI requests as described under Online AI.</li>
 <li><strong>RevenueCat and Google Play / the App Store</strong>: your account ID and purchase records, to provide paid plans.</li>
@@ -250,7 +250,7 @@ function joinStoreLink(url: URL, code: string, ios: boolean) {
   if (!appStoreUrl) {
     return `<p>NomadSafe for iPhone is coming soon. Keep your invite code to join the trip once it's out.</p>`;
   }
-  const inviteUrl = `${url.origin}/join/${code}`;
+  const inviteUrl = `${process.env.WEB_URL || url.origin}/join/${code}`;
   // text/uri-list makes the copy a URL on iOS, so the app can check for it without a paste prompt.
   const copyAndGo = `async function getApp(){var u=${JSON.stringify(inviteUrl)};try{await navigator.clipboard.write([new ClipboardItem({"text/plain":new Blob([u],{type:"text/plain"}),"text/uri-list":new Blob([u],{type:"text/uri-list"})})]);}catch(e){try{await navigator.clipboard.writeText(u);}catch(e2){}}location.href=${JSON.stringify(appStoreUrl)};}`;
   return `<p>Don't have the app yet?</p>

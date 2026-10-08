@@ -23,6 +23,8 @@ import type * as legalPages from "../legalPages.js";
 import type * as migrations from "../migrations.js";
 import type * as places from "../places.js";
 import type * as pushNotifications from "../pushNotifications.js";
+import type * as rates from "../rates.js";
+import type * as ratesRules from "../ratesRules.js";
 import type * as safetyAlerts from "../safetyAlerts.js";
 import type * as securityRules from "../securityRules.js";
 import type * as sharing from "../sharing.js";
@@ -53,6 +55,8 @@ declare const fullApi: ApiFromModules<{
   migrations: typeof migrations;
   places: typeof places;
   pushNotifications: typeof pushNotifications;
+  rates: typeof rates;
+  ratesRules: typeof ratesRules;
   safetyAlerts: typeof safetyAlerts;
   securityRules: typeof securityRules;
   sharing: typeof sharing;
