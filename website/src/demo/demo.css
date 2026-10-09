@@ -92,8 +92,32 @@
     --k: 0.70149;
   }
 }
-@media (max-width: 359px) {
+/* Phones: smaller frames so a section isn't one tall phone. */
+@media (max-width: 640px) {
   .demo-phone {
+    --w: 280px;
+    --k: 0.65174;
+  }
+  .demo-phone--section {
+    --w: 250px;
+    --k: 0.57711;
+  }
+  .demo-phone__hint {
+    font-size: 0.78rem;
+  }
+  .feature {
+    padding-block: 52px;
+  }
+  .feature__grid {
+    gap: 36px;
+  }
+  .feature__copy h2 {
+    margin-bottom: 20px;
+  }
+}
+@media (max-width: 359px) {
+  .demo-phone,
+  .demo-phone--section {
     --w: 272px;
     --k: 0.63184;
   }

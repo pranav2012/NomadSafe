@@ -16,7 +16,7 @@ export function AiBand() {
             <ul className="chips" aria-label="AI options">
               <li>Works offline</li>
               <li>Runs on your phone</li>
-              <li>Online AI optional, with Pro or your own key</li>
+              <li>Optional online AI</li>
             </ul>
           </div>
         </div>

@@ -1109,3 +1109,124 @@ a.store-badge:hover {
   }
 }
 
+
+/* Phones: titles instead of paragraphs, smaller type and phones, more air between sections. */
+@media (max-width: 640px) {
+  body {
+    font-size: 1rem;
+    line-height: 1.55;
+  }
+  h2 {
+    font-size: 1.85rem;
+    line-height: 1.1;
+  }
+  .hero__copy h1 {
+    font-size: 2.35rem;
+  }
+  .hero__copy {
+    gap: 18px;
+  }
+  .lede {
+    font-size: 1rem;
+  }
+  .pill {
+    font-size: 0.8rem;
+    padding: 6px 12px 6px 10px;
+  }
+  .trust {
+    font-size: 0.8rem;
+  }
+  .trust li::before {
+    width: 12px;
+    height: 12px;
+  }
+  .eyebrow {
+    margin-bottom: 14px;
+    font-size: 0.72rem;
+  }
+  .eyebrow::after {
+    width: 36px;
+  }
+  .eyebrow__index {
+    min-width: 32px;
+    height: 24px;
+  }
+  .points {
+    gap: 12px;
+  }
+  .points li {
+    padding-left: 28px;
+  }
+  .points li::before {
+    top: 0.3em;
+    width: 14px;
+    height: 14px;
+  }
+  .points__body {
+    display: none;
+  }
+  .footnote {
+    margin-top: 20px;
+    padding-top: 14px;
+    font-size: 0.8rem;
+  }
+  .halo {
+    width: 420px;
+  }
+  .band__head {
+    margin-bottom: 28px;
+  }
+  .ai-band {
+    gap: 28px;
+    padding: 36px 22px;
+  }
+  .ai-band__copy p:not(.eyebrow) {
+    font-size: 0.95rem;
+  }
+  .orb {
+    width: 110px;
+  }
+  .chips {
+    gap: 8px;
+  }
+  .chips li {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
+  .privacy-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  .privacy-card {
+    gap: 8px;
+    padding: 20px 16px;
+  }
+  .privacy-card h3 {
+    font-size: 0.95rem;
+    line-height: 1.3;
+  }
+  .privacy-card__icon {
+    width: 40px;
+    height: 40px;
+    margin-bottom: 4px;
+  }
+  .privacy-card__body {
+    display: none;
+  }
+  .cta__card {
+    gap: 16px;
+    padding: 44px 20px;
+  }
+  .cta__card .badges {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    width: 100%;
+    max-width: 280px;
+  }
+  .cta__card .store-badge {
+    justify-content: center;
+  }
+  .cta__note {
+    font-size: 0.82rem;
+  }
+}

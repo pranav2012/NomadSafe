@@ -62,7 +62,7 @@ export function PrivacyBand() {
                 </svg>
               </span>
               <h3>{card.title}</h3>
-              <p>{card.body}</p>
+              <p className="privacy-card__body">{card.body}</p>
             </li>
           ))}
         </ul>

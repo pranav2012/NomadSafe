@@ -27,7 +27,7 @@ function Feature({ id, index, label, title, points, footnote, glow, flip, phone 
           <ul className="points">
             {points.map((p) => (
               <li key={p.title}>
-                <strong>{p.title}</strong> {p.body}
+                <strong>{p.title}</strong> <span className="points__body">{p.body}</span>
               </li>
             ))}
           </ul>
