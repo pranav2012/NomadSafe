@@ -295,7 +295,12 @@
     "locked": "Bloccato",
     "unlocked": "Sbloccato",
     "unlockWith": "Sblocca con {{biometricName}}",
-    "unlockFailed": "Sblocco non riuscito. Tocca per riprovare."
+    "unlockFailed": "Sblocco non riuscito. Tocca per riprovare.",
+    "reviewerTitle": "Accesso per la revisione",
+    "reviewerEmail": "Email",
+    "reviewerPassword": "Password",
+    "reviewerSignIn": "Accedi",
+    "reviewerFailed": "Email o password errata."
   },
   "biometric": {
     "touchId": "Touch ID",

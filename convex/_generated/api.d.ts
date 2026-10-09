@@ -25,6 +25,7 @@ import type * as places from "../places.js";
 import type * as pushNotifications from "../pushNotifications.js";
 import type * as rates from "../rates.js";
 import type * as ratesRules from "../ratesRules.js";
+import type * as reviewer from "../reviewer.js";
 import type * as safetyAlerts from "../safetyAlerts.js";
 import type * as securityRules from "../securityRules.js";
 import type * as sharing from "../sharing.js";
@@ -57,6 +58,7 @@ declare const fullApi: ApiFromModules<{
   pushNotifications: typeof pushNotifications;
   rates: typeof rates;
   ratesRules: typeof ratesRules;
+  reviewer: typeof reviewer;
   safetyAlerts: typeof safetyAlerts;
   securityRules: typeof securityRules;
   sharing: typeof sharing;

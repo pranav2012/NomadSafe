@@ -12,7 +12,7 @@ import {
   type QueryCtx,
 } from "./_generated/server";
 import { requireAppCheck } from "./appCheck";
-import { hasActiveCloudAi, planFromSubscriber, type PlanSnapshot } from "./billingRules";
+import { effectivePlan, planFromSubscriber, type PlanSnapshot } from "./billingRules";
 import { constantTimeEqual } from "./securityRules";
 import { getAuthenticatedUser, requireUser } from "./users";
 
@@ -30,13 +30,28 @@ export async function getEntitlement(ctx: QueryCtx | MutationCtx, userId: string
     .unique();
 }
 
+async function getGrant(ctx: QueryCtx | MutationCtx, userId: string) {
+  return ctx.db
+    .query("planGrants")
+    .withIndex("by_user", (q) => q.eq("userId", userId))
+    .unique();
+}
+
+/** The user's plan from RevenueCat and any grant combined. */
+async function planOf(ctx: QueryCtx | MutationCtx, userId: string) {
+  const [purchased, granted] = await Promise.all([getEntitlement(ctx, userId), getGrant(ctx, userId)]);
+  return { purchased, ...effectivePlan(purchased, granted, Date.now()) };
+}
+
 export async function userHasCloudAi(ctx: QueryCtx | MutationCtx, userId: string) {
-  return hasActiveCloudAi(await getEntitlement(ctx, userId), Date.now());
+  return (await planOf(ctx, userId)).cloudAi;
 }
 
 export async function deleteBillingData(ctx: MutationCtx, userId: string) {
   const entitlement = await getEntitlement(ctx, userId);
   if (entitlement) await ctx.db.delete(entitlement._id);
+  const grant = await getGrant(ctx, userId);
+  if (grant) await ctx.db.delete(grant._id);
   const usage = await ctx.db
     .query("aiUsage")
     .withIndex("by_user_month", (q) => q.eq("userId", userId))
@@ -88,8 +103,42 @@ export const refreshFromRevenueCat = internalAction({
 export const planForUser = internalQuery({
   args: { userId: v.string() },
   handler: async (ctx, { userId }) => {
-    const row = await getEntitlement(ctx, userId);
-    return { unlimitedTrips: row?.unlimitedTrips ?? false, cloudAi: hasActiveCloudAi(row, Date.now()) };
+    const { unlimitedTrips, cloudAi } = await planOf(ctx, userId);
+    return { unlimitedTrips, cloudAi };
+  },
+});
+
+/**
+ * Gives a plan without a purchase (`npx convex run billing:grantPlan '{"userId":"…","tier":"pro","note":"…"}'`).
+ * `days` limits it; without it the grant lasts until revoked.
+ */
+export const grantPlan = internalMutation({
+  args: {
+    userId: v.string(),
+    tier: v.union(v.literal("plus"), v.literal("pro")),
+    note: v.string(),
+    days: v.optional(v.number()),
+  },
+  handler: async (ctx, { userId, tier, note, days }) => {
+    const existing = await getGrant(ctx, userId);
+    const row = {
+      userId,
+      unlimitedTrips: true,
+      cloudAi: tier === "pro",
+      expiresAt: days ? Date.now() + days * 24 * 60 * 60 * 1000 : undefined,
+      note,
+      createdAt: Date.now(),
+    };
+    if (existing) await ctx.db.replace(existing._id, row);
+    else await ctx.db.insert("planGrants", row);
+  },
+});
+
+export const revokePlan = internalMutation({
+  args: { userId: v.string() },
+  handler: async (ctx, { userId }) => {
+    const existing = await getGrant(ctx, userId);
+    if (existing) await ctx.db.delete(existing._id);
   },
 });
 
@@ -112,12 +161,8 @@ export const myPlan = query({
   handler: async (ctx) => {
     const user = await getAuthenticatedUser(ctx);
     if (!user) return null;
-    const row = await getEntitlement(ctx, user.id);
-    return {
-      unlimitedTrips: row?.unlimitedTrips ?? false,
-      cloudAi: hasActiveCloudAi(row, Date.now()),
-      expiresAt: row?.expiresAt ?? null,
-    };
+    const { purchased, unlimitedTrips, cloudAi } = await planOf(ctx, user.id);
+    return { unlimitedTrips, cloudAi, expiresAt: purchased?.expiresAt ?? null };
   },
 });
 

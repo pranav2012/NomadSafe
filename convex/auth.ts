@@ -27,6 +27,8 @@ export const createAuth = (ctx: GenericCtx<DataModel>) => {
     baseURL: BASE_URL,
     trustedOrigins: ["nomadsafe://", SITE_URL].filter(Boolean) as string[],
     database: authComponent.adapter(ctx),
+    // Only for accounts made by reviewer:createReviewer (the Play review login); nobody can sign up with a password.
+    emailAndPassword: { enabled: true, disableSignUp: true },
     socialProviders: {
       ...(googleClientId && googleClientSecret
         ? {

@@ -295,7 +295,12 @@
     "locked": "Gesperrt",
     "unlocked": "Entsperrt",
     "unlockWith": "Mit {{biometricName}} entsperren",
-    "unlockFailed": "Entsperren fehlgeschlagen. Tippe, um es erneut zu versuchen."
+    "unlockFailed": "Entsperren fehlgeschlagen. Tippe, um es erneut zu versuchen.",
+    "reviewerTitle": "Anmeldung für die Prüfung",
+    "reviewerEmail": "E-Mail",
+    "reviewerPassword": "Passwort",
+    "reviewerSignIn": "Anmelden",
+    "reviewerFailed": "E-Mail oder Passwort ist falsch."
   },
   "biometric": {
     "touchId": "Touch ID",

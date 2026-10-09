@@ -295,7 +295,12 @@
     "locked": "잠김",
     "unlocked": "잠금 해제됨",
     "unlockWith": "{{biometricName}}(으)로 잠금 해제",
-    "unlockFailed": "잠금을 해제하지 못했어요. 다시 시도하려면 탭하세요."
+    "unlockFailed": "잠금을 해제하지 못했어요. 다시 시도하려면 탭하세요.",
+    "reviewerTitle": "심사용 로그인",
+    "reviewerEmail": "이메일",
+    "reviewerPassword": "비밀번호",
+    "reviewerSignIn": "로그인",
+    "reviewerFailed": "이메일 또는 비밀번호가 올바르지 않습니다."
   },
   "biometric": {
     "touchId": "Touch ID",

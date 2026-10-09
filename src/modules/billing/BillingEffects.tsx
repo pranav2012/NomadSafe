@@ -1,10 +1,15 @@
 import { useEffect } from "react";
 import { useAuthStore } from "@/features/auth/store/authStore";
+import { api, useConvexAuth, useQuery } from "@/modules/backend";
 import { configurePurchases, identifyPurchaser } from "./purchases";
+import { FREE_PLAN } from "./plan";
+import { usePlanStore } from "./planStore";
 
-/** Configures RevenueCat and keeps its customer in step with the signed-in account. */
+/** Configures RevenueCat, keeps its customer in step with the signed-in account, and mirrors the server's plan (grants included). */
 export function BillingEffects() {
   const userId = useAuthStore((s) => s.user?.id ?? null);
+  const { isAuthenticated } = useConvexAuth();
+  const serverPlan = useQuery(api.billing.myPlan, isAuthenticated && userId ? {} : "skip");
 
   useEffect(() => {
     configurePurchases();
@@ -13,6 +18,15 @@ export function BillingEffects() {
   useEffect(() => {
     void identifyPurchaser(userId);
   }, [userId]);
+
+  useEffect(() => {
+    if (!userId) usePlanStore.getState().setServerPlan(FREE_PLAN);
+  }, [userId]);
+
+  useEffect(() => {
+    if (!serverPlan) return;
+    usePlanStore.getState().setServerPlan({ unlimitedTrips: serverPlan.unlimitedTrips, cloudAi: serverPlan.cloudAi });
+  }, [serverPlan]);
 
   return null;
 }

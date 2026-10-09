@@ -295,7 +295,12 @@
     "locked": "பூட்டப்பட்டுள்ளது",
     "unlocked": "திறக்கப்பட்டது",
     "unlockWith": "{{biometricName}} மூலம் திறக்கவும்",
-    "unlockFailed": "திறக்க முடியவில்லை. மீண்டும் முயல தட்டவும்."
+    "unlockFailed": "திறக்க முடியவில்லை. மீண்டும் முயல தட்டவும்.",
+    "reviewerTitle": "மதிப்பாய்வுக்கான உள்நுழைவு",
+    "reviewerEmail": "மின்னஞ்சல்",
+    "reviewerPassword": "கடவுச்சொல்",
+    "reviewerSignIn": "உள்நுழை",
+    "reviewerFailed": "மின்னஞ்சல் அல்லது கடவுச்சொல் தவறு."
   },
   "biometric": {
     "touchId": "Touch ID",

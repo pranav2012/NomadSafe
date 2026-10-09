@@ -295,7 +295,12 @@
     "locked": "ಲಾಕ್ ಆಗಿದೆ",
     "unlocked": "ಅನ್‌ಲಾಕ್ ಆಗಿದೆ",
     "unlockWith": "{{biometricName}} ಮೂಲಕ ಅನ್‌ಲಾಕ್ ಮಾಡಿ",
-    "unlockFailed": "ಅನ್‌ಲಾಕ್ ಮಾಡಲಾಗಲಿಲ್ಲ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಲು ಟ್ಯಾಪ್ ಮಾಡಿ."
+    "unlockFailed": "ಅನ್‌ಲಾಕ್ ಮಾಡಲಾಗಲಿಲ್ಲ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಲು ಟ್ಯಾಪ್ ಮಾಡಿ.",
+    "reviewerTitle": "ಪರಿಶೀಲನೆಗಾಗಿ ಸೈನ್ ಇನ್",
+    "reviewerEmail": "ಇಮೇಲ್",
+    "reviewerPassword": "ಪಾಸ್‌ವರ್ಡ್",
+    "reviewerSignIn": "ಸೈನ್ ಇನ್ ಮಾಡಿ",
+    "reviewerFailed": "ಇಮೇಲ್ ಅಥವಾ ಪಾಸ್‌ವರ್ಡ್ ತಪ್ಪಾಗಿದೆ."
   },
   "biometric": {
     "touchId": "Touch ID",

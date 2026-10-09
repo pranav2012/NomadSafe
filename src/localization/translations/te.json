@@ -295,7 +295,12 @@
     "locked": "లాక్ అయింది",
     "unlocked": "అన్‌లాక్ అయింది",
     "unlockWith": "{{biometricName}}తో అన్‌లాక్ చేయండి",
-    "unlockFailed": "అన్‌లాక్ చేయలేకపోయాం. మళ్లీ ప్రయత్నించడానికి ట్యాప్ చేయండి."
+    "unlockFailed": "అన్‌లాక్ చేయలేకపోయాం. మళ్లీ ప్రయత్నించడానికి ట్యాప్ చేయండి.",
+    "reviewerTitle": "సమీక్ష కోసం సైన్ ఇన్",
+    "reviewerEmail": "ఈమెయిల్",
+    "reviewerPassword": "పాస్‌వర్డ్",
+    "reviewerSignIn": "సైన్ ఇన్ చేయండి",
+    "reviewerFailed": "ఈమెయిల్ లేదా పాస్‌వర్డ్ తప్పు."
   },
   "biometric": {
     "touchId": "Touch ID",

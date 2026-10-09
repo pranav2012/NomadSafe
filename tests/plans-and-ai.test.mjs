@@ -354,3 +354,18 @@ test("app landing: two Money sessions switch to Money, two quick exits switch ba
   assert.equal(state.landOnMoney, true);
   assert.deepEqual(landing.nextLanding(state, { ...visit, hadTrip: true }), landing.INITIAL_LANDING);
 });
+
+test("a plan grant adds to the purchased plan until it expires", () => {
+  const now = 1_000_000;
+  const free = { unlimitedTrips: false, cloudAi: false };
+  const pro = { unlimitedTrips: true, cloudAi: true };
+  assert.deepEqual(rules.effectivePlan(null, null, now), free);
+  assert.deepEqual(rules.effectivePlan(null, { ...pro }, now), pro);
+  assert.deepEqual(rules.effectivePlan(null, { ...pro, expiresAt: now - 1 }, now), free);
+  assert.deepEqual(rules.effectivePlan(null, { unlimitedTrips: false, cloudAi: true }, now), pro);
+  assert.deepEqual(rules.effectivePlan({ unlimitedTrips: true, cloudAi: false }, null, now), { unlimitedTrips: true, cloudAi: false });
+  assert.deepEqual(rules.effectivePlan({ ...pro, expiresAt: now - 1 }, { unlimitedTrips: true, cloudAi: false }, now), {
+    unlimitedTrips: true,
+    cloudAi: false,
+  });
+});

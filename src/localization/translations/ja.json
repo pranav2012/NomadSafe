@@ -295,7 +295,12 @@
     "locked": "ロック中",
     "unlocked": "ロック解除しました",
     "unlockWith": "{{biometricName}}でロック解除",
-    "unlockFailed": "ロックを解除できませんでした。タップしてもう一度お試しください。"
+    "unlockFailed": "ロックを解除できませんでした。タップしてもう一度お試しください。",
+    "reviewerTitle": "審査用サインイン",
+    "reviewerEmail": "メールアドレス",
+    "reviewerPassword": "パスワード",
+    "reviewerSignIn": "サインイン",
+    "reviewerFailed": "メールアドレスまたはパスワードが正しくありません。"
   },
   "biometric": {
     "touchId": "Touch ID",

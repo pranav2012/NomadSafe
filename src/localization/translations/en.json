@@ -685,7 +685,12 @@
     "locked": "Locked",
     "unlocked": "Unlocked",
     "unlockWith": "Unlock with {{biometricName}}",
-    "unlockFailed": "Couldn't unlock. Tap to try again."
+    "unlockFailed": "Couldn't unlock. Tap to try again.",
+    "reviewerTitle": "Review sign-in",
+    "reviewerEmail": "Email",
+    "reviewerPassword": "Password",
+    "reviewerSignIn": "Sign in",
+    "reviewerFailed": "Wrong email or password."
   },
   "biometric": {
     "touchId": "Touch ID",

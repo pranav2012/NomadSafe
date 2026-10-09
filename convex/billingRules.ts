@@ -62,6 +62,20 @@ export function hasActiveCloudAi(plan: PlanSnapshot | null, now: number): boolea
   return plan.expiresAt === undefined || plan.expiresAt > now;
 }
 
+/** The better of a purchased plan and a granted one at `now`; each counts only while unexpired. */
+export function effectivePlan(
+  purchased: PlanSnapshot | null,
+  granted: PlanSnapshot | null,
+  now: number,
+): { unlimitedTrips: boolean; cloudAi: boolean } {
+  const live = (plan: PlanSnapshot | null) => (plan && (plan.expiresAt === undefined || plan.expiresAt > now) ? plan : null);
+  const grant = live(granted);
+  return {
+    unlimitedTrips: (purchased?.unlimitedTrips ?? false) || (grant?.unlimitedTrips ?? false) || (grant?.cloudAi ?? false),
+    cloudAi: hasActiveCloudAi(purchased, now) || (grant?.cloudAi ?? false),
+  };
+}
+
 export function usageMonth(now: number): string {
   return new Date(now).toISOString().slice(0, 7);
 }

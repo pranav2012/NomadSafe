@@ -179,6 +179,16 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_user", ["userId"]),
 
+  // Plans given without a purchase (e.g. the Play review account); kept apart so RevenueCat refreshes never overwrite them.
+  planGrants: defineTable({
+    userId: v.string(),
+    unlimitedTrips: v.boolean(),
+    cloudAi: v.boolean(),
+    expiresAt: v.optional(v.number()),
+    note: v.string(),
+    createdAt: v.number(),
+  }).index("by_user", ["userId"]),
+
   // Cloud AI calls per user per calendar month (UTC, "YYYY-MM").
   aiUsage: defineTable({
     userId: v.string(),

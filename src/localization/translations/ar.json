@@ -295,7 +295,12 @@
     "locked": "مقفل",
     "unlocked": "تم فتح القفل",
     "unlockWith": "افتح القفل باستخدام {{biometricName}}",
-    "unlockFailed": "تعذّر فتح القفل. اضغط للمحاولة مرة أخرى."
+    "unlockFailed": "تعذّر فتح القفل. اضغط للمحاولة مرة أخرى.",
+    "reviewerTitle": "تسجيل دخول المراجعة",
+    "reviewerEmail": "البريد الإلكتروني",
+    "reviewerPassword": "كلمة المرور",
+    "reviewerSignIn": "تسجيل الدخول",
+    "reviewerFailed": "البريد الإلكتروني أو كلمة المرور غير صحيحة."
   },
   "biometric": {
     "touchId": "Touch ID",

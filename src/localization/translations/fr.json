@@ -295,7 +295,12 @@
     "locked": "Verrouillé",
     "unlocked": "Déverrouillé",
     "unlockWith": "Déverrouiller avec {{biometricName}}",
-    "unlockFailed": "Déverrouillage impossible. Touchez pour réessayer."
+    "unlockFailed": "Déverrouillage impossible. Touchez pour réessayer.",
+    "reviewerTitle": "Connexion pour la vérification",
+    "reviewerEmail": "E-mail",
+    "reviewerPassword": "Mot de passe",
+    "reviewerSignIn": "Se connecter",
+    "reviewerFailed": "E-mail ou mot de passe incorrect."
   },
   "biometric": {
     "touchId": "Touch ID",

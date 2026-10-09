@@ -295,7 +295,12 @@
     "locked": "已锁定",
     "unlocked": "已解锁",
     "unlockWith": "使用{{biometricName}}解锁",
-    "unlockFailed": "无法解锁。轻点重试。"
+    "unlockFailed": "无法解锁。轻点重试。",
+    "reviewerTitle": "审核登录",
+    "reviewerEmail": "电子邮件",
+    "reviewerPassword": "密码",
+    "reviewerSignIn": "登录",
+    "reviewerFailed": "电子邮件或密码错误。"
   },
   "biometric": {
     "touchId": "Touch ID",

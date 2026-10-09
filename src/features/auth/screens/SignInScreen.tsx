@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { ActivityIndicator, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import React, { useRef, useState } from "react";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -9,6 +9,7 @@ import { AuraSkyHero, consumeSkyIntro, Icon, PressableScale, SKY_INTRO_MS, useAu
 import { LEGAL_URLS, openLegalPage } from "@/constants/legal";
 import { authClient } from "@/features/auth";
 import { useAmbientLoop } from "@/features/auth/hooks/useAmbientLoop";
+import { ReviewerSignInSheet } from "@/features/auth/components/ReviewerSignInSheet";
 import { useSettingsStore } from "@/features/settings/store/settingsStore";
 import { useLocalization } from "@/localization";
 import { track } from "@/modules/analytics";
@@ -16,6 +17,8 @@ import { withSystemPrompt } from "@/utils/systemPrompt";
 import { auraSignal } from "@/constants/aura";
 
 const DANGER = auraSignal.danger;
+const REVIEWER_TAPS = 10;
+const REVIEWER_TAP_GAP_MS = 1500;
 const AMBIENCE = require("../../../../assets/audio/aurora-ambience.m4a");
 
 function GoogleGlyph() {
@@ -49,6 +52,18 @@ export default function SignInScreen() {
 
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [reviewerOpen, setReviewerOpen] = useState(false);
+  const titleTaps = useRef({ count: 0, last: 0 });
+
+  const onTitleTap = () => {
+    const now = Date.now();
+    const taps = titleTaps.current;
+    taps.count = now - taps.last < REVIEWER_TAP_GAP_MS ? taps.count + 1 : 1;
+    taps.last = now;
+    if (taps.count < REVIEWER_TAPS) return;
+    taps.count = 0;
+    setReviewerOpen(true);
+  };
   const [intro] = useState(consumeSkyIntro);
   const contentDelay = intro ? SKY_INTRO_MS - 900 : 200;
   const soundOn = useSettingsStore((s) => s.ambientSoundEnabled);
@@ -121,7 +136,10 @@ export default function SignInScreen() {
 
       <View style={[styles.body, { paddingBottom: insets.bottom + 16 }]}>
         <Animated.View entering={FadeInDown.delay(contentDelay).duration(600)}>
-          <Text style={[styles.title, { color: c.text, fontFamily: f.bold }]}>{t("common.appName")}</Text>
+          {/* Ten quick taps open the app review sign-in (described in Play Console → App access). */}
+          <Pressable onPress={onTitleTap} accessible={false} style={styles.titleTap}>
+            <Text style={[styles.title, { color: c.text, fontFamily: f.bold }]}>{t("common.appName")}</Text>
+          </Pressable>
           <Text style={[styles.tagline, { color: c.textSoft, fontFamily: f.regular }]}>{t("auth.tagline")}</Text>
         </Animated.View>
 
@@ -165,6 +183,7 @@ export default function SignInScreen() {
           </Text>
         </Animated.View>
       </View>
+      <ReviewerSignInSheet visible={reviewerOpen} onClose={() => setReviewerOpen(false)} />
     </View>
   );
 }
@@ -200,6 +219,7 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.22)",
   },
   body: { flex: 1, paddingHorizontal: 24, justifyContent: "space-between", marginTop: -24 },
+  titleTap: { alignSelf: "flex-start" },
   title: { fontSize: 40, letterSpacing: -1.6, lineHeight: 44 },
   tagline: { fontSize: 16, lineHeight: 23, marginTop: 8, maxWidth: 340 },
   actions: { gap: 14 },
