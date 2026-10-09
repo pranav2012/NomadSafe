@@ -187,6 +187,8 @@ export default function CircleScreen() {
         visible={addOpen}
         onClose={() => setAddOpen(false)}
         onSubmit={circle.add}
+        onShareLink={circle.shareInviteLink}
+        onResetLink={circle.resetInviteLink}
         existingEmails={new Set(circle.people.map((p) => p.email ?? ""))}
       />
     </View>

@@ -15,6 +15,8 @@ import { importErrorCode } from "@/features/expenses/services/importErrors";
 import { useGmailImport } from "@/features/expenses/hooks/useGmailImport";
 import { useGmailProgressLabel } from "@/features/expenses/hooks/useGmailStatus";
 import { syncTripGmail, type TripGmailSyncResult } from "@/features/expenses/services/tripGmailSync";
+import { useGmailInboxStore } from "@/features/expenses/store/gmailInboxStore";
+import { openGmailReview } from "@/features/expenses/components/GmailReviewSheet";
 import type { Trip } from "@/features/trips/store/tripsStore";
 import { track, PrivateView } from "@/modules/analytics";
 import { logger } from "@/modules/logger";
@@ -43,7 +45,10 @@ export function ImportSheet({ visible, onClose, ...props }: ImportSheetProps) {
   );
 }
 
-function ImportBody({ groupId, trip, initialTab = "paste", onImported, onFromApp }: Omit<ImportSheetProps, "visible">) {
+// Lets this sheet finish closing before the review sheet opens; iOS can't present one modal while another is leaving.
+const REVIEW_OPEN_DELAY_MS = 450;
+
+function ImportBody({ groupId, trip, initialTab = "paste", onClose, onImported, onFromApp }: Omit<ImportSheetProps, "visible">) {
   const { c, f } = useAura();
   const { t, formatCurrency, locale } = useLocalization();
   const addExpenses = useExpensesStore((state) => state.addExpenses);
@@ -55,12 +60,19 @@ function ImportBody({ groupId, trip, initialTab = "paste", onImported, onFromApp
   const [isWorking, setIsWorking] = useState(false);
   const [gmailResult, setGmailResult] = useState<TripGmailSyncResult | null>(null);
   const progressLabel = useGmailProgressLabel(trip?.id);
+  const waiting = useGmailInboxStore((state) => (trip ? state.proposals.filter((proposal) => proposal.tripId === trip.id).length : 0));
+  const review = () => {
+    if (!trip) return;
+    const tripId = trip.id;
+    onClose();
+    setTimeout(() => openGmailReview(tripId, "import"), REVIEW_OPEN_DELAY_MS);
+  };
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const autoScannedRef = useRef(false);
   const submittingRef = useRef(false);
 
-  // Gmail spends are added by the trip sync itself; only pasted alerts go through review.
+  // Gmail finds wait in the trip's review sheet; pasted alerts are reviewed here.
   const scanGmail = async () => {
     if (!trip) {
       setError(t("expenses.gmailNeedsTrip"));
@@ -230,10 +242,15 @@ function ImportBody({ groupId, trip, initialTab = "paste", onImported, onFromApp
                 <Text style={[styles.progress, { color: c.textSoft, fontFamily: f.medium }]} accessibilityLiveRegion="polite">
                   {isWorking
                     ? (progressLabel ?? t("expenses.gmailSearching"))
-                    : gmailResult && gmailResult.expensesAdded > 0
-                      ? t("expenses.autoSynced", { count: gmailResult.expensesAdded })
-                      : t("expenses.gmailUpToDate")}
+                    : gmailResult && gmailResult.found > 0
+                      ? t("gmailReview.found", { count: gmailResult.found })
+                      : waiting > 0
+                        ? t("gmailReview.card", { count: waiting })
+                        : t("expenses.gmailUpToDate")}
                 </Text>
+              ) : null}
+              {!isWorking && waiting > 0 ? (
+                <AuraButton label={t("gmailReview.reviewCount", { count: waiting })} icon="check" variant="secondary" onPress={review} />
               ) : null}
             </>
           )}

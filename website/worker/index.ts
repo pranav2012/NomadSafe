@@ -7,6 +7,7 @@ const ROUTES = [
   { path: /^\/privacy$/, methods: ["GET", "HEAD"] },
   { path: /^\/delete-account$/, methods: ["GET", "HEAD", "POST"] },
   { path: /^\/join\/[A-Za-z0-9]{1,16}\/?$/, methods: ["GET", "HEAD"] },
+  { path: /^\/circle\/[A-Za-z0-9]{1,16}\/?$/, methods: ["GET", "HEAD"] },
 ];
 
 /** Runs only for the paths in `run_worker_first`: forwards the public pages to Convex's HTTP actions; anything else gets the static 404 page. */

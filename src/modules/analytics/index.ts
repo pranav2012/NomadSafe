@@ -41,7 +41,10 @@ export interface AnalyticsEvents {
   forex_carried: { kind: "cash" | "card" };
   forex_spend_paid: { source: "manual" | "voice"; kind: "cash" | "card" };
   trip_joined: { deferred: boolean; claimed_member: boolean };
-  invite_deferred_found: { source: "install_referrer" | "clipboard" };
+  invite_deferred_found: { source: "install_referrer" | "clipboard"; kind: "group" | "circle" };
+  circle_invite_shared: { from: "add_sheet" | "invited_person" | "email_not_found" };
+  circle_invite_joined: { deferred: boolean; already_connected: boolean };
+  circle_invite_reset: undefined;
   expense_added: { source: ExpenseSourceKind; count: number };
   live_share_started: { mode: string; recipients: number };
   live_share_stopped: undefined;
@@ -79,6 +82,9 @@ export interface AnalyticsEvents {
   ticket_opened: { kind: "pdf" | "image"; count: number };
   ticket_added: { source: "gmail" | "file" | "photo" | "received" | "screenshot"; count: number };
   ticket_screenshot_read: { found: boolean };
+  gmail_found: { bookings: number; spends: number; returned: number };
+  gmail_review_opened: { from: "trip" | "money" | "import"; bookings: number; spends: number };
+  gmail_review: { action: "confirm" | "edit" | "dismiss" | "confirm_all"; kind: "spend" | "booking" | "mixed"; count: number };
   trip_plan_opened: { from: "home" | "rail" | "day"; days: number; scope: "trip" | "day" };
   travel_reminders_scheduled: { count: number };
   must_do_suggestion: { action: "added" | "dismissed"; where: "free_day" | "trip_prep" | "day_ideas" | "saved_sheet" };

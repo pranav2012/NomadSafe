@@ -27,13 +27,13 @@ import { defaultSpendGroupId, findMoneyGroup, isTrip, selectActiveTrip, useTrips
 import { GroupPeopleSheet } from "@/features/trips/components/GroupPeopleSheet";
 import { useExpensesStore, type Expense } from "@/features/expenses/store/expensesStore";
 import { OVERVIEW, useMoneySelection, useMoneyViewStore } from "@/features/expenses/store/moneyViewStore";
-import { dismissGmailSyncBanner, useTripGmailSyncStatus } from "@/features/expenses/store/gmailSyncStatusStore";
 import { dismissGmailLostAccess, hasGmailGrant, useGmailConnectionStore } from "@/features/expenses/store/gmailConnectionStore";
 import { SELF_ID } from "@/features/expenses/utils/split";
 import { CAPTURE_BAR_HEIGHT, CaptureBar } from "@/features/expenses/components/CaptureBar";
 import { ExpenseForm } from "@/features/expenses/components/ExpenseForm";
 import { GroupMoney } from "@/features/expenses/components/GroupMoney";
 import { ImportSheet } from "@/features/expenses/components/ImportSheet";
+import { GmailReviewCard } from "@/features/expenses/components/GmailReviewSheet";
 import { MoneyOverview } from "@/features/expenses/components/MoneyOverview";
 import { MoneyGroupChips, MoneySwitcher } from "@/features/expenses/components/MoneySwitcher";
 import { NewGroupSheet } from "@/features/expenses/components/NewGroupSheet";
@@ -74,8 +74,6 @@ export default function ExpensesScreen() {
   const [exportOpen, setExportOpen] = useState(false);
   const [recording, setRecording] = useState(false);
   const plus = usePlusGate();
-  const viewingActiveTrip = !!activeTrip && group?.id === activeTrip.id;
-  const gmailAdded = useTripGmailSyncStatus(viewingActiveTrip ? activeTrip.id : undefined).unseenExpenses;
   const gmailLostAccess = useGmailConnectionStore((state) => state.lostAccess && !hasGmailGrant(state.tokens));
 
   const reviewable = group ? expenses.filter((expense) => expense.groupId === group.id && expense.splitHint?.shares) : [];
@@ -181,9 +179,7 @@ export default function ExpensesScreen() {
           </View>
           {!group ? <MoneyGroupChips onSelect={select} onNewGroup={() => startNewGroup(() => setNewGroupOpen(true))} /> : null}
 
-          {gmailAdded > 0 && activeTrip ? (
-            <Banner icon="mail" text={t("expenses.autoSynced", { count: gmailAdded })} onDismiss={() => dismissGmailSyncBanner(activeTrip.id)} />
-          ) : null}
+          {group && isTrip(group) ? <GmailReviewCard tripId={group.id} from="money" /> : null}
           {reviewable.length > 0 && !reviewDismissed ? (
             <Banner
               icon="users"

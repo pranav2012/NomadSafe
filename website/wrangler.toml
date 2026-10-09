@@ -9,7 +9,7 @@ routes = [{ pattern = "nomadsafe.pranav-agarwal.com", custom_domain = true }]
 directory = "./dist"
 binding = "ASSETS"
 not_found_handling = "404-page"
-run_worker_first = ["/privacy", "/delete-account", "/join/*"]
+run_worker_first = ["/privacy", "/delete-account", "/join/*", "/circle/*"]
 
 [vars]
 CONVEX_SITE_URL = "https://gregarious-crocodile-599.convex.site"

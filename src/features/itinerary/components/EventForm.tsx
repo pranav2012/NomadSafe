@@ -10,6 +10,7 @@ import { SELF_ID } from "@/features/expenses/utils/split";
 import { EVENT_TYPES, TRANSIT_MODES, canBeUntimed, type EventTiming, type EventType, type TransitMode } from "@/features/itinerary/constants/eventTypes";
 import type { EventLink, TripEvent } from "@/features/itinerary/store/eventsStore";
 import type { ScreenshotRead } from "@/features/itinerary/services/ticketScreenshot";
+import type { TextBooking } from "@/features/itinerary/services/itineraryExtraction";
 import { classifyLink } from "@/features/itinerary/utils/sharedLinks";
 import { TRAVEL_FIELDS, type TravelDetails, type TravelField } from "@/features/itinerary/utils/travelDetails";
 import { localizeEventDetail, localizeEventTitle } from "@/features/itinerary/utils/eventText";
@@ -84,6 +85,7 @@ export function EventForm({
   onAskForTicket,
   readScreenshot,
   prefill,
+  draft,
   visible,
   onSave,
   onDelete,
@@ -105,6 +107,8 @@ export function EventForm({
   readScreenshot?: () => Promise<ScreenshotRead | null>;
   /** A screenshot already read before the form opened: fills a new item and is kept as its ticket. */
   prefill?: ScreenshotRead | null;
+  /** Fills a new item without a screenshot (a booking found in Gmail). */
+  draft?: (TextBooking & { people?: string[] }) | null;
   visible: boolean;
   onSave: (values: EventFormValues) => void;
   onDelete?: () => void;
@@ -114,7 +118,7 @@ export function EventForm({
   const { c, f } = useAura();
 
   // The parent remounts this form (via `key`) for each open, so state initializes fresh from props.
-  const seed = event ? null : (prefill?.booking ?? null);
+  const seed = event ? null : (prefill?.booking ?? draft ?? null);
   const [type, setType] = useState<EventType>(event?.type ?? seed?.type ?? "activity");
   const [title, setTitle] = useState(event ? localizeEventTitle(event.title, t) : (seed?.title ?? ""));
   const [initialDetail] = useState(() => (event ? (localizeEventDetail(event.detail, t) ?? "") : (seed?.detail ?? "")));
@@ -129,7 +133,7 @@ export function EventForm({
         : new Date((event ? new Date(event.startAt) : (defaultStart ?? new Date())).getTime() + DAY_MS),
   );
   const [pickedWhen, setWhenKind] = useState<When>(event?.timing ?? "time");
-  const [people, setPeople] = useState<string[]>(event?.people ?? []);
+  const [people, setPeople] = useState<string[]>(event?.people ?? draft?.people ?? []);
   const [where, setWhere] = useState(event?.where ?? "");
   const [link, setLink] = useState(event?.link?.url ?? "");
   const [travel, setTravel] = useState<TravelDetails>(event?.travel ?? seed?.travel ?? {});

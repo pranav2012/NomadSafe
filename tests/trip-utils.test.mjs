@@ -20,6 +20,7 @@ const framing = loadModule("src/features/trips/utils/mapFraming.ts");
 const tripName = loadModule("src/features/trips/utils/tripName.ts");
 const money = loadModule("src/features/expenses/utils/money.ts");
 const dates = loadModule("src/features/trips/utils/dates.ts");
+const budget = loadModule("src/features/trips/utils/budgetEstimate.ts");
 
 const LISBON = { latitude: 38.72, longitude: -9.14 };
 const PORTO = { latitude: 41.15, longitude: -8.61 };
@@ -78,4 +79,27 @@ test("days left counts today, so the last day shows 1", () => {
   assert.equal(dates.daysLeftInTrip(trip, new Date(2026, 9, 10, 9)), 5, "first day");
   assert.equal(dates.daysLeftInTrip(trip, new Date(2026, 9, 14, 23)), 1, "last day");
   assert.equal(dates.daysLeftInTrip(trip, new Date(2026, 9, 15, 0)), 0, "over");
+});
+
+test("budget totals multiply per-person USD by days and travellers, then convert", () => {
+  // 20 days in Japan, one traveller, $130/day, 1 USD = 84 INR.
+  assert.deepEqual(budget.tripBudgetTotals(130, 20, 1, 84), { total: 220000, daily: 11000 });
+  assert.deepEqual(budget.tripBudgetTotals(100, 7, 2, 1), { total: 1400, daily: 200 });
+  assert.deepEqual(budget.tripBudgetTotals(61.7, 3, 1, 1), { total: 185, daily: 62 });
+});
+
+test("budget totals are hidden without a usable rate or inputs", () => {
+  assert.equal(budget.tripBudgetTotals(100, 7, 1, null), null);
+  assert.equal(budget.tripBudgetTotals(100, 7, 1, 0), null);
+  assert.equal(budget.tripBudgetTotals(100, 0, 1, 1), null);
+  assert.equal(budget.tripBudgetTotals(100, 7, 0, 1), null);
+  assert.equal(budget.tripBudgetTotals(Number.NaN, 7, 1, 1), null);
+});
+
+test("estimates round to about two significant figures", () => {
+  assert.equal(budget.roundEstimate(13240), 13000);
+  assert.equal(budget.roundEstimate(1234), 1250);
+  assert.equal(budget.roundEstimate(87), 87);
+  assert.equal(budget.roundEstimate(7.4), 7);
+  assert.equal(budget.roundEstimate(0), 0);
 });

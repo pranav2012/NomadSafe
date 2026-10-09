@@ -2,8 +2,10 @@ import { v } from "convex/values";
 import { DAY, HOUR, RateLimiter } from "@convex-dev/rate-limiter";
 import { components } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
-import { query, mutation } from "./_generated/server";
+import { query, mutation, type MutationCtx, type QueryCtx } from "./_generated/server";
+import { newInviteCode, normalizeInviteCode } from "./securityRules";
 import {
+  type AppUser,
   findAuthUserByEmail,
   findAuthUserById,
   getAuthenticatedUser,
@@ -25,6 +27,9 @@ const MAX_SHARE_MS = 25 * HOUR;
 // Each lookup reveals whether an email has an account, so it is metered per user.
 const rateLimiter = new RateLimiter(components.rateLimiter, {
   emailLookup: { kind: "token bucket", rate: 20, period: HOUR, capacity: 10 },
+  // Joining is one tap per invite; this stops scripted guessing of circle codes.
+  circleJoin: { kind: "token bucket", rate: 20, period: HOUR, capacity: 10 },
+  circleCode: { kind: "token bucket", rate: 10, period: HOUR, capacity: 5 },
 });
 
 const modeValidator = v.union(
@@ -493,5 +498,146 @@ export const getOutgoingShares = query({
       recipientUserId: share.recipientUserId,
       paused: share.paused ?? false,
     }));
+  },
+});
+
+async function uniqueCircleCode(ctx: MutationCtx) {
+  for (;;) {
+    const code = newInviteCode();
+    const taken = await ctx.db
+      .query("circleInvites")
+      .withIndex("by_code", (q) => q.eq("code", code))
+      .unique();
+    if (!taken) return code;
+  }
+}
+
+async function circleInviteByCode(ctx: QueryCtx, code: string) {
+  const normalized = normalizeInviteCode(code);
+  if (!normalized) return null;
+  return ctx.db
+    .query("circleInvites")
+    .withIndex("by_code", (q) => q.eq("code", normalized))
+    .unique();
+}
+
+async function findLink(ctx: QueryCtx, ownerUserId: string, linkedUserId: string) {
+  return ctx.db
+    .query("contactLinks")
+    .withIndex("by_owner", (q) => q.eq("ownerUserId", ownerUserId))
+    .filter((q) => q.eq(q.field("linkedUserId"), linkedUserId))
+    .first();
+}
+
+/**
+ * Makes `from`'s link to `to` accepted (so `to` gets `from`'s alerts and can see them), reusing a
+ * pending, declined or email-only link, and drops `from`'s app invites to `to`'s email.
+ */
+async function acceptLinkBetween(ctx: MutationCtx, from: AppUser, to: AppUser) {
+  const email = to.email ? normalizeEmail(to.email) : "";
+  const existing =
+    (await findLink(ctx, from.id, to.id)) ??
+    (email
+      ? await ctx.db
+          .query("contactLinks")
+          .withIndex("by_owner_email", (q) => q.eq("ownerUserId", from.id).eq("email", email))
+          .first()
+      : null);
+  const now = Date.now();
+  if (existing) {
+    if (existing.status !== "accepted" || existing.linkedUserId !== to.id) {
+      await ctx.db.patch(existing._id, { status: "accepted", linkedUserId: to.id, updatedAt: now });
+    }
+  } else {
+    await ctx.db.insert("contactLinks", {
+      ownerUserId: from.id,
+      linkedUserId: to.id,
+      name: (to.name || email.split("@")[0] || "NomadSafe").slice(0, MAX_NAME),
+      email,
+      status: "accepted",
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+  if (!email) return;
+  const invites = await ctx.db
+    .query("pendingInvites")
+    .withIndex("by_owner_email", (q) => q.eq("ownerUserId", from.id).eq("email", email))
+    .collect();
+  for (const invite of invites) await ctx.db.delete(invite._id);
+}
+
+/** The caller's reusable circle invite code, made on first use. */
+export const circleInviteCode = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const user = await requireUser(ctx);
+    const existing = await ctx.db
+      .query("circleInvites")
+      .withIndex("by_owner", (q) => q.eq("ownerUserId", user.id))
+      .first();
+    if (existing) return { code: existing.code };
+    await rateLimiter.limit(ctx, "circleCode", { key: user.id, throws: true });
+    const code = await uniqueCircleCode(ctx);
+    await ctx.db.insert("circleInvites", { ownerUserId: user.id, code, createdAt: Date.now() });
+    return { code };
+  },
+});
+
+/** Replaces the caller's circle invite code, so links shared before stop working. */
+export const resetCircleInviteCode = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const user = await requireUser(ctx);
+    await rateLimiter.limit(ctx, "circleCode", { key: user.id, throws: true });
+    const code = await uniqueCircleCode(ctx);
+    const existing = await ctx.db
+      .query("circleInvites")
+      .withIndex("by_owner", (q) => q.eq("ownerUserId", user.id))
+      .first();
+    if (existing) await ctx.db.patch(existing._id, { code, createdAt: Date.now() });
+    else await ctx.db.insert("circleInvites", { ownerUserId: user.id, code, createdAt: Date.now() });
+    return { code };
+  },
+});
+
+/** What the circle invite screen shows: only the inviter's display name, never their email. */
+export const previewCircleInvite = query({
+  args: { code: v.string() },
+  handler: async (ctx, { code }) => {
+    const user = await getAuthenticatedUser(ctx);
+    if (!user) return { status: "signed_out" as const };
+    const invite = await circleInviteByCode(ctx, code);
+    if (!invite) return { status: "not_found" as const };
+    if (invite.ownerUserId === user.id) return { status: "own" as const };
+    const owner = await findAuthUserById(ctx, invite.ownerUserId);
+    if (!owner) return { status: "not_found" as const };
+    const [toOwner, toMe] = await Promise.all([findLink(ctx, user.id, owner.id), findLink(ctx, owner.id, user.id)]);
+    return {
+      status: "ok" as const,
+      ownerName: owner.name,
+      connected: toOwner?.status === "accepted" && toMe?.status === "accepted",
+    };
+  },
+});
+
+/**
+ * Joins someone's circle from their invite link: both people end up with accepted links to each
+ * other, so each gets the other's SOS and missed-timer alerts and can share their location.
+ * Idempotent; earlier requests between the two (pending or declined) are accepted too.
+ */
+export const joinCircleInvite = mutation({
+  args: { code: v.string() },
+  handler: async (ctx, { code }) => {
+    const user = await requireUser(ctx);
+    await rateLimiter.limit(ctx, "circleJoin", { key: user.id, throws: true });
+    const invite = await circleInviteByCode(ctx, code);
+    if (!invite) throw new Error("Invite not found");
+    if (invite.ownerUserId === user.id) throw new Error("Cannot link to yourself");
+    const owner = await findAuthUserById(ctx, invite.ownerUserId);
+    if (!owner) throw new Error("Invite not found");
+    await acceptLinkBetween(ctx, owner, user);
+    await acceptLinkBetween(ctx, user, owner);
+    return { ownerUserId: owner.id };
   },
 });

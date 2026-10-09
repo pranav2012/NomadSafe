@@ -6,6 +6,7 @@ import { usePlanStore } from "@/modules/billing";
 import { useChatStore } from "@/features/ai/store/chatStore";
 import { useRecurringStore } from "@/features/expenses/store/recurringStore";
 import { usePocketsStore } from "@/features/expenses/store/pocketsStore";
+import { useGmailInboxStore } from "@/features/expenses/store/gmailInboxStore";
 import { useSplitPresetsStore } from "@/features/expenses/store/splitPresetsStore";
 import { useKeepGroupStore } from "@/features/expenses/store/keepGroupStore";
 import { useExpensesStore } from "@/features/expenses/store/expensesStore";
@@ -59,6 +60,7 @@ export async function wipeAllDeviceData({ keepModels = false }: { keepModels?: b
   useSplitPresetsStore.getState().reset();
   useRecurringStore.getState().reset();
   usePocketsStore.getState().reset();
+  useGmailInboxStore.getState().reset();
   useEventsStore.getState().reset();
   useMustDoStore.getState().reset();
   usePlaceLookupStore.getState().reset();

@@ -133,9 +133,32 @@ function remoteJson(task: AiTask, route: RemoteRoute, system: string, prompt: st
 }
 
 /**
- * Runs one structured task along its policy route. An online provider that fails (network, quota,
- * bad JSON) falls through to the next; the last provider's error is thrown.
+ * Runs one structured task along its policy route and says which provider answered. An online
+ * provider that fails (network, quota, bad JSON) falls through to the next; the last provider's
+ * error is thrown.
  */
+async function runTaskWithProvider<T>(
+  task: AiTask,
+  schema: JsonTask,
+  system: string,
+  prompt: string,
+  parse: (text: string) => T,
+  local: () => Promise<T>,
+): Promise<{ value: T; provider: AiProvider }> {
+  const routes = await routesFor(task);
+  for (const [index, route] of routes.entries()) {
+    try {
+      const value = route.kind === "local" ? await local() : parse(await remoteJson(task, route, system, prompt, schema));
+      trackProvider(task, route.kind, index > 0);
+      return { value, provider: route.kind };
+    } catch (error) {
+      if (index === routes.length - 1) throw error;
+      logger.warn("aiService", `${route.kind} ${schema.name} failed`, error);
+    }
+  }
+  throw noRoute(task);
+}
+
 async function runTask<T>(
   task: AiTask,
   schema: JsonTask,
@@ -144,18 +167,7 @@ async function runTask<T>(
   parse: (text: string) => T,
   local: () => Promise<T>,
 ): Promise<T> {
-  const routes = await routesFor(task);
-  for (const [index, route] of routes.entries()) {
-    try {
-      const result = route.kind === "local" ? await local() : parse(await remoteJson(task, route, system, prompt, schema));
-      trackProvider(task, route.kind, index > 0);
-      return result;
-    } catch (error) {
-      if (index === routes.length - 1) throw error;
-      logger.warn("aiService", `${route.kind} ${schema.name} failed`, error);
-    }
-  }
-  throw noRoute(task);
+  return (await runTaskWithProvider(task, schema, system, prompt, parse, local)).value;
 }
 
 function parseSummary(text: string): string {
@@ -170,8 +182,9 @@ export const aiService = {
     return routes.length > 0 && (await localModelService.getReadyModel()) !== null;
   },
 
-  estimateTripBudget(input: TripBudgetEstimateInput): Promise<TripBudgetEstimate> {
-    return runTask(
+  /** Per-person daily costs in USD plus the provider that answered (the card names it). */
+  async estimateTripBudget(input: TripBudgetEstimateInput): Promise<TripBudgetEstimate & { provider: AiProvider }> {
+    const { value, provider } = await runTaskWithProvider(
       "tripBudget",
       AI_TASKS.budget,
       AI_PROMPTS.systemBudgetEstimator,
@@ -179,6 +192,7 @@ export const aiService = {
       parseBudgetEstimate,
       () => localModelService.estimateTripBudget(input),
     );
+    return { ...value, provider };
   },
 
   suggestTripName(input: TripNameInput): Promise<TripNameSuggestion> {
@@ -187,7 +201,7 @@ export const aiService = {
       AI_TASKS.tripName,
       AI_PROMPTS.systemTripNameGenerator,
       AI_PROMPTS.tripNameRequest(input),
-      parseTripName,
+      (text) => parseTripName(text, input.destinations),
       () => localModelService.suggestTripName(input),
     );
   },

@@ -32,6 +32,7 @@ import {
   type TripNameSuggestion,
 } from "../prompts";
 import { compactChatMemory, estimateTokens } from "../chatMemory";
+import { AI_TASKS, type JsonTask } from "../schemas";
 
 export type { AiModel };
 
@@ -274,6 +275,38 @@ async function loadModelUnlocked(model: AiModel, minContextTokens = MIN_CONTEXT_
   return context;
 }
 
+/**
+ * One structured answer through the model's own chat template (system + user turns), with reasoning
+ * off and output held to `task`'s JSON schema. Small instruct models follow a templated chat far
+ * better than a raw prompt.
+ */
+function completeJson(model: AiModel, task: JsonTask, system: string, user: string, nPredict: number, temperature: number): Promise<string> {
+  const messages = [
+    { role: "system", content: system },
+    { role: "user", content: user },
+  ];
+  return runExclusive(async () => {
+    const context = await loadModelUnlocked(model, requiredContextTokens(system + user, nPredict));
+    const params = {
+      messages,
+      jinja: true,
+      n_predict: nPredict,
+      temperature,
+      response_format: { type: "json_schema", json_schema: { strict: true, schema: task.schema } },
+    } as const;
+    if (disableThinkingSupported) {
+      try {
+        return (await context.completion({ ...params, enable_thinking: false })).text;
+      } catch (err) {
+        if (!isThinkingFlagError(err)) throw err;
+        logger.warn("localModelService", "enable_thinking rejected, retrying without it", err);
+        disableThinkingSupported = false;
+      }
+    }
+    return (await context.completion(params)).text;
+  });
+}
+
 async function requireReadyModel(): Promise<AiModel> {
   const model = await getReadyModel();
   if (!model) {
@@ -484,20 +517,7 @@ export const localModelService = {
 
   async estimateTripBudget(input: TripBudgetEstimateInput): Promise<TripBudgetEstimate> {
     const model = await requireReadyModel();
-    const prompt =
-      AI_PROMPTS.systemBudgetEstimator + "\n\n" + AI_PROMPTS.budgetRequest(input);
-
-    const text = await runExclusive(async () => {
-      const context = await loadModelUnlocked(model, requiredContextTokens(prompt, 220));
-      const result = await context.completion({
-        prompt,
-        n_predict: 220,
-        temperature: 0.25,
-        response_format: { type: "json_object" },
-      });
-      return result.text;
-    });
-
+    const text = await completeJson(model, AI_TASKS.budget, AI_PROMPTS.systemBudgetEstimator, AI_PROMPTS.budgetRequest(input), 160, 0.2);
     return parseBudgetEstimate(text);
   },
 
@@ -579,21 +599,8 @@ export const localModelService = {
 
   async suggestTripName(input: TripNameInput): Promise<TripNameSuggestion> {
     const model = await requireReadyModel();
-    const prompt =
-      AI_PROMPTS.systemTripNameGenerator + "\n\n" + AI_PROMPTS.tripNameRequest(input);
-
-    const text = await runExclusive(async () => {
-      const context = await loadModelUnlocked(model, requiredContextTokens(prompt, 90));
-      const result = await context.completion({
-        prompt,
-        n_predict: 90,
-        temperature: 0.65,
-        response_format: { type: "json_object" },
-      });
-      return result.text;
-    });
-
-    return parseTripName(text);
+    const text = await completeJson(model, AI_TASKS.tripName, AI_PROMPTS.systemTripNameGenerator, AI_PROMPTS.tripNameRequest(input), 40, 0.4);
+    return parseTripName(text, input.destinations);
   },
 };
 

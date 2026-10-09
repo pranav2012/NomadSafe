@@ -22,7 +22,12 @@ import {
   fetchExchangeRate,
 } from "@/features/expenses/services/currencyConversion";
 import { translate } from "@/localization/translate";
-import { isPreTripBooking, tripMatchReason } from "@/features/expenses/services/tripEmailFilter";
+import {
+  isPreTripBooking,
+  tripMatchReason,
+  tripSpendReason,
+  type TripSpendContext,
+} from "@/features/expenses/services/tripEmailFilter";
 import { countAttributes, logger } from "@/modules/logger";
 import { trimStoredEmailText } from "@/features/expenses/utils/emailText";
 
@@ -35,6 +40,8 @@ export interface BuildCandidatesOptions {
   allowModel?: boolean;
   /** Gmail is scoped to the selected trip so unrelated payments never enter its ledger. */
   trip?: Trip | null;
+  /** Gmail during the trip: keeps only spends that look like the trip's (see `tripSpendReason`). */
+  spendContext?: TripSpendContext;
 }
 
 export interface ImportCandidate {
@@ -47,6 +54,8 @@ export interface ImportCandidate {
   source: ExpenseSource;
   rawText: string;
   note?: string;
+  /** Gmail: the email's "From" value, for the source line on the spend. */
+  sender?: string;
   preview: string;
   externalId?: string;
   /** Confirmed booking whose payment may still be pending (noted on import). */
@@ -116,6 +125,14 @@ export async function buildImportCandidates(
     const provider = source === "email" ? matchEmailProvider(message.body, message.sender) : null;
     const merchant = provider?.merchant || parsed.merchant || merchantFromSender(message.sender);
 
+    if (source === "email" && options.trip && options.spendContext) {
+      const reason = tripSpendReason(message, options.trip, { currency: parsed.currency, merchant }, options.spendContext);
+      if (reason) {
+        diagnostics.rejected[reason] = (diagnostics.rejected[reason] ?? 0) + 1;
+        continue;
+      }
+    }
+
     const date = parsed.occurredAt;
     const fingerprint = expenseFingerprint({ merchant, amount: parsed.amount, date });
     // A stable source id (Gmail message id / pasted body hash) keeps two genuine
@@ -142,6 +159,7 @@ export async function buildImportCandidates(
       source,
       rawText: source === "email" ? trimStoredEmailText(parsed.raw) : parsed.raw,
       note: message.note,
+      sender: message.sender,
       preview: parsed.raw.slice(0, 120),
       externalId: message.externalId,
       committedBooking: Boolean(provider?.committedBooking),

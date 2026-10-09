@@ -204,12 +204,37 @@ test("SSE parser joins data lines split across chunks", () => {
 });
 
 test("output parsers validate and clean model JSON", () => {
-  assert.deepEqual(prompts.parseTripName("<think>x</think>{\"name\": \" Lisbon Run \"}"), { name: "Lisbon Run" });
+  assert.deepEqual(prompts.parseTripName("<think>x</think>{\"name\": \" Lisbon Run \"}", ["Lisbon, Portugal"]), { name: "Lisbon Run" });
   assert.equal(prompts.parseExpenseCategory("{\"category\":\"Food\"}"), "food");
   assert.equal(prompts.parseExpenseCategory("{\"category\":\"fun\"}"), null);
-  assert.deepEqual(prompts.parseBudgetEstimate("{\"total\": 1200.4, \"daily\": 171.2, \"rationale\": \"\"}").total, 1200);
-  assert.throws(() => prompts.parseBudgetEstimate("{\"total\": 0, \"daily\": 1}"));
   assert.deepEqual(prompts.parseItineraryRefinement("{\"keepIds\":[\"a\",\"z\",\"a\"]}", [{ id: "a" }, { id: "b" }]), { keepIds: ["a"] });
+});
+
+test("budget parser sums per-person USD parts and rejects out-of-range days", () => {
+  const estimate = prompts.parseBudgetEstimate("{\"stay\": 90, \"food\": 45.5, \"transport\": \"$15\", \"activities\": 20, \"rationale\": \"Tokyo is pricey for stays.\"}");
+  assert.equal(estimate.dailyUsd, 170.5);
+  assert.equal(estimate.rationale, "Tokyo is pricey for stays.");
+  // A rationale with amounts would sit next to a converted total, so it's dropped.
+  assert.equal(prompts.parseBudgetEstimate("{\"stay\": 40, \"food\": 20, \"transport\": 5, \"activities\": 5, \"rationale\": \"About $70 a day\"}").rationale, "");
+  // ₹13,000 for 20 days was a USD-sized number labelled INR; per day it is far below the floor.
+  assert.throws(() => prompts.parseBudgetEstimate("{\"stay\": 5, \"food\": 3, \"transport\": 1, \"activities\": 1, \"rationale\": \"\"}"));
+  assert.throws(() => prompts.parseBudgetEstimate("{\"stay\": 9000, \"food\": 3000, \"transport\": 500, \"activities\": 500, \"rationale\": \"\"}"));
+  assert.throws(() => prompts.parseBudgetEstimate("{\"stay\": 90, \"food\": \"lots\", \"transport\": 10, \"activities\": 10}"));
+  assert.throws(() => prompts.parseBudgetEstimate("{\"total\": 1200, \"daily\": 171}"));
+  assert.ok(schemas.AI_TASKS.budget.schema.required.includes("stay"));
+});
+
+test("trip name parser rejects placeholders, generic titles and other places", () => {
+  const places = ["Tokyo, Japan", "Kyoto"];
+  assert.equal(prompts.cleanTripName("Tokyo to Kyoto Sprint", places), "Tokyo to Kyoto Sprint");
+  assert.equal(prompts.cleanTripName("“Cherry Blossom Japan”", places), "Cherry Blossom Japan");
+  assert.equal(prompts.cleanTripName("Zürich Nights", ["Zurich"]), "Zürich Nights");
+  for (const bad of ["[short trip title]", "<trip_title>", "My Trip", "Trip Name", "Vacation", "Vietnam Hop", "{{name}}", "Untitled Tokyo", "Tokyo… Kyoto", "A Very Long Title About Tokyo That Goes On And On"]) {
+    assert.equal(prompts.cleanTripName(bad, places), null, bad);
+  }
+  assert.throws(() => prompts.parseTripName("{\"name\": \"<trip_title>\"}", places));
+  assert.throws(() => prompts.parseTripName("{\"name\": \"\"}", places));
+  assert.ok(!/\[short trip title\]|<trip_title>|My Trip/.test(prompts.AI_PROMPTS.systemTripNameGenerator));
 });
 
 test("only the on-device chat prompt promises the reply stays on the phone", () => {

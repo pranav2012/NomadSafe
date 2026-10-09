@@ -2,14 +2,21 @@ export interface TripBudgetEstimateInput {
   destinations: string[];
   days: number;
   travelerCount: number;
-  currency: string;
 }
 
+/** Mid-range costs for one traveller and one day, in US dollars; the app does the totals and the currency conversion. */
 export interface TripBudgetEstimate {
-  total: number;
-  daily: number;
+  stayUsd: number;
+  foodUsd: number;
+  transportUsd: number;
+  activitiesUsd: number;
+  dailyUsd: number;
   rationale: string;
 }
+
+/** Per person per day in USD; anything outside is treated as a bad answer (wrong currency or unit). */
+export const BUDGET_DAILY_USD_MIN = 15;
+export const BUDGET_DAILY_USD_MAX = 1500;
 
 const CHAT_ASSISTANT_PROMPT =
   "You are Nomad, NomadSafe's travel and money assistant. " +
@@ -32,12 +39,13 @@ export const AI_PROMPTS = {
     "Summarize conversation memory for a future assistant turn. Preserve durable trip facts, user preferences, decisions, unresolved questions, and commitments. Exclude greetings, repetition, and instructions. Use concise plain text.",
 
   systemBudgetEstimator:
-    "You are NomadSafe's travel budget estimator. " +
-    "Produce a realistic mid-range trip budget in the requested currency. " +
-    "Account for lodging, meals, local transport, activities, tips, and a small buffer. " +
-    "Exclude international flights and visa costs. " +
-    "Use local price knowledge for the destinations. " +
-    "Return only a JSON object with keys: total (number), daily (number), rationale (string under 140 characters). " +
+    "You estimate typical mid-range travel costs. " +
+    "Give the cost for ONE traveller for ONE day at the destinations, in US dollars (USD), whatever the traveller's own currency. " +
+    "stay: a mid-range hotel or private room (this person's share when several travel together). " +
+    "food: three meals, coffee and drinks. transport: local transport within the destinations. activities: entry fees, tours and sights. " +
+    "Exclude international flights and visas. Use real local prices: cheaper countries cost less, expensive cities cost more. " +
+    "Return only a JSON object with keys stay, food, transport, activities (numbers in USD per person per day) " +
+    "and rationale (one short sentence under 120 characters about the price level, without any amounts). " +
     "Do not add markdown, explanations, or extra keys.",
 
   budgetRequest: (input: TripBudgetEstimateInput): string =>
@@ -45,18 +53,14 @@ export const AI_PROMPTS = {
       `Destinations: ${input.destinations.join(", ")}`,
       `Trip length: ${input.days} day${input.days === 1 ? "" : "s"}`,
       `Travelers: ${input.travelerCount}`,
-      `Currency: ${input.currency}`,
-      "JSON:",
     ].join("\n"),
 
   systemTripNameGenerator:
-    "You are a concise trip-title writer. " +
-    "Write exactly one short, cool trip title (2-5 words) using ONLY the destinations and trip length provided below. " +
-    "The title MUST contain real destination names from the provided list. Do not use any destination that was not provided. " +
-    "Do not use placeholders, variables, or angle brackets. " +
-    "Good examples for Lisbon: '7 Days in Lisbon', 'Lisbon to Porto Run', 'Lisbon Solo Sprint'. " +
-    "Bad examples: '[short trip title]', '<trip_title>', 'My Trip', 'Vietnam Hop' when the destination is not Vietnam. " +
-    "Return only a JSON object with a single key: name. The value must be the actual title string. " +
+    "You write one short, catchy title for a trip. " +
+    "Use 2 to 5 words. It must include at least one of the destination names given, spelled as given, and no other place. " +
+    "It may mention the trip length, the season or the kind of trip. Write it as a real title, like a magazine headline. " +
+    "Never write instructions, labels, brackets, quotes or generic words alone such as Trip, Vacation or Holiday. " +
+    "Return only a JSON object with one key: name. " +
     "Do not add markdown, explanations, or extra keys.",
 
   systemExpenseCategorizer:
@@ -83,7 +87,6 @@ export const AI_PROMPTS = {
       `Trip length: ${input.days} day${input.days === 1 ? "" : "s"}`,
       `Travel mode: ${input.mode}`,
       `Travelers: ${input.travelerCount}`,
-      "JSON:",
     ].join("\n"),
 
   systemItineraryRefiner:
@@ -188,22 +191,35 @@ export function chatSystemContent(online: boolean, systemContext?: string, conve
   return sections.join("\n\n");
 }
 
-export function parseBudgetEstimate(text: string): TripBudgetEstimate {
-  const candidate = parseJsonObject(text) as Partial<TripBudgetEstimate>;
-  const total = Number(candidate.total);
-  const daily = Number(candidate.daily);
+function usdAmount(value: unknown): number {
+  const cleaned = typeof value === "string" ? value.replace(/[^\d.]/g, "") : value;
+  if (cleaned === "" || cleaned === null || cleaned === undefined) return NaN;
+  const amount = Number(cleaned);
+  return Number.isFinite(amount) && amount >= 0 ? amount : NaN;
+}
 
-  if (!Number.isFinite(total) || total <= 0 || !Number.isFinite(daily) || daily <= 0) {
+/** Throws when a part is missing or the day total is outside the sane USD range, so the caller can retry or fall through. */
+export function parseBudgetEstimate(text: string): TripBudgetEstimate {
+  const candidate = parseJsonObject(text) as Record<string, unknown>;
+  const stayUsd = usdAmount(candidate.stay);
+  const foodUsd = usdAmount(candidate.food);
+  const transportUsd = usdAmount(candidate.transport);
+  const activitiesUsd = usdAmount(candidate.activities);
+  const dailyUsd = stayUsd + foodUsd + transportUsd + activitiesUsd;
+
+  if (!Number.isFinite(dailyUsd) || dailyUsd < BUDGET_DAILY_USD_MIN || dailyUsd > BUDGET_DAILY_USD_MAX) {
     throw new Error("Model returned an invalid budget estimate.");
   }
 
+  const rationale = typeof candidate.rationale === "string" ? candidate.rationale.trim() : "";
   return {
-    total: Math.round(total),
-    daily: Math.round(daily),
-    rationale:
-      typeof candidate.rationale === "string" && candidate.rationale.trim()
-        ? candidate.rationale.trim()
-        : "Estimated from destination, trip length, and travelers.",
+    stayUsd,
+    foodUsd,
+    transportUsd,
+    activitiesUsd,
+    dailyUsd,
+    // A rationale quoting amounts would show dollars next to a converted total.
+    rationale: rationale && !/\d/.test(rationale) ? rationale.slice(0, 160) : "",
   };
 }
 
@@ -236,10 +252,47 @@ export function parseReceiptItems(text: string): ReceiptItems {
   return { items, extras, total };
 }
 
-export function parseTripName(text: string): TripNameSuggestion {
+const GENERIC_NAME_WORDS = new Set([
+  "my", "your", "the", "a", "an", "new", "trip", "trips", "travel", "travels", "vacation", "holiday", "holidays",
+  "journey", "adventure", "getaway", "tour", "name", "title", "untitled", "short", "example", "placeholder", "destination",
+]);
+
+function foldText(value: string): string {
+  return value.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
+/** Destination words the title must contain: "Kyoto, Japan" gives "kyoto" and "japan". */
+function destinationTokens(destinations: string[]): string[] {
+  return destinations.flatMap((destination) =>
+    foldText(destination)
+      .split(/[\s,]+/)
+      .map((token) => token.replace(/[^\p{L}\p{N}'-]/gu, ""))
+      .filter((token) => token.length >= 3 || /[^\x00-\x7f]/.test(token)),
+  );
+}
+
+/**
+ * The model's title cleaned up, or null when it reads like a placeholder, a generic label or names
+ * no given destination (small models echo prompt examples or invent places).
+ */
+export function cleanTripName(raw: string, destinations: string[]): string | null {
+  const name = raw.trim().replace(/^["'“”‘’]+|["'“”‘’.!]+$/g, "").replace(/\s+/g, " ").trim();
+  if (name.length < 3 || name.length > 40) return null;
+  if (/[<>[\]{}_|\\#*@=]|\.\.\.|…/.test(name)) return null;
+  const words = name.split(" ");
+  if (words.length > 6) return null;
+  const folded = foldText(name);
+  if (/\b(trip[\s_-]?(name|title)|placeholder|untitled|example|insert|destination)\b/.test(folded)) return null;
+  if (words.every((word) => GENERIC_NAME_WORDS.has(foldText(word).replace(/[^\p{L}]/gu, "")))) return null;
+  const tokens = destinationTokens(destinations);
+  if (tokens.length > 0 && !tokens.some((token) => folded.includes(token))) return null;
+  return name;
+}
+
+export function parseTripName(text: string, destinations: string[] = []): TripNameSuggestion {
   const parsed = parseJsonObject(text) as Partial<TripNameSuggestion>;
-  const name = typeof parsed.name === "string" ? parsed.name.trim() : "";
-  if (!name) throw new Error("Model returned an empty trip name.");
+  const name = typeof parsed.name === "string" ? cleanTripName(parsed.name, destinations) : null;
+  if (!name) throw new Error("Model returned an unusable trip name.");
   return { name };
 }
 

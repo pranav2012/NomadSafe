@@ -43,6 +43,8 @@ import { usePocketsStore } from "@/features/expenses/store/pocketsStore";
 import { defaultPocketFor, payablePockets, pocketBalance, type ForexPocket } from "@/features/expenses/utils/forex";
 import { formatMoney } from "@/features/expenses/utils/money";
 import { showInterstitial } from "@/modules/ads";
+import type { SplitHint } from "@/features/expenses/utils/party";
+import { EmailTextSheet } from "@/features/expenses/components/EmailTextSheet";
 
 export interface ExpenseDraftValues {
   amount: number;
@@ -57,6 +59,10 @@ export interface ExpenseDraftValues {
   rawText?: string;
   /** Forex pocket it was paid from (voice: "paid cash"). */
   pocketId?: string | null;
+  note?: string;
+  /** Gmail review: the email id, so the spend is never proposed again. */
+  externalId?: string;
+  splitHint?: SplitHint;
 }
 
 export interface ExpenseFormProps {
@@ -202,7 +208,10 @@ function ExpenseFormBody({
   const [category, setCategory] = useState<ExpenseCategory>(prefill?.category ?? "other");
   const [categoryTouched, setCategoryTouched] = useState(Boolean(prefill));
   const [currency, setCurrency] = useState(prefill?.currency ?? tripCurrency ?? target?.currency ?? defaultCurrency);
-  const [note, setNote] = useState(editingExpense?.note ?? "");
+  const [note, setNote] = useState(editingExpense?.note ?? initialDraft?.note ?? "");
+  const [emailOpen, setEmailOpen] = useState(false);
+  const emailText = (editingExpense ?? (source === "email" ? initialDraft : undefined))?.rawText;
+  const showEmail = (editingExpense?.source ?? source) === "email" && Boolean(emailText);
   const pockets = usePocketsStore((state) => state.pockets);
   const allExpenses = useExpensesStore((state) => state.expenses);
   const [editingPocket] = useState(() => (editingExpense ? pocketOfExpense(usePocketsStore.getState().pockets, editingExpense.id) : null));
@@ -232,7 +241,7 @@ function ExpenseFormBody({
     return people.length > 1 ? { ...base, mode: "equal", people } : base;
   };
   const [split, setSplit] = useState<SplitValue>(() => {
-    const hint = editingExpense?.splitHint;
+    const hint = editingExpense?.splitHint ?? initialDraft?.splitHint;
     // A Gmail split suggestion: prefill the proposed shares, or start with the known people selected.
     if (hint?.shares) return initialSplitValue(everyone, decimalSeparator, { paidBy: SELF_ID, shares: hint.shares, currency: editingExpense?.currency ?? currency });
     if (hint) return { ...initialSplitValue(everyone, decimalSeparator), mode: "equal", people: hint.people };
@@ -400,7 +409,7 @@ function ExpenseFormBody({
       updateExpense(editingExpense.id, payload);
       if ((editingPocket?.id ?? null) !== paidFrom) usePocketsStore.getState().setSpend(editingExpense.id, paidFrom);
     } else {
-      const added = addExpense({ ...payload, source, rawText: initialDraft?.rawText, autoCategorized: false });
+      const added = addExpense({ ...payload, source, rawText: initialDraft?.rawText, externalId: initialDraft?.externalId, autoCategorized: false });
       if (paidFrom) {
         usePocketsStore.getState().setSpend(added.id, paidFrom);
         const kind = pockets.find((pocket) => pocket.id === paidFrom)?.kind ?? "cash";
@@ -427,7 +436,7 @@ function ExpenseFormBody({
         });
         track("recurring_created", { frequency: repeat });
       }
-      track("expense_added", { source: source === "voice" ? "voice" : "manual", count: 1 });
+      track("expense_added", { source: source === "voice" ? "voice" : source === "email" ? "gmail" : "manual", count: 1 });
     }
     onSave();
     if (!editingExpense && source !== "voice") showInterstitial("expense_saved");
@@ -599,6 +608,9 @@ function ExpenseFormBody({
           </View>
         ) : null}
         <AuraField label={t("expenses.noteLabel")} value={note} onChangeText={setNote} placeholder={t("expenses.notePlaceholder")} />
+        {showEmail ? (
+          <AuraButton label={t("gmailReview.viewEmail")} icon="mail" variant="secondary" size="md" onPress={() => setEmailOpen(true)} style={styles.itemButton} />
+        ) : null}
 
         <PressableScale
           onPress={() => void handleToggleLocation()}
@@ -622,6 +634,7 @@ function ExpenseFormBody({
 
       </ScrollView>
 
+      <EmailTextSheet text={emailOpen ? (emailText ?? null) : null} onClose={() => setEmailOpen(false)} />
       <ReceiptItemsSheet receipt={receiptItems} everyone={everyone} currency={currency} onClose={() => setReceiptItems(null)} onApply={applyItemWeights} />
       <AuraOptionSheet
         visible={pickerOpen}

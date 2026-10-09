@@ -96,7 +96,7 @@ export const privacyPolicy = httpAction(async () => {
 <ul>
 <li><strong>Account:</strong> when you sign in with Google we receive your name, email address and profile photo to create your account.</li>
 <li><strong>Live location sharing (optional):</strong> while you have sharing turned on, your precise location, battery level and sharing mode are sent to our server and shown only to contacts who accepted your request. This includes when the app is closed or not in use, which Android indicates with a persistent notification. We keep only your latest position per contact, not a location history. Turning sharing off marks it inactive immediately.</li>
-<li><strong>Sharing contacts:</strong> the name and email address of people you invite to receive your location, and the status of those requests.</li>
+<li><strong>Sharing contacts:</strong> the name and email address of people you invite to receive your location, and the status of those requests. If you share your circle invite link, anyone who opens it and taps Join becomes a contact of yours and you of theirs (each can then get the other's SOS and check-in alerts and see the other's location while sharing); you can reset the link at any time.</li>
 <li><strong>Trip backup (on by default, can be turned off):</strong> your trips (names, destinations, dates, budget, companions) and planned trips (names, places and the month you picked), itinerary events and saved ideas (their title, the link you shared and your note), expenses (merchant, amount, category, notes, splits and the place you added), settlements, forex you track for a trip (the currency, how much you got, what you paid, the market rate and which of your spends came out of it; never shown to other trip members) and past travel you add to your passport (country, state, the place name you picked and the month) are saved to your account so they come back when you sign in on another phone. The original text of imported messages is never uploaded. Turning off <em>Settings → Back up to my account</em> deletes this copy from our servers; signing out removes it from your phone.</li>
 <li><strong>Shared trips (optional):</strong> when you create an invite link for a trip or join one, the trip details, itinerary (including saved ideas and their links and notes), the expenses split with others (including where they were added), payments between members, and each member's display name are stored on our servers and shown to everyone on that trip. Anyone with the link or code can join. Expenses you don't split stay private to you. When you leave, your past shared expenses stay on the trip under your name.</li>
 <li><strong>SOS and check-in alerts:</strong> when you start a safety check-in, its end time is stored on our server; when you trigger SOS, the time is stored. If a check-in runs out without you checking in, or you trigger SOS, the contacts who accepted your live-location request get a push notification with your name and that you need help (no location in the notification text), and your latest position is shared with them in the app as with live sharing. When you check in or cancel the SOS, they are told you are safe. Finishing or cancelling a check-in removes its end time.</li>
@@ -237,20 +237,25 @@ const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.pranav
 
 const IOS_UA = /iPhone|iPad|iPod/i;
 
+/** The two kinds of invite link: a shared trip or group (`/join/`), or someone's circle (`/circle/`). */
+type InviteKind = "join" | "circle";
+
 /**
  * Store link that carries the invite through the install: Play's install referrer on Android; on
  * iOS a tap copies the invite URL, which the app reads from the clipboard on first launch.
  */
-function joinStoreLink(url: URL, code: string, ios: boolean) {
+function joinStoreLink(url: URL, code: string, ios: boolean, kind: InviteKind = "join") {
   if (!ios) {
-    const playUrl = `${PLAY_STORE_URL}&referrer=${encodeURIComponent(`join=${code}`)}`;
+    const playUrl = `${PLAY_STORE_URL}&referrer=${encodeURIComponent(`${kind}=${code}`)}`;
     return `<p>Don't have the app yet? <a href="${escapeHtml(playUrl)}">Get NomadSafe on Google Play</a>. Your invite opens once you've signed in.</p>`;
   }
   const appStoreUrl = process.env.IOS_APP_STORE_URL;
   if (!appStoreUrl) {
-    return `<p>NomadSafe for iPhone is coming soon. Keep your invite code to join the trip once it's out.</p>`;
+    return kind === "circle"
+      ? `<p>NomadSafe for iPhone is coming soon. Keep this link to join once it's out.</p>`
+      : `<p>NomadSafe for iPhone is coming soon. Keep your invite code to join the trip once it's out.</p>`;
   }
-  const inviteUrl = `${process.env.WEB_URL || url.origin}/join/${code}`;
+  const inviteUrl = `${process.env.WEB_URL || url.origin}/${kind}/${code}`;
   // text/uri-list makes the copy a URL on iOS, so the app can check for it without a paste prompt.
   const copyAndGo = `async function getApp(){var u=${JSON.stringify(inviteUrl)};try{await navigator.clipboard.write([new ClipboardItem({"text/plain":new Blob([u],{type:"text/plain"}),"text/uri-list":new Blob([u],{type:"text/uri-list"})})]);}catch(e){try{await navigator.clipboard.writeText(u);}catch(e2){}}location.href=${JSON.stringify(appStoreUrl)};}`;
   return `<p>Don't have the app yet?</p>
@@ -259,10 +264,14 @@ function joinStoreLink(url: URL, code: string, ios: boolean) {
 <script>${copyAndGo}document.getElementById("get-app").addEventListener("click",getApp);</script>`;
 }
 
+function codeFromUrl(url: URL) {
+  return url.pathname.split("/").filter(Boolean).pop()?.replace(/[^A-Za-z0-9]/g, "").slice(0, 16).toUpperCase() ?? "";
+}
+
 /** Invite link landing page: opens the app on the join screen, or points to the store. */
 export const joinTripPage = httpAction(async (_ctx, req) => {
   const url = new URL(req.url);
-  const code = url.pathname.split("/").pop()?.replace(/[^A-Za-z0-9]/g, "").slice(0, 16).toUpperCase() ?? "";
+  const code = codeFromUrl(url);
   const appLink = `nomadsafe://join/${code}`;
   const ios = IOS_UA.test(req.headers.get("user-agent") ?? "");
   return page(
@@ -274,6 +283,29 @@ export const joinTripPage = httpAction(async (_ctx, req) => {
 <p class="muted">Invite code: <strong>${escapeHtml(code)}</strong>. In the app, go to <em>Trips → Join with code</em> if the button doesn't open it.</p>
 </div>
 ${joinStoreLink(url, code, ios)}
+<script>location.href=${JSON.stringify(appLink)};</script>`,
+    { personal: true },
+  );
+});
+
+/**
+ * Circle invite landing page: opens the app on the "Join their circle" screen, or points to the
+ * store. It never names the inviter, since anyone holding the link can load it.
+ */
+export const joinCirclePage = httpAction(async (_ctx, req) => {
+  const url = new URL(req.url);
+  const code = codeFromUrl(url);
+  const appLink = `nomadsafe://circle/${code}`;
+  const ios = IOS_UA.test(req.headers.get("user-agent") ?? "");
+  return page(
+    "Join a circle",
+    `<h1>You're invited to a safety circle</h1>
+<p>People in each other's circle get an alert if one of them sends an SOS or misses their safe-arrival time, and can share their live location with each other.</p>
+<div class="card">
+<p><a href="${escapeHtml(appLink)}"><button type="button">Open in NomadSafe</button></a></p>
+<p class="muted">Nothing is shared until you tap Join in the app.</p>
+</div>
+${joinStoreLink(url, code, ios, "circle")}
 <script>location.href=${JSON.stringify(appLink)};</script>`,
     { personal: true },
   );

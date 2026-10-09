@@ -27,6 +27,7 @@ import { fromDateKey } from "@/features/trips/utils/dates";
 import { logger } from "@/modules/logger";
 import { showInterstitial } from "@/modules/ads";
 import { ItineraryEmpty } from "@/features/itinerary/components/ItineraryEmpty";
+import { GmailReviewCard } from "@/features/expenses/components/GmailReviewSheet";
 
 const UP_NEXT_COUNT = 3;
 const PLANNED_COUNT = 5;
@@ -155,6 +156,7 @@ export function TripItinerary({
         />
       )}
 
+      <GmailReviewCard tripId={trip.id} from="trip" />
       {day && ordered.length > 0 ? (
         <Animated.View entering={FadeIn.duration(300)}>
           <TravelDayCard

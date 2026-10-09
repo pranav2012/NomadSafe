@@ -33,6 +33,7 @@ import { BillingEffects } from "@/modules/billing";
 import { useRecapEffects } from "@/features/recap/hooks/useRecapEffects";
 import { useTravelReminderEffects } from "@/features/itinerary/hooks/useTravelReminderEffects";
 import { SavedIdeasSheet } from "@/features/itinerary/components/SavedIdeasSheet";
+import { GmailReviewSheet } from "@/features/expenses/components/GmailReviewSheet";
 import { AndroidShareIntake } from "@/features/itinerary/components/AndroidShareIntake";
 import { useBoundaryViewSync } from "@/features/passport/hooks/usePassport";
 import { AdsEffects } from "@/modules/ads";
@@ -332,6 +333,7 @@ function AppStack() {
           <Stack.Screen name="passport" options={PAGE_OPTIONS} />
           <Stack.Screen name="plan-trip" options={{ presentation: "fullScreenModal", animation: "fade" }} />
           <Stack.Screen name="join/[code]" options={PAGE_OPTIONS} />
+          <Stack.Screen name="circle-invite/[code]" options={PAGE_OPTIONS} />
           <Stack.Screen name="paywall" options={PAGE_OPTIONS} />
           <Stack.Screen name="circle" />
           <Stack.Screen name="trip-recap/[id]" options={{ presentation: "fullScreenModal", animation: "fade" }} />
@@ -347,6 +349,7 @@ function AppStack() {
         </Stack.Protected>
       </Stack>
       {inApp ? <SavedIdeasSheet /> : null}
+      {inApp ? <GmailReviewSheet /> : null}
       {Platform.OS === "android" ? <AndroidShareIntake /> : null}
     </NavigationThemeProvider>
   );

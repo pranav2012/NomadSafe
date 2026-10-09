@@ -33,16 +33,17 @@ export default function TabsLayout() {
   return Platform.OS === "ios" ? <NativeTabsLayout /> : <GlassTabsLayout />;
 }
 
-/** Opens the join screen for an invite link that arrived before the user was in the app. */
+/** Opens the trip or circle join screen for an invite link that arrived before the user was in the app. */
 function usePendingInvite() {
   const router = useRouter();
-  const code = usePendingJoinStore((s) => s.code);
+  const invite = usePendingJoinStore((s) => s.invite);
   useEffect(() => {
-    if (!code) return;
+    if (!invite) return;
     const { deferred } = usePendingJoinStore.getState();
-    usePendingJoinStore.getState().setCode(null);
-    router.push({ pathname: "/join/[code]", params: deferred ? { code, deferred: "1" } : { code } });
-  }, [code, router]);
+    usePendingJoinStore.getState().setInvite(null);
+    const params = deferred ? { code: invite.code, deferred: "1" } : { code: invite.code };
+    router.push({ pathname: invite.kind === "circle" ? "/circle-invite/[code]" : "/join/[code]", params });
+  }, [invite, router]);
 }
 
 // Lets the lock gate's modal (privacy cover or lock screen) finish closing first: iOS can't present

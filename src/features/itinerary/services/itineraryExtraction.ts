@@ -399,9 +399,9 @@ export async function buildEventCandidates(
       const stored = eventFingerprint({ type: event.type, title: event.title, detail: event.detail, startAt });
       const fingerprint = `${event.cancelled ? "cancel|" : ""}${event.bookingRef ?? ""}|${stored}`;
       const externalId = message.externalId ? `${message.externalId}#${eventIndex}` : undefined;
-      // Dedup within the batch by fingerprint, not source id, so the same logical
-      // event arriving in two different emails (confirmation + reminder) collapses.
-      if (seen.has(fingerprint)) continue;
+      // The same booking from another email (confirmation + reminder) is kept: the caller merges it,
+      // recording that email so its PDFs attach too.
+      const repeat = seen.has(fingerprint);
       seen.add(fingerprint);
 
       const duplicate =
@@ -409,6 +409,7 @@ export async function buildEventCandidates(
         (hasFingerprint(stored, trip?.id) || Boolean(externalId && hasExternalId(externalId, trip?.id)));
       if (duplicate) diagnostics.duplicates += 1;
 
+      if (repeat && !externalId) continue;
       candidates.push({
         id: externalId ?? fingerprint,
         type: event.type,

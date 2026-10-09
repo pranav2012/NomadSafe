@@ -163,6 +163,8 @@ export async function saveReceivedTicket(eventId: string, uri: string, kind: Tic
 
 /** Deletes tickets whose item no longer exists (item or trip deleted, or removed by sync). */
 export async function pruneTickets() {
+  // Before the items are read back from storage every ticket would look orphaned.
+  if (!useEventsStore.persist.hasHydrated() || !useTicketsStore.persist.hasHydrated()) return;
   const ids = new Set(useEventsStore.getState().events.map((event) => event.id));
   const orphans = useTicketsStore.getState().tickets.filter((ticket) => !ids.has(ticket.eventId));
   if (orphans.length > 0) await removeTickets(orphans);

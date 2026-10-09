@@ -47,6 +47,15 @@ export default defineSchema({
     .index("by_recipient", ["recipientUserId"])
     .index("by_owner_recipient", ["ownerUserId", "recipientUserId"]),
 
+  // One reusable invite link per user for their circle; joining it links both people both ways.
+  circleInvites: defineTable({
+    ownerUserId: v.string(),
+    code: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_owner", ["ownerUserId"])
+    .index("by_code", ["code"]),
+
   // Pending app-invites for contacts not yet on NomadSafe.
   pendingInvites: defineTable({
     ownerUserId: v.string(),

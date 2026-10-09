@@ -25,7 +25,7 @@ async function deleteAuthRows(ctx: MutationCtx, model: AuthModel, field: string,
 /**
  * Deletes every server-side record tied to a user: their shared-trip memberships (owned trips
  * pass to another member), push tokens, SOS/check-in alert state, plan and cloud AI usage, their trip/expense backup,
- * sharing links in both directions, location shares, invites they sent or received, and finally
+ * sharing links in both directions, location shares, invites they sent or received, their circle invite link, and finally
  * their Better Auth sessions, linked accounts and user record. Their PostHog
  * analytics are deleted by a scheduled action, which only runs if this commits.
  */
@@ -61,6 +61,12 @@ async function purgeUser(ctx: MutationCtx, userId: string, email: string | null)
         .collect()
     : [];
   for (const invite of [...invitesSent, ...invitesReceived]) await ctx.db.delete(invite._id);
+
+  const circleInvites = await ctx.db
+    .query("circleInvites")
+    .withIndex("by_owner", (q) => q.eq("ownerUserId", userId))
+    .collect();
+  for (const invite of circleInvites) await ctx.db.delete(invite._id);
 
   await removeUserFromGroups(ctx, userId);
   const tokens = await ctx.db

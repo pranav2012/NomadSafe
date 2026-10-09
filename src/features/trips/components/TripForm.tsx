@@ -7,6 +7,8 @@ import {
   AuraDateField,
   AuraField,
   AuraSheet,
+  AuraSkeleton,
+  AuraSkeletonGroup,
   Icon,
   type IconName,
   PressableScale,
@@ -16,7 +18,7 @@ import {
 } from "@/atoms";
 import { useAuthStore } from "@/features/auth/store/authStore";
 import { shareGroup } from "@/features/sync";
-import { aiRuntime, aiService, useAiAvailability, type TripBudgetEstimate } from "@/modules/ai";
+import { aiRuntime, aiService, useAiAvailability } from "@/modules/ai";
 import { normalizeSearchText } from "@/features/trips/data/destinations";
 import { auraHitSlop, auraSignal } from "@/constants/aura";
 import {
@@ -30,6 +32,7 @@ import {
   useTripsStore,
 } from "@/features/trips/store/tripsStore";
 import { geocodeDestinations } from "@/features/trips/services/geocoding";
+import { estimateTripBudget, TripBudgetError, type TripBudgetResult } from "@/features/trips/services/budgetEstimate";
 import { DestinationSearch } from "@/features/trips/components/DestinationSearch";
 import { addDays, countInclusiveDays, fromDateKey, startOfLocalDay, toDateKey } from "@/features/trips/utils/dates";
 import { parseAmount, sanitizeAmountInput } from "@/features/trips/utils/amount";
@@ -41,6 +44,8 @@ import { logger } from "@/modules/logger";
 import { showInterstitial } from "@/modules/ads";
 
 type DateField = "start" | "end";
+
+const AI_IDLE_RELEASE_MS = 20_000;
 /** Who set the name: "auto" names follow the destinations; "user"/"ai" names are never overwritten by the default. */
 type NameSource = "auto" | "user" | "ai";
 
@@ -174,15 +179,14 @@ export function TripForm({ editingTrip, onSave, onCancel, destinations, knownCoo
   const [form, setForm] = useState<FormState>(initialForm);
   const [isCurrencyPickerOpen, setIsCurrencyPickerOpen] = useState(false);
   const [isEstimatingBudget, setIsEstimatingBudget] = useState(false);
-  const [budgetEstimate, setBudgetEstimate] = useState<TripBudgetEstimate | null>(null);
+  const [budgetEstimate, setBudgetEstimate] = useState<TripBudgetResult | null>(null);
   const [budgetEstimateError, setBudgetEstimateError] = useState<string | null>(null);
   const [isGeneratingName, setIsGeneratingName] = useState(false);
-  const [nameError, setNameError] = useState<string | null>(null);
   const [hasGeneratedName, setHasGeneratedName] = useState(Boolean(editingTrip));
   const [hasEstimatedBudget, setHasEstimatedBudget] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const isSavingRef = useRef(false);
-  // One AI task at a time: auto budget and auto name are chained through this.
+  // One AI task at a time: the auto name runs first, then the auto budget, on one loaded model.
   const aiTaskRef = useRef<"budget" | "name" | null>(null);
   const parsedBudget = parseAmount(form.budget, locale);
 
@@ -201,20 +205,13 @@ export function TripForm({ editingTrip, onSave, onCancel, destinations, knownCoo
     setBudgetEstimateError(null);
   }, []);
 
-  const clearNameState = useCallback(() => {
-    setNameError(null);
-  }, []);
-
   const updateForm = useCallback(<Key extends keyof FormState>(
     key: Key,
     value: FormState[Key],
   ) => {
     setForm((current) => ({ ...current, [key]: value }));
-    if (key === "mode") {
-      clearBudgetEstimate();
-      clearNameState();
-    }
-  }, [clearBudgetEstimate, clearNameState]);
+    if (key === "mode") clearBudgetEstimate();
+  }, [clearBudgetEstimate]);
 
   const isFormCompleteForAi = form.destinations.length > 0 && form.endDate >= form.startDate;
   const suggestedName = defaultTripName(form.destinations, t);
@@ -304,34 +301,25 @@ export function TripForm({ editingTrip, onSave, onCancel, destinations, knownCoo
     setIsEstimatingBudget(true);
     setBudgetEstimateError(null);
 
-    const maxRetries = 3;
-    let lastError: unknown;
-
     try {
-      for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
-        try {
-          const estimate = await aiService.estimateTripBudget({
-            destinations: form.destinations,
-            days: countInclusiveDays(form.startDate, form.endDate),
-            travelerCount: form.mode === "group" ? form.companions.length + 1 : 1,
-            currency: form.currency,
-          });
-          setBudgetEstimate(estimate);
-          setHasEstimatedBudget(true);
-          return;
-        } catch (error) {
-          lastError = error;
-          if (attempt < maxRetries) {
-            await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
-          }
-        }
-      }
-
-      logger.warn("trip-form", "budget estimate failed after retries", lastError);
+      const estimate = await estimateTripBudget({
+        destinations: form.destinations,
+        days: countInclusiveDays(form.startDate, form.endDate),
+        travelers: form.mode === "group" ? form.companions.length + 1 : 1,
+        currency: form.currency,
+      });
+      setBudgetEstimate(estimate);
+      setHasEstimatedBudget(true);
+    } catch (error) {
       setBudgetEstimate(null);
-      setBudgetEstimateError(t("trip.aiBudgetError"));
+      setBudgetEstimateError(
+        error instanceof TripBudgetError && error.reason === "rate"
+          ? t("trip.aiBudgetNoRate", { currency: form.currency })
+          : t("trip.aiBudgetError"),
+      );
     } finally {
-      await aiRuntime.release();
+      // Keep the model loaded briefly so the next AI step (or a retry) doesn't reload it.
+      aiRuntime.releaseAfter(AI_IDLE_RELEASE_MS);
       aiTaskRef.current = null;
       setIsEstimatingBudget(false);
     }
@@ -353,22 +341,7 @@ export function TripForm({ editingTrip, onSave, onCancel, destinations, knownCoo
 
   const isAiBusy = isEstimatingBudget || isGeneratingName;
 
-  useEffect(() => {
-    if (!shouldShowBudgetEstimate || isAiBusy || hasEstimatedBudget) return;
-    if (budgetEstimateKeyRef.current === budgetEstimateKey || openedEstimateKey === budgetEstimateKey) return;
-
-    handleEstimateBudget();
-  }, [budgetEstimateKey, handleEstimateBudget, isAiBusy, shouldShowBudgetEstimate, hasEstimatedBudget, openedEstimateKey]);
-
-  useEffect(() => {
-    if (!shouldShowBudgetEstimate || openedEstimateKey === budgetEstimateKey) return;
-
-    const id = setTimeout(() => {
-      scrollRef.current?.scrollToEnd({ animated: true });
-    }, 120);
-
-    return () => clearTimeout(id);
-  }, [shouldShowBudgetEstimate, budgetEstimateKey, openedEstimateKey]);
+  useEffect(() => () => void aiRuntime.release(), []);
 
   const nameGenerationKey = useMemo(
     () =>
@@ -382,46 +355,35 @@ export function TripForm({ editingTrip, onSave, onCancel, destinations, knownCoo
     [form.companions.length, form.destinations, form.endDate, form.mode, form.startDate],
   );
 
-  /** `auto` runs never replace a name the user typed, even one typed mid-generation. */
+  /**
+   * `auto` runs never replace a name the user typed, even one typed mid-generation. A failed or
+   * unusable answer keeps the template name; only a tapped Generate says so.
+   */
   const handleGenerateName = useCallback(async (auto = false) => {
     if (form.destinations.length === 0 || aiTaskRef.current) return;
 
     aiTaskRef.current = "name";
     nameGenerationKeyRef.current = nameGenerationKey;
     setIsGeneratingName(true);
-    setNameError(null);
-
-    const maxRetries = 3;
-    let lastError: unknown;
 
     try {
-      for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
-        try {
-          const suggestion = await aiService.suggestTripName({
-            destinations: form.destinations,
-            days: countInclusiveDays(form.startDate, form.endDate),
-            mode: form.mode,
-            travelerCount: form.mode === "group" ? form.companions.length + 1 : 1,
-          });
-          setForm((current) =>
-            auto && current.nameSource === "user" && current.name.trim()
-              ? current
-              : { ...current, name: suggestion.name, nameSource: "ai" },
-          );
-          setHasGeneratedName(true);
-          return;
-        } catch (error) {
-          lastError = error;
-          if (attempt < maxRetries) {
-            await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
-          }
-        }
-      }
-
-      logger.warn("trip-form", "trip name generation failed after retries", lastError);
-      setNameError(t("trip.aiNameError"));
+      const suggestion = await aiService.suggestTripName({
+        destinations: form.destinations,
+        days: countInclusiveDays(form.startDate, form.endDate),
+        mode: form.mode,
+        travelerCount: form.mode === "group" ? form.companions.length + 1 : 1,
+      });
+      setForm((current) =>
+        auto && current.nameSource === "user" && current.name.trim()
+          ? current
+          : { ...current, name: suggestion.name, nameSource: "ai" },
+      );
+      setHasGeneratedName(true);
+    } catch (error) {
+      logger.warn("trip-form", "trip name generation failed", error);
+      if (!auto) showToast(t("trip.aiNameError"));
     } finally {
-      await aiRuntime.release();
+      aiRuntime.releaseAfter(AI_IDLE_RELEASE_MS);
       aiTaskRef.current = null;
       setIsGeneratingName(false);
     }
@@ -437,26 +399,44 @@ export function TripForm({ editingTrip, onSave, onCancel, destinations, knownCoo
 
   const hasTypedName = form.nameSource === "user" && form.name.trim().length > 0;
 
-  // Runs after the budget estimate settles (isAiBusy gate), never alongside it.
+  // The name goes first (a few tokens); the budget estimate follows on the same loaded model.
   useEffect(() => {
     if (!isAiReady || isAiBusy || hasGeneratedName || hasTypedName) return;
     if (!isFormCompleteForAi) return;
-    if (shouldShowBudgetEstimate && !hasEstimatedBudget && budgetEstimateKeyRef.current !== budgetEstimateKey) return;
     if (nameGenerationKeyRef.current === nameGenerationKey) return;
 
     handleGenerateName(true);
+  }, [handleGenerateName, hasGeneratedName, hasTypedName, isAiBusy, isAiReady, isFormCompleteForAi, nameGenerationKey]);
+
+  useEffect(() => {
+    if (!shouldShowBudgetEstimate || isAiBusy || hasEstimatedBudget) return;
+    if (budgetEstimateKeyRef.current === budgetEstimateKey || openedEstimateKey === budgetEstimateKey) return;
+    const nameFirst = !hasGeneratedName && !hasTypedName && isFormCompleteForAi && nameGenerationKeyRef.current !== nameGenerationKey;
+    if (nameFirst) return;
+
+    handleEstimateBudget();
   }, [
     budgetEstimateKey,
-    handleGenerateName,
+    handleEstimateBudget,
     hasEstimatedBudget,
     hasGeneratedName,
     hasTypedName,
     isAiBusy,
-    isAiReady,
     isFormCompleteForAi,
     nameGenerationKey,
+    openedEstimateKey,
     shouldShowBudgetEstimate,
   ]);
+
+  useEffect(() => {
+    if (!shouldShowBudgetEstimate || openedEstimateKey === budgetEstimateKey) return;
+
+    const id = setTimeout(() => {
+      scrollRef.current?.scrollToEnd({ animated: true });
+    }, 120);
+
+    return () => clearTimeout(id);
+  }, [shouldShowBudgetEstimate, budgetEstimateKey, openedEstimateKey]);
 
   const handleDateChange = (field: DateField, date: Date) => {
     const selectedDate = startOfLocalDay(date);
@@ -616,18 +596,36 @@ export function TripForm({ editingTrip, onSave, onCancel, destinations, knownCoo
           >
             <View style={styles.aiHeader}>
               <View style={[styles.aiIcon, { backgroundColor: `${auraSignal.amber}22` }]}>
-                {isEstimatingBudget ? <ActivityIndicator size="small" color={auraSignal.amber} /> : <Icon name="sparkle" size={16} color={auraSignal.amber} />}
+                <Icon name="sparkle" size={16} color={auraSignal.amber} />
               </View>
               <View style={styles.flex}>
-                <Text style={[styles.aiTitle, { color: c.text, fontFamily: f.semibold }]}>{t("trip.aiBudgetTitle")}</Text>
-                <Text style={[styles.aiSub, { color: c.textSoft, fontFamily: f.regular }]}>
-                  {budgetEstimate
-                    ? t("trip.aiBudgetEstimate", { total: formattedEstimate(budgetEstimate.total), daily: formattedEstimate(budgetEstimate.daily) })
-                    : (budgetEstimateError ?? t("trip.aiBudgetBody"))}
+                <Text style={[styles.aiTitle, { color: c.text, fontFamily: f.semibold }]}>
+                  {budgetEstimate && !isEstimatingBudget
+                    ? budgetEstimate.provider === "local"
+                      ? t("trip.aiBudgetByDevice")
+                      : t("trip.aiBudgetByOnline")
+                    : t("trip.aiBudgetHeading")}
                 </Text>
+                {isEstimatingBudget ? (
+                  <AuraSkeletonGroup label={t("trip.aiBudgetEstimating")} style={styles.aiSkeleton}>
+                    <AuraSkeleton width="70%" height={13} radius={6.5} />
+                    <AuraSkeleton width="45%" height={11} radius={5.5} />
+                  </AuraSkeletonGroup>
+                ) : (
+                  <Text style={[styles.aiSub, { color: c.textSoft, fontFamily: f.regular }]} accessibilityLiveRegion="polite">
+                    {budgetEstimate
+                      ? t("trip.aiBudgetEstimate", { total: formattedEstimate(budgetEstimate.total), daily: formattedEstimate(budgetEstimate.daily) })
+                      : (budgetEstimateError ?? t("trip.aiBudgetBody"))}
+                  </Text>
+                )}
               </View>
             </View>
-            {budgetEstimate ? <Text style={[styles.aiReason, { color: c.textSoft, fontFamily: f.regular }]}>{budgetEstimate.rationale}</Text> : null}
+            {budgetEstimate && !isEstimatingBudget ? (
+              <View style={styles.aiNotes}>
+                {budgetEstimate.rationale ? <Text style={[styles.aiReason, { color: c.textSoft, fontFamily: f.regular }]}>{budgetEstimate.rationale}</Text> : null}
+                <Text style={[styles.aiBasis, { color: c.textMuted, fontFamily: f.regular }]}>{t("trip.aiBudgetBasis")}</Text>
+              </View>
+            ) : null}
             <View style={styles.aiActions}>
               <AuraButton
                 label={t("trip.aiBudgetAction")}
@@ -637,7 +635,7 @@ export function TripForm({ editingTrip, onSave, onCancel, destinations, knownCoo
                 disabled={isEstimatingBudget || isGeneratingName || form.destinations.length === 0}
                 onPress={() => void handleEstimateBudget()}
               />
-              {budgetEstimate ? <AuraButton label={t("trip.aiBudgetUse")} size="md" onPress={handleUseBudgetEstimate} /> : null}
+              {budgetEstimate && !isEstimatingBudget ? <AuraButton label={t("trip.aiBudgetUse")} size="md" onPress={handleUseBudgetEstimate} /> : null}
             </View>
           </Animated.View>
         ) : null}
@@ -654,14 +652,13 @@ export function TripForm({ editingTrip, onSave, onCancel, destinations, knownCoo
               >
                 {isGeneratingName ? <ActivityIndicator size="small" color={c.textSoft} /> : <Icon name="sparkle" size={12} color={auraSignal.amber} />}
                 <Text style={[styles.currencyText, { color: c.text, fontFamily: f.semibold }]}>
-                  {hasGeneratedName ? t("trip.aiNameRegenerate") : t("trip.aiNameGenerate")}
+                  {isGeneratingName ? t("trip.aiNameGenerating") : hasGeneratedName ? t("trip.aiNameRegenerate") : t("trip.aiNameGenerate")}
                 </Text>
               </PressableScale>
             ) : undefined
           }
           value={form.name}
           placeholder={suggestedName || t("trip.tripNamePlaceholder")}
-          error={nameError}
           onChangeText={(value) => setForm((current) => ({ ...current, name: value, nameSource: value.trim() ? "user" : "auto" }))}
         />
 
@@ -766,6 +763,9 @@ const styles = StyleSheet.create({
   aiTitle: { fontSize: 15 },
   aiSub: { fontSize: 13.5, lineHeight: 19, marginTop: 2 },
   aiReason: { fontSize: 13, lineHeight: 19 },
+  aiNotes: { gap: 4 },
+  aiBasis: { fontSize: 12, lineHeight: 17 },
+  aiSkeleton: { gap: 6, marginTop: 6 },
   aiActions: { flexDirection: "row", gap: 8 },
   modes: { flexDirection: "row", gap: 10 },
   mode: { flex: 1, borderRadius: 20, borderWidth: StyleSheet.hairlineWidth, padding: 14, gap: 4 },

@@ -1,4 +1,5 @@
 import type { ImportErrorCode } from "@/features/expenses/services/importErrors";
+import { TRAVEL_MERCHANT_TERMS } from "@/features/expenses/services/tripEmailFilter";
 
 export interface GmailPart {
   mimeType?: string;
@@ -79,12 +80,14 @@ const seconds = (ms: number) => Math.floor(ms / 1000);
 /**
  * Gmail search for a trip's mail received in [after, before) (epoch ms). Mirrors
  * the on-device trip filter so Gmail returns only candidates: bookings naming a
- * destination before the trip, spends or bookings during it.
+ * destination before the trip, spends or bookings during it. On a trip at home,
+ * spends must also name a destination or a travel company (the on-device rule).
  */
 export function buildTripGmailQuery(
   trip: { startDate: string; endDate: string; destinations: string[] },
   after: number,
   before: number,
+  options: { domestic?: boolean } = {},
 ): string | null {
   const window = tripMailWindow(trip);
   if (!window || before <= after) return null;
@@ -95,7 +98,12 @@ export function buildTripGmailQuery(
     clauses.push(`(before:${tripStart} ${anyOf(BOOKING_TERMS)} ${anyOf(places)})`);
   }
   if (before > window.tripStart) {
-    clauses.push(`(after:${tripStart} ${anyOf([...BOOKING_TERMS, ...SPEND_TERMS])})`);
+    if (options.domestic && places.length > 0) {
+      const merchants = TRAVEL_MERCHANT_TERMS.map((term) => (/[\s.]/.test(term) ? `"${term}"` : term));
+      clauses.push(`(after:${tripStart} (${anyOf(BOOKING_TERMS)} OR (${anyOf(SPEND_TERMS)} ${anyOf([...places, ...merchants])})))`);
+    } else {
+      clauses.push(`(after:${tripStart} ${anyOf([...BOOKING_TERMS, ...SPEND_TERMS])})`);
+    }
   }
   if (clauses.length === 0) return null;
   return [

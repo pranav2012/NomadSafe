@@ -26,8 +26,14 @@ export const AI_TASKS = {
     name: "trip_budget",
     schema: strictSchema({
       type: "object",
-      properties: { total: { type: "number" }, daily: { type: "number" }, rationale: { type: "string" } },
-      required: ["total", "daily", "rationale"],
+      properties: {
+        stay: { type: "number" },
+        food: { type: "number" },
+        transport: { type: "number" },
+        activities: { type: "number" },
+        rationale: { type: "string" },
+      },
+      required: ["stay", "food", "transport", "activities", "rationale"],
     }),
   },
   tripName: {

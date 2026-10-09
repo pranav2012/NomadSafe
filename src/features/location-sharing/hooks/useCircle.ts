@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Linking, Share } from "react-native";
 import { api, type Id, useMutation, useQuery } from "@/modules/backend";
-import { showAlert } from "@/atoms";
+import { track } from "@/modules/analytics";
+import { showAlert, showToast } from "@/atoms";
+import { circleInviteUrl } from "@/constants/legal";
 import { registerGroupPush } from "@/features/sync";
 import { useLocalization } from "@/localization";
 import { useAppActive } from "@/hooks/useAnimationsActive";
 import { buildCircle, nextStaleAt, type Circle, type CirclePerson, type IncomingShareInput } from "../utils/circle";
 import { useLastLoaded } from "./useSharingQueries";
 
-const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.pranav.nomadsafe";
 const EMPTY = { outgoing: [], incoming: [], invites: [] };
 
 type ContactLinks = {
@@ -41,7 +42,9 @@ export function useCircle(): Circle & {
   remove: (person: CirclePerson) => Promise<void>;
   respond: (linkId: string, accept: boolean) => Promise<void>;
   setSeesYou: (userId: string, on: boolean) => Promise<void>;
-  sendInvite: (person: { name: string; email: string | null }) => void;
+  sendInvite: (person: { name: string; email: string | null }, from?: "invited_person" | "email_not_found") => void;
+  shareInviteLink: () => void;
+  resetInviteLink: () => void;
 } {
   const { t } = useLocalization();
   const appActive = useAppActive();
@@ -69,6 +72,8 @@ export function useCircle(): Circle & {
   const removeContactLink = useMutation(api.sharing.removeContactLink);
   const removeInvite = useMutation(api.sharing.removeInvite);
   const setSharePaused = useMutation(api.sharing.setSharePaused);
+  const circleInviteCode = useMutation(api.sharing.circleInviteCode);
+  const resetCircleInviteCode = useMutation(api.sharing.resetCircleInviteCode);
 
   const circle = useMemo(
     () =>
@@ -83,24 +88,57 @@ export function useCircle(): Circle & {
 
   const linkError = useCallback(() => showAlert(t("sharing.linkErrorTitle"), t("sharing.linkErrorBody")), [t]);
 
-  const sendInvite = useCallback((person: { name: string; email: string | null }) => {
-    const body = t("sharing.inviteMessage", { url: PLAY_STORE_URL });
-    const share = () => Share.share({ message: body }).catch(() => {});
-    if (!person.email) {
-      void share();
-      return;
-    }
-    Linking.openURL(
-      `mailto:${person.email}?subject=${encodeURIComponent(t("sharing.inviteSubject"))}&body=${encodeURIComponent(body)}`,
-    ).catch(share);
-  }, [t]);
+  const inviteError = useCallback(() => showAlert(t("sharing.linkErrorTitle"), t("circle.inviteFailed")), [t]);
+
+  /** The share text with the caller's circle link (made on first use); joining it links both people. */
+  const inviteMessage = useCallback(async () => {
+    const { code } = await circleInviteCode({});
+    return t("circle.inviteMessage", { url: circleInviteUrl(code) });
+  }, [circleInviteCode, t]);
+
+  const shareInviteLink = useCallback(() => {
+    void inviteMessage()
+      .then((message) => Share.share({ message }).then(() => track("circle_invite_shared", { from: "add_sheet" })))
+      .catch(inviteError);
+  }, [inviteError, inviteMessage]);
+
+  /** Sends the circle link to someone added by email who isn't on NomadSafe yet: by email when we have it, else the share sheet. */
+  const sendInvite = useCallback((person: { name: string; email: string | null }, from: "invited_person" | "email_not_found" = "invited_person") => {
+    void inviteMessage()
+      .then(async (body) => {
+        const share = () => Share.share({ message: body }).catch(() => {});
+        track("circle_invite_shared", { from });
+        if (!person.email) return void share();
+        await Linking.openURL(
+          `mailto:${person.email}?subject=${encodeURIComponent(t("sharing.inviteSubject"))}&body=${encodeURIComponent(body)}`,
+        ).catch(share);
+      })
+      .catch(inviteError);
+  }, [inviteError, inviteMessage, t]);
+
+  const resetInviteLink = useCallback(() => {
+    showAlert(t("circle.resetLinkTitle"), t("circle.resetLinkBody"), [
+      { text: t("common.cancel"), style: "cancel" },
+      {
+        text: t("circle.resetLink"),
+        style: "destructive",
+        onPress: () =>
+          void resetCircleInviteCode({})
+            .then(() => {
+              track("circle_invite_reset");
+              showToast(t("circle.resetLinkDone"));
+            })
+            .catch(inviteError),
+      },
+    ]);
+  }, [inviteError, resetCircleInviteCode, t]);
 
   const add = useCallback(async (input: { name: string; email: string }) => {
     const res = await requestContactLink({ name: input.name, email: input.email });
     if (res.status === "invite_pending") {
       showAlert(t("sharing.notOnAppTitle", { name: input.name }), t("sharing.notOnAppBody"), [
         { text: t("common.later"), style: "cancel" },
-        { text: t("sharing.sendInvite"), onPress: () => sendInvite(input) },
+        { text: t("sharing.sendInvite"), onPress: () => sendInvite(input, "email_not_found") },
       ]);
     }
   }, [requestContactLink, sendInvite, t]);
@@ -124,5 +162,5 @@ export function useCircle(): Circle & {
     await setSharePaused({ recipientUserId: userId, paused: !on });
   }, [setSharePaused]);
 
-  return { ...circle, loaded: links !== undefined, add, remove, respond, setSeesYou, sendInvite };
+  return { ...circle, loaded: links !== undefined, add, remove, respond, setSeesYou, sendInvite, shareInviteLink, resetInviteLink };
 }

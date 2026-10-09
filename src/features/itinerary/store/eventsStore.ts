@@ -135,8 +135,6 @@ interface EventsState {
   hasExternalId: (externalId: string, tripId?: string | null) => boolean;
   /** Applies Gmail events in order: merges into the same booking, adds new ones, removes cancelled ones. */
   mergeEmailEvents: (inputs: EmailEventInput[]) => EmailMergeResult;
-  /** Drops a trip's Gmail events the user hasn't edited, before a re-import with a newer parser. */
-  removeUneditedEmailEvents: (tripId: string) => void;
   removeByTripId: (tripId: string) => void;
   reset: () => void;
 }
@@ -238,10 +236,6 @@ export const useEventsStore = create<EventsState>()(
         });
         return result;
       },
-      removeUneditedEmailEvents: (tripId) =>
-        set((state) => ({
-          events: state.events.filter((event) => !(event.tripId === tripId && event.source === "email" && !event.editedAt)),
-        })),
       removeByTripId: (tripId) =>
         set((state) => ({
           events: state.events.filter((event) => event.tripId !== tripId),

@@ -23,6 +23,11 @@ function deviceCountry(): string | null {
   return region && countryContinent(region) !== null ? region : null;
 }
 
+/** `useHomeCountry().code` outside React: the Settings pick, else the phone's region. */
+export function homeCountryCode(): string | null {
+  return useSettingsStore.getState().homeCountry ?? deviceCountry();
+}
+
 /** The user's home country: their pick in Settings, else the phone's region. */
 export function useHomeCountry(): { code: string | null; automatic: boolean; device: string | null } {
   const picked = useSettingsStore((state) => state.homeCountry);

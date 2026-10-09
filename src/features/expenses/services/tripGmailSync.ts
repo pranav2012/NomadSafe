@@ -1,14 +1,30 @@
 import { ensureGmailAccountEmail, withGmailAccess } from "@/features/expenses/services/gmailAuth";
-import { fetchGmailAttachment, fetchTransactionEmails } from "@/features/expenses/services/gmailImport";
-import { MAX_TICKET_BYTES, hasGmailTicket, pruneTickets, saveGmailTicket } from "@/features/itinerary/services/tickets";
+import { fetchTransactionEmails } from "@/features/expenses/services/gmailImport";
 import { buildTripGmailQuery } from "@/features/expenses/services/gmailParsing";
+import { drainGmailTickets, queueGmailTickets } from "@/features/expenses/services/gmailTickets";
 import { importErrorCode } from "@/features/expenses/services/importErrors";
-import { buildImportCandidates, candidateToInput } from "@/features/expenses/services/importPipeline";
+import { buildImportCandidates, type ImportCandidate } from "@/features/expenses/services/importPipeline";
 import { clearLegacyGmailCheckpoints } from "@/features/expenses/services/legacyGmailCheckpoints";
+import { pocketOfExpense } from "@/features/expenses/services/forexPockets";
+import { tripSpendContext, type TripSpendContext } from "@/features/expenses/services/tripEmailFilter";
 import { GMAIL_PARSER_VERSION, coverageAfterScan, nextGmailScanWindow } from "@/features/expenses/services/tripGmailCoverage";
 import type { RawMessage } from "@/features/expenses/services/transactionParser";
-import { useExpensesStore, type CreateExpenseInput } from "@/features/expenses/store/expensesStore";
-import { parseParty, planAutoSplit } from "@/features/expenses/utils/party";
+import { useExpensesStore } from "@/features/expenses/store/expensesStore";
+import { useGmailInboxStore, type GmailFileRef, type GmailProposal } from "@/features/expenses/store/gmailInboxStore";
+import { usePocketsStore } from "@/features/expenses/store/pocketsStore";
+import { trimStoredEmailText } from "@/features/expenses/utils/emailText";
+import {
+  defaultSpendSplit,
+  emailSenderName,
+  eventMessageIds,
+  findSameBooking,
+  isBookingSpend,
+  isDismissedBooking,
+  isRepeatSpend,
+  isUntouchedImportedExpense,
+  selectReturnableEvents,
+  spendKey,
+} from "@/features/expenses/utils/gmailReview";
 import { SELF_ID } from "@/features/expenses/utils/split";
 import { useAuthStore } from "@/features/auth/store/authStore";
 import { hasGmailGrant, hydrateGmailConnection, useGmailConnectionStore } from "@/features/expenses/store/gmailConnectionStore";
@@ -16,23 +32,28 @@ import { updateTripGmailSyncStatus } from "@/features/expenses/store/gmailSyncSt
 import { getTripGmailCoverage, setTripGmailCoverage } from "@/features/expenses/store/tripGmailCoverageStore";
 import { buildEventCandidates } from "@/features/itinerary/services/itineraryExtraction";
 import { parseBookingEmail } from "@/features/itinerary/services/bookingEmailParser";
-import { isGenericTitle } from "@/features/itinerary/utils/bookings";
+import { pruneTickets } from "@/features/itinerary/services/tickets";
+import { useEventsStore, type CreateEventInput, type TripEvent } from "@/features/itinerary/store/eventsStore";
+import { useTicketsStore } from "@/features/itinerary/store/ticketsStore";
+import { isGenericTitle, mergeBooking, sameBooking } from "@/features/itinerary/utils/bookings";
+import { mergeTravelDetails } from "@/features/itinerary/utils/travelDetails";
 import { transitModeOf } from "@/features/itinerary/utils/transit";
-import { toLocalDayKey } from "@/features/expenses/utils/dateKey";
-import { useEventsStore, type EmailMergeResult } from "@/features/itinerary/store/eventsStore";
-import { useTripsStore, type Trip } from "@/features/trips/store/tripsStore";
+import { homeCountryCode, placeCountry } from "@/features/passport/hooks/usePassport";
+import { countryFacts } from "@/features/trips/utils/countryFacts";
+import { getDestinationCoordinates, useTripsStore, type Trip } from "@/features/trips/store/tripsStore";
+import { getCurrentLocale, translate } from "@/localization/translate";
 import { track } from "@/modules/analytics";
 import { logger } from "@/modules/logger";
 
 export interface TripGmailSyncResult {
   scanned: boolean;
-  expensesAdded: number;
-  eventsAdded: number;
+  /** New bookings and spends waiting for review. */
+  found: number;
 }
 
 const inFlight = new Map<string, Promise<TripGmailSyncResult | null>>();
 
-/** Reads the trip's unscanned Gmail mail once into new spends and events; null when Gmail isn't connected. */
+/** Reads the trip's unscanned Gmail mail once into proposals for review; null when Gmail isn't connected. */
 export function syncTripGmail(trip: Trip): Promise<TripGmailSyncResult | null> {
   const running = inFlight.get(trip.id);
   if (running) return running;
@@ -40,6 +61,8 @@ export function syncTripGmail(trip: Trip): Promise<TripGmailSyncResult | null> {
   inFlight.set(trip.id, task);
   return task;
 }
+
+const drainTickets = () => drainGmailTickets().catch((error: unknown) => logger.warn("gmail-tickets", "drain failed", error));
 
 async function runSync(trip: Trip): Promise<TripGmailSyncResult | null> {
   await hydrateGmailConnection();
@@ -53,13 +76,15 @@ async function runSync(trip: Trip): Promise<TripGmailSyncResult | null> {
   if (!window) {
     logger.debug("gmail-sync", "up to date", { has_coverage: Boolean(previous) });
     updateTripGmailSyncStatus(trip.id, { state: "done", progress: null, errorCode: null });
-    return { scanned: false, expensesAdded: 0, eventsAdded: 0 };
+    await drainTickets();
+    return { scanned: false, found: 0 };
   }
 
   updateTripGmailSyncStatus(trip.id, { state: "syncing", progress: null, errorCode: null });
   logger.debug("gmail-sync", "start", { full: !previous, window_days: Math.round((window.before - window.after) / 86_400_000) });
   try {
-    const query = buildTripGmailQuery(trip, window.after, window.before);
+    const context = spendContextFor(trip);
+    const query = buildTripGmailQuery(trip, window.after, window.before, { domestic: context.domestic });
     const fetched = query
       ? await withGmailAccess((accessToken) =>
           fetchTransactionEmails(accessToken, query, (progress) => updateTripGmailSyncStatus(trip.id, { progress })),
@@ -67,40 +92,42 @@ async function runSync(trip: Trip): Promise<TripGmailSyncResult | null> {
       : [];
     // Oldest first, so updates and cancellations are applied after the booking they change.
     const messages = [...fetched].sort((a, b) => (a.date ?? "").localeCompare(b.date ?? ""));
-    // A first scan or a newer parser re-reads the trip: unedited Gmail events are rebuilt from scratch.
+    // A first scan or a newer parser re-reads the whole trip.
     const reparse = !previous || previous.parserVersion !== GMAIL_PARSER_VERSION;
-    if (reparse) useEventsStore.getState().removeUneditedEmailEvents(trip.id);
+    dropOrphanProposals();
+    const returnedEvents = reparse ? returnEventsToReview(trip, messages) : 0;
     const cancelledIds = cancelledConfirmationIds(messages);
-    const expensesAdded = await addNewExpenses(
+    const bookings = await proposeBookings(messages, trip);
+    const spends = await proposeSpends(
       messages.filter((message) => !message.externalId || !cancelledIds.includes(message.externalId)),
       trip,
+      context,
+      bookings.messageIds,
+      reparse,
     );
-    const { added: eventsAdded, removedSourceIds } = await addNewEvents(messages, trip);
-    await attachGmailTickets(messages, trip).catch((error: unknown) => logger.warn("gmail-sync", "tickets failed", error));
-    // A rescan rebuilds unedited bookings under new ids; their old tickets go (the new ones were just saved).
-    if (reparse) await pruneTickets();
-    const expensesRemoved =
-      removeCancelledExpenses([...removedSourceIds, ...cancelledIds], trip.id) + removeGenericDuplicates(trip.id);
-    if (reparse) autoSplitExisting(trip, messages);
+    const expensesRemoved = removeCancelledSpends([...bookings.removedSourceIds, ...cancelledIds], trip.id);
+    if (reparse || bookings.removedSourceIds.length > 0) await pruneTickets();
+    await drainTickets();
 
-    // A trip deleted mid-sync must not leave coverage behind.
+    // A trip deleted mid-sync must not leave coverage or proposals behind.
     if (useTripsStore.getState().trips.some((item) => item.id === trip.id)) {
       setTripGmailCoverage(trip.id, coverageAfterScan(trip, account, window, previous));
+    } else {
+      useGmailInboxStore.getState().removeTrip(trip.id);
     }
-    updateTripGmailSyncStatus(trip.id, (current) => ({
-      state: "done",
-      progress: null,
-      unseenExpenses: current.unseenExpenses + Math.max(0, expensesAdded - expensesRemoved),
-    }));
+    updateTripGmailSyncStatus(trip.id, { state: "done", progress: null });
+    const found = bookings.added + spends.added;
     logger.info("gmail-sync", "done", {
       incremental: Boolean(previous && window.after > previous.from),
       window_days: Math.round((window.before - window.after) / 86_400_000),
       messages: messages.length,
-      expenses_added: expensesAdded,
+      bookings_found: bookings.added,
+      spends_found: spends.added,
+      returned: returnedEvents + spends.returned,
       expenses_removed: expensesRemoved,
-      events_added: eventsAdded,
     });
-    return { scanned: true, expensesAdded, eventsAdded };
+    if (found > 0) track("gmail_found", { bookings: bookings.added, spends: spends.added, returned: returnedEvents + spends.returned });
+    return { scanned: true, found };
   } catch (error) {
     updateTripGmailSyncStatus(trip.id, { state: "failed", progress: null, errorCode: importErrorCode(error) });
     logger.warn("gmail-sync", "failed", error);
@@ -108,28 +135,60 @@ async function runSync(trip: Trip): Promise<TripGmailSyncResult | null> {
   }
 }
 
-async function addNewExpenses(messages: RawMessage[], trip: Trip): Promise<number> {
-  const candidates = await buildImportCandidates(messages, "email", { allowModel: false, trip });
-  const fresh = candidates.filter((candidate) => !candidate.duplicate);
-  if (fresh.length === 0) return 0;
-  const bodies = new Map(messages.map((message) => [message.externalId, message.body]));
-  const inputs = await Promise.all(
-    fresh.map(async (candidate) => {
-      const input = await candidateToInput(candidate, trip.id, trip.currency);
-      return { ...input, ...autoSplitFields(bodies.get(candidate.externalId) ?? input.note ?? "", input, trip) };
-    }),
-  );
-  const added = useExpensesStore.getState().addExpenses(inputs);
-  if (added.length > 0) track("expense_added", { source: "gmail_auto", count: added.length });
-  return added.length;
+/** Destination currencies and whether the trip is at home, from where its destinations are. */
+function spendContextFor(trip: Trip): TripSpendContext {
+  const countries = getDestinationCoordinates(trip)
+    .map((point) => (point ? placeCountry(point) : null))
+    .filter((country): country is string => Boolean(country));
+  return tripSpendContext(countries, homeCountryCode(), (country) => countryFacts(country)?.currency);
 }
 
-async function addNewEvents(messages: RawMessage[], trip: Trip): Promise<EmailMergeResult> {
+function dropOrphanProposals() {
+  const tripIds = new Set(useTripsStore.getState().trips.map((trip) => trip.id));
+  const orphans = useGmailInboxStore.getState().proposals.filter((proposal) => !tripIds.has(proposal.tripId));
+  useGmailInboxStore.getState().removeProposals(orphans.map((proposal) => proposal.id));
+}
+
+/** One-time move of older auto-imported bookings back into review; their emails are proposed again below. */
+function returnEventsToReview(trip: Trip, messages: RawMessage[]): number {
+  const messageIds = new Set(messages.map((message) => message.externalId).filter((id): id is string => Boolean(id)));
+  const ticketEventIds = new Set(useTicketsStore.getState().tickets.map((ticket) => ticket.eventId));
+  const returnable = selectReturnableEvents(useEventsStore.getState().events, {
+    tripId: trip.id,
+    shared: Boolean(trip.shared),
+    messageIds,
+    ticketEventIds,
+  });
+  useEventsStore.getState().deleteEvents(returnable.map((event) => event.id));
+  return returnable.length;
+}
+
+const filesOf = (message: RawMessage | undefined): GmailFileRef[] =>
+  message?.externalId
+    ? (message.attachments ?? []).map((file) => ({ messageId: message.externalId as string, attachmentId: file.attachmentId, name: file.name, size: file.size }))
+    : [];
+
+const uniqueFiles = (files: GmailFileRef[]) => [...new Map(files.map((file) => [`${file.messageId}:${file.name}`, file])).values()];
+
+/**
+ * Turns booking emails into proposals. A booking already in the itinerary (or already proposed) takes
+ * the email as another source instead, so its PDFs attach; cancellations remove both.
+ */
+async function proposeBookings(messages: RawMessage[], trip: Trip) {
   const candidates = await buildEventCandidates(messages, "email", { trip });
-  const fresh = candidates.filter((candidate) => !candidate.duplicate);
-  if (fresh.length === 0) return { added: 0, removedSourceIds: [] };
-  const result = useEventsStore.getState().mergeEmailEvents(
-    fresh.map((candidate) => ({
+  const byMessage = new Map(messages.map((message) => [message.externalId, message]));
+  const dismissed = useGmailInboxStore.getState().dismissed[trip.id] ?? { ids: [], bookings: [] };
+  let proposals: GmailProposal[] = [...useGmailInboxStore.getState().proposals];
+  const removedSourceIds: string[] = [];
+  const messageIds = new Set<string>();
+  let added = 0;
+
+  for (const candidate of candidates) {
+    const messageId = candidate.externalId?.replace(/#\d+$/, "");
+    if (messageId) messageIds.add(messageId);
+    const message = messageId ? byMessage.get(messageId) : undefined;
+    const files = filesOf(message);
+    const input: CreateEventInput = {
       tripId: trip.id,
       type: candidate.type,
       title: candidate.title,
@@ -139,92 +198,167 @@ async function addNewEvents(messages: RawMessage[], trip: Trip): Promise<EmailMe
       endAt: candidate.endAt,
       // Flight tickets are per person: on a trip with others, a flight from your inbox is yours.
       people: trip.companions.length > 0 && transitModeOf(candidate) === "flight" ? [SELF_ID] : undefined,
-      source: candidate.source,
-      note: candidate.note,
-      rawText: candidate.rawText,
+      source: "email",
+      rawText: trimStoredEmailText(message?.note ?? candidate.rawText ?? ""),
       externalId: candidate.externalId,
       bookingRef: candidate.bookingRef,
       travel: candidate.travel,
-      cancelled: candidate.cancelled,
-    })),
-  );
-  if (result.added > 0) track("itinerary_event_added", { source: "gmail", count: result.added });
-  return result;
-}
+    };
 
-/** Saves each booking email's PDFs (tickets, vouchers) on the items it created or merged into; files stay on the phone. */
-async function attachGmailTickets(messages: RawMessage[], trip: Trip): Promise<number> {
-  const events = useEventsStore.getState().events.filter((event) => event.tripId === trip.id && event.source === "email");
-  let saved = 0;
-  for (const message of messages) {
-    const files = (message.attachments ?? []).filter((file) => file.size <= MAX_TICKET_BYTES);
-    if (!message.externalId || files.length === 0) continue;
-    const fromThisEmail = (id: string | undefined) => Boolean(id?.startsWith(`${message.externalId}#`));
-    const targets = events.filter((event) => fromThisEmail(event.externalId) || event.sourceIds?.some(fromThisEmail));
-    if (targets.length === 0) continue;
-    const messageId = message.externalId.slice("gmail:".length);
-    for (const file of files) {
-      const key = `${message.externalId}:${file.name}`;
-      const missing = targets.filter((event) => !hasGmailTicket(event.id, key));
-      if (missing.length === 0) continue;
-      const data = await withGmailAccess((accessToken) => fetchGmailAttachment(accessToken, messageId, file.attachmentId));
-      for (const event of missing) {
-        if (await saveGmailTicket(event.id, key, file.name, data)) saved += 1;
-      }
+    if (candidate.cancelled) {
+      removedSourceIds.push(...useEventsStore.getState().mergeEmailEvents([{ ...input, cancelled: true }]).removedSourceIds);
+      const gone = proposals.filter((item) => item.kind === "booking" && item.tripId === trip.id && sameBooking(item.event, input));
+      for (const item of gone) if (item.kind === "booking") removedSourceIds.push(item.id, ...(item.event.sourceIds ?? []));
+      proposals = proposals.filter((item) => !gone.includes(item));
+      continue;
     }
+
+    const tripEvents = useEventsStore.getState().events.filter((event) => event.tripId === trip.id);
+    const confirmed =
+      tripEvents.find((event) => sameBooking(event, input)) ??
+      (messageId ? tripEvents.find((event) => event.source === "email" && eventMessageIds(event).includes(messageId)) : undefined);
+    if (confirmed) {
+      absorbIntoEvent(confirmed, input);
+      if (files.length > 0) queueGmailTickets(confirmed.id, files);
+      continue;
+    }
+
+    const bookingIndexes = proposals.flatMap((item, index) => (item.kind === "booking" && item.tripId === trip.id ? [index] : []));
+    const match = bookingIndexes[findSameBooking(bookingIndexes.map((index) => (proposals[index] as Extract<GmailProposal, { kind: "booking" }>).event), input)];
+    if (match !== undefined) {
+      const proposal = proposals[match] as Extract<GmailProposal, { kind: "booking" }>;
+      const travel = mergeTravelDetails(proposal.event.travel, input.travel);
+      proposals[match] = {
+        ...proposal,
+        event: { ...proposal.event, ...mergeBooking(proposal.event, input), ...(travel ? { travel } : null) },
+        files: uniqueFiles([...proposal.files, ...files]),
+      };
+      continue;
+    }
+    if (isDismissedBooking(dismissed, input) || !input.externalId) continue;
+
+    proposals.push({
+      kind: "booking",
+      id: input.externalId,
+      tripId: trip.id,
+      event: input,
+      emailText: input.rawText ?? "",
+      files: uniqueFiles(files),
+      createdAt: new Date().toISOString(),
+    });
+    added += 1;
   }
-  if (saved > 0) {
-    logger.info("gmail-sync", "tickets saved", { count: saved });
-    track("ticket_added", { source: "gmail", count: saved });
-  }
-  return saved;
+
+  useGmailInboxStore.getState().setProposals(() => proposals);
+  return { added, removedSourceIds, messageIds };
 }
 
-/** Split fields for a Gmail spend you paid, from the email's head-count and guest names. */
-function autoSplitFields(
-  text: string,
-  spend: { amount: number; currency: string },
-  trip: Trip,
-): Pick<CreateExpenseInput, "paidBy" | "shares" | "splitHint"> {
-  const plan = planAutoSplit(parseParty(text), {
-    amount: spend.amount,
-    currency: spend.currency,
-    companions: trip.companions,
-    selfName: useAuthStore.getState().user?.name,
-    shared: Boolean(trip.shared),
-  });
-  if (!plan) return {};
-  return plan.kind === "split" ? { paidBy: SELF_ID, shares: plan.shares } : { splitHint: plan.hint };
+/** Records another email about a booking in the itinerary; untouched items also take its new details. */
+function absorbIntoEvent(event: TripEvent, input: CreateEventInput) {
+  if (!input.externalId || eventMessageIds(event).includes(input.externalId.replace(/#\d+$/, ""))) return;
+  const update = event.editedAt
+    ? { sourceIds: [...new Set([...(event.sourceIds ?? []), input.externalId])] }
+    : (() => {
+        const travel = mergeTravelDetails(event.travel, input.travel);
+        return { ...mergeBooking(event, input), ...(travel ? { travel } : null) };
+      })();
+  useEventsStore.getState().updateEvent(event.id, update);
+}
+
+/** "From Agoda · 3 Oct", plus a pending-payment mark for booking totals. */
+function sourceNote(candidate: ImportCandidate): string {
+  const name = emailSenderName(candidate.sender) || candidate.merchant;
+  let day = candidate.date.slice(0, 10);
+  try {
+    day = new Intl.DateTimeFormat(getCurrentLocale(), { day: "numeric", month: "short" }).format(new Date(candidate.date));
+  } catch {}
+  const line = translate("expenses.gmailSourceNote", { name, date: day });
+  return candidate.committedBooking ? `${line} · ${translate("expenses.gmailPaymentPending")}` : line;
 }
 
 /**
- * One pass over the trip's earlier Gmail spends that were never split, using the email from this scan
- * when it was fetched again, else the start of the email kept on the spend.
+ * Turns spend emails into proposals with a default split. On the re-read, older auto-imported spends
+ * the user never changed go back to review (not on shared trips, where removing one syncs to everyone).
  */
-function autoSplitExisting(trip: Trip, messages: RawMessage[]): void {
-  const bodies = new Map(messages.map((message) => [message.externalId, message.body]));
-  const updates: { id: string; input: Partial<CreateExpenseInput> }[] = [];
-  for (const expense of useExpensesStore.getState().expenses) {
-    if (expense.groupId !== trip.id || expense.source !== "email" || expense.shares?.length || expense.splitHint) continue;
-    const text = (expense.externalId && bodies.get(expense.externalId)) || expense.note || expense.rawText || "";
-    const fields = autoSplitFields(text, expense, trip);
-    if (fields.shares || fields.splitHint) updates.push({ id: expense.id, input: fields });
-  }
-  useExpensesStore.getState().updateExpenses(updates);
-}
+async function proposeSpends(messages: RawMessage[], trip: Trip, context: TripSpendContext, bookingMessageIds: Set<string>, reparse: boolean) {
+  const candidates = await buildImportCandidates(messages, "email", { allowModel: false, trip, spendContext: context });
+  const byMessage = new Map(messages.map((message) => [message.externalId, message]));
+  const expenses = useExpensesStore.getState().expenses;
+  const pockets = usePocketsStore.getState().pockets;
+  const dismissed = new Set(useGmailInboxStore.getState().dismissed[trip.id]?.ids ?? []);
+  let proposals: GmailProposal[] = [...useGmailInboxStore.getState().proposals];
+  const selfName = useAuthStore.getState().user?.name;
+  const returned: string[] = [];
+  let added = 0;
 
-/**
- * A booking site's receipt ("Booking", ¥17,367) duplicates the named confirmation spend
- * ("Maple Leaf Hostel", ¥17,367, same day); keeps the named one.
- */
-function removeGenericDuplicates(tripId: string): number {
-  const { expenses, removeExpenses } = useExpensesStore.getState();
-  const email = expenses.filter((expense) => expense.groupId === tripId && expense.source === "email");
-  const key = (expense: (typeof email)[number]) => `${expense.currency}|${expense.amount.toFixed(2)}|${toLocalDayKey(expense.date)}`;
-  const named = new Set(email.filter((expense) => !isGenericTitle(expense.merchant)).map(key));
-  const duplicates = email.filter((expense) => isGenericTitle(expense.merchant) && named.has(key(expense)));
-  removeExpenses(duplicates.map((expense) => expense.id));
-  return duplicates.length;
+  for (const candidate of candidates) {
+    const externalId = candidate.externalId;
+    if (!externalId) continue;
+    const message = byMessage.get(externalId);
+    const emailText = trimStoredEmailText(message?.note ?? candidate.rawText);
+    if (candidate.duplicate) {
+      const existing = reparse && !trip.shared ? expenses.find((expense) => expense.externalId === externalId) : undefined;
+      if (
+        !existing ||
+        existing.groupId !== trip.id ||
+        pocketOfExpense(pockets, existing.id) ||
+        !isUntouchedImportedExpense(existing, candidate, emailText)
+      ) {
+        continue;
+      }
+      returned.push(existing.id);
+    }
+    if (dismissed.has(externalId) || proposals.some((proposal) => proposal.id === externalId)) continue;
+    const tripSpends = proposals.flatMap((proposal) => (proposal.kind === "spend" && proposal.tripId === trip.id ? [proposal.expense] : []));
+    const ledger = expenses.filter((expense) => expense.groupId === trip.id && !returned.includes(expense.id));
+    if (isRepeatSpend({ ...candidate, externalId: undefined }, [...ledger, ...tripSpends])) continue;
+    if (!isGenericTitle(candidate.merchant)) {
+      const key = spendKey(candidate);
+      proposals = proposals.filter(
+        (proposal) => !(proposal.kind === "spend" && proposal.tripId === trip.id && isGenericTitle(proposal.expense.merchant) && spendKey(proposal.expense) === key),
+      );
+    }
+
+    const booking = isBookingSpend(candidate.category, {
+      committedBooking: candidate.committedBooking,
+      hasBooking: bookingMessageIds.has(externalId),
+    });
+    const split = defaultSpendSplit({
+      text: message?.body ?? emailText,
+      amount: candidate.amount,
+      currency: candidate.currency,
+      booking,
+      companions: trip.companions,
+      selfName,
+    });
+    proposals.push({
+      kind: "spend",
+      id: externalId,
+      tripId: trip.id,
+      booking,
+      createdAt: new Date().toISOString(),
+      expense: {
+        groupId: trip.id,
+        merchant: candidate.merchant || translate("expenses.unknownMerchant"),
+        amount: candidate.amount,
+        currency: candidate.currency,
+        category: candidate.category,
+        date: candidate.date,
+        source: "email",
+        autoCategorized: true,
+        rawText: emailText,
+        note: sourceNote(candidate),
+        externalId,
+        location: null,
+        ...split,
+      },
+    });
+    added += 1;
+  }
+
+  useExpensesStore.getState().removeExpenses(returned);
+  useGmailInboxStore.getState().setProposals(() => proposals);
+  return { added, returned: returned.length };
 }
 
 /** Message ids of confirmation emails whose booking number has a cancellation email in the same batch. */
@@ -238,11 +372,19 @@ function cancelledConfirmationIds(messages: RawMessage[]): string[] {
     .map(({ id }) => id as string);
 }
 
-/** Drops Gmail spends imported from the confirmation of a booking that was later cancelled. */
-function removeCancelledExpenses(sourceIds: string[], tripId: string): number {
+/** Drops the spends (added or proposed) from the confirmation of a booking that was later cancelled. */
+function removeCancelledSpends(sourceIds: string[], tripId: string): number {
   // Event source ids are "gmail:<message>#<n>"; the spend from that email is "gmail:<message>".
   const messageIds = new Set(sourceIds.map((id) => id.replace(/#\d+$/, "")));
   if (messageIds.size === 0) return 0;
+  useGmailInboxStore
+    .getState()
+    .removeProposals(
+      useGmailInboxStore
+        .getState()
+        .proposals.filter((proposal) => proposal.kind === "spend" && proposal.tripId === tripId && messageIds.has(proposal.id))
+        .map((proposal) => proposal.id),
+    );
   const { expenses, removeExpenses } = useExpensesStore.getState();
   const cancelled = expenses.filter(
     (expense) => expense.groupId === tripId && expense.source === "email" && expense.externalId && messageIds.has(expense.externalId),

@@ -25,3 +25,8 @@ export function openLegalPage(url: string) {
 export function inviteUrl(code: string) {
   return `${siteUrl}/join/${code}`;
 }
+
+/** Web landing page for a circle invite; it opens the app on the "Join their circle" screen. */
+export function circleInviteUrl(code: string) {
+  return `${siteUrl}/circle/${code}`;
+}

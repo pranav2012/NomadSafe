@@ -1,7 +1,7 @@
 import { tripMailWindow } from "@/features/expenses/services/gmailParsing";
 
 /** Bump when email parsing changes so every trip re-reads its mail once with the new parser. */
-export const GMAIL_PARSER_VERSION = 5;
+export const GMAIL_PARSER_VERSION = 6;
 
 export interface TripGmailCoverage {
   account: string;

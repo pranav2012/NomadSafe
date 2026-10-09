@@ -13,13 +13,11 @@ export interface TripGmailSyncStatus {
   state: GmailSyncState;
   progress: GmailFetchProgress | null;
   errorCode: ImportErrorCode | null;
-  /** Spends added by syncs that the Money banner hasn't shown yet. */
-  unseenExpenses: number;
 }
 
-const IDLE: TripGmailSyncStatus = { state: "idle", progress: null, errorCode: null, unseenExpenses: 0 };
+const IDLE: TripGmailSyncStatus = { state: "idle", progress: null, errorCode: null };
 
-/** In-memory Gmail sync status per trip, for loading, empty states and the Money banner. */
+/** In-memory Gmail sync status per trip, for loading and empty states. */
 export const useGmailSyncStatus = create<{ byTrip: Record<string, TripGmailSyncStatus> }>()(() => ({ byTrip: {} }));
 
 export function updateTripGmailSyncStatus(
@@ -35,8 +33,4 @@ export function updateTripGmailSyncStatus(
 
 export function useTripGmailSyncStatus(tripId: string | null | undefined): TripGmailSyncStatus {
   return useGmailSyncStatus((state) => (tripId ? state.byTrip[tripId] : undefined) ?? IDLE);
-}
-
-export function dismissGmailSyncBanner(tripId: string): void {
-  updateTripGmailSyncStatus(tripId, { unseenExpenses: 0 });
 }

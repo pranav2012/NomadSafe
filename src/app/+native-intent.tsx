@@ -4,7 +4,7 @@ import { sharedTextFromLink } from "@/features/itinerary/utils/shareLink";
 import { useIncomingShareStore } from "@/features/itinerary/store/incomingShareStore";
 import { isQuickSosLink, useQuickSosStore } from "@/features/safety/store/quickSosStore";
 import { usePendingJoinStore } from "@/features/trips/store/pendingJoinStore";
-import { inviteCodeFromPath } from "@/features/trips/utils/inviteLinks";
+import { inviteFromPath } from "@/features/trips/utils/inviteLinks";
 import { isWidgetToken, linkParam, WIDGET_TOKEN_PARAM, withoutLinkParams } from "@/features/widget/widgetToken";
 
 // Google OAuth callback (`com.pranav.nomadsafe:/oauthredirect?...`), consumed by expo-auth-session.
@@ -42,10 +42,10 @@ export function redirectSystemPath({ path }: { path: string; initial: boolean })
     path = withoutLinkParams(path, fromWidget ? [WIDGET_TOKEN_PARAM] : [WIDGET_TOKEN_PARAM, "autostart", "source"]);
   }
   noteIncomingLink(path);
-  // Invite links wait until the user is signed in and onboarded; the tabs layout picks them up.
-  const code = inviteCodeFromPath(path);
-  if (code) {
-    usePendingJoinStore.getState().setCode(code);
+  // Trip and circle invite links wait until the user is signed in and onboarded; the tabs layout picks them up.
+  const invite = inviteFromPath(path);
+  if (invite) {
+    usePendingJoinStore.getState().setInvite(invite);
     return "/";
   }
   return path;

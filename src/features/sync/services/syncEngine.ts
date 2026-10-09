@@ -12,6 +12,7 @@ import { useTravelInfoStore } from "@/features/trips/store/travelInfoStore";
 import { normalizePlanned, pickDefaultActiveTripId, selectShareables, useTripsStore, type Group, type PlannedTrip, type Trip } from "@/features/trips/store/tripsStore";
 import { useRecurringStore, type RecurringRule } from "@/features/expenses/store/recurringStore";
 import { usePocketsStore } from "@/features/expenses/store/pocketsStore";
+import { useGmailInboxStore } from "@/features/expenses/store/gmailInboxStore";
 import type { ForexPocket } from "@/features/expenses/utils/forex";
 import { syncWidgets } from "@/features/widget/syncWidgets";
 import { logger } from "@/modules/logger";
@@ -327,6 +328,7 @@ export function clearSyncedLocalData() {
   usePassportStore.getState().reset();
   useRecurringStore.getState().reset();
   usePocketsStore.getState().reset();
+  useGmailInboxStore.getState().reset();
   useIncomingShareStore.getState().clear();
   void deleteAllTripPhotos();
   void deleteAllTickets();

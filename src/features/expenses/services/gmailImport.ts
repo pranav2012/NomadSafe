@@ -126,6 +126,22 @@ export async function fetchGmailAttachment(accessToken: string, messageId: strin
 }
 
 /**
+ * A PDF's bytes as base64. Gmail attachment ids can change between reads, so a stale one is found
+ * again by file name on a fresh copy of the message.
+ */
+export async function fetchGmailPdf(accessToken: string, messageId: string, file: { attachmentId: string; name: string }): Promise<string> {
+  try {
+    return await fetchGmailAttachment(accessToken, messageId, file.attachmentId);
+  } catch (error) {
+    if (!(error instanceof ImportError) || (error.status !== 400 && error.status !== 404)) throw error;
+    const message = await gmailFetch<GmailMessage>(`messages/${encodeURIComponent(messageId)}?format=full`, accessToken);
+    const current = pdfAttachments(message).find((attachment) => attachment.name === file.name);
+    if (!current) throw error;
+    return fetchGmailAttachment(accessToken, messageId, current.attachmentId);
+  }
+}
+
+/**
  * Fetches the emails matching a Gmail search as raw messages for the import pipeline.
  * Pulls the full body (text/plain or stripped HTML) plus the subject and sender,
  * giving the parser real context to extract the amount and merchant, and a
