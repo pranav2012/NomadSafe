@@ -14,7 +14,7 @@ import {
 import { requireAppCheck } from "./appCheck";
 import { effectivePlan, planFromSubscriber, type PlanSnapshot } from "./billingRules";
 import { constantTimeEqual } from "./securityRules";
-import { getAuthenticatedUser, requireUser } from "./users";
+import { findAuthUserByEmail, findAuthUserById, getAuthenticatedUser, requireUser } from "./users";
 
 const REVENUECAT_API = "https://api.revenuecat.com/v1";
 
@@ -108,29 +108,30 @@ export const planForUser = internalQuery({
   },
 });
 
+const tierArg = v.union(v.literal("plus"), v.literal("pro"));
+
+async function saveGrant(ctx: MutationCtx, userId: string, tier: "plus" | "pro", note: string, days?: number) {
+  const existing = await getGrant(ctx, userId);
+  const row = {
+    userId,
+    unlimitedTrips: true,
+    cloudAi: tier === "pro",
+    expiresAt: days ? Date.now() + days * 24 * 60 * 60 * 1000 : undefined,
+    note,
+    createdAt: Date.now(),
+  };
+  if (existing) await ctx.db.replace(existing._id, row);
+  else await ctx.db.insert("planGrants", row);
+}
+
 /**
  * Gives a plan without a purchase (`npx convex run billing:grantPlan '{"userId":"…","tier":"pro","note":"…"}'`).
  * `days` limits it; without it the grant lasts until revoked.
  */
 export const grantPlan = internalMutation({
-  args: {
-    userId: v.string(),
-    tier: v.union(v.literal("plus"), v.literal("pro")),
-    note: v.string(),
-    days: v.optional(v.number()),
-  },
+  args: { userId: v.string(), tier: tierArg, note: v.string(), days: v.optional(v.number()) },
   handler: async (ctx, { userId, tier, note, days }) => {
-    const existing = await getGrant(ctx, userId);
-    const row = {
-      userId,
-      unlimitedTrips: true,
-      cloudAi: tier === "pro",
-      expiresAt: days ? Date.now() + days * 24 * 60 * 60 * 1000 : undefined,
-      note,
-      createdAt: Date.now(),
-    };
-    if (existing) await ctx.db.replace(existing._id, row);
-    else await ctx.db.insert("planGrants", row);
+    await saveGrant(ctx, userId, tier, note, days);
   },
 });
 
@@ -139,6 +140,60 @@ export const revokePlan = internalMutation({
   handler: async (ctx, { userId }) => {
     const existing = await getGrant(ctx, userId);
     if (existing) await ctx.db.delete(existing._id);
+  },
+});
+
+/**
+ * Grants a plan to signed-up accounts by email, e.g. testers:
+ * `npx convex run --prod billing:grantPlanByEmail '{"emails":["a@x.com"],"tier":"pro","note":"beta","days":30}'`.
+ * Emails with no account yet are listed in `notFound`; they need to sign in once first.
+ */
+export const grantPlanByEmail = internalMutation({
+  args: { emails: v.array(v.string()), tier: tierArg, note: v.string(), days: v.optional(v.number()) },
+  handler: async (ctx, { emails, tier, note, days }) => {
+    const granted: string[] = [];
+    const notFound: string[] = [];
+    for (const email of emails) {
+      const user = await findAuthUserByEmail(ctx, email);
+      if (!user) {
+        notFound.push(email);
+        continue;
+      }
+      await saveGrant(ctx, user.id, tier, note, days);
+      granted.push(email);
+    }
+    return { granted, notFound };
+  },
+});
+
+export const revokePlanByEmail = internalMutation({
+  args: { emails: v.array(v.string()) },
+  handler: async (ctx, { emails }) => {
+    const revoked: string[] = [];
+    for (const email of emails) {
+      const user = await findAuthUserByEmail(ctx, email);
+      const grant = user ? await getGrant(ctx, user.id) : null;
+      if (!grant) continue;
+      await ctx.db.delete(grant._id);
+      revoked.push(email);
+    }
+    return { revoked };
+  },
+});
+
+/** Every active grant with its account email (`npx convex run --prod billing:listGrants`). */
+export const listGrants = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const grants = await ctx.db.query("planGrants").collect();
+    return Promise.all(
+      grants.map(async (grant) => ({
+        email: (await findAuthUserById(ctx, grant.userId))?.email ?? null,
+        tier: grant.cloudAi ? "pro" : "plus",
+        expiresAt: grant.expiresAt ? new Date(grant.expiresAt).toISOString() : null,
+        note: grant.note,
+      })),
+    );
   },
 });
 
