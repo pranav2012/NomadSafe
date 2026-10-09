@@ -113,7 +113,7 @@ function AppStateLock() {
 
         if (nextState !== "active" || prev === "active") return;
 
-        void aiRuntime.ensureProvisioned();
+        if (useAuthStore.getState().isSignedIn) void aiRuntime.ensureProvisioned();
         // Apply share expiry and the emergency time limit, then mirror the task's state in the UI store.
         void enforceBroadcastLimits()
           .then(() => isLocationBroadcastRunning())
@@ -368,13 +368,18 @@ function RootLayout() {
     if (fontsLoaded && splashDrawn) SplashScreen.hide();
   }, [fontsLoaded, splashDrawn]);
 
-  // Provision the device-matched model (resuming any download from a previous
-  // session), wire up the background task, and prepare download notifications.
+  // Wire up the background download task and download notifications.
   useEffect(() => {
     modelNotifications.configure();
     aiRuntime.registerBackgroundDownload();
-    void aiRuntime.ensureProvisioned();
   }, []);
+
+  // Provision the device-matched model (resuming any earlier download) only once someone has signed in,
+  // so the sign-in screen never starts a large download.
+  const isSignedIn = useAuthStore((s) => s.isSignedIn);
+  useEffect(() => {
+    if (isSignedIn) void aiRuntime.ensureProvisioned();
+  }, [isSignedIn]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
