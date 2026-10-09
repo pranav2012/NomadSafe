@@ -824,6 +824,57 @@ a.store-badge:hover {
 .cta__card .badges {
   margin-top: 12px;
 }
+.steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  width: min(880px, 100%);
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+.steps__item {
+  display: flex;
+  gap: 14px;
+  padding: 20px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 20px;
+  background: rgba(11, 13, 18, 0.55);
+}
+.steps__num {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--aurora);
+  color: var(--bg);
+  font-weight: 700;
+}
+.steps__item h3 {
+  margin: 4px 0 6px;
+  font-size: 1.05rem;
+}
+.steps__item p {
+  margin: 0;
+  color: var(--text-soft);
+  line-height: 1.5;
+}
+.steps__link {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--bg);
+  font-weight: 600;
+  transition: transform 0.25s var(--ease);
+}
+.steps__link:hover {
+  transform: translateY(-2px);
+}
 .cta__arc {
   width: min(420px, 80%);
   height: auto;

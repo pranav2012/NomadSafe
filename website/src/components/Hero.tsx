@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Aurora } from "./Aurora";
 import { DemoPhone } from "./DemoPhone";
+import { EARLY_ACCESS } from "../site";
 import { StoreBadges } from "./StoreBadges";
 
 export function Hero() {
@@ -37,7 +38,7 @@ export function Hero() {
         <div className="hero__copy">
           <p className="pill">
             <span className="pill__dot" aria-hidden="true" />
-            Launching soon on Android, then iPhone
+            {EARLY_ACCESS ? "Early access on Android, iPhone next" : "Launching soon on Android, then iPhone"}
           </p>
           <h1 id="hero-title">
             Every part of the trip, <span className="gradient-text">in one calm app.</span>

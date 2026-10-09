@@ -1,5 +1,5 @@
 import type { PointerEvent } from "react";
-import { STORE_LINKS } from "../site";
+import { EARLY_ACCESS, STORE_LINKS } from "../site";
 
 // Magnetic hover: the badge drifts a few pixels toward a mouse pointer.
 function onMagnet(e: PointerEvent<HTMLElement>) {
@@ -42,12 +42,13 @@ export function StoreBadges({ center = false }: { center?: boolean }) {
   return (
     <ul className={center ? "badges badges--center" : "badges"} aria-label="Download NomadSafe">
       {STORES.map(({ key, name, live, soon, Icon }) => {
-        const href = STORE_LINKS[key];
+        const early = key === "play" && !STORE_LINKS.play && EARLY_ACCESS;
+        const href = STORE_LINKS[key] ?? (early ? "#early-access" : null);
         const body = (
           <>
             <Icon />
             <span className="store-badge__text">
-              <span className="store-badge__kicker">{href ? live : soon}</span>
+              <span className="store-badge__kicker">{early ? "Early access" : href ? live : soon}</span>
               <span className="store-badge__store">{name}</span>
             </span>
           </>
