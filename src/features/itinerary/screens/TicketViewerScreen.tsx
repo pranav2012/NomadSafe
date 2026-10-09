@@ -48,7 +48,8 @@ function ZoomableImage({ uri }: { uri: string }) {
   return (
     <GestureDetector gesture={Gesture.Simultaneous(pinch, pan, reset)}>
       <Animated.View style={[styles.fill, style]}>
-        <Image source={{ uri }} style={styles.fill} resizeMode="contain" />
+        {/* White behind the image too, so a transparent ticket's black QR code stays scannable in dark mode. */}
+        <Image source={{ uri }} style={[styles.fill, styles.page]} resizeMode="contain" />
       </Animated.View>
     </GestureDetector>
   );
@@ -221,6 +222,7 @@ export default function TicketViewerScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   fill: { flex: 1 },
+  page: { backgroundColor: "#FFFFFF" },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
   header: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingBottom: 10 },
   round: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },

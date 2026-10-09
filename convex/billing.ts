@@ -143,6 +143,17 @@ export const revokePlan = internalMutation({
   },
 });
 
+/** Hourly cron: deletes expired grants. Queries don't re-run as time passes, so the deletion is what drops the plan on phones. */
+export const pruneExpiredGrants = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    for (const grant of await ctx.db.query("planGrants").collect()) {
+      if (grant.expiresAt !== undefined && grant.expiresAt <= now) await ctx.db.delete(grant._id);
+    }
+  },
+});
+
 /**
  * Grants a plan to signed-up accounts by email, e.g. testers:
  * `npx convex run --prod billing:grantPlanByEmail '{"emails":["a@x.com"],"tier":"pro","note":"beta","days":30}'`.

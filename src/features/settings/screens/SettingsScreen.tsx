@@ -273,8 +273,13 @@ export default function SettingsScreen() {
         style: "destructive",
         onPress: async () => {
           useAuthStore.getState().setSigningOut(true);
-          // Shared trips leave the phone on sign-out too, so their pending changes count as well.
-          const sent = (await flushGroupSync()) && (!backedUp || (await flushSync()));
+          let sent = false;
+          try {
+            // Shared trips leave the phone on sign-out too, so their pending changes count as well.
+            sent = (await flushGroupSync()) && (!backedUp || (await flushSync()));
+          } catch {
+            // Treated like an upload that didn't finish: the user decides below.
+          }
           if (!sent) {
             useAuthStore.getState().setSigningOut(false);
             showAlert(t("settings.signOutUnsyncedTitle"), t("settings.signOutUnsyncedBody"), [
