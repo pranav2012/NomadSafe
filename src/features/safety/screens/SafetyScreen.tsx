@@ -7,7 +7,7 @@ import { useNetworkState } from "expo-network";
 import { useFocusEffect, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { getLastKnownPosition, getRecentPosition, requestForegroundPermission } from "@/modules/location";
-import { GlassSurface, LiveDot, showAlert, useAura, useTabBarInset } from "@/atoms";
+import { GlassSurface, Icon, LiveDot, PressableScale, showAlert, useAura, useTabBarInset } from "@/atoms";
 import { useAnimationsActive, useAppActive } from "@/hooks/useAnimationsActive";
 import { auraStatusAccent, type AuraStatus } from "@/constants/aura";
 import { useLocalization } from "@/localization";
@@ -51,7 +51,7 @@ import { EmergencyTakeover, SosCountdownOverlay } from "@/features/safety/compon
 import { ReadinessSheet } from "@/features/safety/components/ReadinessSheet";
 import { SafeArrivalSheet } from "@/features/safety/components/SafeArrivalSheet";
 import { SafetyMap } from "@/features/safety/components/SafetyMap";
-import { CircleRow, FixBanner, SafetyTile, SharingLiveCard, TimerLiveCard } from "@/features/safety/components/SafetyPanel";
+import { CircleRow, SafetyTile, SharingLiveCard, TimerLiveCard } from "@/features/safety/components/SafetyPanel";
 import { SosHoldButton } from "@/features/safety/components/SosHoldButton";
 import { useBriefPulse } from "@/features/safety/hooks/useBriefPulse";
 import { isCheckInMissed, useSafetyStore, type ContactAlert } from "../store/safetyStore";
@@ -63,8 +63,9 @@ import { logger } from "@/modules/logger";
 const PRESETS = [15 * 60, 30 * 60, 60 * 60, 2 * 60 * 60, 4 * 60 * 60, 8 * 60 * 60];
 
 const SOS_HOLD_MS = 2000;
+// Room between the panel and the floating SOS button, enough for Google's credit line under it.
+const SOS_GAP = 30;
 // Keeps the SOS button above Google's credit line, which sits on the panel's top edge.
-const SOS_GAP = 34;
 const SOS_CANCEL_WINDOW_SECONDS = 5;
 const WARN = "#FFB547";
 const READY = "#3DDC97";
@@ -729,10 +730,18 @@ export default function SafetyScreen() {
         <Text accessibilityRole="header" style={[styles.title, { color: c.text, fontFamily: f.semibold }]}>
           {t("safety.title")}
         </Text>
-        <View style={[styles.pill, { backgroundColor: c.card, borderColor: c.hairline }]} accessibilityLiveRegion="polite">
+        <PressableScale
+          onPress={issueCount > 0 ? () => setSheet("readiness") : circleEmpty ? openCircle : undefined}
+          disabled={!setupNeeded || auraStatus !== "calm"}
+          haptic={false}
+          accessibilityRole={setupNeeded && auraStatus === "calm" ? "button" : "text"}
+          accessibilityLiveRegion="polite"
+          style={[styles.pill, { backgroundColor: c.card, borderColor: c.hairline }]}
+        >
           <LiveDot color={statusDot} active={statusPulse} size={7} />
           <Text style={[styles.pillText, { color: c.text, fontFamily: f.medium }]}>{statusLabel}</Text>
-        </View>
+          {setupNeeded && auraStatus === "calm" ? <Icon name="chevronRight" size={13} color={c.textMuted} /> : null}
+        </PressableScale>
       </View>
 
       <View style={[styles.sos, { bottom: panelBottom + panelHeight + SOS_GAP }]} pointerEvents="box-none">
@@ -814,7 +823,6 @@ export default function SafetyScreen() {
           </View>
 
           <CircleRow people={circle.people} alertCount={circle.loaded ? alertCount : 1} onPress={openCircle} />
-          {issueCount > 0 ? <FixBanner count={issueCount} onPress={() => setSheet("readiness")} /> : null}
         </ScrollView>
       </View>
 
@@ -870,7 +878,7 @@ const styles = StyleSheet.create({
   title: { flexShrink: 1, fontSize: 30, letterSpacing: -0.9 },
   pill: { flexDirection: "row", alignItems: "center", gap: 7, height: 30, paddingHorizontal: 12, borderRadius: 15, borderWidth: StyleSheet.hairlineWidth },
   pillText: { fontSize: 12.5 },
-  sos: { position: "absolute", right: 18 },
+  sos: { position: "absolute", right: 16 },
   panel: { position: "absolute", left: 10, right: 10, borderRadius: 30, overflow: "hidden" },
   panelTint: { borderRadius: 30 },
   panelBorder: { borderRadius: 30, borderWidth: StyleSheet.hairlineWidth },

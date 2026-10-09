@@ -5,8 +5,10 @@ import { Easing, cancelAnimation, useSharedValue, withSpring, withTiming } from 
 import { scheduleOnRN } from "react-native-worklets";
 import { auraFonts, auraStatusAccent, auraStatusColors, type AuraPalette } from "@/constants/aura";
 
-const SIZE = 60;
-const RING = 5;
+const SIZE = 46;
+const RING = 4;
+// How long "Hold for SOS" shows after a tap that let go too early.
+const HINT_MS = 1800;
 const CANVAS = SIZE + RING * 4;
 const ALERT = auraStatusAccent.alert;
 const [GLOW] = auraStatusColors.alert;
@@ -27,7 +29,8 @@ interface SosHoldButtonProps {
 }
 
 /**
- * Floating round SOS button with its label beside it. Holding fills a ring on the UI thread and
+ * Small floating round SOS button. Its label shows only while held ("Keep holding") or briefly
+ * after a tap that let go too early ("Hold for SOS"). Holding fills a ring on the UI thread and
  * calls `onHoldComplete` once full; letting go early springs it back. No React state per frame.
  */
 export function SosHoldButton({
@@ -43,7 +46,9 @@ export function SosHoldButton({
 }: SosHoldButtonProps) {
   const fill = useSharedValue(0);
   const [holding, setHolding] = useState(false);
+  const [hint, setHint] = useState(false);
   const holdingRef = useRef(false);
+  const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const complete = useCallback(() => {
     if (!holdingRef.current) return;
@@ -69,9 +74,18 @@ export function SosHoldButton({
     setHolding(false);
     cancelAnimation(fill);
     fill.set(withSpring(0, SPRING_BACK));
+    setHint(true);
+    if (hintTimer.current) clearTimeout(hintTimer.current);
+    hintTimer.current = setTimeout(() => setHint(false), HINT_MS);
   }, [fill]);
 
-  useEffect(() => () => cancelAnimation(fill), [fill]);
+  useEffect(
+    () => () => {
+      cancelAnimation(fill);
+      if (hintTimer.current) clearTimeout(hintTimer.current);
+    },
+    [fill],
+  );
 
   const ring = useMemo(() => {
     const r = SIZE / 2 + RING;
@@ -82,15 +96,17 @@ export function SosHoldButton({
 
   return (
     <View style={styles.root} pointerEvents="box-none">
-      <View style={[styles.label, { backgroundColor: holding ? ALERT : palette.card, borderColor: holding ? ALERT : palette.hairline }]}>
-        <Text numberOfLines={1} style={[styles.labelText, { color: holding ? "#FFFFFF" : palette.text }]}>
-          {holding ? holdingLabel : idleLabel}
-        </Text>
-      </View>
+      {holding || hint ? (
+        <View style={[styles.label, { backgroundColor: holding ? ALERT : palette.card, borderColor: holding ? ALERT : palette.hairline }]}>
+          <Text numberOfLines={1} style={[styles.labelText, { color: holding ? "#FFFFFF" : palette.text }]}>
+            {holding ? holdingLabel : idleLabel}
+          </Text>
+        </View>
+      ) : null}
       <View style={styles.stage}>
         <Canvas style={styles.canvas} pointerEvents="none">
-          <Path path={ring} style="stroke" strokeWidth={3.5} strokeCap="round" color={`${ALERT}40`} />
-          <Path path={ring} style="stroke" strokeWidth={3.5} strokeCap="round" color={ALERT} start={0} end={fill} />
+          <Path path={ring} style="stroke" strokeWidth={3} strokeCap="round" color={`${ALERT}40`} />
+          <Path path={ring} style="stroke" strokeWidth={3} strokeCap="round" color={ALERT} start={0} end={fill} />
         </Canvas>
         <Pressable
           onPressIn={pressIn}
@@ -112,9 +128,9 @@ export function SosHoldButton({
 }
 
 const styles = StyleSheet.create({
-  root: { flexDirection: "row", alignItems: "center", gap: 12 },
-  label: { height: 34, paddingHorizontal: 14, borderRadius: 17, borderWidth: StyleSheet.hairlineWidth, justifyContent: "center" },
-  labelText: { fontFamily: auraFonts.semibold, fontSize: 13 },
+  root: { flexDirection: "row", alignItems: "center", gap: 10 },
+  label: { height: 30, paddingHorizontal: 12, borderRadius: 15, borderWidth: StyleSheet.hairlineWidth, justifyContent: "center" },
+  labelText: { fontFamily: auraFonts.semibold, fontSize: 12.5 },
   stage: { width: SIZE, height: SIZE, alignItems: "center", justifyContent: "center" },
   canvas: { position: "absolute", width: CANVAS, height: CANVAS, left: (SIZE - CANVAS) / 2, top: (SIZE - CANVAS) / 2 },
   button: {
@@ -126,9 +142,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     shadowColor: GLOW,
     shadowOpacity: 0.55,
-    shadowRadius: 14,
+    shadowRadius: 10,
     shadowOffset: { width: 0, height: 6 },
-    elevation: 10,
+    elevation: 8,
   },
-  sos: { color: "#FFFFFF", fontFamily: auraFonts.bold, fontSize: 16, letterSpacing: 0.8 },
+  sos: { color: "#FFFFFF", fontFamily: auraFonts.bold, fontSize: 13, letterSpacing: 0.6 },
 });

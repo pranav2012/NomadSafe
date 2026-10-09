@@ -42,7 +42,7 @@ export function SafetyTile({
       style={[styles.tile, { backgroundColor: live ? `${accent}1F` : c.surfaceStrong, borderColor: live ? `${accent}80` : c.hairline }]}
     >
       <View style={styles.tileHead}>
-        <Icon name={icon} size={20} color={color} strokeWidth={1.9} />
+        <Icon name={icon} size={19} color={color} strokeWidth={1.9} />
         {live ? <LiveDot color={accent} size={7} active={pulse} /> : null}
       </View>
       <Text numberOfLines={2} style={[styles.tileLabel, { color: c.text, fontFamily: f.semibold }]}>
@@ -167,7 +167,7 @@ export function CircleRow({ people, alertCount, onPress }: { people: CirclePerso
             <View key={person.key} style={[styles.avatarSlot, i > 0 && styles.overlap, { borderColor: c.card }]}>
               <CircleAvatar
                 name={person.name}
-                size={32}
+                size={28}
                 sharing={!!person.location}
                 stale={person.location?.stale}
                 muted={person.status !== "accepted" && person.status !== "none"}
@@ -177,7 +177,7 @@ export function CircleRow({ people, alertCount, onPress }: { people: CirclePerso
         </View>
       ) : (
         <View style={[styles.addIcon, { backgroundColor: `${WARN}26` }]}>
-          <Icon name="plus" size={18} color={WARN} />
+          <Icon name="plus" size={16} color={WARN} />
         </View>
       )}
       <View style={styles.flex}>
@@ -193,30 +193,12 @@ export function CircleRow({ people, alertCount, onPress }: { people: CirclePerso
   );
 }
 
-/** Shown only while some phone setting would stop alerts or sharing from working. */
-export function FixBanner({ count, onPress }: { count: number; onPress: () => void }) {
-  const { c, f } = useAura();
-  const { t } = useLocalization();
-  return (
-    <PressableScale
-      onPress={onPress}
-      pressedScale={0.98}
-      accessibilityRole="button"
-      style={[styles.fix, { backgroundColor: `${WARN}14`, borderColor: `${WARN}55` }]}
-    >
-      <Icon name="alertTriangle" size={16} color={WARN} />
-      <Text style={[styles.fixText, { color: c.text, fontFamily: f.medium }]}>{t("safety.fixBanner", { count })}</Text>
-      <Icon name="chevronRight" size={16} color={c.textMuted} />
-    </PressableScale>
-  );
-}
-
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  tile: { flex: 1, minHeight: 104, borderRadius: 20, borderWidth: StyleSheet.hairlineWidth, padding: 12, justifyContent: "space-between" },
+  tile: { flex: 1, minHeight: 88, borderRadius: 18, borderWidth: StyleSheet.hairlineWidth, padding: 11, justifyContent: "space-between" },
   tileHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  tileLabel: { fontSize: 13.5, lineHeight: 17, marginTop: 10 },
-  tileSub: { fontSize: 12, marginTop: 3, fontVariant: ["tabular-nums"] },
+  tileLabel: { fontSize: 13, lineHeight: 16, marginTop: 8 },
+  tileSub: { fontSize: 11.5, marginTop: 2, fontVariant: ["tabular-nums"] },
   live: { borderRadius: 22, borderWidth: StyleSheet.hairlineWidth, padding: 14, marginBottom: 10 },
   liveHead: { flexDirection: "row", alignItems: "center", gap: 10 },
   liveTitle: { fontSize: 12.5 },
@@ -227,13 +209,11 @@ const styles = StyleSheet.create({
   shareTitle: { fontSize: 15 },
   error: { flexDirection: "row", alignItems: "flex-start", gap: 8, marginTop: 10 },
   errorText: { flex: 1, fontSize: 12.5, lineHeight: 17 },
-  circle: { flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 20, borderWidth: StyleSheet.hairlineWidth, padding: 12, marginTop: 10 },
+  circle: { flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 12, paddingVertical: 9, marginTop: 8 },
   avatars: { flexDirection: "row" },
   avatarSlot: { borderRadius: 18, borderWidth: 2 },
   overlap: { marginLeft: -10 },
-  addIcon: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
-  circleTitle: { fontSize: 14.5 },
-  circleSub: { fontSize: 12.5, marginTop: 1 },
-  fix: { flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 12, paddingVertical: 11, marginTop: 10 },
-  fixText: { flex: 1, fontSize: 13.5 },
+  addIcon: { width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center" },
+  circleTitle: { fontSize: 14 },
+  circleSub: { fontSize: 12, marginTop: 1 },
 });

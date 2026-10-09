@@ -12,21 +12,27 @@ import { circleTone } from "@/features/location-sharing/components/CircleAvatar"
 import { useLocalization } from "@/localization";
 
 const LIVE = "#3DDC97";
-const REVEAL_MS = 200;
+const REVEAL_MS = 280;
+// Lets the first framing land before the map is shown, so it never visibly jumps into place.
+const FIRST_FRAME_DELAY_MS = 80;
 // Shows the map even if Google never reports its tiles drawn (offline, no Play services). A map
 // re-created on return draws from its cache, so it waits less.
 const REVEAL_FALLBACK_MS = 2000;
 const RETURN_FALLBACK_MS = 400;
 // Long enough for the screen to be hidden (tab switch) or covered (pushed screen) first.
 const COVER_AFTER_BLUR_MS = 500;
-// Room kept around the points inside the clear area, on top of the header and panel insets.
-const FRAME_PADDING = { top: 40, right: 60, bottom: 80, left: 60 };
+// Room kept around the points inside the clear area, on top of the header and the panel (and Google's credit).
+const FRAME_PADDING = { top: 40, right: 60, bottom: 40, left: 60 };
+// Google's credit sits this far above the panel, over a soft fade that runs under the panel's rounded top.
+const CREDIT_GAP = 10;
+// How far the fade reaches under the panel's rounded top.
+const FADE_UNDER_PANEL = 60;
 const ME_ZOOM = 15;
 
 type Point = { latitude: number; longitude: number };
 
 interface SafetyMapProps {
-  /** Space covered by the header and the bottom panel (up to its top edge). Framing and Google's logo stay clear of it. */
+  /** Space covered by the header and the bottom panel (up to its top edge). Framing and Google's credit stay clear of it. */
   topInset: number;
   bottomInset: number;
   palette: AuraPalette;
@@ -50,12 +56,13 @@ export function SafetyMap({ topInset, bottomInset, palette: c, accent, isDark, m
   const points = useMemo(() => [...(me ? [me] : []), ...people.map(({ latitude, longitude }) => ({ latitude, longitude }))], [people, me]);
   const pointsKey = points.map((p) => `${p.latitude.toFixed(4)},${p.longitude.toFixed(4)}`).join("|");
 
-  const mapPadding = { top: topInset, right: 0, bottom: bottomInset, left: 0 };
+  const creditBottom = bottomInset + CREDIT_GAP;
+  const mapPadding = { top: topInset, right: 0, bottom: creditBottom, left: 0 };
   // Android adds edgePadding to mapPadding; iOS measures it from the map's edges.
   const edgePadding =
     Platform.OS === "android"
       ? FRAME_PADDING
-      : { ...FRAME_PADDING, top: FRAME_PADDING.top + topInset, bottom: FRAME_PADDING.bottom + bottomInset };
+      : { ...FRAME_PADDING, top: FRAME_PADDING.top + topInset, bottom: FRAME_PADDING.bottom + creditBottom };
 
   const followMe = useRef(false);
   const frame = (animated: boolean) => {
@@ -78,6 +85,12 @@ export function SafetyMap({ topInset, bottomInset, palette: c, accent, isDark, m
   const coverStyle = useAnimatedStyle(() => ({ opacity: cover.get() }));
   const fallback = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loadedOnce = useRef(false);
+  // The map is shown once its tiles have drawn and its first framing has landed.
+  const tilesDrawn = useRef(false);
+  const framed = useRef(false);
+  const revealWhenSettled = () => {
+    if (tilesDrawn.current && framed.current) reveal();
+  };
   const reveal = () => {
     if (fallback.current) clearTimeout(fallback.current);
     fallback.current = null;
@@ -113,10 +126,11 @@ export function SafetyMap({ topInset, bottomInset, palette: c, accent, isDark, m
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    if (!framed.current) return;
     const timer = setTimeout(() => frame(true), 300);
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-frame when the points move, the panel resizes or the padding lands
-  }, [pointsKey, bottomInset, ready]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-frame when the points move or the panel resizes
+  }, [pointsKey, creditBottom]);
 
   const locate = () => {
     followMe.current = true;
@@ -139,10 +153,20 @@ export function SafetyMap({ topInset, bottomInset, palette: c, accent, isDark, m
             mapPadding={ready ? mapPadding : undefined}
             onMapReady={() => {
               coverUntilLoaded();
+              tilesDrawn.current = false;
+              framed.current = false;
               setReady(true);
-              frame(false);
+              // Framed without animation once the padding is in, while the map is still covered.
+              setTimeout(() => {
+                frame(false);
+                framed.current = true;
+                revealWhenSettled();
+              }, FIRST_FRAME_DELAY_MS);
             }}
-            onMapLoaded={reveal}
+            onMapLoaded={() => {
+              tilesDrawn.current = true;
+              revealWhenSettled();
+            }}
             rotateEnabled={false}
             pitchEnabled={false}
             toolbarEnabled={false}
@@ -174,6 +198,7 @@ export function SafetyMap({ topInset, bottomInset, palette: c, accent, isDark, m
       )}
 
       <LinearGradient pointerEvents="none" colors={[c.bg, `${c.bg}00`]} style={[styles.topFade, { height: topInset + 30 }]} />
+      <LinearGradient pointerEvents="none" colors={[`${c.bg}00`, `${c.bg}D9`]} style={[styles.bottomFade, { bottom: bottomInset - FADE_UNDER_PANEL, height: FADE_UNDER_PANEL + CREDIT_GAP - 2 }]} />
 
       {points.length > 0 ? (
         <PressableScale
@@ -220,6 +245,7 @@ function offset(point: Point, delta: number): Point {
 
 const styles = StyleSheet.create({
   topFade: { position: "absolute", top: 0, left: 0, right: 0 },
+  bottomFade: { position: "absolute", left: 0, right: 0 },
   recenter: {
     position: "absolute",
     right: 16,
