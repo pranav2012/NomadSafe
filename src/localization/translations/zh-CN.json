@@ -275,7 +275,8 @@
     "appLockOnPrompt": "开启应用锁",
     "appLockOffPrompt": "关闭应用锁",
     "screenLockNeededTitle": "请先设置屏幕锁定",
-    "screenLockNeededBody": "应用锁使用手机的屏幕锁定。请在手机设置中添加 PIN 码、图案、密码、指纹或人脸解锁，然后重试。"
+    "screenLockNeededBody": "应用锁使用手机的屏幕锁定。请在手机设置中添加 PIN 码、图案、密码、指纹或人脸解锁，然后重试。",
+    "planBetaDetail": "测试期间免费"
   },
   "auth": {
     "sceneLocation": "北极圈挪威",
@@ -1635,7 +1636,11 @@
     "featureMoneyTools": "定期花费、按份数分摊、图表、导出、收据扫描和外币管理",
     "featureReceiptItems": "按项目分摊收据",
     "titlePlanned": "你已用完 {{count}} 个计划中的旅行",
-    "ledePlanned": "免费版可有 {{count}} 个计划中的旅行。Plus 可随意计划，并确认无限旅行。"
+    "ledePlanned": "免费版可有 {{count}} 个计划中的旅行。Plus 可随意计划，并确认无限旅行。",
+    "betaEyebrow": "测试版",
+    "betaTitle": "测试期间 Plus 免费",
+    "betaLede": "NomadSafe 处于测试阶段期间，所有人都可免费使用 Plus。无需购买，也没有广告。",
+    "betaLedeAi": "测试期间暂不提供云端 AI。设备端 AI 和你自己的密钥仍可使用。"
   },
   "aiKey": {
     "title": "自己的 API 密钥",

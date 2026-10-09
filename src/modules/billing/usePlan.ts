@@ -10,7 +10,8 @@ export function usePlan() {
   const cloudAi = usePlanStore((s) => s.cloudAi);
   const billingAvailable = usePlanStore((s) => s.billingAvailable);
   const lifetime = usePlanStore((s) => s.lifetime);
-  return { unlimitedTrips, cloudAi, billingAvailable, lifetime, tier: tierOf({ unlimitedTrips, cloudAi }) };
+  const beta = usePlanStore((s) => s.beta);
+  return { unlimitedTrips, cloudAi, billingAvailable, lifetime, beta, tier: tierOf({ unlimitedTrips, cloudAi }) };
 }
 
 /**

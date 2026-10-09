@@ -671,7 +671,8 @@
     "appLockOnPrompt": "Turn on app lock",
     "appLockOffPrompt": "Turn off app lock",
     "screenLockNeededTitle": "Set a screen lock first",
-    "screenLockNeededBody": "App lock uses your phone's screen lock. Add a PIN, pattern, passcode, fingerprint or face unlock in your phone's settings, then try again."
+    "screenLockNeededBody": "App lock uses your phone's screen lock. Add a PIN, pattern, passcode, fingerprint or face unlock in your phone's settings, then try again.",
+    "planBetaDetail": "Free during the beta"
   },
   "auth": {
     "sceneLocation": "Arctic Norway",
@@ -1635,7 +1636,11 @@
     "featureMoneyTools": "Recurring spends, shares splits, charts, export, receipt scan and forex",
     "featureReceiptItems": "Split receipts item by item",
     "titlePlanned": "You've used your {{count}} planned trips",
-    "ledePlanned": "Free covers {{count}} planned trips. Plus lets you plan as many as you like and confirm unlimited trips."
+    "ledePlanned": "Free covers {{count}} planned trips. Plus lets you plan as many as you like and confirm unlimited trips.",
+    "betaEyebrow": "Beta",
+    "betaTitle": "Plus is free during the beta",
+    "betaLede": "While NomadSafe is in beta, everyone gets Plus at no cost. Nothing to buy, and no ads.",
+    "betaLedeAi": "Cloud AI isn't available during the beta yet. On-device AI and your own key still work."
   },
   "aiKey": {
     "title": "Your own API key",

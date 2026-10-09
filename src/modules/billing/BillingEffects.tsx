@@ -20,12 +20,15 @@ export function BillingEffects() {
   }, [userId]);
 
   useEffect(() => {
-    if (!userId) usePlanStore.getState().setServerPlan(FREE_PLAN);
+    if (userId) return;
+    usePlanStore.getState().setServerPlan(FREE_PLAN);
+    usePlanStore.getState().setBeta(false);
   }, [userId]);
 
   useEffect(() => {
     if (!serverPlan) return;
     usePlanStore.getState().setServerPlan({ unlimitedTrips: serverPlan.unlimitedTrips, cloudAi: serverPlan.cloudAi });
+    usePlanStore.getState().setBeta(serverPlan.beta);
   }, [serverPlan]);
 
   return null;

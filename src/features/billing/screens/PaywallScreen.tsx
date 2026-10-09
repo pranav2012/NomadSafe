@@ -73,7 +73,7 @@ export default function PaywallScreen() {
   }, [reason]);
 
   useEffect(() => {
-    if (!plan.billingAvailable) return;
+    if (!plan.billingAvailable || plan.beta) return;
     loadPackages()
       .then((loaded) => {
         setPackages(loaded);
@@ -85,7 +85,7 @@ export default function PaywallScreen() {
         logger.warn("paywall", "offerings failed", error);
         setLoadFailed(true);
       });
-  }, [plan.billingAvailable]);
+  }, [plan.billingAvailable, plan.beta]);
 
   const choose = (next: PaidTier) => {
     setTier(next);
@@ -164,6 +164,45 @@ export default function PaywallScreen() {
       : pkg
         ? t("paywall.continueWithPrice", { price: pkg.product.priceString })
         : t("common.continue");
+
+  if (plan.beta) {
+    return (
+      <View style={[styles.root, { backgroundColor: c.bg }]}>
+        <ScrollView contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 16, paddingBottom: 24 }]} showsVerticalScrollIndicator={false}>
+          <View style={styles.header}>
+            <View style={styles.flex}>
+              <Text style={[styles.eyebrow, { color: c.textMuted, fontFamily: f.medium }]}>{t("paywall.betaEyebrow")}</Text>
+              <Text style={[styles.title, { color: c.text, fontFamily: f.semibold }]}>{t("paywall.betaTitle")}</Text>
+            </View>
+            <PressableScale
+              onPress={() => router.back()}
+              hitSlop={auraHitSlop(38)}
+              accessibilityRole="button"
+              accessibilityLabel={t("common.close")}
+              style={[styles.close, { backgroundColor: c.surfaceStrong }]}
+            >
+              <Icon name="x" size={16} color={c.text} />
+            </PressableScale>
+          </View>
+          <Text style={[styles.lede, { color: c.textSoft, fontFamily: f.regular }]}>
+            {reason === "ai" ? t("paywall.betaLedeAi") : t("paywall.betaLede")}
+          </Text>
+          <AuraCard tone={INDIGO} style={styles.card}>
+            <Text style={[styles.cardTitle, { color: c.text, fontFamily: f.semibold }]}>{t("paywall.plusTagline")}</Text>
+            {[t("paywall.featureUnlimitedTrips"), t("paywall.featureMoneyTools"), t("paywall.featureNoAds"), t("paywall.featureEverything")].map((item) => (
+              <View key={item} style={styles.feature}>
+                <Icon name="check" size={16} color={TEAL} strokeWidth={2.4} />
+                <Text style={[styles.featureText, { color: c.textSoft, fontFamily: f.regular }]}>{item}</Text>
+              </View>
+            ))}
+          </AuraCard>
+        </ScrollView>
+        <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
+          <AuraButton label={t("common.ok")} onPress={() => router.back()} />
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.root, { backgroundColor: c.bg }]}>

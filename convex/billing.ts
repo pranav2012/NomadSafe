@@ -12,7 +12,7 @@ import {
   type QueryCtx,
 } from "./_generated/server";
 import { requireAppCheck } from "./appCheck";
-import { effectivePlan, planFromSubscriber, type PlanSnapshot } from "./billingRules";
+import { effectivePlan, isBetaPlus, planFromSubscriber, type PlanSnapshot } from "./billingRules";
 import { constantTimeEqual } from "./securityRules";
 import { findAuthUserByEmail, findAuthUserById, getAuthenticatedUser, requireUser } from "./users";
 
@@ -37,10 +37,12 @@ async function getGrant(ctx: QueryCtx | MutationCtx, userId: string) {
     .unique();
 }
 
-/** The user's plan from RevenueCat and any grant combined. */
+/** The user's plan from RevenueCat and any grant combined; `BETA_PLAN=plus` makes everyone at least Plus. */
 async function planOf(ctx: QueryCtx | MutationCtx, userId: string) {
   const [purchased, granted] = await Promise.all([getEntitlement(ctx, userId), getGrant(ctx, userId)]);
-  return { purchased, ...effectivePlan(purchased, granted, Date.now()) };
+  const plan = effectivePlan(purchased, granted, Date.now());
+  const beta = isBetaPlus(process.env.BETA_PLAN);
+  return { purchased, beta, ...plan, unlimitedTrips: plan.unlimitedTrips || beta };
 }
 
 export async function userHasCloudAi(ctx: QueryCtx | MutationCtx, userId: string) {
@@ -227,8 +229,8 @@ export const myPlan = query({
   handler: async (ctx) => {
     const user = await getAuthenticatedUser(ctx);
     if (!user) return null;
-    const { purchased, unlimitedTrips, cloudAi } = await planOf(ctx, user.id);
-    return { unlimitedTrips, cloudAi, expiresAt: purchased?.expiresAt ?? null };
+    const { purchased, unlimitedTrips, cloudAi, beta } = await planOf(ctx, user.id);
+    return { unlimitedTrips, cloudAi, beta, expiresAt: purchased?.expiresAt ?? null };
   },
 });
 

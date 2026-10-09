@@ -275,7 +275,8 @@
     "appLockOnPrompt": "앱 잠금 켜기",
     "appLockOffPrompt": "앱 잠금 끄기",
     "screenLockNeededTitle": "먼저 화면 잠금을 설정하세요",
-    "screenLockNeededBody": "앱 잠금은 휴대폰의 화면 잠금을 사용해요. 휴대폰 설정에서 PIN, 패턴, 암호, 지문 또는 얼굴 인식 잠금 해제를 추가한 다음 다시 시도하세요."
+    "screenLockNeededBody": "앱 잠금은 휴대폰의 화면 잠금을 사용해요. 휴대폰 설정에서 PIN, 패턴, 암호, 지문 또는 얼굴 인식 잠금 해제를 추가한 다음 다시 시도하세요.",
+    "planBetaDetail": "베타 기간 무료"
   },
   "auth": {
     "sceneLocation": "북극권 노르웨이",
@@ -1635,7 +1636,11 @@
     "featureMoneyTools": "반복 지출, 몫 나누기, 차트, 내보내기, 영수증 스캔, 외화 관리",
     "featureReceiptItems": "영수증을 항목별로 나누기",
     "titlePlanned": "계획 중인 여행 {{count}}개를 모두 썼어요",
-    "ledePlanned": "무료는 계획 중인 여행 {{count}}개까지예요. Plus로 원하는 만큼 계획하고 여행을 무제한으로 확정하세요."
+    "ledePlanned": "무료는 계획 중인 여행 {{count}}개까지예요. Plus로 원하는 만큼 계획하고 여행을 무제한으로 확정하세요.",
+    "betaEyebrow": "베타",
+    "betaTitle": "베타 기간에는 Plus가 무료예요",
+    "betaLede": "NomadSafe가 베타인 동안 모두가 Plus를 무료로 써요. 구매할 것도, 광고도 없어요.",
+    "betaLedeAi": "베타 기간에는 아직 클라우드 AI를 쓸 수 없어요. 기기 내 AI와 내 키는 계속 쓸 수 있어요."
   },
   "aiKey": {
     "title": "내 API 키",

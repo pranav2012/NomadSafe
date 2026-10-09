@@ -394,3 +394,11 @@ test("a plan grant adds to the purchased plan until it expires", () => {
     cloudAi: false,
   });
 });
+
+test("BETA_PLAN gives Plus only when set to plus", () => {
+  assert.equal(rules.isBetaPlus("plus"), true);
+  assert.equal(rules.isBetaPlus(" Plus "), true);
+  assert.equal(rules.isBetaPlus(undefined), false);
+  assert.equal(rules.isBetaPlus(""), false);
+  assert.equal(rules.isBetaPlus("pro"), false);
+});

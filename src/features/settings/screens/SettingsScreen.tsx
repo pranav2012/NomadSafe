@@ -399,8 +399,9 @@ export default function SettingsScreen() {
     setSheet("aiKey");
   };
 
-  const planDetail =
-    plan.tier === "pro"
+  const planDetail = plan.beta && plan.tier === "plus"
+    ? t("settings.planBetaDetail")
+    : plan.tier === "pro"
       ? t("settings.planProDetail")
       : plan.tier === "plus"
         ? t("settings.planPlusDetail")
@@ -449,7 +450,7 @@ export default function SettingsScreen() {
             tone={VIOLET}
             label={t(`paywall.tierName_${plan.tier}`)}
             detail={planDetail}
-            value={plan.tier === "pro" || !plan.billingAvailable ? undefined : t("settings.planUpgrade")}
+            value={plan.tier === "pro" || plan.beta || !plan.billingAvailable ? undefined : t("settings.planUpgrade")}
             onPress={() => router.push({ pathname: "/paywall", params: { reason: "settings" } })}
           />
           {plan.cloudAi ? (
@@ -462,7 +463,7 @@ export default function SettingsScreen() {
               onPress={() => setSheet("aiUsage")}
             />
           ) : null}
-          {plan.tier !== "free" ? (
+          {plan.tier !== "free" && !plan.beta ? (
             <AuraListRow
               icon="settings"
               label={t("settings.manageSubscription")}

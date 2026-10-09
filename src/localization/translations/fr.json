@@ -275,7 +275,8 @@
     "appLockOnPrompt": "Activer le verrouillage de l'app",
     "appLockOffPrompt": "Désactiver le verrouillage de l'app",
     "screenLockNeededTitle": "Configurez d'abord un verrouillage de l'écran",
-    "screenLockNeededBody": "Le verrouillage de l'app utilise le verrouillage de l'écran de votre téléphone. Ajoutez un code PIN, un schéma, un code, une empreinte ou le déverrouillage par reconnaissance faciale dans les réglages du téléphone, puis réessayez."
+    "screenLockNeededBody": "Le verrouillage de l'app utilise le verrouillage de l'écran de votre téléphone. Ajoutez un code PIN, un schéma, un code, une empreinte ou le déverrouillage par reconnaissance faciale dans les réglages du téléphone, puis réessayez.",
+    "planBetaDetail": "Gratuit pendant la bêta"
   },
   "auth": {
     "sceneLocation": "Norvège arctique",
@@ -1635,7 +1636,11 @@
     "featureMoneyTools": "Dépenses récurrentes, partage par parts, graphiques, export, scan de reçus et devises",
     "featureReceiptItems": "Partage les reçus article par article",
     "titlePlanned": "Tu as utilisé tes {{count}} voyages en projet",
-    "ledePlanned": "La version gratuite inclut {{count}} voyages en projet. Avec Plus, planifie autant que tu veux et confirme des voyages sans limite."
+    "ledePlanned": "La version gratuite inclut {{count}} voyages en projet. Avec Plus, planifie autant que tu veux et confirme des voyages sans limite.",
+    "betaEyebrow": "Bêta",
+    "betaTitle": "Plus est gratuit pendant la bêta",
+    "betaLede": "Tant que NomadSafe est en bêta, tout le monde a Plus gratuitement. Rien à acheter, et pas de pub.",
+    "betaLedeAi": "L'IA dans le cloud n'est pas encore disponible pendant la bêta. L'IA sur l'appareil et votre propre clé fonctionnent toujours."
   },
   "aiKey": {
     "title": "Votre propre clé API",

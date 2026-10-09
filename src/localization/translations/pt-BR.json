@@ -275,7 +275,8 @@
     "appLockOnPrompt": "Ativar o bloqueio do app",
     "appLockOffPrompt": "Desativar o bloqueio do app",
     "screenLockNeededTitle": "Configure primeiro um bloqueio de tela",
-    "screenLockNeededBody": "O bloqueio do app usa o bloqueio de tela do seu celular. Adicione um PIN, padrão, senha, digital ou desbloqueio facial nas configurações do celular e tente de novo."
+    "screenLockNeededBody": "O bloqueio do app usa o bloqueio de tela do seu celular. Adicione um PIN, padrão, senha, digital ou desbloqueio facial nas configurações do celular e tente de novo.",
+    "planBetaDetail": "Grátis durante o beta"
   },
   "auth": {
     "sceneLocation": "Noruega ártica",
@@ -1635,7 +1636,11 @@
     "featureMoneyTools": "Gastos recorrentes, divisão por partes, gráficos, exportação, leitura de recibos e moeda estrangeira",
     "featureReceiptItems": "Divida recibos item por item",
     "titlePlanned": "Você já usou suas {{count}} viagens planejadas",
-    "ledePlanned": "O grátis inclui {{count}} viagens planejadas. Com o Plus você planeja quantas quiser e confirma viagens sem limite."
+    "ledePlanned": "O grátis inclui {{count}} viagens planejadas. Com o Plus você planeja quantas quiser e confirma viagens sem limite.",
+    "betaEyebrow": "Beta",
+    "betaTitle": "O Plus é grátis durante o beta",
+    "betaLede": "Enquanto o NomadSafe estiver em beta, todos têm o Plus sem custo. Nada para comprar e sem anúncios.",
+    "betaLedeAi": "A IA na nuvem ainda não está disponível no beta. A IA no aparelho e sua própria chave continuam funcionando."
   },
   "aiKey": {
     "title": "Sua própria chave de API",

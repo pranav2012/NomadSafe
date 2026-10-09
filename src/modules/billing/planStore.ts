@@ -11,10 +11,13 @@ interface PlanStoreState extends PlanState {
   billingAvailable: boolean;
   /** The plan is a one-time lifetime purchase, so there's no subscription to manage. */
   lifetime: boolean;
+  /** Plus is free for everyone during the beta (server `BETA_PLAN`); purchases are hidden. */
+  beta: boolean;
   setPlan: (plan: PlanState) => void;
   setServerPlan: (plan: PlanState) => void;
   setBillingAvailable: (value: boolean) => void;
   setLifetime: (value: boolean) => void;
+  setBeta: (value: boolean) => void;
   reset: () => void;
 }
 
@@ -31,11 +34,13 @@ export const usePlanStore = create<PlanStoreState>()(
       serverPlan: FREE_PLAN,
       billingAvailable: false,
       lifetime: false,
+      beta: false,
       setPlan: (plan) => set((state) => ({ storePlan: plan, ...merge(plan, state.serverPlan) })),
       setServerPlan: (plan) => set((state) => ({ serverPlan: plan, ...merge(state.storePlan, plan) })),
       setBillingAvailable: (value) => set({ billingAvailable: value }),
       setLifetime: (value) => set({ lifetime: value }),
-      reset: () => set({ ...FREE_PLAN, storePlan: FREE_PLAN, serverPlan: FREE_PLAN, lifetime: false }),
+      setBeta: (value) => set({ beta: value }),
+      reset: () => set({ ...FREE_PLAN, storePlan: FREE_PLAN, serverPlan: FREE_PLAN, lifetime: false, beta: false }),
     }),
     {
       name: "plan-store",
@@ -47,6 +52,7 @@ export const usePlanStore = create<PlanStoreState>()(
         storePlan: state.storePlan,
         serverPlan: state.serverPlan,
         lifetime: state.lifetime,
+        beta: state.beta,
       }),
       migrate: (persisted, version) => {
         const state = persisted as Partial<PlanStoreState>;

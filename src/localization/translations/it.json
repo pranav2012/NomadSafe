@@ -275,7 +275,8 @@
     "appLockOnPrompt": "Attiva il blocco app",
     "appLockOffPrompt": "Disattiva il blocco app",
     "screenLockNeededTitle": "Imposta prima un blocco schermo",
-    "screenLockNeededBody": "Il blocco app usa il blocco schermo del telefono. Aggiungi un PIN, una sequenza, un codice, un'impronta o lo sblocco con il volto nelle impostazioni del telefono, poi riprova."
+    "screenLockNeededBody": "Il blocco app usa il blocco schermo del telefono. Aggiungi un PIN, una sequenza, un codice, un'impronta o lo sblocco con il volto nelle impostazioni del telefono, poi riprova.",
+    "planBetaDetail": "Gratis durante la beta"
   },
   "auth": {
     "sceneLocation": "Norvegia artica",
@@ -1635,7 +1636,11 @@
     "featureMoneyTools": "Spese ricorrenti, divisione per quote, grafici, esportazione, scansione ricevute e valuta estera",
     "featureReceiptItems": "Dividi le ricevute voce per voce",
     "titlePlanned": "Hai usato i tuoi {{count}} viaggi in programma",
-    "ledePlanned": "Il piano gratuito include {{count}} viaggi in programma. Con Plus ne pianifichi quanti vuoi e confermi viaggi senza limiti."
+    "ledePlanned": "Il piano gratuito include {{count}} viaggi in programma. Con Plus ne pianifichi quanti vuoi e confermi viaggi senza limiti.",
+    "betaEyebrow": "Beta",
+    "betaTitle": "Plus è gratis durante la beta",
+    "betaLede": "Finché NomadSafe è in beta, tutti hanno Plus gratis. Niente da acquistare e nessuna pubblicità.",
+    "betaLedeAi": "L'IA nel cloud non è ancora disponibile durante la beta. L'IA sul dispositivo e la tua chiave funzionano comunque."
   },
   "aiKey": {
     "title": "La tua chiave API",

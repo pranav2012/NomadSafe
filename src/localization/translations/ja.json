@@ -275,7 +275,8 @@
     "appLockOnPrompt": "アプリのロックをオンにする",
     "appLockOffPrompt": "アプリのロックをオフにする",
     "screenLockNeededTitle": "先に画面ロックを設定してください",
-    "screenLockNeededBody": "アプリのロックはスマートフォンの画面ロックを使います。スマートフォンの設定でPIN、パターン、パスコード、指紋、または顔認証を追加してから、もう一度お試しください。"
+    "screenLockNeededBody": "アプリのロックはスマートフォンの画面ロックを使います。スマートフォンの設定でPIN、パターン、パスコード、指紋、または顔認証を追加してから、もう一度お試しください。",
+    "planBetaDetail": "ベータ期間中は無料"
   },
   "auth": {
     "sceneLocation": "北極圏ノルウェー",
@@ -1635,7 +1636,11 @@
     "featureMoneyTools": "定期支出、口数割り、グラフ、書き出し、レシート読み取り、外貨",
     "featureReceiptItems": "レシートを品目ごとに割り勘",
     "titlePlanned": "計画中の旅行{{count}}件を使い切りました",
-    "ledePlanned": "無料プランでは計画中の旅行は{{count}}件までです。Plusなら好きなだけ計画でき、旅行も無制限に確定できます。"
+    "ledePlanned": "無料プランでは計画中の旅行は{{count}}件までです。Plusなら好きなだけ計画でき、旅行も無制限に確定できます。",
+    "betaEyebrow": "ベータ",
+    "betaTitle": "ベータ期間中は Plus が無料",
+    "betaLede": "NomadSafe がベータ版の間は、全員が Plus を無料で使えます。購入は不要で、広告もありません。",
+    "betaLedeAi": "ベータ期間中はクラウド AI はまだ使えません。端末上の AI とご自身のキーは使えます。"
   },
   "aiKey": {
     "title": "自分のAPIキー",

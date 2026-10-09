@@ -275,7 +275,8 @@
     "appLockOnPrompt": "App-Sperre einschalten",
     "appLockOffPrompt": "App-Sperre ausschalten",
     "screenLockNeededTitle": "Zuerst eine Displaysperre einrichten",
-    "screenLockNeededBody": "Die App-Sperre nutzt die Displaysperre deines Telefons. Richte in den Telefoneinstellungen eine PIN, ein Muster, einen Code, einen Fingerabdruck oder die Gesichtsentsperrung ein und versuche es dann erneut."
+    "screenLockNeededBody": "Die App-Sperre nutzt die Displaysperre deines Telefons. Richte in den Telefoneinstellungen eine PIN, ein Muster, einen Code, einen Fingerabdruck oder die Gesichtsentsperrung ein und versuche es dann erneut.",
+    "planBetaDetail": "Kostenlos in der Beta"
   },
   "auth": {
     "sceneLocation": "Arktisches Norwegen",
@@ -1635,7 +1636,11 @@
     "featureMoneyTools": "Wiederkehrende Ausgaben, Anteile, Diagramme, Export, Belegscan und Devisen",
     "featureReceiptItems": "Belege Posten für Posten aufteilen",
     "titlePlanned": "Du hast deine {{count}} geplanten Reisen genutzt",
-    "ledePlanned": "Kostenlos sind {{count}} geplante Reisen. Mit Plus planst du so viele du willst und bestätigst unbegrenzt Reisen."
+    "ledePlanned": "Kostenlos sind {{count}} geplante Reisen. Mit Plus planst du so viele du willst und bestätigst unbegrenzt Reisen.",
+    "betaEyebrow": "Beta",
+    "betaTitle": "Plus ist in der Beta kostenlos",
+    "betaLede": "Solange NomadSafe in der Beta ist, bekommen alle Plus kostenlos. Nichts zu kaufen, keine Werbung.",
+    "betaLedeAi": "Cloud-KI ist in der Beta noch nicht verfügbar. KI auf dem Gerät und dein eigener Schlüssel funktionieren weiter."
   },
   "aiKey": {
     "title": "Eigener API-Schlüssel",

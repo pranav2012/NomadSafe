@@ -76,6 +76,11 @@ export function effectivePlan(
   };
 }
 
+/** True when the `BETA_PLAN` env var gives every signed-in user Plus (beta testing). */
+export function isBetaPlus(betaPlan: string | undefined): boolean {
+  return betaPlan?.trim().toLowerCase() === "plus";
+}
+
 export function usageMonth(now: number): string {
   return new Date(now).toISOString().slice(0, 7);
 }
