@@ -312,7 +312,9 @@ function AppStack() {
         <Stack.Protected guard={isSignedIn && !onboardingCompleted}>
           <Stack.Screen name="(onboarding)" />
         </Stack.Protected>
-        <Stack.Screen name="(auth)" />
+        <Stack.Protected guard={!isSignedIn}>
+          <Stack.Screen name="(auth)" />
+        </Stack.Protected>
         <Stack.Protected guard={inApp}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="settings" options={PAGE_OPTIONS} />

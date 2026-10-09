@@ -1,14 +1,13 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import Svg, { Path } from "react-native-svg";
 import { AuraSkyHero, consumeSkyIntro, Icon, PressableScale, SKY_INTRO_MS, useAura } from "@/atoms";
 import { LEGAL_URLS, openLegalPage } from "@/constants/legal";
-import { authClient, useAuthStore } from "@/features/auth";
+import { authClient } from "@/features/auth";
 import { useAmbientLoop } from "@/features/auth/hooks/useAmbientLoop";
 import { useSettingsStore } from "@/features/settings/store/settingsStore";
 import { useLocalization } from "@/localization";
@@ -43,13 +42,10 @@ function GoogleGlyph() {
 }
 
 export default function SignInScreen() {
-  const router = useRouter();
   const { c, f, isDark } = useAura();
   const { t } = useLocalization();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
-  const isSignedIn = useAuthStore((s) => s.isSignedIn);
-  const onboardingCompleted = useSettingsStore((s) => s.onboardingCompleted);
 
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -60,13 +56,6 @@ export default function SignInScreen() {
   useAmbientLoop(AMBIENCE, soundOn, intro ? SKY_INTRO_MS + 1500 : 3000);
 
   const heroHeight = Math.round(height * 0.74);
-
-  // Once the session listener confirms we are signed in, route forward: first-time setup, then the app.
-  useEffect(() => {
-    if (!isSignedIn) return;
-    // With the app lock on, LockGate asks for the phone's unlock after signing in.
-    router.replace(onboardingCompleted ? "/(tabs)" : "/(onboarding)/welcome");
-  }, [isSignedIn, onboardingCompleted, router]);
 
   const handleGoogleSignIn = async () => {
     if (loading) return;
@@ -84,7 +73,7 @@ export default function SignInScreen() {
         track("sign_in_failed");
         setError(t("auth.signInFailed"));
       }
-      // Navigation is handled by the useEffect above once session syncs.
+      // The root stack's guards leave sign-in once the session syncs.
     } catch {
       track("sign_in_failed");
       setError(t("auth.signInFailed"));

@@ -1,14 +1,6 @@
 import { Stack } from "expo-router";
-import { useAuthStore } from "@/features/auth";
 
+// Guarded in the root stack, so signing in leaves the whole group instead of emptying it.
 export default function AuthLayout() {
-  const isSignedIn = useAuthStore((s) => s.isSignedIn);
-
-  return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Protected guard={!isSignedIn}>
-        <Stack.Screen name="sign-in" />
-      </Stack.Protected>
-    </Stack>
-  );
+  return <Stack screenOptions={{ headerShown: false }} />;
 }
