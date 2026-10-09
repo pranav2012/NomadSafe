@@ -29,7 +29,7 @@ yarn-error.*
 # macOS
 .DS_Store
 *.pem
-# EAS Update code signing: the certificate is public, the private key never leaves a secure backup
+# EAS Update code signing (currently off): the certificate is public, the private key never leaves a secure backup
 !certs/certificate.pem
 keys/
 
