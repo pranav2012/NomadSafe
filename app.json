@@ -178,7 +178,6 @@
       "./plugins/withGradleHeap",
       "./plugins/withLlamaMemoryEntitlements",
       "./plugins/withGoogleMobileAdsBackend",
-      "./plugins/withRecentsPrivacy",
       "./plugins/withFirebaseAppCheck",
       "./plugins/withVulkanRequirement",
       "./plugins/withNetworkSecurity",

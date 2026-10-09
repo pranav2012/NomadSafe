@@ -36,6 +36,7 @@ import { SavedIdeasSheet } from "@/features/itinerary/components/SavedIdeasSheet
 import { AndroidShareIntake } from "@/features/itinerary/components/AndroidShareIntake";
 import { useBoundaryViewSync } from "@/features/passport/hooks/usePassport";
 import { AdsEffects } from "@/modules/ads";
+import { setRecentsPreviewHidden } from "@/modules/display";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { useTheme } from "@/hooks/useTheme";
 import { LocalizationProvider } from "@/localization";
@@ -182,6 +183,15 @@ function LockGate({ fadeIn, onShow }: { fadeIn: boolean; onShow: () => void }) {
       {locked ? <LockScreen /> : <PrivacyCover />}
     </Modal>
   );
+}
+
+/** Android: hides the app from the recents screenshot only while the app lock is on (iOS uses PrivacyCover). */
+function RecentsPrivacy() {
+  const hidden = useAuthStore((s) => s.isSignedIn && s.lockEnabled);
+  useEffect(() => {
+    setRecentsPreviewHidden(hidden);
+  }, [hidden]);
+  return null;
 }
 
 /** Starts ads (free plan) only once the user is in the app, unlocked and not on a safety or capture screen. */
@@ -382,6 +392,7 @@ function AppTree({ splashVisible, onLockShown }: { splashVisible: boolean; onLoc
       <LocalizationProvider>
         <ThemeProvider>
           <AppStateLock />
+          <RecentsPrivacy />
           <SessionEffects />
           <BackupEffects />
           <BillingEffects />

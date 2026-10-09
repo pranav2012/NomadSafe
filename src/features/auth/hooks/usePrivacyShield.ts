@@ -5,8 +5,8 @@ import { useAuthStore } from "../store/authStore";
 
 /**
  * iOS: true while the app is inactive or in the background with the app lock on, so the app switcher
- * snapshot shows a cover instead of the screen. Android hides recents in MainActivity
- * (plugins/withRecentsPrivacy.js) instead.
+ * snapshot shows a cover instead of the screen. Android hides the recents screenshot instead
+ * (RecentsPrivacy in the root layout).
  */
 export function usePrivacyShield() {
   const isSignedIn = useAuthStore((s) => s.isSignedIn);

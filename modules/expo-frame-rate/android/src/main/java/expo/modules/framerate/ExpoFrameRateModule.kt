@@ -6,8 +6,25 @@ import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 
 class ExpoFrameRateModule : Module() {
+  private var recentsHidden = false
+
+  // Android 13+: a blank card in the recents screen instead of a screenshot of the app.
+  private fun applyRecentsPreview() {
+    if (Build.VERSION.SDK_INT < 33) return
+    val activity = appContext.currentActivity ?: return
+    activity.runOnUiThread { activity.setRecentsScreenshotEnabled(!recentsHidden) }
+  }
+
   override fun definition() = ModuleDefinition {
     Name("ExpoFrameRate")
+
+    // Re-applied when the activity comes back, since it may not exist yet when JS first calls this.
+    OnActivityEntersForeground { applyRecentsPreview() }
+
+    Function("setRecentsPreviewHidden") { hidden: Boolean ->
+      recentsHidden = hidden
+      applyRecentsPreview()
+    }
 
     // Asks for the display's top refresh rate (e.g. 120 Hz on adaptive screens) while `high` is true,
     // and hands the choice back to the system when it's false.
