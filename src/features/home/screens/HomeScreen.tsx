@@ -4,6 +4,8 @@ import type { AuraStatus } from "@/constants/aura";
 import { ExpenseForm } from "@/features/expenses/components/ExpenseForm";
 import { ImportSheet } from "@/features/expenses/components/ImportSheet";
 import { TripHome, type UserLocation } from "@/features/home/components/TripHome";
+import { useAuthStore } from "@/features/auth";
+import { useLocalization } from "@/localization";
 import { useHomeData } from "@/features/home/hooks/useHomeData";
 import { useHomeViewed } from "@/features/home/hooks/useHomeViewed";
 import { BackgroundLocationDisclosure } from "@/features/location-sharing/components/BackgroundLocationDisclosure";
@@ -64,6 +66,8 @@ async function resolveUserLocation(): Promise<UserLocation | null> {
 export default function HomeScreen() {
   const { isDark } = useTheme();
   const router = useRouter();
+  const { t } = useLocalization();
+  const userName = useAuthStore((state) => state.user?.name?.trim());
   const startNewTrip = useStartNewTrip();
   const tripCount = useTripsStore((state) => state.trips.length);
   const activeTrip = useTripsStore(selectActiveTrip);
@@ -93,7 +97,16 @@ export default function HomeScreen() {
   }, []);
 
   if (!activeTrip || !data) {
-    return <EmptyHome tripCount={tripCount} onViewTrips={() => router.push("/trips")} onPlanTrip={() => startNewTrip()} everyday={<EverydayCards />} />;
+    return (
+      <EmptyHome
+        tripCount={tripCount}
+        onViewTrips={() => router.push("/trips")}
+        onPlanTrip={() => startNewTrip()}
+        onOpenSettings={() => router.push("/settings")}
+        userInitial={(userName || t("common.fallbackUser")).charAt(0).toUpperCase()}
+        everyday={<EverydayCards />}
+      />
+    );
   }
 
   const status: AuraStatus = safetyStatus === "emergency" ? "alert" : share.isBroadcasting ? "live" : "calm";

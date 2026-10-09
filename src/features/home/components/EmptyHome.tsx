@@ -6,7 +6,7 @@ import { PrivateView } from "@/modules/analytics";
 import { LinearGradient } from "expo-linear-gradient";
 import { AuraButton, Icon, PressableScale, useAura, useTabBarInset } from "@/atoms";
 import { useScrollActivity } from "@/hooks/useScrollActivity";
-import { auraSignal, auraStatusAccent } from "@/constants/aura";
+import { auraDark, auraSignal, auraStatusAccent } from "@/constants/aura";
 import { useGlobeContext } from "@/features/home/hooks/useGlobeContext";
 import { useLocalization } from "@/localization";
 import { PlannedTripCard } from "@/features/trips/components/PlannedTripCard";
@@ -14,16 +14,22 @@ import { useTripsStore } from "@/features/trips/store/tripsStore";
 import { FREE_PLANNED_LIMIT, ownedTripCount, usePlan } from "@/modules/billing";
 import { Globe, type GlobeStop } from "./aura/globe/Globe";
 
+const GLOBE_BUTTON_FILL = "rgba(14,16,24,0.55)";
+
 /** Home without a trip: the spinning globe with "Where to first?" (search opens the planner) and planned trips as dashed cards and pins. */
 export function EmptyHome({
   tripCount,
   onViewTrips,
   onPlanTrip,
+  onOpenSettings,
+  userInitial,
   everyday,
 }: {
   tripCount: number;
   onViewTrips: () => void;
   onPlanTrip: () => void;
+  onOpenSettings: () => void;
+  userInitial: string;
   /** Cards for days without a trip (balance, Get home safe). */
   everyday?: React.ReactNode;
 }) {
@@ -75,6 +81,14 @@ export function EmptyHome({
           </Animated.View>
           <LinearGradient pointerEvents="none" colors={[`${c.bg}00`, c.bg]} style={styles.globeFade} />
         </PrivateView>
+        <PressableScale
+          onPress={onOpenSettings}
+          accessibilityRole="button"
+          accessibilityLabel={t("settings.title")}
+          style={[styles.settings, { top: insets.top + 12, borderColor: auraDark.hairline }]}
+        >
+          <Text style={[styles.avatarText, { color: auraDark.text, fontFamily: f.semibold }]}>{userInitial}</Text>
+        </PressableScale>
 
         <Animated.View entering={FadeInDown.delay(250).duration(420)} style={styles.body}>
           <Text style={[styles.title, { color: c.text, fontFamily: f.semibold }]}>{t("trip.createTitle")}</Text>
@@ -125,6 +139,18 @@ export function EmptyHome({
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  settings: {
+    position: "absolute",
+    right: 20,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: StyleSheet.hairlineWidth,
+    backgroundColor: GLOBE_BUTTON_FILL,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarText: { fontSize: 15 },
   globeFade: { position: "absolute", left: 0, right: 0, bottom: 0, height: 72 },
   body: { paddingHorizontal: 20, gap: 12, marginTop: -8 },
   title: { fontSize: 34, letterSpacing: -1.2, lineHeight: 38 },
