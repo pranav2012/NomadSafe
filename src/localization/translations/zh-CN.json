@@ -1085,7 +1085,9 @@
     "stopRepeatTitle": "停止重复 {{merchant}}？",
     "stopRepeatBody": "已添加的花费会保留，不再添加新的。",
     "sourceRecurring": "定期",
-    "sourceImport": "已导入"
+    "sourceImport": "已导入",
+    "amountMissing": "请输入大于零的金额。",
+    "merchantMissing": "请填写这笔支出的用途。"
   },
   "itinerary": {
     "title": "行程活动",

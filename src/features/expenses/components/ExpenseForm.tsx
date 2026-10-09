@@ -198,6 +198,7 @@ function ExpenseFormBody({
   const prefill = editingExpense ?? initialDraft;
   const [amount, setAmount] = useState(prefill ? String(prefill.amount).replace(".", decimalSeparator) : "");
   const [merchant, setMerchant] = useState(prefill?.merchant ?? "");
+  const [missing, setMissing] = useState<{ amount: boolean; merchant: boolean }>({ amount: false, merchant: false });
   const [category, setCategory] = useState<ExpenseCategory>(prefill?.category ?? "other");
   const [categoryTouched, setCategoryTouched] = useState(Boolean(prefill));
   const [currency, setCurrency] = useState(prefill?.currency ?? tripCurrency ?? target?.currency ?? defaultCurrency);
@@ -268,6 +269,7 @@ function ExpenseFormBody({
   // Auto-suggest a category from the merchant until the user picks one.
   const handleMerchantChange = (value: string) => {
     setMerchant(value);
+    setMissing((current) => (current.merchant ? { ...current, merchant: false } : current));
     if (!categoryTouched) {
       const guess = categorizeHeuristic({ merchant: value });
       if (guess.matched) setCategory(guess.category);
@@ -361,8 +363,9 @@ function ExpenseFormBody({
     const parsedAmount = parseAmountInput(amount, decimalSeparator);
     const numericAmount = Number.isFinite(parsedAmount) ? roundMoney(parsedAmount, currency) : parsedAmount;
     const trimmedMerchant = merchant.trim();
-    if (!Number.isFinite(numericAmount) || numericAmount <= 0 || !trimmedMerchant) {
-      showAlert(t("expenses.validationTitle"), t("expenses.validationBody"));
+    const amountMissing = !Number.isFinite(numericAmount) || numericAmount <= 0;
+    if (amountMissing || !trimmedMerchant) {
+      setMissing({ amount: amountMissing, merchant: !trimmedMerchant });
       return;
     }
     const resolution = canSplit ? splitValueToShares(split, numericAmount, currency, decimalSeparator) : null;
@@ -472,7 +475,11 @@ function ExpenseFormBody({
             </PressableScale>
           }
           value={amount}
-          onChangeText={(value) => setAmount(value.replace(/[^0-9.,]/g, ""))}
+          onChangeText={(value) => {
+            setAmount(value.replace(/[^0-9.,]/g, ""));
+            setMissing((current) => (current.amount ? { ...current, amount: false } : current));
+          }}
+          error={missing.amount ? t("expenses.amountMissing") : null}
           placeholder={`0${decimalSeparator}00`}
           keyboardType="decimal-pad"
           autoFocus={!prefill}
@@ -518,7 +525,14 @@ function ExpenseFormBody({
           </View>
         ) : null}
 
-        <AuraField label={t("expenses.merchant")} value={merchant} onChangeText={handleMerchantChange} placeholder={t("expenses.merchantPlaceholder")} autoCapitalize="words" />
+        <AuraField
+          label={t("expenses.merchant")}
+          value={merchant}
+          onChangeText={handleMerchantChange}
+          placeholder={t("expenses.merchantPlaceholder")}
+          autoCapitalize="words"
+          error={missing.merchant ? t("expenses.merchantMissing") : null}
+        />
 
         {receiptLines && canSplit ? (
           <AuraButton

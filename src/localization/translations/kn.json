@@ -1085,7 +1085,9 @@
     "stopRepeatTitle": "{{merchant}} ಪುನರಾವರ್ತನೆ ನಿಲ್ಲಿಸಬೇಕೆ?",
     "stopRepeatBody": "ಈಗಾಗಲೇ ಸೇರಿಸಿದ ಖರ್ಚುಗಳು ಉಳಿಯುತ್ತವೆ. ಹೊಸದನ್ನು ಸೇರಿಸಲಾಗುವುದಿಲ್ಲ.",
     "sourceRecurring": "ಪುನರಾವರ್ತಿತ",
-    "sourceImport": "ಆಮದು"
+    "sourceImport": "ಆಮದು",
+    "amountMissing": "ಸೊನ್ನೆಗಿಂತ ಹೆಚ್ಚಿನ ಮೊತ್ತವನ್ನು ನಮೂದಿಸಿ.",
+    "merchantMissing": "ಈ ಖರ್ಚು ಯಾವುದಕ್ಕಾಗಿ ಎಂದು ಸೇರಿಸಿ."
   },
   "itinerary": {
     "title": "ಪ್ರವಾಸದ ಕಾರ್ಯಕ್ರಮಗಳು",

@@ -1085,7 +1085,9 @@
     "stopRepeatTitle": "Parar de repetir {{merchant}}?",
     "stopRepeatBody": "Os gastos já adicionados continuam. Nenhum novo será adicionado.",
     "sourceRecurring": "Recorrente",
-    "sourceImport": "Importado"
+    "sourceImport": "Importado",
+    "amountMissing": "Insira um valor maior que zero.",
+    "merchantMissing": "Informe com o que foi este gasto."
   },
   "itinerary": {
     "title": "Eventos da viagem",

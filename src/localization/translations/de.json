@@ -1085,7 +1085,9 @@
     "stopRepeatTitle": "{{merchant}} nicht mehr wiederholen?",
     "stopRepeatBody": "Bereits eingetragene Ausgaben bleiben. Es kommen keine neuen dazu.",
     "sourceRecurring": "Wiederkehrend",
-    "sourceImport": "Importiert"
+    "sourceImport": "Importiert",
+    "amountMissing": "Gib einen Betrag über null ein.",
+    "merchantMissing": "Gib an, wofür diese Ausgabe war."
   },
   "itinerary": {
     "title": "Reise-Ereignisse",

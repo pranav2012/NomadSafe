@@ -1085,7 +1085,9 @@
     "stopRepeatTitle": "إيقاف تكرار {{merchant}}؟",
     "stopRepeatBody": "تبقى المصاريف المضافة سابقًا. لن تُضاف مصاريف جديدة.",
     "sourceRecurring": "متكرر",
-    "sourceImport": "مستورد"
+    "sourceImport": "مستورد",
+    "amountMissing": "أدخل مبلغًا أكبر من صفر.",
+    "merchantMissing": "أضف الغرض من هذا الإنفاق."
   },
   "itinerary": {
     "title": "أحداث الرحلة",

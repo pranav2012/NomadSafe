@@ -1085,7 +1085,9 @@
     "stopRepeatTitle": "{{merchant}} दोहराना बंद करें?",
     "stopRepeatBody": "पहले से जोड़े गए खर्च बने रहेंगे। नए नहीं जुड़ेंगे।",
     "sourceRecurring": "दोहराता है",
-    "sourceImport": "इम्पोर्ट किया"
+    "sourceImport": "इम्पोर्ट किया",
+    "amountMissing": "शून्य से ज़्यादा राशि डालें।",
+    "merchantMissing": "बताएँ कि यह खर्च किस लिए था।"
   },
   "itinerary": {
     "title": "ट्रिप इवेंट्स",

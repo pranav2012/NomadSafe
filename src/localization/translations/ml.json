@@ -1085,7 +1085,9 @@
     "stopRepeatTitle": "{{merchant}} ആവർത്തനം നിർത്തണോ?",
     "stopRepeatBody": "ഇതിനകം ചേർത്ത ചെലവുകൾ നിലനിൽക്കും. പുതിയവ ചേർക്കില്ല.",
     "sourceRecurring": "ആവർത്തിക്കുന്നത്",
-    "sourceImport": "ഇമ്പോർട്ട് ചെയ്തത്"
+    "sourceImport": "ഇമ്പോർട്ട് ചെയ്തത്",
+    "amountMissing": "പൂജ്യത്തിൽ കൂടുതലുള്ള തുക നൽകുക.",
+    "merchantMissing": "ഈ ചെലവ് എന്തിനായിരുന്നു എന്ന് ചേർക്കുക."
   },
   "itinerary": {
     "title": "യാത്രാ ഇവന്റുകൾ",

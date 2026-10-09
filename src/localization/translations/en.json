@@ -1312,7 +1312,9 @@
     "stopRepeatTitle": "Stop repeating {{merchant}}?",
     "stopRepeatBody": "Spends already added stay. No new ones will be added.",
     "sourceRecurring": "Repeats",
-    "sourceImport": "Imported"
+    "sourceImport": "Imported",
+    "amountMissing": "Enter an amount greater than zero.",
+    "merchantMissing": "Add what this spend was for."
   },
   "emergencyContacts": {
     "confirmRemoveTitle": "Remove {{name}}?",

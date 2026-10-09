@@ -1085,7 +1085,9 @@
     "stopRepeatTitle": "{{merchant}} పునరావృతం ఆపాలా?",
     "stopRepeatBody": "ఇప్పటికే జోడించిన ఖర్చులు ఉంటాయి. కొత్తవి జోడించబడవు.",
     "sourceRecurring": "పునరావృతం",
-    "sourceImport": "దిగుమతి"
+    "sourceImport": "దిగుమతి",
+    "amountMissing": "సున్నా కంటే ఎక్కువ మొత్తాన్ని నమోదు చేయండి.",
+    "merchantMissing": "ఈ ఖర్చు దేనికోసమో జోడించండి."
   },
   "itinerary": {
     "title": "యాత్ర ఈవెంట్‌లు",

@@ -1085,7 +1085,9 @@
     "stopRepeatTitle": "{{merchant}} 반복을 중지할까요?",
     "stopRepeatBody": "이미 추가된 지출은 남아요. 새 지출은 추가되지 않아요.",
     "sourceRecurring": "반복",
-    "sourceImport": "가져옴"
+    "sourceImport": "가져옴",
+    "amountMissing": "0보다 큰 금액을 입력하세요.",
+    "merchantMissing": "무엇에 쓴 돈인지 입력하세요."
   },
   "itinerary": {
     "title": "여행 일정",

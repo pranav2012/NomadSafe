@@ -1085,7 +1085,9 @@
     "stopRepeatTitle": "{{merchant}}の繰り返しを停止しますか？",
     "stopRepeatBody": "追加済みの支出は残ります。新しい支出は追加されません。",
     "sourceRecurring": "定期",
-    "sourceImport": "取り込み"
+    "sourceImport": "取り込み",
+    "amountMissing": "0より大きい金額を入力してください。",
+    "merchantMissing": "何の支出か入力してください。"
   },
   "itinerary": {
     "title": "旅程",

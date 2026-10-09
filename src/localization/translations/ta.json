@@ -1085,7 +1085,9 @@
     "stopRepeatTitle": "{{merchant}} மீண்டும் செய்வதை நிறுத்தவா?",
     "stopRepeatBody": "ஏற்கனவே சேர்த்த செலவுகள் இருக்கும். புதியவை சேர்க்கப்படாது.",
     "sourceRecurring": "தொடர்",
-    "sourceImport": "இறக்குமதி"
+    "sourceImport": "இறக்குமதி",
+    "amountMissing": "பூஜ்ஜியத்தை விட அதிகமான தொகையை உள்ளிடவும்.",
+    "merchantMissing": "இந்தச் செலவு எதற்காக என்று சேர்க்கவும்."
   },
   "itinerary": {
     "title": "பயண நிகழ்வுகள்",
