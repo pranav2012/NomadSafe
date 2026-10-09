@@ -19,6 +19,8 @@ interface AuthState {
   isUnlocked: boolean;
   lastActiveTimestamp: number | null;
   autoLockTimeout: number;
+  /** Sign-out in progress: covers the app until the sign-in screen is up. Not persisted. */
+  signingOut: boolean;
 
   setUser: (user: AuthUser | null) => void;
   setSignedIn: (value: boolean) => void;
@@ -26,6 +28,7 @@ interface AuthState {
   setUnlocked: (value: boolean) => void;
   updateLastActive: () => void;
   setAutoLockTimeout: (ms: number) => void;
+  setSigningOut: (value: boolean) => void;
   signOut: () => void;
 }
 
@@ -39,6 +42,7 @@ export const useAuthStore = create<AuthState>()(
       isUnlocked: false,
       lastActiveTimestamp: null,
       autoLockTimeout: 60000,
+      signingOut: false,
 
       setUser: (user) => set({ user }),
       setSignedIn: (value) => set({ isSignedIn: value }),
@@ -46,6 +50,7 @@ export const useAuthStore = create<AuthState>()(
       setUnlocked: (value) => set({ isUnlocked: value }),
       updateLastActive: () => set({ lastActiveTimestamp: Date.now() }),
       setAutoLockTimeout: (ms) => set({ autoLockTimeout: ms }),
+      setSigningOut: (value) => set({ signingOut: value }),
       signOut: () =>
         set({
           user: null,

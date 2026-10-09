@@ -260,10 +260,8 @@ export default function SettingsScreen() {
     ]);
   };
 
-  const signOutNow = async () => {
-    await signOutAndCleanup();
-    router.replace("/(auth)/sign-in");
-  };
+  // The root stack's guards move to sign-in on their own; navigating here too animates it in twice.
+  const signOutNow = () => signOutAndCleanup({ flushed: true });
 
   // Backed-up and shared data leaves the phone on sign-out, so make sure pending changes reached the account first.
   const handleSignOut = () => {
@@ -274,9 +272,11 @@ export default function SettingsScreen() {
         text: t("settings.signOut"),
         style: "destructive",
         onPress: async () => {
+          useAuthStore.getState().setSigningOut(true);
           // Shared trips leave the phone on sign-out too, so their pending changes count as well.
           const sent = (await flushGroupSync()) && (!backedUp || (await flushSync()));
           if (!sent) {
+            useAuthStore.getState().setSigningOut(false);
             showAlert(t("settings.signOutUnsyncedTitle"), t("settings.signOutUnsyncedBody"), [
               { text: t("common.cancel"), style: "cancel" },
               { text: t("settings.signOutAnyway"), style: "destructive", onPress: () => void signOutNow() },

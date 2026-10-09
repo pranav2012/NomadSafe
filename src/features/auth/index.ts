@@ -10,3 +10,4 @@ export { removeLegacyPin, useAuthStore } from "./store/authStore";
 export { useAppLocked } from "./hooks/useAppLocked";
 export { usePrivacyShield } from "./hooks/usePrivacyShield";
 export { PrivacyCover } from "./components/PrivacyCover";
+export { SignOutCover } from "./components/SignOutCover";

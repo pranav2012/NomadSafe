@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -19,6 +19,8 @@ import { auraSignal } from "@/constants/aura";
 const DANGER = auraSignal.danger;
 const REVIEWER_TAPS = 10;
 const REVIEWER_TAP_GAP_MS = 1500;
+// How long "Connecting…" waits for the session after Google returns before the button is usable again.
+const SESSION_WAIT_MS = 15_000;
 const AMBIENCE = require("../../../../assets/audio/aurora-ambience.m4a");
 
 function GoogleGlyph() {
@@ -54,6 +56,10 @@ export default function SignInScreen() {
   const [error, setError] = useState<string | null>(null);
   const [reviewerOpen, setReviewerOpen] = useState(false);
   const titleTaps = useRef({ count: 0, last: 0 });
+  const sessionWait = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (sessionWait.current) clearTimeout(sessionWait.current);
+  }, []);
 
   const onTitleTap = () => {
     const now = Date.now();
@@ -87,12 +93,19 @@ export default function SignInScreen() {
       if (result?.error) {
         track("sign_in_failed");
         setError(t("auth.signInFailed"));
+        setLoading(null);
+        return;
       }
-      // The root stack's guards leave sign-in once the session syncs.
+      // Google returned a session (a cancelled sign-in leaves none): stay on "Connecting…" until the
+      // root stack's guards leave sign-in, instead of flashing the idle screen while the session loads.
+      if (authClient.getCookie().includes("session_token")) {
+        sessionWait.current = setTimeout(() => setLoading(null), SESSION_WAIT_MS);
+        return;
+      }
+      setLoading(null);
     } catch {
       track("sign_in_failed");
       setError(t("auth.signInFailed"));
-    } finally {
       setLoading(null);
     }
   };

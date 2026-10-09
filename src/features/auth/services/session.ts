@@ -72,8 +72,18 @@ export async function flushBeforeSignOut() {
  * marked inactive while the session is still valid), revokes Gmail access,
  * sends pending backup changes, then signs out. Backed-up trips and expenses are
  * removed from the phone; with backup off they stay unless wiped. A saved AI API key, the AI source choice and the on-phone AI usage log are forgotten.
+ * `flushed` skips sending pending changes when the caller already did. The sign-out cover shows throughout.
  */
-export async function signOutAndCleanup() {
+export async function signOutAndCleanup({ flushed = false }: { flushed?: boolean } = {}) {
+  useAuthStore.getState().setSigningOut(true);
+  try {
+    await cleanUpAndSignOut(flushed);
+  } finally {
+    useAuthStore.getState().setSigningOut(false);
+  }
+}
+
+async function cleanUpAndSignOut(flushed: boolean) {
   try {
     await stopLocationBroadcast();
   } catch {}
@@ -94,8 +104,10 @@ export async function signOutAndCleanup() {
   // Shared trips and backed-up data live on the account, so they leave the phone with it. Both
   // engines stop before anything is cleared, or the clearing would be uploaded as deletions.
   const backedUp = hasBackupOwner();
-  await flushGroupSync();
-  if (backedUp) await flushSync();
+  if (!flushed) {
+    await flushGroupSync();
+    if (backedUp) await flushSync();
+  }
   stopGroupSync();
   stopSync();
   clearSharedLocalData(useAuthStore.getState().user?.id ?? null);

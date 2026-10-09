@@ -16,7 +16,7 @@ import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 import { registerGroupPush, startGroupSync, startSync, stopGroupSync, stopSync, useGroupNotificationRouting } from "@/features/sync";
 import { AURA_FONT_FILES, auraDark, auraLight } from "@/constants/aura";
-import { PrivacyCover, useAuthStore, usePrivacyShield, useSyncAuthSession } from "@/features/auth";
+import { PrivacyCover, SignOutCover, useAuthStore, usePrivacyShield, useSyncAuthSession } from "@/features/auth";
 import LockScreen from "@/features/auth/screens/LockScreen";
 import { useChatStore } from "@/features/ai/store/chatStore";
 import { aiRuntime, modelNotifications } from "@/modules/ai";
@@ -389,6 +389,7 @@ function AppTree({ splashVisible, onLockShown }: { splashVisible: boolean; onLoc
           <AnalyticsEffects />
           <WidgetSync />
           <AppStack />
+          <SignOutCover />
           <LockGate fadeIn={splashVisible} onShow={onLockShown} />
           <AuraAlertHost />
         </ThemeProvider>

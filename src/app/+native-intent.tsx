@@ -9,10 +9,14 @@ import { isWidgetToken, linkParam, WIDGET_TOKEN_PARAM, withoutLinkParams } from 
 
 // Google OAuth callback (`com.pranav.nomadsafe:/oauthredirect?...`), consumed by expo-auth-session.
 const OAUTH_REDIRECT = /^(?:[\w.+-]+:\/{1,2}|\/)oauthredirect(?:[/?#]|$)/;
+// Google sign-in's return to the app root (`nomadsafe://?cookie=...`), consumed by Better Auth's auth session.
+const SIGN_IN_CALLBACK = /^(?:[\w.+-]+:\/\/\/?|\/)?\?(?:[^#]*&)?cookie=/;
 
 export function redirectSystemPath({ path }: { path: string; initial: boolean }) {
   // Not a screen: navigating would unmount the sheet waiting for the auth result.
   if (OAUTH_REDIRECT.test(path)) return null;
+  // Navigating would route through "/" back to sign-in while the session is still loading.
+  if (SIGN_IN_CALLBACK.test(path)) return null;
   // A ticket sent by someone and opened with NomadSafe: the user picks which item it belongs to.
   if (isIncomingFileLink(path)) {
     useIncomingTicketStore.getState().set(path);
