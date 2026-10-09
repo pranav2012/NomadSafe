@@ -1,39 +1,33 @@
 import { Aurora } from "./Aurora";
 import { EARLY_ACCESS } from "../site";
-import { StoreBadges } from "./StoreBadges";
+import { GroupIcon, PlayIcon, StoreBadges } from "./StoreBadges";
 
-/** How to join the Google Play closed test. */
-function EarlyAccessSteps({ group, play }: { group: string; play: string }) {
+/** Joining the Google Play closed test: the testers group first, then the Play page. */
+function EarlyAccessJoin({ group, play }: { group: string; play: string }) {
   return (
-    <ol className="steps" aria-label="How to join early access">
-      <li className="steps__item">
-        <span className="steps__num" aria-hidden="true">1</span>
-        <div>
-          <h3>Join the testers group</h3>
-          <p>Use the same Google account as the Play Store on your Android phone.</p>
-          <a className="steps__link" href={group} rel="noopener">
-            Join the group
+    <>
+      <ul className="badges badges--center" aria-label="Join early access">
+        <li>
+          <a className="store-badge" href={group} rel="noopener">
+            <GroupIcon />
+            <span className="store-badge__text">
+              <span className="store-badge__kicker">Step 1</span>
+              <span className="store-badge__store">Join the beta</span>
+            </span>
           </a>
-        </div>
-      </li>
-      <li className="steps__item">
-        <span className="steps__num" aria-hidden="true">2</span>
-        <div>
-          <h3>Give it a little time</h3>
-          <p>Google Play can take a while, sometimes a few hours, to let your account in.</p>
-        </div>
-      </li>
-      <li className="steps__item">
-        <span className="steps__num" aria-hidden="true">3</span>
-        <div>
-          <h3>Install from Google Play</h3>
-          <p>Open the NomadSafe page on your phone and tap Install.</p>
-          <a className="steps__link" href={play} rel="noopener">
-            Open Google Play
+        </li>
+        <li>
+          <a className="store-badge store-badge--outline" href={play} rel="noopener">
+            <PlayIcon />
+            <span className="store-badge__text">
+              <span className="store-badge__kicker">Step 2</span>
+              <span className="store-badge__store">Install on Play</span>
+            </span>
           </a>
-        </div>
-      </li>
-    </ol>
+        </li>
+      </ul>
+      <p className="cta__note">Join with your phone&rsquo;s Google account, then give Play a few hours before the install page opens.</p>
+    </>
   );
 }
 
@@ -57,8 +51,8 @@ export function FinalCta() {
           <h2 id="cta-title">Your next trip, all in one place.</h2>
           {EARLY_ACCESS ? (
             <>
-              <p className="lede">NomadSafe is in early access on Google Play. Join in three steps; the App Store comes after.</p>
-              <EarlyAccessSteps group={EARLY_ACCESS.group} play={EARLY_ACCESS.play} />
+              <p className="lede">Early access is open on Google Play.</p>
+              <EarlyAccessJoin group={EARLY_ACCESS.group} play={EARLY_ACCESS.play} />
             </>
           ) : (
             <>

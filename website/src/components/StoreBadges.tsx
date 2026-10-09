@@ -15,11 +15,21 @@ function offMagnet(e: PointerEvent<HTMLElement>) {
   e.currentTarget.style.removeProperty("--ty");
 }
 
-function PlayIcon() {
+export function PlayIcon() {
   return (
     <svg className="store-badge__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
       <path d="M5 3.5v17a.8.8 0 0 0 1.2.7l14.3-8.5a.8.8 0 0 0 0-1.4L6.2 2.8A.8.8 0 0 0 5 3.5Z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
       <path d="M5.4 3 14 12l-8.6 9M14 12l3.2-3.2M14 12l3.2 3.2" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" opacity="0.6" />
+    </svg>
+  );
+}
+
+export function GroupIcon() {
+  return (
+    <svg className="store-badge__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <circle cx="9" cy="8.5" r="3.2" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M3.5 19c.6-3 2.8-4.6 5.5-4.6s4.9 1.6 5.5 4.6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M15.5 5.6a3 3 0 0 1 0 5.8M17.6 14.6c1.6.6 2.6 2 2.9 4.4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" opacity="0.6" />
     </svg>
   );
 }
