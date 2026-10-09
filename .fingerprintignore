@@ -1,0 +1,4 @@
+# Files that local native builds rewrite inside node_modules; ignored so local and EAS fingerprints match
+node_modules/**/android-expo/build/**/*
+node_modules/react-native-maps/ios/AirMaps/RNMapsDefines.h
+node_modules/@react-native-masked-view/masked-view/android/src/main/AndroidManifest.xml
