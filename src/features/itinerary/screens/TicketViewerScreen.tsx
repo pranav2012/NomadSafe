@@ -6,7 +6,7 @@ import Pdf from "react-native-pdf";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Icon, PressableScale, showAlert } from "@/atoms";
+import { Icon, PressableScale, showAlert, useAura } from "@/atoms";
 import { auraFonts as f } from "@/constants/aura";
 import { useLocalization } from "@/localization";
 import { PrivateView, track } from "@/modules/analytics";
@@ -19,9 +19,6 @@ import { formatters, routeOf } from "@/features/itinerary/utils/entryText";
 import { TRAVEL_FIELDS } from "@/features/itinerary/utils/travelDetails";
 import type { TripEvent } from "@/features/itinerary/store/eventsStore";
 
-// Light page and dark text: gate scanners read QR codes best on white at full brightness.
-const PAGE = "#FFFFFF";
-const INK = "#0E1018";
 const MAX_ZOOM = 5;
 
 /** Pinch to zoom, drag to move once zoomed, double tap to reset. */
@@ -60,6 +57,7 @@ function ZoomableImage({ uri }: { uri: string }) {
 /** Route, times and terminal / gate / platform / coach / seat above a travel ticket, from the booking or the user. */
 function TravelStrip({ event }: { event: TripEvent }) {
   const { t, locale, hour12 } = useLocalization();
+  const { c } = useAura();
   const format = formatters(locale, hour12);
   const route = routeOf(event.detail);
   const times = [
@@ -70,15 +68,15 @@ function TravelStrip({ event }: { event: TripEvent }) {
   const details = TRAVEL_FIELDS.flatMap((field) => (event.travel?.[field] ? [{ field, value: event.travel[field]! }] : []));
   return (
     <View style={styles.strip}>
-      <Text numberOfLines={1} style={styles.stripRoute}>
+      <Text numberOfLines={1} style={[styles.stripRoute, { color: c.textSoft }]}>
         {[route, times.join(" · ")].filter(Boolean).join("  ·  ")}
       </Text>
       {details.length > 0 ? (
         <View style={styles.stripDetails}>
           {details.map(({ field, value }) => (
-            <View key={field} style={styles.stripDetail}>
-              <Text style={styles.stripLabel}>{t(`itinerary.travel.${field}`)}</Text>
-              <Text style={styles.stripValue}>{value}</Text>
+            <View key={field} style={[styles.stripDetail, { backgroundColor: c.surfaceStrong }]}>
+              <Text style={[styles.stripLabel, { color: c.textMuted }]}>{t(`itinerary.travel.${field}`)}</Text>
+              <Text style={[styles.stripValue, { color: c.text }]}>{value}</Text>
             </View>
           ))}
         </View>
@@ -87,12 +85,15 @@ function TravelStrip({ event }: { event: TripEvent }) {
   );
 }
 
-/** A trip item's tickets full screen at full brightness, for showing at gates and counters. */
+/** A trip item's tickets full screen at full brightness, for showing at gates and counters. The page itself stays white for scanners; the screen around it follows the theme. */
 export default function TicketViewerScreen() {
   const { eventId, ticketId } = useLocalSearchParams<{ eventId: string; ticketId?: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { t } = useLocalization();
+  const { c } = useAura();
+  const round = [styles.round, { backgroundColor: c.surfaceStrong }];
+  const subtitle = [styles.subtitle, { color: c.textMuted }];
   const allTickets = useTicketsStore((state) => state.tickets);
   const event = useEventsStore((state) => state.events.find((item) => item.id === eventId));
   const tickets = allTickets.filter((ticket) => ticket.eventId === eventId);
@@ -146,24 +147,24 @@ export default function TicketViewerScreen() {
     ]);
 
   return (
-    <View style={[styles.root, { backgroundColor: PAGE }]}>
+    <View style={[styles.root, { backgroundColor: c.bg }]}>
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <PressableScale onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={t("common.close")} style={styles.round}>
-          <Icon name="x" size={18} color={INK} />
+        <PressableScale onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={t("common.close")} style={round}>
+          <Icon name="x" size={18} color={c.text} />
         </PressableScale>
         <View style={styles.titles}>
-          <Text numberOfLines={1} style={styles.title}>
+          <Text numberOfLines={1} style={[styles.title, { color: c.text }]}>
             {event ? localizeEventTitle(event.title, t) : ticket.name}
           </Text>
-          <Text numberOfLines={1} style={styles.subtitle}>
+          <Text numberOfLines={1} style={subtitle}>
             {tickets.length > 1 ? `${ticket.name} · ${t("tickets.position", { index: index + 1, total: tickets.length })}` : ticket.name}
           </Text>
         </View>
-        <PressableScale onPress={() => void sendTicket(ticket)} accessibilityRole="button" accessibilityLabel={t("tickets.send")} style={styles.round}>
-          <Icon name="share" size={17} color={INK} />
+        <PressableScale onPress={() => void sendTicket(ticket)} accessibilityRole="button" accessibilityLabel={t("tickets.send")} style={round}>
+          <Icon name="share" size={17} color={c.text} />
         </PressableScale>
-        <PressableScale onPress={confirmRemove} accessibilityRole="button" accessibilityLabel={t("tickets.remove")} style={styles.round}>
-          <Icon name="trash" size={17} color={INK} />
+        <PressableScale onPress={confirmRemove} accessibilityRole="button" accessibilityLabel={t("tickets.remove")} style={round}>
+          <Icon name="trash" size={17} color={c.text} />
         </PressableScale>
       </View>
 
@@ -172,13 +173,13 @@ export default function TicketViewerScreen() {
       <PrivateView style={styles.fill}>
         {failed === ticket.id ? (
           <View style={styles.center}>
-            <Text style={styles.subtitle}>{t("tickets.openFailed")}</Text>
+            <Text style={subtitle}>{t("tickets.openFailed")}</Text>
           </View>
         ) : ticket.kind === "pdf" ? (
           <Pdf
             key={ticket.id}
             source={{ uri: ticket.uri }}
-            style={[styles.fill, { backgroundColor: PAGE }]}
+            style={[styles.fill, { backgroundColor: c.bg }]}
             maxScale={MAX_ZOOM}
             onError={(err) => {
               logger.warn("tickets", "pdf failed to open", err);
@@ -197,19 +198,19 @@ export default function TicketViewerScreen() {
             onPress={() => setIndex(index - 1)}
             accessibilityRole="button"
             accessibilityLabel={t("tickets.previous")}
-            style={[styles.round, { opacity: index === 0 ? 0.3 : 1 }]}
+            style={[round, { opacity: index === 0 ? 0.3 : 1 }]}
           >
-            <Icon name="chevronLeft" size={18} color={INK} />
+            <Icon name="chevronLeft" size={18} color={c.text} />
           </PressableScale>
-          <Text style={styles.subtitle}>{t("tickets.position", { index: index + 1, total: tickets.length })}</Text>
+          <Text style={subtitle}>{t("tickets.position", { index: index + 1, total: tickets.length })}</Text>
           <PressableScale
             disabled={index === tickets.length - 1}
             onPress={() => setIndex(index + 1)}
             accessibilityRole="button"
             accessibilityLabel={t("tickets.next")}
-            style={[styles.round, { opacity: index === tickets.length - 1 ? 0.3 : 1 }]}
+            style={[round, { opacity: index === tickets.length - 1 ? 0.3 : 1 }]}
           >
-            <Icon name="chevronRight" size={18} color={INK} />
+            <Icon name="chevronRight" size={18} color={c.text} />
           </PressableScale>
         </View>
       ) : null}
@@ -222,15 +223,15 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
   header: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingBottom: 10 },
-  round: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(14,16,24,0.06)" },
+  round: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
   titles: { flex: 1 },
-  title: { fontFamily: f.semibold, fontSize: 16, color: INK },
-  subtitle: { fontFamily: f.regular, fontSize: 13, color: "rgba(14,16,24,0.6)" },
+  title: { fontFamily: f.semibold, fontSize: 16 },
+  subtitle: { fontFamily: f.regular, fontSize: 13 },
   strip: { paddingHorizontal: 16, paddingBottom: 10, gap: 8 },
-  stripRoute: { fontFamily: f.medium, fontSize: 13.5, color: "rgba(14,16,24,0.75)" },
+  stripRoute: { fontFamily: f.medium, fontSize: 13.5 },
   stripDetails: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  stripDetail: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, backgroundColor: "rgba(14,16,24,0.06)" },
-  stripLabel: { fontFamily: f.medium, fontSize: 10.5, letterSpacing: 0.5, textTransform: "uppercase", color: "rgba(14,16,24,0.55)" },
-  stripValue: { fontFamily: f.semibold, fontSize: 17, color: INK },
+  stripDetail: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10 },
+  stripLabel: { fontFamily: f.medium, fontSize: 10.5, letterSpacing: 0.5, textTransform: "uppercase" },
+  stripValue: { fontFamily: f.semibold, fontSize: 17 },
   pager: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 18, paddingTop: 10 },
 });
